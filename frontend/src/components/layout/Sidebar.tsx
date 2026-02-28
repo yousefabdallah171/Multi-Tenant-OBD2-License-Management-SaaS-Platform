@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, BarChart3, Building2, History, KeyRound, LayoutDashboard, Package, ScrollText, Settings, ShieldBan, User, UserCog, Users, Wallet } from 'lucide-react'
+import { Activity, BarChart3, Building2, History, KeyRound, LayoutDashboard, Package, ScrollText, Settings, ShieldBan, User, UserCog, UserRound, Users, Wallet } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
@@ -49,6 +49,27 @@ const managerParentItems: NavItem[] = [
   { key: 'profile', icon: User, href: routePaths.managerParent.profile, label: 'Profile' },
 ]
 
+const managerItems: NavItem[] = [
+  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.manager.dashboard, label: 'Dashboard' },
+  { key: 'team', icon: Users, href: routePaths.manager.team, label: 'Team' },
+  { key: 'usernameManagement', icon: KeyRound, href: routePaths.manager.usernameManagement, label: 'Username Mgmt' },
+  { key: 'customers', icon: UserRound, href: routePaths.manager.customers, label: 'Customers' },
+  { key: 'software', icon: Package, href: routePaths.manager.software, label: 'Software' },
+  { key: 'reports', icon: BarChart3, href: routePaths.manager.reports, label: 'Reports' },
+  { key: 'activity', icon: ScrollText, href: routePaths.manager.activity, label: 'Activity' },
+  { key: 'profile', icon: User, href: routePaths.manager.profile, label: 'Profile' },
+]
+
+const resellerItems: NavItem[] = [
+  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.reseller.dashboard, label: 'Dashboard' },
+  { key: 'customers', icon: Users, href: routePaths.reseller.customers, label: 'Customers' },
+  { key: 'software', icon: Package, href: routePaths.reseller.software, label: 'Software' },
+  { key: 'licenses', icon: KeyRound, href: routePaths.reseller.licenses, label: 'Licenses' },
+  { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, label: 'Reports' },
+  { key: 'activity', icon: Activity, href: routePaths.reseller.activity, label: 'Activity' },
+  { key: 'profile', icon: User, href: routePaths.reseller.profile, label: 'Profile' },
+]
+
 export function Sidebar() {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -56,7 +77,16 @@ export function Sidebar() {
   const collapsed = useSidebarStore((state) => state.collapsed)
   const setCollapsed = useSidebarStore((state) => state.setCollapsed)
 
-  const items = user?.role === 'super_admin' ? superAdminItems : user?.role === 'manager_parent' ? managerParentItems : []
+  const items =
+    user?.role === 'super_admin'
+      ? superAdminItems
+      : user?.role === 'manager_parent'
+        ? managerParentItems
+        : user?.role === 'manager'
+          ? managerItems
+          : user?.role === 'reseller'
+            ? resellerItems
+            : []
   const navContent = (
     <nav className="space-y-2">
       {items.map((item) => {

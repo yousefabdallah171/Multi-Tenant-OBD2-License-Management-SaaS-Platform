@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ApiLog;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -44,9 +45,11 @@ class ExternalApiService
      */
     private function send(string $method, string $uri, array $payload = []): array
     {
+        $startedAt = microtime(true);
+        $endpoint = ltrim($uri, '/');
+
         try {
             $request = $this->client();
-            $endpoint = ltrim($uri, '/');
 
             $response = match (strtolower($method)) {
                 'get' => $request->get($endpoint, $payload),
@@ -55,15 +58,21 @@ class ExternalApiService
                 default => $request->send($method, $endpoint, ['json' => $payload]),
             };
 
+            $body = $response->json() ?? [];
+            $this->logApiCall($endpoint, strtoupper($method), $payload, $body, $response->status(), $startedAt);
+
             return [
                 'success' => $response->successful(),
-                'data' => $response->json() ?? [],
+                'data' => $body,
                 'status_code' => $response->status(),
             ];
         } catch (Throwable $exception) {
+            $body = ['message' => $exception->getMessage()];
+            $this->logApiCall($endpoint, strtoupper($method), $payload, $body, 503, $startedAt);
+
             return [
                 'success' => false,
-                'data' => ['message' => $exception->getMessage()],
+                'data' => $body,
                 'status_code' => 503,
             ];
         }
@@ -78,5 +87,21 @@ class ExternalApiService
             ->withHeaders([
                 'X-API-Key' => (string) config('external-api.key'),
             ]);
+    }
+
+    private function logApiCall(string $endpoint, string $method, array $payload, array $responseBody, int $statusCode, float $startedAt): void
+    {
+        $user = auth()->user();
+
+        ApiLog::query()->create([
+            'tenant_id' => $user?->tenant_id,
+            'user_id' => $user?->id,
+            'endpoint' => '/'.$endpoint,
+            'method' => $method,
+            'request_body' => $payload === [] ? null : $payload,
+            'response_body' => $responseBody === [] ? null : $responseBody,
+            'status_code' => $statusCode,
+            'response_time_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+        ]);
     }
 }

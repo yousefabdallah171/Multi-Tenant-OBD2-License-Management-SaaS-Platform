@@ -7,7 +7,7 @@ const COLORS = ['#0284c7', '#0f766e', '#f59e0b', '#e11d48', '#7c3aed', '#2563eb'
 
 interface PieBreakdownChartProps {
   title: string
-  data: Array<Record<string, string | number | undefined>>
+  data: object[]
   dataKey?: string
   nameKey?: string
   isLoading?: boolean

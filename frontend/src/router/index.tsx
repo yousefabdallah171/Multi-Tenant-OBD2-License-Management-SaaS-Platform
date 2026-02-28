@@ -3,6 +3,14 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
 import { LoginPage } from '@/pages/auth/Login'
 import { RoleDashboard } from '@/pages/dashboard/RoleDashboard'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { ActivityPage as ManagerActivityPage } from '@/pages/manager/Activity'
+import { CustomersPage as ManagerCustomersPage } from '@/pages/manager/Customers'
+import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/Dashboard'
+import { ProfilePage as ManagerProfilePage } from '@/pages/manager/Profile'
+import { ReportsPage as ManagerReportsPage } from '@/pages/manager/Reports'
+import { SoftwarePage as ManagerSoftwarePage } from '@/pages/manager/Software'
+import { TeamPage as ManagerTeamPage } from '@/pages/manager/Team'
+import { UsernameManagementPage as ManagerUsernameManagementPage } from '@/pages/manager/UsernameManagement'
 import { ActivityPage as ManagerParentActivityPage } from '@/pages/manager-parent/Activity'
 import { BiosBlacklistPage as ManagerParentBiosBlacklistPage } from '@/pages/manager-parent/BiosBlacklist'
 import { BiosHistoryPage as ManagerParentBiosHistoryPage } from '@/pages/manager-parent/BiosHistory'
@@ -30,6 +38,13 @@ import { SettingsPage } from '@/pages/super-admin/Settings'
 import { TenantsPage } from '@/pages/super-admin/Tenants'
 import { UsernameManagementPage } from '@/pages/super-admin/UsernameManagement'
 import { UsersPage } from '@/pages/super-admin/Users'
+import { ActivityPage as ResellerActivityPage } from '@/pages/reseller/Activity'
+import { CustomersPage as ResellerCustomersPage } from '@/pages/reseller/Customers'
+import { DashboardPage as ResellerDashboardPage } from '@/pages/reseller/Dashboard'
+import { LicensesPage as ResellerLicensesPage } from '@/pages/reseller/Licenses'
+import { ProfilePage as ResellerProfilePage } from '@/pages/reseller/Profile'
+import { ReportsPage as ResellerReportsPage } from '@/pages/reseller/Reports'
+import { SoftwarePage as ResellerSoftwarePage } from '@/pages/reseller/Software'
 import { GuestRoute, ProtectedRoute, RoleGuard } from '@/router/guards'
 import { LanguageLayout, LanguageNotFound } from '@/router/LanguageLayout'
 
@@ -81,10 +96,29 @@ export function AppRouter() {
             </Route>
           </Route>
           <Route element={<RoleGuard allowedRoles={['manager']} />}>
-            <Route path="manager" element={<RoleDashboard role="manager" />} />
+            <Route path="manager" element={<DashboardLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<ManagerDashboardPage />} />
+              <Route path="team" element={<ManagerTeamPage />} />
+              <Route path="username-management" element={<ManagerUsernameManagementPage />} />
+              <Route path="customers" element={<ManagerCustomersPage />} />
+              <Route path="software" element={<ManagerSoftwarePage />} />
+              <Route path="reports" element={<ManagerReportsPage />} />
+              <Route path="activity" element={<ManagerActivityPage />} />
+              <Route path="profile" element={<ManagerProfilePage />} />
+            </Route>
           </Route>
           <Route element={<RoleGuard allowedRoles={['reseller']} />}>
-            <Route path="reseller" element={<RoleDashboard role="reseller" />} />
+            <Route path="reseller" element={<DashboardLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<ResellerDashboardPage />} />
+              <Route path="customers" element={<ResellerCustomersPage />} />
+              <Route path="software" element={<ResellerSoftwarePage />} />
+              <Route path="licenses" element={<ResellerLicensesPage />} />
+              <Route path="reports" element={<ResellerReportsPage />} />
+              <Route path="activity" element={<ResellerActivityPage />} />
+              <Route path="profile" element={<ResellerProfilePage />} />
+            </Route>
           </Route>
           <Route element={<RoleGuard allowedRoles={['customer']} />}>
             <Route path="customer" element={<RoleDashboard role="customer" />} />

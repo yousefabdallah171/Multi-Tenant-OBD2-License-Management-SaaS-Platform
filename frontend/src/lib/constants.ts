@@ -11,7 +11,7 @@ export const USER_ROLES: UserRole[] = ['super_admin', 'manager_parent', 'manager
 export const ROLE_DASHBOARD_SEGMENTS: Record<UserRole, string> = {
   super_admin: 'super-admin/dashboard',
   manager_parent: 'dashboard',
-  manager: 'manager',
-  reseller: 'reseller',
+  manager: 'manager/dashboard',
+  reseller: 'reseller/dashboard',
   customer: 'customer',
 }
