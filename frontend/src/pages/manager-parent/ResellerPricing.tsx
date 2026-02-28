@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ interface BulkState {
 }
 
 export function ResellerPricingPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -54,7 +56,7 @@ export function ResellerPricingPage() {
         commission_rate: commissionRate,
       }),
     onSuccess: () => {
-      toast.success('Pricing updated successfully.')
+      toast.success(t('managerParent.pages.resellerPricing.updateSuccess'))
       setEditingRowId(null)
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'pricing'] })
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'pricing-history'] })
@@ -70,7 +72,7 @@ export function ResellerPricingPage() {
         commission_rate: Number(bulk.commissionRate || '0'),
       }),
     onSuccess: (data) => {
-      toast.success(`Bulk pricing applied to ${data.updated} rows.`)
+      toast.success(t('managerParent.pages.resellerPricing.bulkSuccess', { count: data.updated }))
       setBulkOpen(false)
       setBulk({
         resellerIds: [],
@@ -90,21 +92,21 @@ export function ResellerPricingPage() {
     () => [
       {
         key: 'program',
-        label: 'Program',
+        label: t('common.program'),
         sortable: true,
         sortValue: (row) => row.program_name,
         render: (row) => row.program_name,
       },
       {
         key: 'basePrice',
-        label: 'Base Price',
+        label: t('managerParent.pages.resellerPricing.basePrice'),
         sortable: true,
         sortValue: (row) => row.base_price,
         render: (row) => formatCurrency(row.base_price, 'USD', locale),
       },
       {
         key: 'resellerPrice',
-        label: 'Reseller Price',
+        label: t('managerParent.pages.resellerPricing.resellerPrice'),
         sortable: true,
         sortValue: (row) => row.reseller_price,
         render: (row) =>
@@ -116,14 +118,14 @@ export function ResellerPricingPage() {
       },
       {
         key: 'margin',
-        label: 'Margin %',
+        label: t('managerParent.pages.resellerPricing.margin'),
         sortable: true,
         sortValue: (row) => row.base_price > 0 ? ((row.reseller_price - row.base_price) / row.base_price) * 100 : 0,
         render: (row) => `${row.base_price > 0 ? (((row.reseller_price - row.base_price) / row.base_price) * 100).toFixed(1) : '0.0'}%`,
       },
       {
         key: 'commission',
-        label: 'Commission %',
+        label: t('managerParent.pages.resellerPricing.commission'),
         sortable: true,
         sortValue: (row) => row.commission_rate,
         render: (row) =>
@@ -135,7 +137,7 @@ export function ResellerPricingPage() {
       },
       {
         key: 'actions',
-        label: 'Actions',
+        label: t('common.actions'),
         render: (row) =>
           editingRowId === row.program_id ? (
             <div className="flex gap-2">
@@ -144,7 +146,7 @@ export function ResellerPricingPage() {
                 size="sm"
                 onClick={() => {
                   if (!selectedId) {
-                    toast.error('Select a reseller first.')
+                    toast.error(t('managerParent.pages.resellerPricing.selectResellerFirst'))
                     return
                   }
 
@@ -156,10 +158,10 @@ export function ResellerPricingPage() {
                   })
                 }}
               >
-                Save
+                {t('common.save')}
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={() => setEditingRowId(null)}>
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
           ) : (
@@ -173,33 +175,33 @@ export function ResellerPricingPage() {
                 setEditingCommission(String(row.commission_rate))
               }}
             >
-              Edit
+              {t('common.edit')}
             </Button>
           ),
       },
     ],
-    [editingCommission, editingPrice, editingRowId, locale, selectedId, updateMutation],
+    [editingCommission, editingPrice, editingRowId, locale, selectedId, t, updateMutation],
   )
 
   const historyColumns = useMemo<Array<DataTableColumn<PricingHistoryEntry>>>(
     () => [
-      { key: 'time', label: 'Timestamp', sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
-      { key: 'program', label: 'Program', sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
-      { key: 'oldPrice', label: 'Old Price', sortable: true, sortValue: (row) => row.old_price ?? 0, render: (row) => formatCurrency(row.old_price ?? 0, 'USD', locale) },
-      { key: 'newPrice', label: 'New Price', sortable: true, sortValue: (row) => row.new_price, render: (row) => formatCurrency(row.new_price, 'USD', locale) },
-      { key: 'changedBy', label: 'Changed By', sortable: true, sortValue: (row) => row.changed_by ?? '', render: (row) => row.changed_by ?? '-' },
+      { key: 'time', label: t('common.timestamp'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
+      { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+      { key: 'oldPrice', label: t('managerParent.pages.resellerPricing.oldPrice'), sortable: true, sortValue: (row) => row.old_price ?? 0, render: (row) => formatCurrency(row.old_price ?? 0, 'USD', locale) },
+      { key: 'newPrice', label: t('managerParent.pages.resellerPricing.newPrice'), sortable: true, sortValue: (row) => row.new_price, render: (row) => formatCurrency(row.new_price, 'USD', locale) },
+      { key: 'changedBy', label: t('managerParent.pages.resellerPricing.changedBy'), sortable: true, sortValue: (row) => row.changed_by ?? '', render: (row) => row.changed_by ?? '-' },
     ],
-    [locale],
+    [locale, t],
   )
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Reseller Pricing"
-        description="Set reseller-specific program prices, adjust commission rates, and review pricing history."
+        title={t('managerParent.pages.resellerPricing.title')}
+        description={t('managerParent.pages.resellerPricing.description')}
         actions={
           <Button type="button" onClick={() => setBulkOpen(true)}>
-            Bulk Update
+            {t('managerParent.pages.resellerPricing.bulkUpdate')}
           </Button>
         }
       />
@@ -207,7 +209,7 @@ export function ResellerPricingPage() {
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 p-4">
           <div className="space-y-2">
-            <Label htmlFor="reseller-select">Reseller</Label>
+            <Label htmlFor="reseller-select">{t('common.reseller')}</Label>
             <select
               id="reseller-select"
               value={selectedId ?? ''}
@@ -228,7 +230,7 @@ export function ResellerPricingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Pricing History</CardTitle>
+          <CardTitle className="text-lg">{t('managerParent.pages.resellerPricing.pricingHistory')}</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable columns={historyColumns} data={historyQuery.data?.data ?? []} rowKey={(row) => row.id} isLoading={historyQuery.isLoading} />
@@ -238,12 +240,12 @@ export function ResellerPricingPage() {
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Bulk Update Pricing</DialogTitle>
-            <DialogDescription>Select reseller accounts and apply either a markup percentage or a fixed price across all programs.</DialogDescription>
+            <DialogTitle>{t('managerParent.pages.resellerPricing.bulkUpdateTitle')}</DialogTitle>
+            <DialogDescription>{t('managerParent.pages.resellerPricing.bulkUpdateDescription')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
             <div className="space-y-2">
-              <Label>Resellers</Label>
+              <Label>{t('managerParent.pages.resellerPricing.resellers')}</Label>
               <div className="grid max-h-48 gap-2 overflow-y-auto rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
                 {(payload?.resellers ?? []).map((reseller) => {
                   const checked = bulk.resellerIds.includes(reseller.id)
@@ -268,36 +270,36 @@ export function ResellerPricingPage() {
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="bulk-mode">Mode</Label>
+                <Label htmlFor="bulk-mode">{t('managerParent.pages.resellerPricing.mode')}</Label>
                 <select
                   id="bulk-mode"
                   value={bulk.mode}
                   onChange={(event) => setBulk((current) => ({ ...current, mode: event.target.value as 'fixed' | 'markup' }))}
                   className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                 >
-                  <option value="markup">Percentage markup</option>
-                  <option value="fixed">Fixed price</option>
+                  <option value="markup">{t('managerParent.pages.resellerPricing.markupMode')}</option>
+                  <option value="fixed">{t('managerParent.pages.resellerPricing.fixedMode')}</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="bulk-value">{bulk.mode === 'markup' ? 'Markup %' : 'Fixed price'}</Label>
+                <Label htmlFor="bulk-value">{bulk.mode === 'markup' ? t('managerParent.pages.resellerPricing.markupValue') : t('managerParent.pages.resellerPricing.fixedValue')}</Label>
                 <Input id="bulk-value" value={bulk.value} onChange={(event) => setBulk((current) => ({ ...current, value: event.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="bulk-commission">Commission %</Label>
+                <Label htmlFor="bulk-commission">{t('managerParent.pages.resellerPricing.commission')}</Label>
                 <Input id="bulk-commission" value={bulk.commissionRate} onChange={(event) => setBulk((current) => ({ ...current, commissionRate: event.target.value }))} />
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setBulkOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
               onClick={() => {
                 if (bulk.resellerIds.length === 0 || Number.isNaN(Number(bulk.value))) {
-                  toast.error('Select at least one reseller and enter a valid value.')
+                  toast.error(t('managerParent.pages.resellerPricing.bulkValidation'))
                   return
                 }
 
@@ -305,7 +307,7 @@ export function ResellerPricingPage() {
               }}
               disabled={bulkMutation.isPending}
             >
-              {bulkMutation.isPending ? 'Applying...' : 'Apply Bulk Update'}
+              {bulkMutation.isPending ? t('managerParent.pages.resellerPricing.applying') : t('managerParent.pages.resellerPricing.applyBulkUpdate')}
             </Button>
           </DialogFooter>
         </DialogContent>

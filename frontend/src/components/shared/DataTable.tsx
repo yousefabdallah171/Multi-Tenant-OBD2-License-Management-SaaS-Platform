@@ -3,6 +3,9 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { ResponsiveTable } from '@/components/shared/ResponsiveTable'
+import { SkeletonTable } from '@/components/shared/SkeletonTable'
 import { cn } from '@/lib/utils'
 
 export interface DataTableColumn<T> {
@@ -114,17 +117,25 @@ export function DataTable<T>({
 
   return (
     <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
+      <ResponsiveTable>
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
           <thead className="bg-slate-50 dark:bg-slate-950/70">
             <tr>
               {columns.map((column) => {
                 const isActive = sortKey === column.key
                 return (
-                  <th key={column.key} className={cn('px-4 py-3 text-start text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400', column.className)}>
+                  <th
+                    key={column.key}
+                    scope="col"
+                    aria-sort={column.sortable && isActive ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    className={cn('px-4 py-3 text-start text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400', column.className)}
+                  >
                     <button
                       type="button"
-                      className={cn('inline-flex items-center gap-2', column.sortable ? 'cursor-pointer' : 'cursor-default')}
+                      className={cn(
+                        'inline-flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
+                        column.sortable ? 'cursor-pointer' : 'cursor-default',
+                      )}
                       onClick={() => toggleSort(column)}
                     >
                       <span>{column.label}</span>
@@ -142,21 +153,14 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-900">
-            {isLoading
-              ? Array.from({ length: 5 }).map((_, index) => (
-                  <tr key={`skeleton-${index}`}>
-                    {columns.map((column) => (
-                      <td key={`${column.key}-${index}`} className="px-4 py-4">
-                        <div className="h-4 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              : null}
+            {isLoading ? <SkeletonTable columnCount={columns.length} /> : null}
             {!isLoading && sortedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
-                  {emptyMessage || t('common.noData')}
+                <td colSpan={columns.length} className="px-4 py-6">
+                  <EmptyState
+                    title={emptyMessage || t('common.noData')}
+                    description={t('common.adjustFilters')}
+                  />
                 </td>
               </tr>
             ) : null}
@@ -177,7 +181,7 @@ export function DataTable<T>({
               : null}
           </tbody>
         </table>
-      </div>
+      </ResponsiveTable>
       {pagination && onPageChange ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
           <span>{t('common.totalCount', { count: pagination.total })}</span>

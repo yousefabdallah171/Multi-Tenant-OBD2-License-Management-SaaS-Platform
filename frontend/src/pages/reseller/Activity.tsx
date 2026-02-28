@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { KeyRound, LogIn, ShieldOff, ShieldPlus, Undo2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -9,46 +10,20 @@ import { resellerService } from '@/services/reseller.service'
 import { formatDate } from '@/lib/utils'
 
 export function ActivityPage() {
+  const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const text = lang === 'ar'
-    ? {
-        eyebrow: 'موزع',
-        title: 'النشاط',
-        description: 'راجع إجراءات التفعيل والتجديد والإلغاء وتسجيل الدخول الخاصة بك.',
-        filters: [
-          { value: '', label: 'كل الإجراءات' },
-          { value: 'license.activate', label: 'تفعيل' },
-          { value: 'license.renew', label: 'تجديد' },
-          { value: 'license.deactivate', label: 'إلغاء' },
-          { value: 'auth.login', label: 'تسجيل الدخول' },
-        ],
-        empty: 'لا يوجد نشاط شخصي مطابق للفلاتر الحالية.',
-        totalEntries: 'إجمالي السجلات',
-        rows: 'الصفوف',
-        previous: 'السابق',
-        next: 'التالي',
-      }
-    : {
-        eyebrow: 'Reseller',
-        title: 'Activity',
-        description: 'Review your activation, renewal, deactivation, and sign-in actions.',
-        filters: [
-          { value: '', label: 'All Actions' },
-          { value: 'license.activate', label: 'Activation' },
-          { value: 'license.renew', label: 'Renewal' },
-          { value: 'license.deactivate', label: 'Deactivation' },
-          { value: 'auth.login', label: 'Login' },
-        ],
-        empty: 'No personal activity matches the current filters.',
-        totalEntries: 'Total entries',
-        rows: 'Rows',
-        previous: 'Previous',
-        next: 'Next',
-      }
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(12)
   const [action, setAction] = useState('')
+
+  const filters = [
+    { value: '', label: t('reseller.pages.activity.allActions') },
+    { value: 'license.activate', label: t('reseller.pages.activity.activation') },
+    { value: 'license.renew', label: t('reseller.pages.activity.renewal') },
+    { value: 'license.deactivate', label: t('reseller.pages.activity.deactivation') },
+    { value: 'auth.login', label: t('reseller.pages.activity.login') },
+  ]
 
   const activityQuery = useQuery({
     queryKey: ['reseller', 'activity', page, perPage, action],
@@ -61,7 +36,7 @@ export function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={text.eyebrow} title={text.title} description={text.description} />
+      <PageHeader eyebrow={t('roles.reseller')} title={t('reseller.pages.activity.title')} description={t('reseller.pages.activity.description')} />
 
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 p-4">
@@ -73,7 +48,7 @@ export function ActivityPage() {
             }}
             className="h-11 min-w-[220px] rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            {text.filters.map((filter) => (
+            {filters.map((filter) => (
               <option key={filter.label} value={filter.value}>
                 {filter.label}
               </option>
@@ -118,17 +93,17 @@ export function ActivityPage() {
 
         {!activityQuery.isLoading && entries.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">{text.empty}</CardContent>
+            <CardContent className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">{t('reseller.pages.activity.empty')}</CardContent>
           </Card>
         ) : null}
       </div>
 
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-slate-500 dark:text-slate-400">
-          <span>{text.totalEntries}: {meta?.total ?? 0}</span>
+          <span>{t('reseller.pages.activity.totalEntries', { count: meta?.total ?? 0 })}</span>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2">
-              <span>{text.rows}</span>
+              <span>{t('common.rowsPerPage')}</span>
               <select
                 value={perPage}
                 onChange={(event) => {
@@ -143,13 +118,13 @@ export function ActivityPage() {
               </select>
             </label>
             <Button type="button" variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
-              {text.previous}
+              {t('common.previous')}
             </Button>
             <span>
               {page} / {totalPages}
             </span>
             <Button type="button" variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>
-              {text.next}
+              {t('common.next')}
             </Button>
           </div>
         </CardContent>

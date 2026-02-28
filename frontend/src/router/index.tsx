@@ -1,6 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
 import { LoginPage } from '@/pages/auth/Login'
+import { AccessDeniedPage } from '@/pages/errors/AccessDenied'
+import { NotFoundPage } from '@/pages/errors/NotFound'
+import { ServerErrorPage } from '@/pages/errors/ServerError'
 import { CustomerLayout } from '@/components/layout/CustomerLayout'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { DashboardPage as CustomerDashboardPage } from '@/pages/customer/Dashboard'
@@ -49,7 +52,7 @@ import { ProfilePage as ResellerProfilePage } from '@/pages/reseller/Profile'
 import { ReportsPage as ResellerReportsPage } from '@/pages/reseller/Reports'
 import { SoftwarePage as ResellerSoftwarePage } from '@/pages/reseller/Software'
 import { GuestRoute, ProtectedRoute, RoleGuard } from '@/router/guards'
-import { LanguageLayout, LanguageNotFound } from '@/router/LanguageLayout'
+import { LanguageLayout } from '@/router/LanguageLayout'
 
 export function AppRouter() {
   return (
@@ -57,6 +60,9 @@ export function AppRouter() {
       <Route path="/" element={<Navigate to="/ar/login" replace />} />
       <Route path="/:lang" element={<LanguageLayout />}>
         <Route index element={<Navigate to="login" replace />} />
+        <Route path="not-found" element={<NotFoundPage />} />
+        <Route path="access-denied" element={<AccessDeniedPage />} />
+        <Route path="server-error" element={<ServerErrorPage />} />
         <Route element={<GuestRoute />}>
           <Route path="login" element={<LoginPage />} />
           <Route path="forgot-password" element={<ForgotPasswordPage />} />
@@ -132,9 +138,9 @@ export function AppRouter() {
             </Route>
           </Route>
         </Route>
-        <Route path="*" element={<LanguageNotFound />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/ar/login" replace />} />
+      <Route path="*" element={<Navigate to="/ar/not-found" replace />} />
     </Routes>
   )
 }

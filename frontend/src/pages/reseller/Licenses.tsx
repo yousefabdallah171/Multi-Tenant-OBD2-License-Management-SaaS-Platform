@@ -3,6 +3,7 @@ import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, CheckSquare, Eye, RotateCw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -21,6 +22,7 @@ import type { DurationUnit, LicenseSummary } from '@/types/manager-reseller.type
 const STATUS_OPTIONS = ['all', 'active', 'expired', 'suspended', 'pending'] as const
 
 export function LicensesPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -108,87 +110,101 @@ export function LicensesPage() {
         },
       }
     : {
-        eyebrow: 'Reseller',
-        title: 'Licenses',
-        description: 'Track all licenses you have activated, renew them in bulk, and act early on upcoming expirations.',
+        eyebrow: t('roles.reseller'),
+        title: t('reseller.pages.licenses.title'),
+        description: t('reseller.pages.licenses.description'),
         expiryLabels: {
-          day1: 'Expire in 1 day',
-          day3: 'Expire in 3 days',
-          day7: 'Expire in 7 days',
-          licenses: 'licenses',
+          day1: t('reseller.pages.licenses.expiryLabels.day1'),
+          day3: t('reseller.pages.licenses.expiryLabels.day3'),
+          day7: t('reseller.pages.licenses.expiryLabels.day7'),
+          licenses: t('reseller.pages.licenses.expiryLabels.licenses'),
         },
-        statusOptions: { all: 'All', active: 'Active', expired: 'Expired', suspended: 'Suspended', pending: 'Pending' },
-        searchPlaceholder: 'Search by customer, BIOS ID, or program',
-        bulkActionPlaceholder: 'Bulk action',
-        bulkRenew: 'Renew Selected',
-        bulkDeactivate: 'Deactivate Selected',
-        apply: 'Apply',
-        selectVisible: 'Select Visible',
-        clearVisible: 'Clear Visible',
+        statusOptions: {
+          all: t('common.all'),
+          active: t('common.active'),
+          expired: t('common.expired'),
+          suspended: t('common.suspended'),
+          pending: t('common.pending'),
+        },
+        searchPlaceholder: t('reseller.pages.licenses.searchPlaceholder'),
+        bulkActionPlaceholder: t('reseller.pages.licenses.bulkActionPlaceholder'),
+        bulkRenew: t('reseller.pages.licenses.bulkRenew'),
+        bulkDeactivate: t('reseller.pages.licenses.bulkDeactivate'),
+        apply: t('common.apply'),
+        selectVisible: t('common.selectAllVisible'),
+        clearVisible: t('common.clearVisible'),
         table: {
-          select: 'Select',
-          customer: 'Customer',
-          bios: 'BIOS ID',
-          program: 'Program',
-          duration: 'Duration',
-          price: 'Price',
-          activated: 'Activated',
-          expires: 'Expires',
-          status: 'Status',
-          actions: 'Actions',
+          select: t('common.select'),
+          customer: t('common.customer'),
+          bios: t('reseller.pages.licenses.table.bios'),
+          program: t('common.program'),
+          duration: t('common.duration'),
+          price: t('common.price'),
+          activated: t('reseller.pages.licenses.table.activated'),
+          expires: t('reseller.pages.licenses.table.expires'),
+          status: t('common.status'),
+          actions: t('common.actions'),
         },
-        actions: { view: 'View', renew: 'Renew', deactivate: 'Deactivate' },
-        units: { days: 'Days', months: 'Months', years: 'Years' },
+        actions: {
+          view: t('common.view'),
+          renew: t('common.renew'),
+          deactivate: t('common.deactivate'),
+        },
+        units: {
+          days: t('common.days'),
+          months: t('common.months'),
+          years: t('common.years'),
+        },
         details: {
-          titleFallback: 'License detail',
-          descriptionFallback: 'Inspect the full license record.',
-          customer: 'Customer',
-          program: 'Program',
-          version: 'Version',
-          status: 'Status',
-          bios: 'BIOS ID',
-          duration: 'Duration',
-          price: 'Price',
-          expires: 'Expires',
-          activity: 'Activity',
-          openDownload: 'Open Download Link',
+          titleFallback: t('reseller.pages.licenses.details.titleFallback'),
+          descriptionFallback: t('reseller.pages.licenses.details.descriptionFallback'),
+          customer: t('common.customer'),
+          program: t('common.program'),
+          version: t('reseller.pages.licenses.details.version'),
+          status: t('common.status'),
+          bios: t('reseller.pages.licenses.details.bios'),
+          duration: t('common.duration'),
+          price: t('common.price'),
+          expires: t('reseller.pages.licenses.details.expires'),
+          activity: t('reseller.pages.licenses.details.activity'),
+          openDownload: t('reseller.pages.licenses.details.openDownload'),
         },
         renewDialog: {
-          title: 'Renew License',
-          fallback: 'Update duration and price, then renew.',
-          description: (program: string, biosId: string) => `Renew ${program} for BIOS ID ${biosId}.`,
-          duration: 'Duration',
-          unit: 'Unit',
-          price: 'Price',
-          cancel: 'Cancel',
-          renew: 'Renew',
-          renewing: 'Renewing...',
+          title: t('reseller.pages.licenses.renewDialog.title'),
+          fallback: t('reseller.pages.licenses.renewDialog.fallback'),
+          description: (program: string, biosId: string) => t('reseller.pages.licenses.renewDialog.description', { program, biosId }),
+          duration: t('common.duration'),
+          unit: t('common.unit'),
+          price: t('common.price'),
+          cancel: t('common.cancel'),
+          renew: t('common.renew'),
+          renewing: t('reseller.pages.licenses.renewDialog.renewing'),
         },
         bulkRenewDialog: {
-          title: 'Bulk Renew',
-          description: (count: number) => `Apply the same duration and price to ${count} selected licenses.`,
+          title: t('reseller.pages.licenses.bulkRenewDialog.title'),
+          description: (count: number) => t('reseller.pages.licenses.bulkRenewDialog.description', { count }),
         },
         confirm: {
-          bulkDeactivateTitle: 'Bulk deactivate licenses?',
-          bulkDeactivateDescription: (count: number) => `This will deactivate ${count} selected licenses.`,
-          deactivateTitle: 'Deactivate license?',
-          deactivateDescription: (biosId: string) => `This will deactivate the license for BIOS ID: ${biosId}`,
-          deactivateSelected: 'Deactivate Selected',
-          deactivate: 'Deactivate',
+          bulkDeactivateTitle: t('reseller.pages.licenses.confirm.bulkDeactivateTitle'),
+          bulkDeactivateDescription: (count: number) => t('reseller.pages.licenses.confirm.bulkDeactivateDescription', { count }),
+          deactivateTitle: t('reseller.pages.licenses.confirm.deactivateTitle'),
+          deactivateDescription: (biosId: string) => t('reseller.pages.licenses.confirm.deactivateDescription', { biosId }),
+          deactivateSelected: t('reseller.pages.licenses.confirm.deactivateSelected'),
+          deactivate: t('common.deactivate'),
         },
         toasts: {
-          renewed: 'License renewed successfully.',
-          deactivated: 'License deactivated successfully.',
-          bulkRenewed: 'Selected licenses renewed successfully.',
-          bulkDeactivated: 'Selected licenses deactivated successfully.',
+          renewed: t('reseller.pages.licenses.toasts.renewed'),
+          deactivated: t('reseller.pages.licenses.toasts.deactivated'),
+          bulkRenewed: t('reseller.pages.licenses.toasts.bulkRenewed'),
+          bulkDeactivated: t('reseller.pages.licenses.toasts.bulkDeactivated'),
         },
         errors: {
-          selectAction: 'Select licenses and a bulk action first.',
-          renew: 'Enter a valid duration and price before renewing.',
-          bulkRenew: 'Select licenses and enter a valid duration and price first.',
-          requestFailed: 'The request failed.',
+          selectAction: t('reseller.pages.licenses.errors.selectAction'),
+          renew: t('reseller.pages.licenses.errors.renew'),
+          bulkRenew: t('reseller.pages.licenses.errors.bulkRenew'),
+          requestFailed: t('reseller.pages.licenses.errors.requestFailed'),
         },
-      }), [lang])
+      }), [lang, t])
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [search, setSearch] = useState('')
@@ -468,7 +484,7 @@ export function LicensesPage() {
         <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
           <DialogHeader>
             <DialogTitle>{detailLicense?.program ?? text.details.titleFallback}</DialogTitle>
-            <DialogDescription>{detailLicense ? `BIOS ID ${detailLicense.bios_id}` : text.details.descriptionFallback}</DialogDescription>
+            <DialogDescription>{detailLicense ? `${text.details.bios} ${detailLicense.bios_id}` : text.details.descriptionFallback}</DialogDescription>
           </DialogHeader>
           {detailLicense ? (
             <div className="space-y-6">
@@ -521,7 +537,7 @@ export function LicensesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{text.renewDialog.title}</DialogTitle>
-            <DialogDescription>{renewLicense ? text.renewDialog.description(renewLicense.program ?? 'license', renewLicense.bios_id) : text.renewDialog.fallback}</DialogDescription>
+            <DialogDescription>{renewLicense ? text.renewDialog.description(renewLicense.program ?? text.details.program, renewLicense.bios_id) : text.renewDialog.fallback}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-3">
             <Field label={text.renewDialog.duration} htmlFor="renew-duration">

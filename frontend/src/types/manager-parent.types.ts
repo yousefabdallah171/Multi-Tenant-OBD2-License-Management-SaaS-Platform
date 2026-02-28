@@ -16,6 +16,7 @@ export interface ChartPoint {
   range?: string
   name?: string
   label?: string
+  date?: string
   program?: string
   reseller?: string
   country?: string
@@ -24,6 +25,8 @@ export interface ChartPoint {
   activations?: number
   customers?: number
   percentage?: number
+  additions?: number
+  removals?: number
 }
 
 export interface TeamMemberSummary {

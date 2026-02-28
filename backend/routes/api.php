@@ -91,6 +91,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::get('/dashboard/revenue-chart', [ManagerParentDashboardController::class, 'revenueChart']);
         Route::get('/dashboard/expiry-forecast', [ManagerParentDashboardController::class, 'expiryForecast']);
         Route::get('/dashboard/team-performance', [ManagerParentDashboardController::class, 'teamPerformance']);
+        Route::get('/dashboard/conflict-rate', [ManagerParentDashboardController::class, 'conflictRate']);
 
         Route::get('/team', [ManagerParentTeamController::class, 'index']);
         Route::post('/team', [ManagerParentTeamController::class, 'store']);
@@ -214,6 +215,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::get('/dashboard/stats', [SuperAdminDashboardController::class, 'stats']);
         Route::get('/dashboard/revenue-trend', [SuperAdminDashboardController::class, 'revenueTrend']);
         Route::get('/dashboard/tenant-comparison', [SuperAdminDashboardController::class, 'tenantComparison']);
+        Route::get('/dashboard/license-timeline', [SuperAdminDashboardController::class, 'licenseTimeline']);
         Route::get('/dashboard/recent-activity', [SuperAdminDashboardController::class, 'recentActivity']);
 
         Route::get('/tenants/{tenant}/stats', [SuperAdminTenantController::class, 'stats']);
@@ -230,6 +232,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::post('/admin-management/{user}/reset-password', [AdminManagementController::class, 'resetPassword']);
 
         Route::get('/bios-blacklist', [SuperAdminBiosBlacklistController::class, 'index']);
+        Route::get('/bios-blacklist/stats', [SuperAdminBiosBlacklistController::class, 'stats']);
         Route::post('/bios-blacklist', [SuperAdminBiosBlacklistController::class, 'store']);
         Route::post('/bios-blacklist/import', [SuperAdminBiosBlacklistController::class, 'import']);
         Route::get('/bios-blacklist/export', [SuperAdminBiosBlacklistController::class, 'export']);

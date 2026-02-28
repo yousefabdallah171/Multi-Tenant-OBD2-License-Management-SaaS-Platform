@@ -2,41 +2,29 @@ import { useQuery } from '@tanstack/react-query'
 import { Banknote, LayoutDashboard, ShieldCheck, Users, UserSquare2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { ActivationTimeline } from '@/components/charts/ActivationTimeline'
-import { TenantComparisonChart } from '@/components/charts/TenantComparisonChart'
+import { BarChartWidget } from '@/components/charts/BarChartWidget'
+import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
+import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 
-const MONTHS: Record<string, number> = {
-  Jan: 0,
-  Feb: 1,
-  Mar: 2,
-  Apr: 3,
-  May: 4,
-  Jun: 5,
-  Jul: 6,
-  Aug: 7,
-  Sep: 8,
-  Oct: 9,
-  Nov: 10,
-  Dec: 11,
-}
+function localizeExpiryRange(range: string, t: ReturnType<typeof useTranslation>['t']) {
+  const match = range.match(/^(\d+)-(\d+)\s+days$/i)
 
-function localizeMonthLabel(label: string, locale: string) {
-  const [monthToken, yearToken] = label.split(' ')
-  const monthIndex = MONTHS[monthToken]
-
-  if (monthIndex === undefined || !yearToken) {
-    return label
+  if (!match) {
+    return range
   }
 
-  return new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(new Date(Number(yearToken), monthIndex, 1))
+  return t('managerParent.pages.dashboard.licenseRangeDays', {
+    from: match[1],
+    to: match[2],
+  })
 }
 
 export function DashboardPage() {
@@ -65,11 +53,25 @@ export function DashboardPage() {
     queryFn: () => managerParentService.getTeamPerformance(),
   })
 
+  const conflictQuery = useQuery({
+    queryKey: ['manager-parent', 'dashboard', 'conflict-rate'],
+    queryFn: () => managerParentService.getConflictRate(),
+  })
+
   const stats = statsQuery.data?.stats
   const topPerformers = (performanceQuery.data?.data ?? []).slice(0, 4)
   const revenueSeries = (revenueQuery.data?.data ?? []).map((point) => ({
     ...point,
     month: localizeMonthLabel(point.month, locale),
+  }))
+  const conflictSeries = (conflictQuery.data?.data ?? []).map((point) => ({
+    ...point,
+    month: localizeMonthLabel(point.month, locale),
+  }))
+  const expirySeries = (expiryQuery.data?.data ?? []).map((point) => ({
+    ...point,
+    rangeKey: point.range,
+    range: localizeExpiryRange(point.range, t),
   }))
 
   return (
@@ -97,19 +99,58 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <ActivationTimeline title={t('managerParent.pages.dashboard.monthlyRevenue')} data={revenueSeries} isLoading={revenueQuery.isLoading} dataKey="revenue" xKey="month" />
-        <TenantComparisonChart title={t('managerParent.pages.dashboard.licenseExpiryForecast')} data={expiryQuery.data?.data ?? []} isLoading={expiryQuery.isLoading} dataKey="count" xKey="range" />
+        <LineChartWidget
+          title={t('managerParent.pages.dashboard.monthlyRevenue')}
+          data={revenueSeries}
+          isLoading={revenueQuery.isLoading}
+          xKey="month"
+          series={[{ key: 'revenue', label: t('common.revenue') }]}
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
+        <BarChartWidget
+          title={t('managerParent.pages.dashboard.licenseExpiryForecast')}
+          data={expirySeries}
+          isLoading={expiryQuery.isLoading}
+          xKey="range"
+          series={[{ key: 'count', label: t('managerParent.pages.dashboard.licenseCount') }]}
+          showLabels
+          colorByEntry={(payload) => {
+            const range = String(payload.rangeKey ?? '')
+
+            if (range.startsWith('0')) {
+              return '#f59e0b'
+            }
+
+            if (range.startsWith('31')) {
+              return '#fb923c'
+            }
+
+            return '#f43f5e'
+          }}
+        />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <BarChartWidget
+          title={t('managerParent.pages.dashboard.teamPerformance')}
+          data={(performanceQuery.data?.data ?? []).map((member) => ({ name: member.name, activations: member.activations }))}
+          isLoading={performanceQuery.isLoading}
+          xKey="name"
+          horizontal
+          showLabels
+          series={[{ key: 'activations', label: t('common.activations') }]}
+        />
+        <LineChartWidget
+          title={t('managerParent.pages.dashboard.conflictRate')}
+          description={t('managerParent.pages.dashboard.conflictRateDescription')}
+          data={conflictSeries}
+          isLoading={conflictQuery.isLoading}
+          xKey="month"
+          series={[{ key: 'count', label: t('managerParent.pages.dashboard.conflicts') }]}
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-        <TenantComparisonChart
-          title={t('managerParent.pages.dashboard.teamPerformance')}
-          data={(performanceQuery.data?.data ?? []).map((member) => ({ name: member.name, revenue: member.revenue }))}
-          isLoading={performanceQuery.isLoading}
-          dataKey="revenue"
-          xKey="name"
-        />
-
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">{t('managerParent.pages.dashboard.quickActions')}</CardTitle>
@@ -129,30 +170,33 @@ export function DashboardPage() {
                 {t('managerParent.pages.dashboard.actions.openReports')}
               </Button>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                <LayoutDashboard className="h-4 w-4 text-sky-500" />
-                {t('managerParent.pages.dashboard.topPerformers')}
-              </div>
-              <div className="space-y-3">
-                {topPerformers.length === 0 ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.dashboard.noTeamActivity')}</p> : null}
-                {topPerformers.map((member) => (
-                  <div key={member.id} className="rounded-2xl bg-white px-4 py-3 shadow-sm dark:bg-slate-900">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-slate-950 dark:text-white">{member.name}</p>
-                        <p className="text-xs capitalize text-slate-500 dark:text-slate-400">{t(`roles.${member.role}`)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-slate-950 dark:text-white">{formatCurrency(member.revenue, 'USD', locale)}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{t('managerParent.pages.dashboard.activationsCount', { count: member.activations })}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{t('managerParent.pages.dashboard.topPerformers')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <LayoutDashboard className="h-4 w-4 text-sky-500" />
+              {t('managerParent.pages.dashboard.topPerformers')}
             </div>
+            {topPerformers.length === 0 ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.dashboard.noTeamActivity')}</p> : null}
+            {topPerformers.map((member) => (
+              <div key={member.id} className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/40">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-950 dark:text-white">{member.name}</p>
+                    <p className="text-xs capitalize text-slate-500 dark:text-slate-400">{t(`roles.${member.role}`)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-slate-950 dark:text-white">{formatCurrency(member.revenue, 'USD', locale)}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('managerParent.pages.dashboard.activationsCount', { count: member.activations })}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>

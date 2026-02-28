@@ -40,11 +40,21 @@ class DashboardController extends BaseManagerController
 
     public function revenueChart(Request $request): JsonResponse
     {
+        $resellers = $this->teamResellersQuery($request)->get();
+
         return response()->json([
-            'data' => $this->monthlySeries(
-                License::query()->whereIn('reseller_id', $this->teamResellerIds($request))->get(),
-                fn ($bucket): float => round((float) $bucket->sum('price'), 2),
-            ),
+            'data' => $resellers
+                ->map(function ($reseller): array {
+                    $licenses = License::query()->where('reseller_id', $reseller->id)->get();
+
+                    return [
+                        'reseller' => $reseller->name,
+                        'revenue' => round((float) $licenses->sum('price'), 2),
+                        'activations' => $licenses->count(),
+                    ];
+                })
+                ->sortByDesc('revenue')
+                ->values(),
         ]);
     }
 

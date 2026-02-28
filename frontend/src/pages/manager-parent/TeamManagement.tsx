@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -37,6 +38,7 @@ function isValidEmail(value: string) {
 }
 
 export function TeamManagementPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -58,7 +60,7 @@ export function TeamManagementPage() {
   const createMutation = useMutation({
     mutationFn: (payload: TeamPayload) => teamService.create(payload),
     onSuccess: () => {
-      toast.success(`${role === 'manager' ? 'Manager' : 'Reseller'} invited successfully.`)
+      toast.success(t(role === 'manager' ? 'managerParent.pages.teamManagement.managerInvited' : 'managerParent.pages.teamManagement.resellerInvited'))
       closeForm()
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
     },
@@ -67,7 +69,7 @@ export function TeamManagementPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<Omit<TeamPayload, 'role' | 'password'>> }) => teamService.update(id, payload),
     onSuccess: () => {
-      toast.success('Team member updated successfully.')
+      toast.success(t('managerParent.pages.teamManagement.updateSuccess'))
       closeForm()
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
     },
@@ -76,7 +78,7 @@ export function TeamManagementPage() {
   const statusMutation = useMutation({
     mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'suspended' | 'inactive' }) => teamService.updateStatus(id, nextStatus),
     onSuccess: () => {
-      toast.success('Status updated successfully.')
+      toast.success(t('managerParent.pages.teamManagement.statusUpdated'))
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
     },
   })
@@ -84,7 +86,7 @@ export function TeamManagementPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => teamService.delete(id),
     onSuccess: () => {
-      toast.success('Team member removed successfully.')
+      toast.success(t('managerParent.pages.teamManagement.deleteSuccess'))
       setDeleteTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
     },
@@ -94,7 +96,7 @@ export function TeamManagementPage() {
     () => [
       {
         key: 'name',
-        label: 'Name',
+        label: t('common.name'),
         sortable: true,
         sortValue: (row) => row.name,
         render: (row) => (
@@ -106,49 +108,49 @@ export function TeamManagementPage() {
       },
       {
         key: 'email',
-        label: 'Email',
+        label: t('common.email'),
         sortable: true,
         sortValue: (row) => row.email,
         render: (row) => row.email,
       },
       {
         key: 'phone',
-        label: 'Phone',
+        label: t('common.phone'),
         sortable: true,
         sortValue: (row) => row.phone ?? '',
         render: (row) => row.phone || '-',
       },
       {
         key: 'status',
-        label: 'Status',
+        label: t('common.status'),
         sortable: true,
         sortValue: (row) => row.status,
         render: (row) => <StatusBadge status={row.status} />,
       },
       {
         key: 'customers',
-        label: 'Customers',
+        label: t('managerParent.pages.teamManagement.customers'),
         sortable: true,
         sortValue: (row) => row.customers_count,
         render: (row) => row.customers_count,
       },
       {
         key: 'activeLicenses',
-        label: 'Active Licenses',
+        label: t('managerParent.pages.teamManagement.activeLicenses'),
         sortable: true,
         sortValue: (row) => row.active_licenses_count,
         render: (row) => row.active_licenses_count,
       },
       {
         key: 'revenue',
-        label: 'Revenue',
+        label: t('common.revenue'),
         sortable: true,
         sortValue: (row) => row.revenue,
         render: (row) => formatCurrency(row.revenue, 'USD', locale),
       },
       {
         key: 'actions',
-        label: 'Actions',
+        label: t('common.actions'),
         render: (row) => (
           <div className="flex flex-wrap gap-2">
             <Button
@@ -166,7 +168,7 @@ export function TeamManagementPage() {
                 setFormOpen(true)
               }}
             >
-              Edit
+              {t('common.edit')}
             </Button>
             <Button
               type="button"
@@ -179,16 +181,16 @@ export function TeamManagementPage() {
                 })
               }
             >
-              {row.status === 'active' ? 'Suspend' : 'Activate'}
+              {row.status === 'active' ? t('common.suspend') : t('common.activate')}
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(row)}>
-              Delete
+              {t('common.delete')}
             </Button>
           </div>
         ),
       },
     ],
-    [locale, statusMutation],
+    [locale, statusMutation, t],
   )
 
   const list = membersQuery.data?.data ?? []
@@ -203,17 +205,17 @@ export function TeamManagementPage() {
 
   function submitForm() {
     if (form.name.trim().length < 2) {
-      toast.error('Name must be at least 2 characters.')
+      toast.error(t('managerParent.pages.teamManagement.nameValidation'))
       return
     }
 
     if (!isValidEmail(form.email)) {
-      toast.error('Please enter a valid email address.')
+      toast.error(t('managerParent.pages.teamManagement.emailValidation'))
       return
     }
 
     if (!editingMember && form.password.trim().length < 8) {
-      toast.error('Password must be at least 8 characters.')
+      toast.error(t('managerParent.pages.teamManagement.passwordValidation'))
       return
     }
 
@@ -241,8 +243,8 @@ export function TeamManagementPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Team Management"
-        description="Invite and manage managers and resellers under this tenant. Revenue and customer counts are shown per member."
+        title={t('managerParent.pages.teamManagement.title')}
+        description={t('managerParent.pages.teamManagement.description')}
         actions={
           <Button
             type="button"
@@ -252,7 +254,7 @@ export function TeamManagementPage() {
               setFormOpen(true)
             }}
           >
-            {role === 'manager' ? 'Invite Manager' : 'Invite Reseller'}
+            {role === 'manager' ? t('managerParent.pages.teamManagement.inviteManager') : t('managerParent.pages.teamManagement.inviteReseller')}
           </Button>
         }
       />
@@ -260,19 +262,19 @@ export function TeamManagementPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Visible team members</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.teamManagement.visibleTeamMembers')}</p>
             <p className="mt-2 text-3xl font-semibold">{membersQuery.data?.meta.total ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Customers represented</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.teamManagement.customersRepresented')}</p>
             <p className="mt-2 text-3xl font-semibold">{totalCustomers}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-6">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Visible revenue</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.teamManagement.visibleRevenue')}</p>
             <p className="mt-2 text-3xl font-semibold">{formatCurrency(totalRevenue, 'USD', locale)}</p>
           </CardContent>
         </Card>
@@ -286,8 +288,8 @@ export function TeamManagementPage() {
         }}
       >
         <TabsList>
-          <TabsTrigger value="manager">Managers</TabsTrigger>
-          <TabsTrigger value="reseller">Resellers</TabsTrigger>
+          <TabsTrigger value="manager">{t('managerParent.pages.teamManagement.managers')}</TabsTrigger>
+          <TabsTrigger value="reseller">{t('managerParent.pages.teamManagement.resellers')}</TabsTrigger>
         </TabsList>
         <TabsContent value={role} className="space-y-4">
           <Card>
@@ -298,7 +300,7 @@ export function TeamManagementPage() {
                   setSearch(event.target.value)
                   setPage(1)
                 }}
-                placeholder="Search by name or email"
+                placeholder={t('managerParent.pages.teamManagement.searchPlaceholder')}
                 className="min-w-[220px] flex-1"
               />
               <select
@@ -309,10 +311,10 @@ export function TeamManagementPage() {
                 }}
                 className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                <option value="">All statuses</option>
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-                <option value="inactive">Inactive</option>
+                <option value="">{t('common.allStatuses')}</option>
+                <option value="active">{t('common.active')}</option>
+                <option value="suspended">{t('common.suspended')}</option>
+                <option value="inactive">{t('common.inactive')}</option>
               </select>
             </CardContent>
           </Card>
@@ -340,35 +342,35 @@ export function TeamManagementPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingMember ? 'Edit Team Member' : role === 'manager' ? 'Invite Manager' : 'Invite Reseller'}</DialogTitle>
-            <DialogDescription>{editingMember ? 'Update the selected team member details.' : 'Create a new account under this tenant.'}</DialogDescription>
+            <DialogTitle>{editingMember ? t('managerParent.pages.teamManagement.editTitle') : role === 'manager' ? t('managerParent.pages.teamManagement.inviteManager') : t('managerParent.pages.teamManagement.inviteReseller')}</DialogTitle>
+            <DialogDescription>{editingMember ? t('managerParent.pages.teamManagement.editDescription') : t('managerParent.pages.teamManagement.formDescription')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="team-name">Name</Label>
+              <Label htmlFor="team-name">{t('common.name')}</Label>
               <Input id="team-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="team-email">Email</Label>
+              <Label htmlFor="team-email">{t('common.email')}</Label>
               <Input id="team-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="team-phone">Phone</Label>
+              <Label htmlFor="team-phone">{t('common.phone')}</Label>
               <Input id="team-phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
             </div>
             {!editingMember ? (
               <div className="space-y-2">
-                <Label htmlFor="team-password">Password</Label>
+                <Label htmlFor="team-password">{t('common.password')}</Label>
                 <Input id="team-password" type="password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} />
               </div>
             ) : null}
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeForm}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={submitForm} disabled={createMutation.isPending || updateMutation.isPending}>
-              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : editingMember ? 'Save Changes' : 'Create Account'}
+              {createMutation.isPending || updateMutation.isPending ? t('common.saving') : editingMember ? t('managerParent.pages.teamManagement.saveChanges') : t('managerParent.pages.teamManagement.createAccount')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -381,9 +383,9 @@ export function TeamManagementPage() {
             setDeleteTarget(null)
           }
         }}
-        title="Delete team member?"
-        description={deleteTarget ? `This will remove ${deleteTarget.name} from the team.` : undefined}
-        confirmLabel="Delete"
+        title={t('managerParent.pages.teamManagement.deleteTitle')}
+        description={deleteTarget ? t('managerParent.pages.teamManagement.deleteDescription', { name: deleteTarget.name }) : undefined}
+        confirmLabel={t('common.delete')}
         isDestructive
         onConfirm={() => {
           if (deleteTarget) {

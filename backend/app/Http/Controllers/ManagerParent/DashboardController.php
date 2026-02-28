@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Enums\UserRole;
+use App\Models\BiosConflict;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
@@ -87,5 +88,22 @@ class DashboardController extends BaseManagerParentController
             ->values();
 
         return response()->json(['data' => $team]);
+    }
+
+    public function conflictRate(): JsonResponse
+    {
+        $months = collect(range(11, 0))
+            ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
+
+        $conflicts = BiosConflict::query()
+            ->get()
+            ->groupBy(fn (BiosConflict $conflict): string => $conflict->created_at?->format('Y-m') ?? '');
+
+        return response()->json([
+            'data' => $months->map(fn (CarbonImmutable $month): array => [
+                'month' => $month->format('M Y'),
+                'count' => $conflicts->get($month->format('Y-m'))?->count() ?? 0,
+            ])->values(),
+        ]);
     }
 }

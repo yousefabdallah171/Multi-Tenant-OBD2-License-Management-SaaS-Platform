@@ -80,6 +80,26 @@ class DashboardController extends BaseSuperAdminController
         return response()->json(['data' => $tenants]);
     }
 
+    public function licenseTimeline(): JsonResponse
+    {
+        $days = collect(range(29, 0))
+            ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfDay()->subDays($offset));
+
+        $totals = License::query()
+            ->whereNotNull('activated_at')
+            ->get()
+            ->groupBy(fn (License $license): string => $license->activated_at->format('Y-m-d'))
+            ->map(fn ($group): int => $group->count());
+
+        return response()->json([
+            'data' => $days->map(fn (CarbonImmutable $day): array => [
+                'date' => $day->format('Y-m-d'),
+                'label' => $day->format('d M'),
+                'count' => (int) ($totals[$day->format('Y-m-d')] ?? 0),
+            ])->values(),
+        ]);
+    }
+
     public function recentActivity(): JsonResponse
     {
         $activities = ActivityLog::query()

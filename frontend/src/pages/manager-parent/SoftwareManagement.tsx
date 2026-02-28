@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Grid2X2, List, Plus, Upload } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -55,6 +56,7 @@ function isValidUrl(value: string) {
 }
 
 export function SoftwareManagementPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -76,7 +78,7 @@ export function SoftwareManagementPage() {
   const createMutation = useMutation({
     mutationFn: (payload: ProgramPayload) => programService.create(payload),
     onSuccess: () => {
-      toast.success('Program created successfully.')
+      toast.success(t('managerParent.pages.softwareManagement.createSuccess'))
       closeForm()
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'programs'] })
     },
@@ -85,7 +87,7 @@ export function SoftwareManagementPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<ProgramPayload> }) => programService.update(id, payload),
     onSuccess: () => {
-      toast.success('Program updated successfully.')
+      toast.success(t('managerParent.pages.softwareManagement.updateSuccess'))
       closeForm()
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'programs'] })
     },
@@ -94,7 +96,7 @@ export function SoftwareManagementPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => programService.delete(id),
     onSuccess: () => {
-      toast.success('Program deleted successfully.')
+      toast.success(t('managerParent.pages.softwareManagement.deleteSuccess'))
       setDeleteTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'programs'] })
     },
@@ -103,7 +105,7 @@ export function SoftwareManagementPage() {
   const columns: Array<DataTableColumn<ProgramSummary>> = [
     {
       key: 'program',
-      label: 'Program',
+      label: t('common.program'),
       sortable: true,
       sortValue: (row) => row.name,
       render: (row) => (
@@ -117,25 +119,25 @@ export function SoftwareManagementPage() {
           )}
           <div>
             <p className="font-medium text-slate-950 dark:text-white">{row.name}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">v{row.version}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.version')} {row.version}</p>
           </div>
         </div>
       ),
     },
-    { key: 'price', label: 'Base Price', sortable: true, sortValue: (row) => row.base_price, render: (row) => formatCurrency(row.base_price, 'USD', locale) },
-    { key: 'status', label: 'Status', sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
-    { key: 'licenses', label: 'Licenses Sold', sortable: true, sortValue: (row) => row.licenses_sold, render: (row) => row.licenses_sold },
-    { key: 'createdAt', label: 'Created', sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
+    { key: 'price', label: t('managerParent.pages.softwareManagement.basePrice'), sortable: true, sortValue: (row) => row.base_price, render: (row) => formatCurrency(row.base_price, 'USD', locale) },
+    { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+    { key: 'licenses', label: t('managerParent.pages.softwareManagement.licensesSold'), sortable: true, sortValue: (row) => row.licenses_sold, render: (row) => row.licenses_sold },
+    { key: 'createdAt', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
     {
       key: 'actions',
-      label: 'Actions',
+      label: t('common.actions'),
       render: (row) => (
         <div className="flex gap-2">
           <Button type="button" size="sm" variant="ghost" onClick={() => openEdit(row)}>
-            Edit
+            {t('common.edit')}
           </Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(row)}>
-            Delete
+            {t('common.delete')}
           </Button>
         </div>
       ),
@@ -168,17 +170,17 @@ export function SoftwareManagementPage() {
 
   function submitForm() {
     if (form.name.trim().length < 2) {
-      toast.error('Program name must be at least 2 characters.')
+      toast.error(t('managerParent.pages.softwareManagement.nameValidation'))
       return
     }
 
     if (!isValidUrl(form.download_link)) {
-      toast.error('Download link must be a valid URL.')
+      toast.error(t('managerParent.pages.softwareManagement.downloadValidation'))
       return
     }
 
     if (form.installation_guide_url.trim() && !isValidUrl(form.installation_guide_url.trim())) {
-      toast.error('Installation guide must be a valid URL.')
+      toast.error(t('managerParent.pages.softwareManagement.installationGuideValidation'))
       return
     }
 
@@ -186,7 +188,7 @@ export function SoftwareManagementPage() {
     const trialDays = Number(form.trial_days)
 
     if (Number.isNaN(basePrice) || basePrice < 0 || Number.isNaN(trialDays) || trialDays < 0) {
-      toast.error('Base price and trial days must be valid numbers.')
+      toast.error(t('managerParent.pages.softwareManagement.numberValidation'))
       return
     }
 
@@ -220,17 +222,17 @@ export function SoftwareManagementPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Software Management"
-        description="Manage the tenant's programs, pricing defaults, versions, download links, and storefront visibility."
+        title={t('managerParent.pages.softwareManagement.title')}
+        description={t('managerParent.pages.softwareManagement.description')}
         actions={
           <>
             <Button type="button" variant={view === 'grid' ? 'default' : 'secondary'} onClick={() => setView('grid')}>
               <Grid2X2 className="me-2 h-4 w-4" />
-              Grid
+              {t('managerParent.pages.softwareManagement.grid')}
             </Button>
             <Button type="button" variant={view === 'table' ? 'default' : 'secondary'} onClick={() => setView('table')}>
               <List className="me-2 h-4 w-4" />
-              Table
+              {t('managerParent.pages.softwareManagement.table')}
             </Button>
             <Button
               type="button"
@@ -241,7 +243,7 @@ export function SoftwareManagementPage() {
               }}
             >
               <Plus className="me-2 h-4 w-4" />
-              Add Program
+              {t('managerParent.pages.softwareManagement.addProgram')}
             </Button>
           </>
         }
@@ -255,7 +257,7 @@ export function SoftwareManagementPage() {
               setSearch(event.target.value)
               setPage(1)
             }}
-            placeholder="Search programs"
+            placeholder={t('managerParent.pages.softwareManagement.searchPlaceholder')}
             className="min-w-[220px] flex-1"
           />
           <select
@@ -266,9 +268,9 @@ export function SoftwareManagementPage() {
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="">{t('common.allStatuses')}</option>
+            <option value="active">{t('common.active')}</option>
+            <option value="inactive">{t('common.inactive')}</option>
           </select>
         </CardContent>
       </Card>
@@ -289,30 +291,30 @@ export function SoftwareManagementPage() {
                     )}
                     <div>
                       <CardTitle className="text-lg">{program.name}</CardTitle>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Version {program.version}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.version')} {program.version}</p>
                     </div>
                   </div>
                   <StatusBadge status={program.status} />
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="min-h-12 text-sm text-slate-600 dark:text-slate-300">{program.description || 'No description provided.'}</p>
+                <p className="min-h-12 text-sm text-slate-600 dark:text-slate-300">{program.description || t('managerParent.pages.softwareManagement.noDescription')}</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Base Price</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.basePrice')}</p>
                     <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Trial Days</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.trialDays')}</p>
                     <p className="mt-1 font-semibold">{program.trial_days}</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" size="sm" onClick={() => openEdit(program)}>
-                    Edit
+                    {t('common.edit')}
                   </Button>
                   <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(program)}>
-                    Delete
+                    {t('common.delete')}
                   </Button>
                 </div>
               </CardContent>
@@ -342,51 +344,51 @@ export function SoftwareManagementPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{editingProgram ? 'Edit Program' : 'Add Program'}</DialogTitle>
-            <DialogDescription>{editingProgram ? 'Update the selected program configuration.' : 'Create a new program that your team can activate for customers.'}</DialogDescription>
+            <DialogTitle>{editingProgram ? t('managerParent.pages.softwareManagement.editProgram') : t('managerParent.pages.softwareManagement.addProgram')}</DialogTitle>
+            <DialogDescription>{editingProgram ? t('managerParent.pages.softwareManagement.editDescription') : t('managerParent.pages.softwareManagement.formDescription')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="program-name">Program Name</Label>
+              <Label htmlFor="program-name">{t('managerParent.pages.softwareManagement.programName')}</Label>
               <Input id="program-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program-version">Version</Label>
+              <Label htmlFor="program-version">{t('managerParent.pages.softwareManagement.version')}</Label>
               <Input id="program-version" value={form.version} onChange={(event) => setForm((current) => ({ ...current, version: event.target.value }))} />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="program-description">Description</Label>
+              <Label htmlFor="program-description">{t('managerParent.pages.softwareManagement.programDescription')}</Label>
               <Textarea id="program-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="program-download">Download Link</Label>
+              <Label htmlFor="program-download">{t('managerParent.pages.softwareManagement.downloadLink')}</Label>
               <Input id="program-download" value={form.download_link} onChange={(event) => setForm((current) => ({ ...current, download_link: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program-file-size">File Size</Label>
-              <Input id="program-file-size" value={form.file_size} onChange={(event) => setForm((current) => ({ ...current, file_size: event.target.value }))} placeholder="e.g. 245 MB" />
+              <Label htmlFor="program-file-size">{t('managerParent.pages.softwareManagement.fileSize')}</Label>
+              <Input id="program-file-size" value={form.file_size} onChange={(event) => setForm((current) => ({ ...current, file_size: event.target.value }))} placeholder={t('managerParent.pages.softwareManagement.fileSizePlaceholder')} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program-guide">Installation Guide URL</Label>
+              <Label htmlFor="program-guide">{t('managerParent.pages.softwareManagement.installationGuideUrl')}</Label>
               <Input id="program-guide" value={form.installation_guide_url} onChange={(event) => setForm((current) => ({ ...current, installation_guide_url: event.target.value }))} />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="program-requirements">System Requirements</Label>
+              <Label htmlFor="program-requirements">{t('managerParent.pages.softwareManagement.systemRequirements')}</Label>
               <Textarea id="program-requirements" value={form.system_requirements} onChange={(event) => setForm((current) => ({ ...current, system_requirements: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program-trial">Trial Days</Label>
+              <Label htmlFor="program-trial">{t('managerParent.pages.softwareManagement.trialDays')}</Label>
               <Input id="program-trial" type="number" value={form.trial_days} onChange={(event) => setForm((current) => ({ ...current, trial_days: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program-price">Base Price</Label>
+              <Label htmlFor="program-price">{t('managerParent.pages.softwareManagement.basePrice')}</Label>
               <Input id="program-price" type="number" step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program-icon">Icon Upload</Label>
+              <Label htmlFor="program-icon">{t('managerParent.pages.softwareManagement.iconUpload')}</Label>
               <label className="flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
                 <Upload className="h-4 w-4" />
-                <span>{form.icon ? form.icon.name : 'Choose image file'}</span>
+                <span>{form.icon ? form.icon.name : t('managerParent.pages.softwareManagement.chooseImageFile')}</span>
                 <input
                   id="program-icon"
                   type="file"
@@ -400,24 +402,24 @@ export function SoftwareManagementPage() {
               </label>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program-status">Status</Label>
+              <Label htmlFor="program-status">{t('common.status')}</Label>
               <select
                 id="program-status"
                 value={form.status}
                 onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as 'active' | 'inactive' }))}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="active">{t('common.active')}</option>
+                <option value="inactive">{t('common.inactive')}</option>
               </select>
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeForm}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={submitForm} disabled={createMutation.isPending || updateMutation.isPending}>
-              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : editingProgram ? 'Save Changes' : 'Create Program'}
+              {createMutation.isPending || updateMutation.isPending ? t('common.saving') : editingProgram ? t('managerParent.pages.softwareManagement.saveChanges') : t('managerParent.pages.softwareManagement.createProgram')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -430,9 +432,9 @@ export function SoftwareManagementPage() {
             setDeleteTarget(null)
           }
         }}
-        title="Delete program?"
-        description={deleteTarget ? `The program ${deleteTarget.name} will be removed from this tenant.` : undefined}
-        confirmLabel="Delete"
+        title={t('managerParent.pages.softwareManagement.deleteProgramTitle')}
+        description={deleteTarget ? t('managerParent.pages.softwareManagement.deleteProgramDescription', { name: deleteTarget.name }) : undefined}
+        confirmLabel={t('common.delete')}
         isDestructive
         onConfirm={() => {
           if (deleteTarget) {

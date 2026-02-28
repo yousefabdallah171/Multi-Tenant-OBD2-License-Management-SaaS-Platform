@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\ManagerParent;
 
+use App\Exports\ReportExporter;
 use App\Enums\UserRole;
 use App\Models\License;
 use App\Models\User;
 use App\Models\UserBalance;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,30 +45,21 @@ class FinancialReportController extends BaseManagerParentController
     {
         $report = $this->index($request)->getData(true)['data'];
 
-        return response()->streamDownload(function () use ($report): void {
-            $handle = fopen('php://output', 'wb');
-            fputcsv($handle, ['Metric', 'Value']);
-
-            foreach ($report['summary'] as $metric => $value) {
-                fputcsv($handle, [$metric, $value]);
-            }
-
-            fclose($handle);
-        }, 'manager-parent-financial.csv', ['Content-Type' => 'text/csv']);
+        return app(ReportExporter::class)->toCsv('manager-parent-financial.csv', $this->exportSections($report));
     }
 
     public function exportPdf(Request $request)
     {
         $report = $this->index($request)->getData(true)['data'];
-        $rows = collect($report['revenue_by_reseller'])->map(fn (array $row): array => [$row['reseller'], $row['revenue'], $row['activations']])->all();
 
-        $pdf = Pdf::loadHTML(view('pdf.simple-table', [
-            'title' => 'Manager Parent Financial Report',
-            'columns' => ['Reseller', 'Revenue', 'Activations'],
-            'rows' => $rows,
-        ])->render());
-
-        return $pdf->download('manager-parent-financial.pdf');
+        return app(ReportExporter::class)->toPdf(
+            'manager-parent-financial.pdf',
+            'Manager Parent Financial Report',
+            $this->exportSections($report),
+            $this->summaryLabels($report['summary']),
+            $this->dateRangeLabel($request),
+            $this->reportLanguage($request),
+        );
     }
 
     private function filteredLicenses(Request $request)
@@ -133,5 +124,84 @@ class FinancialReportController extends BaseManagerParentController
                 'commission' => round((float) $group->sum('price') * 0.1, 2),
             ];
         })->sortByDesc('total_revenue')->values();
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @return array<int, array{title?: string|null, headers: array<int, string>, rows: array<int, array<int, string|int|float|null>>}>
+     */
+    private function exportSections(array $report): array
+    {
+        return [
+            [
+                'title' => 'Summary',
+                'headers' => ['Metric', 'Value'],
+                'rows' => collect($this->summaryLabels($report['summary']))
+                    ->map(fn ($value, $label): array => [$label, $value])
+                    ->values()
+                    ->all(),
+            ],
+            [
+                'title' => 'Revenue by Reseller',
+                'headers' => ['Reseller', 'Revenue', 'Activations'],
+                'rows' => collect($report['revenue_by_reseller'])->map(fn (array $row): array => [$row['reseller'], $row['revenue'], $row['activations']])->all(),
+            ],
+            [
+                'title' => 'Revenue by Program',
+                'headers' => ['Program', 'Revenue', 'Activations'],
+                'rows' => collect($report['revenue_by_program'])->map(fn (array $row): array => [$row['program'], $row['revenue'], $row['activations']])->all(),
+            ],
+            [
+                'title' => 'Reseller Balances',
+                'headers' => ['Reseller', 'Revenue', 'Activations', 'Average Price', 'Commission'],
+                'rows' => collect($report['reseller_balances'])->map(fn (array $row): array => [
+                    $row['reseller'],
+                    $row['total_revenue'],
+                    $row['total_activations'],
+                    $row['avg_price'],
+                    $row['commission'],
+                ])->all(),
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, int|float> $summary
+     * @return array<string, int|float>
+     */
+    private function summaryLabels(array $summary): array
+    {
+        return [
+            'Total Revenue' => $summary['total_revenue'],
+            'Total Activations' => $summary['total_activations'],
+            'Active Licenses' => $summary['active_licenses'],
+        ];
+    }
+
+    private function dateRangeLabel(Request $request): string
+    {
+        $from = $request->string('from')->toString();
+        $to = $request->string('to')->toString();
+
+        if ($from !== '' && $to !== '') {
+            return sprintf('Date range: %s to %s', $from, $to);
+        }
+
+        if ($from !== '') {
+            return sprintf('From %s', $from);
+        }
+
+        if ($to !== '') {
+            return sprintf('Until %s', $to);
+        }
+
+        return 'All time';
+    }
+
+    private function reportLanguage(Request $request): string
+    {
+        $lang = $request->query('lang', $request->header('Accept-Language', 'en'));
+
+        return str_starts_with((string) $lang, 'ar') ? 'ar' : 'en';
     }
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Download, UserRound } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,6 +12,7 @@ import { activityService } from '@/services/activity.service'
 import { teamService } from '@/services/team.service'
 
 export function ActivityPage() {
+  const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
@@ -37,12 +39,12 @@ export function ActivityPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Activity"
-        description="Review tenant audit events, filter them by user or action, and export the current activity stream."
+        title={t('managerParent.pages.activity.title')}
+        description={t('managerParent.pages.activity.description')}
         actions={
           <Button type="button" onClick={() => void activityService.export({ user_id: userId, action, from: range.from, to: range.to, per_page: perPage, page })}>
             <Download className="me-2 h-4 w-4" />
-            Export
+            {t('managerParent.pages.activity.export')}
           </Button>
         }
       />
@@ -57,7 +59,7 @@ export function ActivityPage() {
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="">All actions</option>
+            <option value="">{t('managerParent.pages.activity.allActions')}</option>
             {actionOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -72,7 +74,7 @@ export function ActivityPage() {
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="">All users</option>
+            <option value="">{t('managerParent.pages.activity.allUsers')}</option>
             {(teamQuery.data?.data ?? []).map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name}
@@ -93,7 +95,7 @@ export function ActivityPage() {
               <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-slate-950 dark:text-white">{entry.user?.name ?? 'System'}</p>
+                    <p className="font-semibold text-slate-950 dark:text-white">{entry.user?.name ?? t('managerParent.pages.activity.system')}</p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">{entry.action}</p>
                     {entry.description ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{entry.description}</p> : null}
                   </div>
@@ -114,17 +116,17 @@ export function ActivityPage() {
 
         {!activityQuery.isLoading && entries.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">No activity matches the current filters.</CardContent>
+            <CardContent className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.activity.noMatches')}</CardContent>
           </Card>
         ) : null}
       </div>
 
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-slate-500 dark:text-slate-400">
-          <span>Total entries: {meta?.total ?? 0}</span>
+          <span>{t('managerParent.pages.activity.totalEntries', { count: meta?.total ?? 0 })}</span>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2">
-              <span>Rows</span>
+              <span>{t('common.rowsPerPage')}</span>
               <select
                 value={perPage}
                 onChange={(event) => {
@@ -139,13 +141,13 @@ export function ActivityPage() {
               </select>
             </label>
             <Button type="button" variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
-              Previous
+              {t('common.previous')}
             </Button>
             <span>
               {page} / {totalPages}
             </span>
             <Button type="button" variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>
-              Next
+              {t('common.next')}
             </Button>
           </div>
         </CardContent>

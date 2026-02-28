@@ -4,6 +4,7 @@ import { MoreHorizontal, Plus, Search, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
+import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { biosService } from '@/services/bios.service'
@@ -36,6 +38,11 @@ export function BiosBlacklistPage() {
   const blacklistQuery = useQuery({
     queryKey: ['super-admin', 'bios-blacklist', page, perPage, search, status],
     queryFn: () => biosService.getBlacklist({ page, per_page: perPage, search, status }),
+  })
+
+  const statsQuery = useQuery({
+    queryKey: ['super-admin', 'bios-blacklist', 'stats'],
+    queryFn: () => biosService.getBlacklistStats(),
   })
 
   const addMutation = useMutation({
@@ -96,6 +103,10 @@ export function BiosBlacklistPage() {
     ],
     [lang, locale, navigate, removeMutation, t],
   )
+  const trendData = (statsQuery.data?.data ?? []).map((item) => ({
+    ...item,
+    month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
+  }))
 
   return (
     <div className="space-y-6">
@@ -163,6 +174,18 @@ export function BiosBlacklistPage() {
           </select>
         </CardContent>
       </Card>
+
+      <LineChartWidget
+        title={t('superAdmin.pages.biosBlacklist.trendTitle')}
+        description={t('superAdmin.pages.biosBlacklist.trendDescription')}
+        data={trendData}
+        isLoading={statsQuery.isLoading}
+        xKey="month"
+        series={[
+          { key: 'additions', label: t('superAdmin.pages.biosBlacklist.additions') },
+          { key: 'removals', label: t('superAdmin.pages.biosBlacklist.removals') },
+        ]}
+      />
 
       <DataTable
         columns={columns}

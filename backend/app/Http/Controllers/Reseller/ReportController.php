@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Reseller;
 
+use App\Exports\ReportExporter;
 use App\Models\License;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,31 +48,19 @@ class ReportController extends BaseResellerController
 
     public function exportCsv(Request $request): StreamedResponse
     {
-        $rows = $this->topPrograms($request)->getData(true)['data'];
-
-        return response()->streamDownload(function () use ($rows): void {
-            $handle = fopen('php://output', 'wb');
-            fputcsv($handle, ['Program', 'Activations', 'Revenue']);
-
-            foreach ($rows as $row) {
-                fputcsv($handle, [$row['program'], $row['count'], $row['revenue']]);
-            }
-
-            fclose($handle);
-        }, 'reseller-report.csv', ['Content-Type' => 'text/csv']);
+        return app(ReportExporter::class)->toCsv('reseller-report.csv', $this->exportSections($request));
     }
 
     public function exportPdf(Request $request)
     {
-        $rows = $this->topPrograms($request)->getData(true)['data'];
-
-        $pdf = Pdf::loadHTML(view('pdf.simple-table', [
-            'title' => 'Reseller Report',
-            'columns' => ['Program', 'Activations', 'Revenue'],
-            'rows' => collect($rows)->map(fn (array $row): array => [$row['program'], $row['count'], $row['revenue']])->all(),
-        ])->render());
-
-        return $pdf->download('reseller-report.pdf');
+        return app(ReportExporter::class)->toPdf(
+            'reseller-report.pdf',
+            'Reseller Report',
+            $this->exportSections($request),
+            [],
+            $this->dateRangeLabel($request),
+            $this->reportLanguage($request),
+        );
     }
 
     private function filteredLicenses(Request $request): array
@@ -116,5 +104,59 @@ class ReportController extends BaseResellerController
                 ];
             })
             ->values();
+    }
+
+    /**
+     * @return array<int, array{title?: string|null, headers: array<int, string>, rows: array<int, array<int, string|int|float|null>>}>
+     */
+    private function exportSections(Request $request): array
+    {
+        $revenueRows = collect($this->revenue($request)->getData(true)['data']);
+        $activationRows = collect($this->activations($request)->getData(true)['data']);
+        $programRows = collect($this->topPrograms($request)->getData(true)['data']);
+
+        return [
+            [
+                'title' => 'Revenue',
+                'headers' => ['Period', 'Revenue'],
+                'rows' => $revenueRows->map(fn (array $row): array => [$row['period'], $row['revenue']])->all(),
+            ],
+            [
+                'title' => 'Activations',
+                'headers' => ['Period', 'Activations'],
+                'rows' => $activationRows->map(fn (array $row): array => [$row['period'], $row['count']])->all(),
+            ],
+            [
+                'title' => 'Top Programs',
+                'headers' => ['Program', 'Activations', 'Revenue'],
+                'rows' => $programRows->map(fn (array $row): array => [$row['program'], $row['count'], $row['revenue']])->all(),
+            ],
+        ];
+    }
+
+    private function dateRangeLabel(Request $request): string
+    {
+        $from = $request->string('from')->toString();
+        $to = $request->string('to')->toString();
+        $period = $request->string('period')->toString();
+
+        $range = 'All time';
+
+        if ($from !== '' && $to !== '') {
+            $range = sprintf('Date range: %s to %s', $from, $to);
+        } elseif ($from !== '') {
+            $range = sprintf('From %s', $from);
+        } elseif ($to !== '') {
+            $range = sprintf('Until %s', $to);
+        }
+
+        return $period !== '' ? sprintf('%s | Period: %s', $range, $period) : $range;
+    }
+
+    private function reportLanguage(Request $request): string
+    {
+        $lang = $request->query('lang', $request->header('Accept-Language', 'en'));
+
+        return str_starts_with((string) $lang, 'ar') ? 'ar' : 'en';
     }
 }

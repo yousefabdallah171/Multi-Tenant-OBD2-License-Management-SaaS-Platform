@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { LicenseCard } from '@/components/customer/LicenseCard'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { SkeletonCard } from '@/components/shared/SkeletonCard'
+import { StaggerGroup, StaggerItem } from '@/components/shared/PageTransition'
 import { StatsCard } from '@/components/shared/StatsCard'
-import { Card, CardContent } from '@/components/ui/card'
 import { customerPortalService } from '@/services/customer.service'
 
 export function DashboardPage() {
@@ -27,7 +28,7 @@ export function DashboardPage() {
 
     const recipient = license.reseller_email ? encodeURIComponent(license.reseller_email) : ''
 
-    window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`
+    window.location.assign(`mailto:${recipient}?subject=${subject}&body=${body}`)
     toast.success(t('customerPortal.actions.renewalStarted'))
   }
 
@@ -39,24 +40,21 @@ export function DashboardPage() {
         <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('customerPortal.dashboard.description')}</p>
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatsCard title={t('customerPortal.dashboard.totalLicenses')} value={summary?.total_licenses ?? 0} icon={WalletCards} color="sky" />
-        <StatsCard title={t('customerPortal.dashboard.activeLicenses')} value={summary?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
-        <StatsCard title={t('customerPortal.dashboard.expiredLicenses')} value={summary?.expired_licenses ?? 0} icon={ShieldAlert} color="rose" />
-      </div>
+      <StaggerGroup className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <StaggerItem>
+          <StatsCard title={t('customerPortal.dashboard.totalLicenses')} value={summary?.total_licenses ?? 0} icon={WalletCards} color="sky" />
+        </StaggerItem>
+        <StaggerItem>
+          <StatsCard title={t('customerPortal.dashboard.activeLicenses')} value={summary?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
+        </StaggerItem>
+        <StaggerItem>
+          <StatsCard title={t('customerPortal.dashboard.expiredLicenses')} value={summary?.expired_licenses ?? 0} icon={ShieldAlert} color="rose" />
+        </StaggerItem>
+      </StaggerGroup>
 
       {dashboardQuery.isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Card key={index} className="animate-pulse">
-              <CardContent className="space-y-4 p-5">
-                <div className="h-6 w-1/2 rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="h-4 w-2/3 rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="h-20 rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="h-10 rounded bg-slate-200 dark:bg-slate-800" />
-              </CardContent>
-            </Card>
-          ))}
+          {Array.from({ length: 3 }).map((_, index) => <SkeletonCard key={index} lines={4} />)}
         </div>
       ) : null}
 
@@ -69,24 +67,25 @@ export function DashboardPage() {
       ) : null}
 
       {licenses.length > 0 ? (
-        <div data-testid="customer-dashboard-grid" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <StaggerGroup data-testid="customer-dashboard-grid" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {licenses.map((license) => (
-            <LicenseCard
-              key={license.id}
-              licenseId={license.id}
-              programName={license.program_name ?? t('customerPortal.dashboard.unknownProgram')}
-              programVersion={license.program_version}
-              biosId={license.bios_id}
-              status={license.status}
-              activatedAt={license.activated_at}
-              expiresAt={license.expires_at}
-              daysRemaining={license.days_remaining}
-              percentageRemaining={license.percentage_remaining}
-              downloadLink={license.download_link}
-              onRequestRenewal={() => handleRenewalRequest(license)}
-            />
+            <StaggerItem key={license.id}>
+              <LicenseCard
+                licenseId={license.id}
+                programName={license.program_name ?? t('customerPortal.dashboard.unknownProgram')}
+                programVersion={license.program_version}
+                biosId={license.bios_id}
+                status={license.status}
+                activatedAt={license.activated_at}
+                expiresAt={license.expires_at}
+                daysRemaining={license.days_remaining}
+                percentageRemaining={license.percentage_remaining}
+                downloadLink={license.download_link}
+                onRequestRenewal={() => handleRenewalRequest(license)}
+              />
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerGroup>
       ) : null}
     </div>
   )

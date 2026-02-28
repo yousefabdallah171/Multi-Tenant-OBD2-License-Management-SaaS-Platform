@@ -1,11 +1,15 @@
+import { useTranslation } from 'react-i18next'
 import { ProgramCatalogPage } from '@/components/shared/ProgramCatalogPage'
 
 export function SoftwarePage() {
+  const { t } = useTranslation()
+
   return (
     <ProgramCatalogPage
-      eyebrow="Manager"
-      title="Software"
-      description="Review the active programs your resellers can sell. This catalog is read-only for managers."
+      eyebrow={t('manager.layout.eyebrow')}
+      title={t('manager.pages.software.title')}
+      description={t('manager.pages.software.description')}
+      translationPrefix="manager.pages.software"
     />
   )
 }

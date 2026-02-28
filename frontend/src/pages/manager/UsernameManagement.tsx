@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -17,6 +18,7 @@ import type { TeamManagedUser } from '@/types/manager-reseller.types'
 import type { UserRole } from '@/types/user.types'
 
 export function UsernameManagementPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
@@ -44,7 +46,7 @@ export function UsernameManagementPage() {
   const unlockMutation = useMutation({
     mutationFn: () => managerService.unlockUsername(unlockTarget?.id ?? 0, unlockReason),
     onSuccess: () => {
-      toast.success('Username unlocked successfully.')
+      toast.success(t('manager.pages.usernameManagement.unlockSuccess'))
       setUnlockTarget(null)
       setUnlockReason('')
       void queryClient.invalidateQueries({ queryKey: ['manager', 'username-management'] })
@@ -54,7 +56,7 @@ export function UsernameManagementPage() {
   const usernameMutation = useMutation({
     mutationFn: () => managerService.changeUsername(usernameTarget?.id ?? 0, newUsername, changeReason),
     onSuccess: () => {
-      toast.success('Username changed successfully.')
+      toast.success(t('manager.pages.usernameManagement.renameSuccess'))
       setUsernameTarget(null)
       setNewUsername('')
       setChangeReason('')
@@ -65,7 +67,7 @@ export function UsernameManagementPage() {
   const resetMutation = useMutation({
     mutationFn: (id: number) => managerService.resetPassword(id),
     onSuccess: (data) => {
-      toast.success(`Temporary password: ${data.temporary_password}`)
+      toast.success(`${t('manager.pages.usernameManagement.resetPasswordSuccess')}: ${data.temporary_password}`)
       void queryClient.invalidateQueries({ queryKey: ['manager', 'username-management'] })
     },
   })
@@ -74,7 +76,7 @@ export function UsernameManagementPage() {
     () => [
       {
         key: 'user',
-        label: 'User',
+        label: t('common.user'),
         sortable: true,
         sortValue: (row) => row.name,
         render: (row) => (
@@ -84,13 +86,13 @@ export function UsernameManagementPage() {
           </div>
         ),
       },
-      { key: 'username', label: 'Username', sortable: true, sortValue: (row) => row.username ?? '', render: (row) => row.username ?? '-' },
-      { key: 'email', label: 'Email', sortable: true, sortValue: (row) => row.email, render: (row) => row.email },
-      { key: 'status', label: 'Role Status', sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
-      { key: 'locked', label: 'Locked', sortable: true, sortValue: (row) => (row.username_locked ? 1 : 0), render: (row) => <StatusBadge status={row.username_locked ? 'suspended' : 'active'} /> },
+      { key: 'username', label: t('common.username'), sortable: true, sortValue: (row) => row.username ?? '', render: (row) => row.username ?? '-' },
+      { key: 'email', label: t('common.email'), sortable: true, sortValue: (row) => row.email, render: (row) => row.email },
+      { key: 'status', label: t('manager.pages.usernameManagement.roleStatus'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'locked', label: t('manager.pages.usernameManagement.locked'), sortable: true, sortValue: (row) => (row.username_locked ? 1 : 0), render: (row) => <StatusBadge status={row.username_locked ? 'suspended' : 'active'} /> },
       {
         key: 'actions',
-        label: 'Actions',
+        label: t('common.actions'),
         render: (row) => (
           <div className="flex flex-wrap gap-2">
             <Button
@@ -104,7 +106,7 @@ export function UsernameManagementPage() {
                 setUnlockReason('')
               }}
             >
-              Unlock
+              {t('manager.pages.usernameManagement.unlock')}
             </Button>
             <Button
               type="button"
@@ -117,7 +119,7 @@ export function UsernameManagementPage() {
                 setChangeReason('')
               }}
             >
-              Change Username
+              {t('manager.pages.usernameManagement.changeUsername')}
             </Button>
             <Button
               type="button"
@@ -128,21 +130,21 @@ export function UsernameManagementPage() {
                 resetMutation.mutate(row.id)
               }}
             >
-              Reset Password
+              {t('common.resetPassword')}
             </Button>
           </div>
         ),
       },
     ],
-    [resetMutation],
+    [resetMutation, t],
   )
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Manager"
-        title="Username Management"
-        description="Manage usernames for your resellers and their customers. Unlock, rename, and reset credentials with full team audit logging."
+        eyebrow={t('manager.layout.eyebrow')}
+        title={t('manager.pages.usernameManagement.title')}
+        description={t('manager.pages.usernameManagement.description')}
       />
 
       <Card>
@@ -153,7 +155,7 @@ export function UsernameManagementPage() {
               setSearch(event.target.value)
               setPage(1)
             }}
-            placeholder="Search by username or email"
+            placeholder={t('manager.pages.usernameManagement.searchPlaceholder')}
           />
           <select
             value={role}
@@ -163,9 +165,9 @@ export function UsernameManagementPage() {
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="">All roles</option>
-            <option value="reseller">Reseller</option>
-            <option value="customer">Customer</option>
+            <option value="">{t('common.allRoles')}</option>
+            <option value="reseller">{t('roles.reseller')}</option>
+            <option value="customer">{t('roles.customer')}</option>
           </select>
           <select
             value={locked}
@@ -175,9 +177,9 @@ export function UsernameManagementPage() {
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="all">All lock states</option>
-            <option value="locked">Locked</option>
-            <option value="unlocked">Unlocked</option>
+            <option value="all">{t('manager.pages.usernameManagement.allLockStates')}</option>
+            <option value="locked">{t('manager.pages.usernameManagement.locked')}</option>
+            <option value="unlocked">{t('manager.pages.usernameManagement.unlocked')}</option>
           </select>
         </CardContent>
       </Card>
@@ -208,12 +210,12 @@ export function UsernameManagementPage() {
             setUnlockReason('')
           }
         }}
-        title="Unlock username?"
-        description={unlockTarget ? `Unlock ${unlockTarget.email} and clear the username lock.` : undefined}
-        confirmLabel="Unlock"
+        title={t('manager.pages.usernameManagement.unlockTitle')}
+        description={unlockTarget ? t('manager.pages.usernameManagement.unlockDescription', { email: unlockTarget.email }) : undefined}
+        confirmLabel={t('manager.pages.usernameManagement.unlock')}
         onConfirm={() => {
           if (!unlockReason.trim()) {
-            toast.error('A reason is required before unlocking a username.')
+            toast.error(t('manager.pages.usernameManagement.unlockReasonRequired'))
             return
           }
 
@@ -221,8 +223,8 @@ export function UsernameManagementPage() {
         }}
       >
         <div className="space-y-2">
-          <Label htmlFor="unlock-reason">Reason</Label>
-          <Textarea id="unlock-reason" value={unlockReason} onChange={(event) => setUnlockReason(event.target.value)} placeholder="Explain why this username is being unlocked." />
+          <Label htmlFor="unlock-reason">{t('common.reason')}</Label>
+          <Textarea id="unlock-reason" value={unlockReason} onChange={(event) => setUnlockReason(event.target.value)} placeholder={t('manager.pages.usernameManagement.unlockReasonPlaceholder')} />
         </div>
       </ConfirmDialog>
 
@@ -238,28 +240,28 @@ export function UsernameManagementPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Username</DialogTitle>
-            <DialogDescription>{usernameTarget ? `Assign a new username for ${usernameTarget.email}.` : 'Assign a new username.'}</DialogDescription>
+            <DialogTitle>{t('manager.pages.usernameManagement.renameTitle')}</DialogTitle>
+            <DialogDescription>{usernameTarget ? t('manager.pages.usernameManagement.renameDescription', { email: usernameTarget.email }) : t('manager.pages.usernameManagement.renameDescriptionFallback')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="new-username">New Username</Label>
+              <Label htmlFor="new-username">{t('manager.pages.usernameManagement.newUsername')}</Label>
               <Input id="new-username" value={newUsername} onChange={(event) => setNewUsername(event.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="change-reason">Reason</Label>
-              <Textarea id="change-reason" value={changeReason} onChange={(event) => setChangeReason(event.target.value)} placeholder="Why is this username being changed?" />
+              <Label htmlFor="change-reason">{t('common.reason')}</Label>
+              <Textarea id="change-reason" value={changeReason} onChange={(event) => setChangeReason(event.target.value)} placeholder={t('manager.pages.usernameManagement.changeReasonPlaceholder')} />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setUsernameTarget(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
               onClick={() => {
                 if (!newUsername.trim()) {
-                  toast.error('Username is required.')
+                  toast.error(t('manager.pages.usernameManagement.usernameRequired'))
                   return
                 }
 
@@ -267,7 +269,7 @@ export function UsernameManagementPage() {
               }}
               disabled={usernameMutation.isPending}
             >
-              {usernameMutation.isPending ? 'Saving...' : 'Save Username'}
+              {usernameMutation.isPending ? t('common.saving') : t('manager.pages.usernameManagement.saveUsername')}
             </Button>
           </DialogFooter>
         </DialogContent>

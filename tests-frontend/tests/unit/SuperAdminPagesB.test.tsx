@@ -31,6 +31,14 @@ jest.mock('@/components/charts/TenantComparisonChart', () => ({
   TenantComparisonChart: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
 }))
 
+jest.mock('@/components/charts/LineChartWidget', () => ({
+  LineChartWidget: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
+}))
+
+jest.mock('@/components/charts/BarChartWidget', () => ({
+  BarChartWidget: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
+}))
+
 jest.mock('@/services/api-status.service', () => ({
   apiStatusService: {
     getStatus: jest.fn(),
@@ -72,6 +80,7 @@ jest.mock('@/services/tenant.service', () => ({
 jest.mock('@/services/bios.service', () => ({
   biosService: {
     getBlacklist: jest.fn(),
+    getBlacklistStats: jest.fn(),
     addToBlacklist: jest.fn(),
     removeFromBlacklist: jest.fn(),
     exportBlacklist: jest.fn(),
@@ -165,6 +174,7 @@ beforeEach(() => {
     data: [{ id: 5, bios_id: 'BIOS-001', reason: 'Fraud', status: 'active', added_by: 'Admin', created_at: '2026-02-28T10:00:00Z' }],
     meta: { current_page: 1, last_page: 1, per_page: 10, total: 1, from: 1, to: 1 },
   })
+  mockBiosService.getBlacklistStats.mockResolvedValue({ data: [{ month: 'Jan 2026', additions: 1, removals: 0 }] })
   mockBiosService.importBlacklist.mockResolvedValue({ message: 'ok', created: 1 })
   mockBiosService.getHistory.mockResolvedValue({
     data: [{ id: 'evt-1', bios_id: 'BIOS-001', tenant_id: 1, tenant: 'Tenant One', customer: 'Customer A', action: 'activation', status: 'active', description: 'Activated license', occurred_at: '2026-02-28T10:00:00Z' }],
@@ -192,6 +202,8 @@ beforeEach(() => {
       },
       revenue_by_tenant: [{ tenant: 'Tenant One', revenue: 1200 }],
       revenue_by_program: [{ program: 'Stage 1', revenue: 800, activations: 20 }],
+      revenue_breakdown: [{ tenant: 'Tenant One', 'Stage 1': 800 }],
+      revenue_breakdown_series: ['Stage 1'],
       monthly_revenue: [{ month: 'Jan', revenue: 1200 }],
       reseller_balances: [{ id: 1, reseller: 'Reseller A', tenant: 'Tenant One', total_revenue: 800, total_activations: 20, avg_price: 40, balance: 200 }],
     },
@@ -203,7 +215,7 @@ test('API Status page renders the system status and endpoint list', async () => 
 
   await waitFor(() => expect(mockApiStatusService.getStatus).toHaveBeenCalled())
 
-  expect(screen.getAllByText('online').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('Online').length).toBeGreaterThan(0)
   expect(screen.getByText('/health')).toBeInTheDocument()
   expect(screen.getAllByTestId('chart')).toHaveLength(1)
 })

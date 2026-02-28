@@ -1,26 +1,34 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, Banknote, CheckCircle2, Download } from 'lucide-react'
+import { Activity, Banknote, CheckCircle2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { BarChartWidget } from '@/components/charts/BarChartWidget'
+import { LineChartWidget } from '@/components/charts/LineChartWidget'
+import { PieChartWidget } from '@/components/charts/PieChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
-import { PieBreakdownChart } from '@/components/charts/PieBreakdownChart'
-import { RevenueChart } from '@/components/charts/RevenueChart'
-import { TenantComparisonChart } from '@/components/charts/TenantComparisonChart'
+import { ExportButtons } from '@/components/shared/ExportButtons'
 import { StatsCard } from '@/components/shared/StatsCard'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { useLanguage } from '@/hooks/useLanguage'
+import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
 import { managerParentService } from '@/services/manager-parent.service'
 
-function CardSection({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-xl shadow-slate-950/5 dark:border-slate-800 dark:bg-slate-900/95">
-      {children}
-    </div>
-  )
+function localizeActivationLabel(label: string, t: ReturnType<typeof useTranslation>['t']) {
+  if (label === 'Success') {
+    return t('managerParent.pages.reports.success')
+  }
+
+  if (label === 'Failure') {
+    return t('managerParent.pages.reports.failure')
+  }
+
+  return label
 }
 
 export function ReportsPage() {
+  const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
@@ -48,44 +56,72 @@ export function ReportsPage() {
   const totalRevenue = useMemo(() => (revenueByResellerQuery.data?.data ?? []).reduce((sum, item) => sum + item.revenue, 0), [revenueByResellerQuery.data?.data])
   const totalActivations = useMemo(() => (revenueByResellerQuery.data?.data ?? []).reduce((sum, item) => sum + item.activations, 0), [revenueByResellerQuery.data?.data])
   const successRate = activationRateQuery.data?.data.find((item) => item.label === 'Success')?.percentage ?? 0
+  const activationRateSeries = (activationRateQuery.data?.data ?? []).map((item) => ({
+    ...item,
+    label: localizeActivationLabel(item.label, t),
+  }))
+  const retentionSeries = (retentionQuery.data?.data ?? []).map((item) => ({
+    ...item,
+    month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
+  }))
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Reports"
-        description="Analyze reseller and program revenue, activation quality, and customer retention for the selected date range."
-        actions={
-          <>
-            <Button type="button" variant="secondary" onClick={() => void managerParentService.exportReportsCsv(range)}>
-              <Download className="me-2 h-4 w-4" />
-              Export CSV
-            </Button>
-            <Button type="button" onClick={() => void managerParentService.exportReportsPdf(range)}>
-              <Download className="me-2 h-4 w-4" />
-              Export PDF
-            </Button>
-          </>
-        }
+        title={t('managerParent.pages.reports.title')}
+        description={t('managerParent.pages.reports.description')}
+        actions={<ExportButtons onExportCsv={() => managerParentService.exportReportsCsv(range)} onExportPdf={() => managerParentService.exportReportsPdf(range)} />}
       />
 
-      <CardSection>
-        <DateRangePicker value={range} onChange={setRange} />
-      </CardSection>
+      <Card>
+        <CardContent className="p-4">
+          <DateRangePicker value={range} onChange={setRange} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatsCard title="Total Revenue" value={formatCurrency(totalRevenue, 'USD', locale)} icon={Banknote} color="emerald" />
-        <StatsCard title="Total Activations" value={totalActivations} icon={Activity} color="sky" />
-        <StatsCard title="Success Rate" value={`${successRate.toFixed(1)}%`} icon={CheckCircle2} color="amber" />
+        <StatsCard title={t('managerParent.pages.reports.totalRevenue')} value={formatCurrency(totalRevenue, 'USD', locale)} icon={Banknote} color="emerald" />
+        <StatsCard title={t('managerParent.pages.reports.totalActivations')} value={totalActivations} icon={Activity} color="sky" />
+        <StatsCard title={t('managerParent.pages.reports.successRate')} value={`${successRate.toFixed(1)}%`} icon={CheckCircle2} color="amber" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <PieBreakdownChart title="Revenue by Reseller" data={revenueByResellerQuery.data?.data ?? []} nameKey="reseller" dataKey="revenue" isLoading={revenueByResellerQuery.isLoading} />
-        <TenantComparisonChart title="Revenue by Program" data={revenueByProgramQuery.data?.data ?? []} dataKey="revenue" xKey="program" isLoading={revenueByProgramQuery.isLoading} />
+        <PieChartWidget
+          title={t('managerParent.pages.reports.revenueByReseller')}
+          description={t('managerParent.pages.reports.revenueByResellerDescription')}
+          data={revenueByResellerQuery.data?.data ?? []}
+          nameKey="reseller"
+          valueKey="revenue"
+          isLoading={revenueByResellerQuery.isLoading}
+          totalLabel={t('common.revenue')}
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
+        <BarChartWidget
+          title={t('managerParent.pages.reports.revenueByProgram')}
+          data={revenueByProgramQuery.data?.data ?? []}
+          isLoading={revenueByProgramQuery.isLoading}
+          xKey="program"
+          series={[{ key: 'revenue', label: t('common.revenue') }]}
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <PieBreakdownChart title="Activation Success / Failure" data={activationRateQuery.data?.data ?? []} nameKey="label" dataKey="count" isLoading={activationRateQuery.isLoading} />
-        <RevenueChart title="Customer Retention" data={retentionQuery.data?.data ?? []} dataKey="customers" xKey="month" isLoading={retentionQuery.isLoading} />
+        <PieChartWidget
+          title={t('managerParent.pages.reports.activationQuality')}
+          data={activationRateSeries}
+          nameKey="label"
+          valueKey="count"
+          isLoading={activationRateQuery.isLoading}
+          totalLabel={t('managerParent.pages.reports.attempts')}
+        />
+        <LineChartWidget
+          title={t('managerParent.pages.reports.customerRetention')}
+          data={retentionSeries}
+          isLoading={retentionQuery.isLoading}
+          xKey="month"
+          series={[{ key: 'customers', label: t('managerParent.pages.reports.customersLabel') }]}
+        />
       </div>
     </div>
   )

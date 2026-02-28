@@ -29,11 +29,28 @@ jest.mock('@/components/charts/ActivationTimeline', () => ({
   ActivationTimeline: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
 }))
 
+jest.mock('@/components/charts/LineChartWidget', () => ({
+  LineChartWidget: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
+}))
+
+jest.mock('@/components/charts/BarChartWidget', () => ({
+  BarChartWidget: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
+}))
+
+jest.mock('@/components/charts/AreaChartWidget', () => ({
+  AreaChartWidget: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
+}))
+
+jest.mock('@/components/charts/PieChartWidget', () => ({
+  PieChartWidget: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
+}))
+
 jest.mock('@/services/report.service', () => ({
   reportService: {
     getDashboardStats: jest.fn(),
     getRevenueTrend: jest.fn(),
     getTenantComparison: jest.fn(),
+    getLicenseTimeline: jest.fn(),
     getRecentActivity: jest.fn(),
     getRevenue: jest.fn(),
     getActivations: jest.fn(),
@@ -90,6 +107,7 @@ beforeEach(() => {
   })
   mockReportService.getRevenueTrend.mockResolvedValue({ data: [{ month: 'Jan', revenue: 300 }] })
   mockReportService.getTenantComparison.mockResolvedValue({ data: [{ id: 1, name: 'Tenant One', revenue: 400, active_licenses: 12 }] })
+  mockReportService.getLicenseTimeline.mockResolvedValue({ data: [{ date: '2026-02-28', label: '28 Feb', count: 9 }] })
   mockReportService.getRecentActivity.mockResolvedValue({
     data: [{ id: 1, action: 'Activation synced', description: 'Synced tenant data', user: 'Admin', tenant: 'Tenant One', created_at: '2026-02-28T10:00:00Z' }],
   })
@@ -183,7 +201,7 @@ test('Dashboard page renders stats, charts, and recent activity', async () => {
 
   expect(screen.getByText('7')).toBeInTheDocument()
   expect(screen.getByText('Synced tenant data')).toBeInTheDocument()
-  expect(screen.getAllByTestId('chart')).toHaveLength(3)
+  expect(screen.getAllByTestId('chart')).toHaveLength(4)
 })
 
 test('Dashboard page shows loading skeletons while queries are pending', async () => {

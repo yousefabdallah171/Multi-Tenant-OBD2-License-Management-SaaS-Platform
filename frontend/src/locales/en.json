@@ -98,6 +98,17 @@
     "customer": "Customer",
     "user": "User",
     "username": "Username",
+    "price": "Price",
+    "duration": "Duration",
+    "unit": "Unit",
+    "days": "Days",
+    "months": "Months",
+    "years": "Years",
+    "renew": "Renew",
+    "deactivate": "Deactivate",
+    "apply": "Apply",
+    "select": "Select",
+    "back": "Back",
     "date": "Date",
     "timestamp": "Timestamp",
     "lastChecked": "Last checked",
@@ -125,7 +136,37 @@
     "selectedCount": "{{count}} selected",
     "selectRow": "Select {{name}}",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "adjustFilters": "Try adjusting the current filters or search terms.",
+    "connectionLost": "Connection lost. Please check your network and try again.",
+    "openNavigation": "Open navigation menu",
+    "closeNavigation": "Close navigation menu",
+    "skipToContent": "Skip to content",
+    "tryAgain": "Try Again",
+    "goToDashboard": "Go to Dashboard",
+    "signIn": "Sign In",
+    "goBack": "Go Back",
+    "technicalDetails": "Technical details",
+    "errorBoundaryTitle": "Something went wrong",
+    "errorBoundaryDescription": "The page failed to render correctly. You can retry the current view or return to your dashboard.",
+    "online": "Online",
+    "offline": "Offline",
+    "degraded": "Degraded",
+    "unknown": "Unknown",
+    "errorPages": {
+      "notFound": {
+        "title": "Page not found",
+        "description": "The page you requested does not exist or has moved. You can return to your dashboard or sign in again."
+      },
+      "accessDenied": {
+        "title": "Access denied",
+        "description": "You do not have permission to view this content. If this looks incorrect, return to your dashboard or contact an administrator."
+      },
+      "serverError": {
+        "title": "Server error",
+        "description": "An unexpected error occurred while processing the request. Retry now or return to your dashboard."
+      }
+    }
   },
   "superAdmin": {
     "layout": {
@@ -162,7 +203,11 @@
         "revenueTrend": "Revenue trend",
         "recentActivity": "Recent activity",
         "tenantComparison": "Tenant comparison",
-        "noActivity": "There are no recent activity events yet."
+        "noActivity": "There are no recent activity events yet.",
+        "licenseTimeline": "License Timeline",
+        "licenseTimelineDescription": "Daily activations across the last 30 days.",
+        "ipCountryDistribution": "IP Country Distribution",
+        "ipCountryDistributionDescription": "Top login countries across the platform."
       },
       "tenants": {
         "title": "Tenant Management",
@@ -284,7 +329,11 @@
         "import": "Import CSV",
         "export": "Export CSV",
         "addTitle": "Add to blacklist",
-        "formDescription": "Capture the BIOS ID and the reason for blocking it."
+        "formDescription": "Capture the BIOS ID and the reason for blocking it.",
+        "trendTitle": "BIOS Blacklist Trend",
+        "trendDescription": "Monthly additions and removals across the global blacklist.",
+        "additions": "Additions",
+        "removals": "Removals"
       },
       "biosHistory": {
         "title": "BIOS History",
@@ -317,7 +366,11 @@
         "revenueByProgram": "Revenue by program",
         "monthlyRevenue": "Monthly revenue",
         "avgPrice": "Average price",
-        "balance": "Balance"
+        "balance": "Balance",
+        "revenueBreakdown": "Financial Revenue Breakdown",
+        "revenueBreakdownDescription": "Stacked tenant revenue split by program.",
+        "resellerBalancesTitle": "Reseller Balances",
+        "resellerBalancesDescription": "Top reseller balances across tenants."
       }
     }
   },
@@ -351,7 +404,12 @@
         "activeLicenses": "Active Licenses",
         "monthlyRevenue": "Monthly Revenue",
         "licenseExpiryForecast": "License Expiry Forecast",
+        "licenseCount": "Licenses",
+        "licenseRangeDays": "{{from}}-{{to}} days",
         "teamPerformance": "Team Performance",
+        "conflictRate": "BIOS Conflict Rate",
+        "conflictRateDescription": "Conflict attempts recorded across the tenant.",
+        "conflicts": "Conflicts",
         "quickActions": "Quick Actions",
         "topPerformers": "Top performers",
         "noTeamActivity": "No team activity yet.",
@@ -364,6 +422,268 @@
           "reviewCustomers": "Review customers",
           "openReports": "Open reports"
         }
+      },
+      "reports": {
+        "title": "Reports",
+        "description": "Analyze reseller and program revenue, activation quality, and customer retention for the selected date range.",
+        "totalRevenue": "Total Revenue",
+        "totalActivations": "Total Activations",
+        "successRate": "Success Rate",
+        "revenueByReseller": "Revenue by Reseller",
+        "revenueByResellerDescription": "Revenue distribution among tenant resellers.",
+        "revenueByProgram": "Revenue by Program",
+        "activationQuality": "Activation Success / Failure",
+        "attempts": "Attempts",
+        "customerRetention": "Customer Retention",
+        "customersLabel": "Customers",
+        "success": "Success",
+        "failure": "Failure"
+      },
+      "financialReports": {
+        "title": "Financial Reports",
+        "description": "Review tenant revenue, reseller balances, activation volume, and export the current financial view.",
+        "totalTenantRevenue": "Total Tenant Revenue",
+        "totalActivations": "Total Activations",
+        "activeLicenses": "Active Licenses",
+        "revenueByReseller": "Revenue by Reseller",
+        "revenueByProgram": "Revenue by Program",
+        "monthlyRevenueTrend": "Monthly Revenue Trend",
+        "resellerBalances": "Reseller Balances",
+        "columns": {
+          "reseller": "Reseller",
+          "totalRevenue": "Total Revenue",
+          "avgPrice": "Avg Price",
+          "commission": "Commission"
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Maintain tenant business information, onboarding defaults, and notification preferences.",
+        "loadingTitle": "Loading settings...",
+        "loadingDescription": "Preparing tenant business information, defaults, and notification controls.",
+        "saveSuccess": "Settings saved successfully.",
+        "saveSettings": "Save Settings",
+        "companyNameRequired": "Company name is required.",
+        "businessEmailInvalid": "Business email must be valid.",
+        "businessInfo": "Business Info",
+        "companyName": "Company Name",
+        "address": "Address",
+        "defaults": "Defaults",
+        "defaultTrialDays": "Default Trial Days",
+        "defaultPricing": "Default Pricing",
+        "notifications": "Notifications",
+        "newActivationsAlerts": "Email alerts for new activations",
+        "expiryWarningsAlerts": "Email alerts for expiry warnings"
+      },
+      "customers": {
+        "title": "Customers",
+        "description": "Read-only customer directory with tenant-scoped filters for reseller, program, status, and BIOS search.",
+        "searchPlaceholder": "Search by customer, email, or BIOS ID",
+        "allResellers": "All resellers",
+        "allPrograms": "All programs",
+        "biosId": "BIOS ID",
+        "customerDetails": "Customer details",
+        "customerDetailsDescription": "Select a customer row to inspect license history.",
+        "licenseHistory": "License History",
+        "unknownProgram": "Unknown program",
+        "unknownReseller": "Unknown reseller",
+        "biosLine": "BIOS {{biosId}}",
+        "activatedBy": "Activated by {{reseller}}",
+        "expiresLabel": "Expires {{date}}"
+      },
+      "activity": {
+        "title": "Activity",
+        "description": "Review tenant audit events, filter them by user or action, and export the current activity stream.",
+        "export": "Export",
+        "allActions": "All actions",
+        "allUsers": "All users",
+        "system": "System",
+        "noMatches": "No activity matches the current filters.",
+        "totalEntries": "Total entries: {{count}}"
+      },
+      "biosBlacklist": {
+        "title": "BIOS Blacklist",
+        "description": "Manage tenant-level blocked BIOS identifiers and keep the list scoped to this organization.",
+        "saveSuccess": "BIOS added to blacklist.",
+        "removeSuccess": "Blacklist entry removed.",
+        "biosId": "BIOS ID",
+        "history": "History",
+        "remove": "Remove",
+        "add": "Add to Blacklist",
+        "searchPlaceholder": "Search BIOS ID",
+        "addTitle": "Add to Blacklist",
+        "formDescription": "Store a BIOS identifier and a required reason for the tenant blacklist.",
+        "validationRequired": "BIOS ID and reason are required."
+      },
+      "biosHistory": {
+        "title": "BIOS History",
+        "description": "Search a BIOS identifier and review timeline events scoped to this tenant only.",
+        "biosId": "BIOS ID",
+        "enterBiosId": "Enter BIOS ID",
+        "allActions": "All actions",
+        "activation": "Activation",
+        "blacklist": "Blacklist",
+        "conflict": "Conflict",
+        "renewal": "Renewal",
+        "allResellers": "All resellers",
+        "timelineTitle": "BIOS Timeline",
+        "timelineFor": "Timeline for {{biosId}}",
+        "noTimelineEntries": "No timeline entries were found for this BIOS ID.",
+        "searchToLoadTimeline": "Search for a BIOS ID to load the full tenant timeline.",
+        "timelineMeta": "Customer: {{customer}} | Reseller: {{reseller}}"
+      },
+      "teamManagement": {
+        "title": "Team Management",
+        "description": "Invite and manage managers and resellers under this tenant. Revenue and customer counts are shown per member.",
+        "managerInvited": "Manager invited successfully.",
+        "resellerInvited": "Reseller invited successfully.",
+        "updateSuccess": "Team member updated successfully.",
+        "statusUpdated": "Status updated successfully.",
+        "deleteSuccess": "Team member removed successfully.",
+        "customers": "Customers",
+        "activeLicenses": "Active Licenses",
+        "inviteManager": "Invite Manager",
+        "inviteReseller": "Invite Reseller",
+        "visibleTeamMembers": "Visible team members",
+        "customersRepresented": "Customers represented",
+        "visibleRevenue": "Visible revenue",
+        "managers": "Managers",
+        "resellers": "Resellers",
+        "searchPlaceholder": "Search by name or email",
+        "editTitle": "Edit Team Member",
+        "editDescription": "Update the selected team member details.",
+        "formDescription": "Create a new account under this tenant.",
+        "nameValidation": "Name must be at least 2 characters.",
+        "emailValidation": "Please enter a valid email address.",
+        "passwordValidation": "Password must be at least 8 characters.",
+        "saveChanges": "Save Changes",
+        "createAccount": "Create Account",
+        "deleteTitle": "Delete team member?",
+        "deleteDescription": "This will remove {{name}} from the team."
+      },
+      "softwareManagement": {
+        "title": "Software Management",
+        "description": "Manage program availability, pricing, download links, and presentation across your tenant catalog.",
+        "createSuccess": "Program created successfully.",
+        "updateSuccess": "Program updated successfully.",
+        "deleteSuccess": "Program deleted successfully.",
+        "version": "Version",
+        "basePrice": "Base Price",
+        "licensesSold": "Licenses Sold",
+        "nameValidation": "Program name must be at least 2 characters.",
+        "downloadValidation": "Enter a valid download link.",
+        "installationGuideValidation": "Enter a valid installation guide link.",
+        "numberValidation": "Trial days and base price must be valid numbers.",
+        "grid": "Grid",
+        "table": "Table",
+        "addProgram": "Add Program",
+        "searchPlaceholder": "Search by program name",
+        "noDescription": "No description provided.",
+        "trialDays": "Trial Days",
+        "editProgram": "Edit Program",
+        "editDescription": "Update the selected program details.",
+        "formDescription": "Create a new program with pricing, downloads, and installation guidance.",
+        "programName": "Program Name",
+        "programDescription": "Program Description",
+        "downloadLink": "Download Link",
+        "fileSize": "File Size",
+        "fileSizePlaceholder": "e.g. 245 MB",
+        "installationGuideUrl": "Installation Guide URL",
+        "systemRequirements": "System Requirements",
+        "iconUpload": "Program Icon",
+        "chooseImageFile": "Choose image file",
+        "saveChanges": "Save Changes",
+        "createProgram": "Create Program",
+        "deleteProgramTitle": "Delete program?",
+        "deleteProgramDescription": "This will permanently remove {{name}} from the tenant catalog."
+      },
+      "usernameManagement": {
+        "title": "Username Management",
+        "description": "Manage tenant usernames, unlock locked identities, and reset passwords with full tenant scope.",
+        "unlockSuccess": "Username unlocked successfully.",
+        "renameSuccess": "Username changed successfully.",
+        "resetPasswordSuccess": "Temporary password",
+        "roleStatus": "Role Status",
+        "locked": "Locked",
+        "unlock": "Unlock",
+        "changeUsername": "Change Username",
+        "allLockStates": "All lock states",
+        "unlocked": "Unlocked",
+        "searchPlaceholder": "Search by username or email",
+        "unlockTitle": "Unlock username?",
+        "unlockDescription": "Unlock {{email}} and clear the username lock.",
+        "unlockReasonRequired": "A reason is required before unlocking a username.",
+        "renameTitle": "Change Username",
+        "renameDescription": "Assign a new username for {{email}}.",
+        "renameDescriptionFallback": "Assign a new username.",
+        "newUsername": "New Username",
+        "usernameRequired": "Username is required.",
+        "saveUsername": "Save Username"
+      },
+      "resellerPricing": {
+        "title": "Reseller Pricing",
+        "description": "Set reseller-specific program prices, adjust commission rates, and review pricing history.",
+        "updateSuccess": "Pricing updated successfully.",
+        "bulkSuccess": "Bulk pricing applied to {{count}} rows.",
+        "basePrice": "Base Price",
+        "resellerPrice": "Reseller Price",
+        "margin": "Margin %",
+        "commission": "Commission %",
+        "selectResellerFirst": "Select a reseller first.",
+        "oldPrice": "Old Price",
+        "newPrice": "New Price",
+        "changedBy": "Changed By",
+        "bulkUpdate": "Bulk Update",
+        "pricingHistory": "Pricing History",
+        "bulkUpdateTitle": "Bulk Update Pricing",
+        "bulkUpdateDescription": "Select reseller accounts and apply either a markup percentage or a fixed price across all programs.",
+        "resellers": "Resellers",
+        "mode": "Mode",
+        "markupMode": "Percentage markup",
+        "fixedMode": "Fixed price",
+        "markupValue": "Markup %",
+        "fixedValue": "Fixed price",
+        "bulkValidation": "Select at least one reseller and enter a valid value.",
+        "applying": "Applying...",
+        "applyBulkUpdate": "Apply Bulk Update"
+      },
+      "ipAnalytics": {
+        "title": "IP Analytics",
+        "description": "Inspect tenant IP access distribution, review suspicious activity, and filter events by user, country, and date.",
+        "unknownUser": "Unknown user",
+        "ipAddress": "IP Address",
+        "location": "Location",
+        "isp": "ISP",
+        "reputation": "Reputation",
+        "countryDistribution": "Country Distribution",
+        "ips": "IPs",
+        "suspiciousIpAlerts": "Suspicious IP Alerts",
+        "unknownCountry": "Unknown country",
+        "noSuspiciousIps": "No suspicious IPs detected.",
+        "searchPlaceholder": "Search IP address",
+        "allUsers": "All users",
+        "allCountries": "All countries",
+        "allReputationScores": "All reputation scores",
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      },
+      "profile": {
+        "title": "Profile",
+        "description": "Update your account details, password, and notification preferences.",
+        "accountCard": "Account Card",
+        "editProfile": "Edit Profile",
+        "saveProfile": "Save Profile",
+        "changePassword": "Change Password",
+        "currentPassword": "Current Password",
+        "newPassword": "New Password",
+        "confirmPassword": "Confirm Password",
+        "updatePassword": "Update Password",
+        "preferences": "Notification Preferences",
+        "emailNotifications": "Email notifications",
+        "productUpdates": "Product updates and platform changes",
+        "profileSaved": "Profile updated successfully.",
+        "passwordSaved": "Password updated successfully."
       }
     }
   },
@@ -383,6 +703,128 @@
       "profile": "Profile"
     },
     "pages": {
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Track your reseller team, customer base, active licenses, and revenue without crossing into reseller-only workflows.",
+        "teamResellers": "Team Resellers",
+        "teamCustomers": "Team Customers",
+        "activeLicenses": "Active Licenses",
+        "teamRevenue": "Team Revenue",
+        "teamActivations": "Team Activations",
+        "recentTeamActivity": "Recent Team Activity",
+        "noTeamActivityTitle": "No team activity yet",
+        "noTeamActivityDescription": "Recent reseller and manager actions will appear here.",
+        "teamMember": "Team member",
+        "managerActions": "Manager Actions",
+        "monthlyActivations": "Monthly Activations",
+        "actions": {
+          "team": "Team",
+          "usernameManagement": "Username Mgmt",
+          "reports": "Reports"
+        },
+        "quickActions": {
+          "reviewTeamResellers": "Review Team Resellers",
+          "customerOverview": "Customer Overview",
+          "unlockUsernames": "Unlock Usernames"
+        }
+      },
+      "reports": {
+        "title": "Reports",
+        "description": "Measure team performance by reseller, activation volume, and revenue contribution for the selected period.",
+        "totalRevenue": "Total Revenue",
+        "totalActivations": "Total Activations",
+        "avgRevenue": "Avg Revenue",
+        "trackedResellers": "Tracked Resellers",
+        "revenueByReseller": "Revenue by Reseller",
+        "teamActivations": "Team Activations",
+        "topResellersByRevenue": "Top Resellers by Revenue",
+        "columns": {
+          "reseller": "Reseller"
+        }
+      },
+      "team": {
+        "title": "Team",
+        "description": "Review the resellers assigned to you. This view is read-only and scoped to your team.",
+        "searchPlaceholder": "Search by reseller name or email",
+        "resellerDetail": "Reseller detail",
+        "resellerDetailDescription": "Inspect recent team reseller performance.",
+        "recentLicenses": "Recent Licenses",
+        "noRecentLicensesTitle": "No recent licenses",
+        "noRecentLicensesDescription": "This reseller does not have recent activation activity yet.",
+        "unknownCustomer": "Unknown customer",
+        "noEmail": "No email on file",
+        "biosId": "BIOS ID:",
+        "joined": "Joined",
+        "columns": {
+          "reseller": "Reseller"
+        }
+      },
+      "activity": {
+        "title": "Activity",
+        "description": "Audit recent manager and reseller actions across your team.",
+        "clearDates": "Clear Dates",
+        "exportReport": "Export Report",
+        "allActions": "All actions",
+        "allResellers": "All resellers",
+        "noMatches": "No activity matches the current filters.",
+        "totalEntries": "Total entries: {{count}}"
+      },
+      "software": {
+        "title": "Software",
+        "description": "Review the active programs your resellers can sell. This catalog is read-only for managers.",
+        "searchPlaceholder": "Search by program name",
+        "emptyTitle": "No programs found",
+        "emptyDescription": "Adjust the search term or activate programs from the manager parent software catalog first.",
+        "version": "Version",
+        "noDescription": "No description provided.",
+        "basePrice": "Base Price",
+        "trialDays": "Trial Days",
+        "licensesSold": "Licenses Sold",
+        "activeLicenses": "Active Licenses",
+        "openDownload": "Open Download"
+      },
+      "profile": {
+        "title": "Profile",
+        "description": "Update your manager account details, password, and notification preferences.",
+        "accountCard": "Account Card",
+        "editProfile": "Edit Profile",
+        "saveProfile": "Save Profile",
+        "changePassword": "Change Password",
+        "currentPassword": "Current Password",
+        "newPassword": "New Password",
+        "confirmPassword": "Confirm Password",
+        "updatePassword": "Update Password",
+        "preferences": "Notification Preferences",
+        "emailNotifications": "Email notifications",
+        "productUpdates": "Product updates and platform changes",
+        "profileSaved": "Profile updated successfully.",
+        "passwordSaved": "Password updated successfully."
+      },
+      "usernameManagement": {
+        "title": "Username Management",
+        "description": "Manage usernames for your resellers and their customers. Unlock, rename, and reset credentials with full team audit logging.",
+        "unlockSuccess": "Username unlocked successfully.",
+        "renameSuccess": "Username changed successfully.",
+        "resetPasswordSuccess": "Temporary password",
+        "roleStatus": "Role Status",
+        "locked": "Locked",
+        "unlock": "Unlock",
+        "changeUsername": "Change Username",
+        "searchPlaceholder": "Search by username or email",
+        "allLockStates": "All lock states",
+        "unlocked": "Unlocked",
+        "unlockTitle": "Unlock username?",
+        "unlockDescription": "Unlock {{email}} and clear the username lock.",
+        "unlockReasonRequired": "A reason is required before unlocking a username.",
+        "unlockReasonPlaceholder": "Explain why this username is being unlocked.",
+        "renameTitle": "Change Username",
+        "renameDescription": "Assign a new username for {{email}}.",
+        "renameDescriptionFallback": "Assign a new username.",
+        "newUsername": "New Username",
+        "changeReasonPlaceholder": "Why is this username being changed?",
+        "usernameRequired": "Username is required.",
+        "saveUsername": "Save Username"
+      },
       "customers": {
         "title": "Customers",
         "description": "Review all customers across your reseller team with read-only filters for reseller, program, status, and BIOS search.",
@@ -396,6 +838,214 @@
         "unknownProgram": "Unknown program",
         "unknownReseller": "Unknown reseller",
         "expires": "Expires"
+      }
+    }
+  },
+  "reseller": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "customers": "Customers",
+      "software": "Software",
+      "licenses": "Licenses",
+      "reports": "Reports",
+      "activity": "Activity",
+      "profile": "Profile"
+    },
+    "pages": {
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Track your customers, active licenses, current revenue, and the latest activation work from your personal reseller scope.",
+        "customers": "Customers",
+        "activeLicenses": "Active Licenses",
+        "monthlyActivations": "Monthly Activations",
+        "activationTrend": "Activation Trend",
+        "revenueTrend": "Revenue Trend",
+        "recentActivity": "Recent Activity",
+        "noActivityTitle": "No activity yet",
+        "noActivityDescription": "Your recent activation, renewal, and deactivation actions will appear here.",
+        "quickActions": "Quick Actions",
+        "actions": {
+          "customers": "Customers",
+          "licenses": "Licenses",
+          "reports": "Reports"
+        },
+        "quickActionsList": {
+          "activateNewCustomer": "Activate New Customer",
+          "manageLicenses": "Manage Licenses",
+          "exportReports": "Export Reports"
+        }
+      },
+      "customers": {
+        "title": "Customers",
+        "description": "Create and activate customers, then manage renewals and deactivations from your personal reseller workspace.",
+        "addCustomer": "Add Customer",
+        "searchPlaceholder": "Search by name, email, or BIOS ID",
+        "table": {
+          "bios": "BIOS ID"
+        },
+        "activationDialog": {
+          "title": "Add Customer",
+          "description": "Move through each step to create the customer and activate the license.",
+          "steps": ["Customer Info", "BIOS Activation", "Pricing & Duration", "Review"],
+          "stepLabel": "Step",
+          "customerName": "Customer Name",
+          "customerEmail": "Customer Email",
+          "biosId": "BIOS ID",
+          "selectProgram": "Select program",
+          "basePrice": "Base Price",
+          "trialDays": "Trial Days",
+          "noDescription": "No description provided.",
+          "durationDays": "Duration in Days",
+          "expiryPreview": "Expiry Preview",
+          "review": "Review & Confirm",
+          "activating": "Activating..."
+        },
+        "detail": {
+          "titleFallback": "Customer details",
+          "descriptionFallback": "Inspect license history for this customer.",
+          "bios": "BIOS ID",
+          "activationHistory": "Activation History",
+          "unknownProgram": "Unknown program",
+          "activated": "Activated",
+          "expires": "Expires"
+        },
+        "renewDialog": {
+          "title": "Renew License",
+          "descriptionFallback": "Update duration and price, then renew.",
+          "descriptionWithProgram": "Renew {{program}} for BIOS ID {{biosId}}.",
+          "renewing": "Renewing..."
+        },
+        "deactivateDialog": {
+          "title": "Deactivate license?",
+          "description": "This will deactivate the license for BIOS ID: {{biosId}}"
+        },
+        "toasts": {
+          "activated": "License activated successfully.",
+          "renewed": "License renewed successfully.",
+          "deactivated": "License deactivated successfully."
+        },
+        "validation": {
+          "customerName": "Customer name must be at least 2 characters.",
+          "customerEmail": "Enter a valid customer email address.",
+          "biosId": "BIOS ID must be at least 5 characters.",
+          "selectProgram": "Select a program before continuing.",
+          "duration": "Duration must be at least 1.",
+          "price": "Enter a valid price.",
+          "renew": "Enter a valid duration and price before renewing.",
+          "requestFailed": "The request failed."
+        }
+      },
+      "licenses": {
+        "title": "Licenses",
+        "description": "Track all licenses you have activated, renew them in bulk, and act early on upcoming expirations.",
+        "expiryLabels": {
+          "day1": "Expire in 1 day",
+          "day3": "Expire in 3 days",
+          "day7": "Expire in 7 days",
+          "licenses": "licenses"
+        },
+        "searchPlaceholder": "Search by customer, BIOS ID, or program",
+        "bulkActionPlaceholder": "Bulk action",
+        "bulkRenew": "Renew Selected",
+        "bulkDeactivate": "Deactivate Selected",
+        "table": {
+          "bios": "BIOS ID",
+          "activated": "Activated",
+          "expires": "Expires"
+        },
+        "details": {
+          "titleFallback": "License detail",
+          "descriptionFallback": "Inspect the full license record.",
+          "version": "Version",
+          "bios": "BIOS ID",
+          "expires": "Expires",
+          "activity": "Activity",
+          "openDownload": "Open Download Link"
+        },
+        "renewDialog": {
+          "title": "Renew License",
+          "fallback": "Update duration and price, then renew.",
+          "description": "Renew {{program}} for BIOS ID {{biosId}}.",
+          "renewing": "Renewing..."
+        },
+        "bulkRenewDialog": {
+          "title": "Bulk Renew",
+          "description": "Apply the same duration and price to {{count}} selected licenses."
+        },
+        "confirm": {
+          "bulkDeactivateTitle": "Bulk deactivate licenses?",
+          "bulkDeactivateDescription": "This will deactivate {{count}} selected licenses.",
+          "deactivateTitle": "Deactivate license?",
+          "deactivateDescription": "This will deactivate the license for BIOS ID: {{biosId}}",
+          "deactivateSelected": "Deactivate Selected"
+        },
+        "toasts": {
+          "renewed": "License renewed successfully.",
+          "deactivated": "License deactivated successfully.",
+          "bulkRenewed": "Selected licenses renewed successfully.",
+          "bulkDeactivated": "Selected licenses deactivated successfully."
+        },
+        "errors": {
+          "selectAction": "Select licenses and a bulk action first.",
+          "renew": "Enter a valid duration and price before renewing.",
+          "bulkRenew": "Select licenses and enter a valid duration and price first.",
+          "requestFailed": "The request failed."
+        }
+      },
+      "reports": {
+        "title": "Reports",
+        "description": "Analyze personal reseller revenue, activation volume, and top-selling programs across the selected date range.",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "totalRevenue": "Total Revenue",
+        "totalActivations": "Total Activations",
+        "avgPrice": "Avg Price",
+        "successRate": "Success Rate",
+        "activationCount": "Activation Count",
+        "topPrograms": "Top Programs by Sales"
+      },
+      "software": {
+        "title": "Software",
+        "description": "Browse the active programs available for activation. This catalog is read-only for reseller accounts.",
+        "searchPlaceholder": "Search by program name",
+        "emptyTitle": "No programs found",
+        "emptyDescription": "Adjust the search term or activate programs from the manager parent software catalog first.",
+        "version": "Version",
+        "noDescription": "No description provided.",
+        "basePrice": "Base Price",
+        "trialDays": "Trial Days",
+        "licensesSold": "Licenses Sold",
+        "activeLicenses": "Active Licenses",
+        "openDownload": "Open Download"
+      },
+      "profile": {
+        "title": "Profile",
+        "description": "Update your reseller account details, password, and notification preferences.",
+        "accountCard": "Account Card",
+        "editProfile": "Edit Profile",
+        "saveProfile": "Save Profile",
+        "changePassword": "Change Password",
+        "currentPassword": "Current Password",
+        "newPassword": "New Password",
+        "confirmPassword": "Confirm Password",
+        "updatePassword": "Update Password",
+        "preferences": "Notification Preferences",
+        "emailNotifications": "Email notifications",
+        "productUpdates": "Product updates and platform changes",
+        "profileSaved": "Profile updated successfully.",
+        "passwordSaved": "Password updated successfully."
+      },
+      "activity": {
+        "title": "Activity",
+        "description": "Review your activation, renewal, deactivation, and sign-in actions.",
+        "allActions": "All Actions",
+        "activation": "Activation",
+        "renewal": "Renewal",
+        "deactivation": "Deactivation",
+        "login": "Login",
+        "empty": "No personal activity matches the current filters.",
+        "totalEntries": "Total entries: {{count}}"
       }
     }
   },

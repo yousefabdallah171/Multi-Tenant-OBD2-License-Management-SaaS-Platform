@@ -66,9 +66,10 @@ test('renders the sidebar on the right for Arabic RTL routes', async () => {
   const desktopShell = screen.getByTestId('desktop-sidebar-shell')
   const desktopSidebar = screen.getByTestId('desktop-sidebar')
 
-  expect(desktopShell).toHaveClass('lg:order-last')
   expect(desktopSidebar).toHaveClass('border-l')
   expect(desktopSidebar).not.toHaveClass('border-r')
+  expect(desktopShell).not.toHaveClass('lg:order-last')
+  expect(desktopShell).not.toHaveClass('lg:order-first')
   expect(screen.getByText('dashboard content')).toBeInTheDocument()
 })
 
@@ -82,10 +83,10 @@ test('renders the sidebar on the left for English LTR routes', async () => {
   const desktopShell = screen.getByTestId('desktop-sidebar-shell')
   const desktopSidebar = screen.getByTestId('desktop-sidebar')
 
-  expect(desktopShell).toHaveClass('lg:order-first')
   expect(desktopSidebar).toHaveClass('border-r')
   expect(desktopSidebar).not.toHaveClass('border-l')
   expect(desktopShell).not.toHaveClass('lg:order-last')
+  expect(desktopShell).not.toHaveClass('lg:order-first')
 })
 
 test('keeps the collapsed mobile RTL sidebar off-canvas on the right edge', async () => {
@@ -116,7 +117,7 @@ test('language toggle preserves the current super admin path', async () => {
 
   renderDashboard('/ar/super-admin/settings')
 
-  await user.click(screen.getByRole('button', { name: /en/i }))
+  await user.click(screen.getByRole('button', { name: /^en$/i }))
 
   await waitFor(() => expect(screen.getByTestId('current-path')).toHaveTextContent('/en/super-admin/settings'))
   await waitFor(() => expect(document.documentElement.dir).toBe('ltr'))

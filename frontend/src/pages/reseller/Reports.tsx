@@ -1,57 +1,24 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Activity, Banknote, Download, Target } from 'lucide-react'
-import { RevenueChart } from '@/components/charts/RevenueChart'
-import { TenantComparisonChart } from '@/components/charts/TenantComparisonChart'
+import { Activity, Banknote, Target } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { BarChartWidget } from '@/components/charts/BarChartWidget'
+import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { ExportButtons } from '@/components/shared/ExportButtons'
 import { StatsCard } from '@/components/shared/StatsCard'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { useLanguage } from '@/hooks/useLanguage'
-import { resellerService } from '@/services/reseller.service'
 import { formatCurrency } from '@/lib/utils'
+import { resellerService } from '@/services/reseller.service'
 
 export function ReportsPage() {
+  const { t } = useTranslation()
   const { lang } = useLanguage()
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly')
-  const text = lang === 'ar'
-    ? {
-        eyebrow: 'موزع',
-        title: 'التقارير',
-        description: 'حلل إيرادات الموزع الشخصية وحجم التفعيل والبرامج الأكثر مبيعاً ضمن النطاق الزمني المحدد.',
-        exportCsv: 'تصدير CSV',
-        exportPdf: 'تصدير PDF',
-        daily: 'يومي',
-        weekly: 'أسبوعي',
-        monthly: 'شهري',
-        totalRevenue: 'إجمالي الإيراد',
-        totalActivations: 'إجمالي التفعيلات',
-        avgPrice: 'متوسط السعر',
-        successRate: 'معدل النجاح',
-        revenue: 'الإيراد',
-        activationCount: 'عدد التفعيلات',
-        topPrograms: 'أفضل البرامج مبيعاً',
-      }
-    : {
-        eyebrow: 'Reseller',
-        title: 'Reports',
-        description: 'Analyze personal reseller revenue, activation volume, and top-selling programs across the selected date range.',
-        exportCsv: 'Export CSV',
-        exportPdf: 'Export PDF',
-        daily: 'Daily',
-        weekly: 'Weekly',
-        monthly: 'Monthly',
-        totalRevenue: 'Total Revenue',
-        totalActivations: 'Total Activations',
-        avgPrice: 'Avg Price',
-        successRate: 'Success Rate',
-        revenue: 'Revenue',
-        activationCount: 'Activation Count',
-        topPrograms: 'Top Programs by Sales',
-      }
 
   const revenueQuery = useQuery({
     queryKey: ['reseller', 'reports', 'revenue', range.from, range.to, period],
@@ -81,21 +48,10 @@ export function ReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={text.eyebrow}
-        title={text.title}
-        description={text.description}
-        actions={
-          <>
-            <Button type="button" variant="secondary" onClick={() => void resellerService.exportCsv({ ...range, period })}>
-              <Download className="me-2 h-4 w-4" />
-              {text.exportCsv}
-            </Button>
-            <Button type="button" onClick={() => void resellerService.exportPdf({ ...range, period })}>
-              <Download className="me-2 h-4 w-4" />
-              {text.exportPdf}
-            </Button>
-          </>
-        }
+        eyebrow={t('roles.reseller')}
+        title={t('reseller.pages.reports.title')}
+        description={t('reseller.pages.reports.description')}
+        actions={<ExportButtons onExportCsv={() => resellerService.exportCsv({ ...range, period })} onExportPdf={() => resellerService.exportPdf({ ...range, period })} />}
       />
 
       <Card>
@@ -106,39 +62,48 @@ export function ReportsPage() {
             onChange={(event) => setPeriod(event.target.value as 'daily' | 'weekly' | 'monthly')}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="daily">{text.daily}</option>
-            <option value="weekly">{text.weekly}</option>
-            <option value="monthly">{text.monthly}</option>
+            <option value="daily">{t('reseller.pages.reports.daily')}</option>
+            <option value="weekly">{t('reseller.pages.reports.weekly')}</option>
+            <option value="monthly">{t('reseller.pages.reports.monthly')}</option>
           </select>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard title={text.totalRevenue} value={formatCurrency(totalRevenue)} icon={Banknote} color="emerald" />
-        <StatsCard title={text.totalActivations} value={totalActivations} icon={Activity} color="sky" />
-        <StatsCard title={text.avgPrice} value={formatCurrency(avgPrice)} icon={Target} color="amber" />
-        <StatsCard title={text.successRate} value={`${Math.max(0, Math.min(100, successRate)).toFixed(1)}%`} icon={Target} color="rose" />
+        <StatsCard title={t('reseller.pages.reports.totalRevenue')} value={formatCurrency(totalRevenue, 'USD', locale)} icon={Banknote} color="emerald" />
+        <StatsCard title={t('reseller.pages.reports.totalActivations')} value={totalActivations} icon={Activity} color="sky" />
+        <StatsCard title={t('reseller.pages.reports.avgPrice')} value={formatCurrency(avgPrice, 'USD', locale)} icon={Target} color="amber" />
+        <StatsCard title={t('reseller.pages.reports.successRate')} value={`${Math.max(0, Math.min(100, successRate)).toFixed(1)}%`} icon={Target} color="rose" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <RevenueChart title={text.revenue} data={revenueQuery.data?.data ?? []} dataKey="revenue" xKey="period" isLoading={revenueQuery.isLoading} />
-        <TenantComparisonChart title={text.activationCount} data={activationsQuery.data?.data ?? []} dataKey="count" xKey="period" isLoading={activationsQuery.isLoading} />
+        <LineChartWidget
+          title={t('common.revenue')}
+          data={revenueQuery.data?.data ?? []}
+          isLoading={revenueQuery.isLoading}
+          xKey="period"
+          series={[{ key: 'revenue', label: t('common.revenue') }]}
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
+        <BarChartWidget
+          title={t('reseller.pages.reports.activationCount')}
+          data={activationsQuery.data?.data ?? []}
+          isLoading={activationsQuery.isLoading}
+          xKey="period"
+          series={[{ key: 'count', label: t('reseller.pages.reports.activationCount') }]}
+        />
       </div>
 
-      <Card>
-        <CardContent className="h-96 p-4">
-          <h3 className="mb-4 text-lg font-semibold">{text.topPrograms}</h3>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={programsQuery.data?.data ?? []} layout="vertical" margin={{ left: 40, right: 20, top: 10, bottom: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
-              <XAxis type="number" stroke="#64748b" tickLine={false} axisLine={false} />
-              <YAxis type="category" dataKey="program" stroke="#64748b" tickLine={false} axisLine={false} width={120} />
-              <Tooltip />
-              <Bar dataKey="revenue" fill="#0f766e" radius={[0, 8, 8, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <BarChartWidget
+        title={t('reseller.pages.reports.topPrograms')}
+        data={programsQuery.data?.data ?? []}
+        isLoading={programsQuery.isLoading}
+        xKey="program"
+        horizontal
+        showLabels
+        series={[{ key: 'revenue', label: t('common.revenue') }]}
+        valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+      />
     </div>
   )
 }

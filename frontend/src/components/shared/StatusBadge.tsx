@@ -1,4 +1,4 @@
-import { useLanguage } from '@/hooks/useLanguage'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 type Status = 'active' | 'suspended' | 'inactive' | 'expired' | 'pending' | 'removed' | 'online' | 'offline' | 'degraded' | 'unknown'
@@ -17,32 +17,20 @@ const statusStyles: Record<Status, string> = {
 }
 
 export function StatusBadge({ status }: { status: Status }) {
-  const { lang } = useLanguage()
-  const labels: Record<Status, string> = lang === 'ar'
-    ? {
-        active: 'نشط',
-        suspended: 'معلق',
-        inactive: 'غير نشط',
-        expired: 'منتهي',
-        pending: 'قيد الانتظار',
-        removed: 'تمت الإزالة',
-        online: 'متصل',
-        offline: 'غير متصل',
-        degraded: 'متدهور',
-        unknown: 'غير معروف',
-      }
-    : {
-        active: 'Active',
-        suspended: 'Suspended',
-        inactive: 'Inactive',
-        expired: 'Expired',
-        pending: 'Pending',
-        removed: 'Removed',
-        online: 'Online',
-        offline: 'Offline',
-        degraded: 'Degraded',
-        unknown: 'Unknown',
-      }
+  const { t } = useTranslation()
+
+  const labels: Record<Status, string> = {
+    active: t('common.active'),
+    suspended: t('common.suspended'),
+    inactive: t('common.inactive'),
+    expired: t('common.expired'),
+    pending: t('common.pending'),
+    removed: t('common.removed'),
+    online: t('common.online'),
+    offline: t('common.offline'),
+    degraded: t('common.degraded'),
+    unknown: t('common.unknown'),
+  }
 
   return <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', statusStyles[status])}>{labels[status]}</span>
 }

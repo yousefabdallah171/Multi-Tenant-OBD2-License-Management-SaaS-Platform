@@ -12,9 +12,7 @@ interface NavItem {
   key: string
   icon: LucideIcon
   href: (lang: 'ar' | 'en') => string
-  label?: string
-  labelAr?: string
-  translationKey?: string
+  translationKey: string
 }
 
 const superAdminItems: NavItem[] = [
@@ -62,13 +60,13 @@ const managerItems: NavItem[] = [
 ]
 
 const resellerItems: NavItem[] = [
-  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.reseller.dashboard, label: 'Dashboard', labelAr: 'لوحة التحكم' },
-  { key: 'customers', icon: Users, href: routePaths.reseller.customers, label: 'Customers', labelAr: 'العملاء' },
-  { key: 'software', icon: Package, href: routePaths.reseller.software, label: 'Software', labelAr: 'البرامج' },
-  { key: 'licenses', icon: KeyRound, href: routePaths.reseller.licenses, label: 'Licenses', labelAr: 'التراخيص' },
-  { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, label: 'Reports', labelAr: 'التقارير' },
-  { key: 'activity', icon: Activity, href: routePaths.reseller.activity, label: 'Activity', labelAr: 'النشاط' },
-  { key: 'profile', icon: User, href: routePaths.reseller.profile, label: 'Profile', labelAr: 'الملف الشخصي' },
+  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.reseller.dashboard, translationKey: 'reseller.nav.dashboard' },
+  { key: 'customers', icon: Users, href: routePaths.reseller.customers, translationKey: 'reseller.nav.customers' },
+  { key: 'software', icon: Package, href: routePaths.reseller.software, translationKey: 'reseller.nav.software' },
+  { key: 'licenses', icon: KeyRound, href: routePaths.reseller.licenses, translationKey: 'reseller.nav.licenses' },
+  { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, translationKey: 'reseller.nav.reports' },
+  { key: 'activity', icon: Activity, href: routePaths.reseller.activity, translationKey: 'reseller.nav.activity' },
+  { key: 'profile', icon: User, href: routePaths.reseller.profile, translationKey: 'reseller.nav.profile' },
 ]
 
 export function Sidebar() {
@@ -88,11 +86,12 @@ export function Sidebar() {
           : user?.role === 'reseller'
             ? resellerItems
             : []
+
   const navContent = (
     <nav className="space-y-2">
       {items.map((item) => {
         const Icon = item.icon
-        const label = item.translationKey ? t(item.translationKey) : lang === 'ar' && item.labelAr ? item.labelAr : item.label ?? item.key
+        const label = t(item.translationKey)
 
         return (
           <NavLink
@@ -124,8 +123,9 @@ export function Sidebar() {
     <>
       <button
         type="button"
-        aria-label="Close sidebar overlay"
-        className={cn('fixed inset-0 z-30 bg-slate-950/40 transition lg:hidden', collapsed ? 'pointer-events-none opacity-0' : 'opacity-100')}
+        aria-label={t('common.closeNavigation')}
+        aria-hidden={collapsed}
+        className={cn('fixed inset-0 z-30 bg-slate-950/40 transition-opacity duration-200 lg:hidden', collapsed ? 'pointer-events-none opacity-0' : 'opacity-100')}
         onClick={() => setCollapsed(true)}
       />
       <div
@@ -133,7 +133,6 @@ export function Sidebar() {
         className={cn(
           'hidden lg:block lg:shrink-0',
           collapsed ? 'lg:w-24' : 'lg:w-72',
-          isRtl ? 'lg:order-last' : 'lg:order-first',
         )}
       >
         <aside
@@ -150,8 +149,9 @@ export function Sidebar() {
         data-testid="mobile-sidebar"
         className={cn(
           'fixed top-16 z-40 h-[calc(100vh-4rem)] w-72 max-w-[85vw] overflow-y-auto border-slate-200 bg-white/95 px-3 py-4 shadow-2xl backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 lg:hidden',
+          'transition-transform duration-200 ease-out',
           collapsed ? (isRtl ? 'translate-x-full' : '-translate-x-full') : 'translate-x-0',
-          isRtl ? 'right-0 border-l lg:order-last' : 'left-0 border-r',
+          isRtl ? 'right-0 border-l' : 'left-0 border-r',
         )}
       >
         {navContent}

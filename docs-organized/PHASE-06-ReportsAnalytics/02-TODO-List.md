@@ -1,322 +1,168 @@
-# PHASE 06: Reports & Analytics - TODO List
+# PHASE 06: Reports & Analytics - Completion Checklist
 
-**Duration:** Day 8
-**Deadline:** End of Day 8
+**Status:** Complete  
+**Last Verified:** February 28, 2026
 
 ---
 
 ## Reusable Chart Components
 
-- [ ] Install Recharts: `npm install recharts`
-- [ ] Create `src/components/charts/ChartCard.tsx`
-  - shadcn Card wrapper with: title, description, date range picker, export dropdown
-  - Loading skeleton state
-  - Empty state: "No data available"
-- [ ] Create `src/components/charts/LineChartWidget.tsx`
-  - Props: data, xKey, yKey, color, height
-  - Responsive container
-  - Tooltip on hover (formatted values)
-  - Grid lines (subtle)
-  - Dark mode compatible colors
-- [ ] Create `src/components/charts/BarChartWidget.tsx`
-  - Props: data, xKey, yKey, color, height, horizontal?
-  - Vertical and horizontal variants
-  - Rounded bar corners
-  - Value labels on bars (optional)
-- [ ] Create `src/components/charts/AreaChartWidget.tsx`
-  - Props: data, xKey, yKey, color, height
-  - Gradient fill
-  - Smooth curve
-- [ ] Create `src/components/charts/PieChartWidget.tsx`
-  - Props: data, nameKey, valueKey, colors
-  - Legend with percentages
-  - Center label (total)
-  - Donut variant (innerRadius)
-- [ ] Create `src/components/shared/DateRangePicker.tsx`
-  - shadcn DatePicker with range selection
-  - Preset ranges: Last 7 days, Last 30 days, Last 3 months, Last year, Custom
+- [x] Recharts is integrated in the frontend workspace.
+- [x] Added reusable chart shell components:
+  - `frontend/src/components/charts/ChartCard.tsx`
+  - `frontend/src/components/charts/BaseChart.tsx`
+  - `frontend/src/components/charts/LineChartWidget.tsx`
+  - `frontend/src/components/charts/BarChartWidget.tsx`
+  - `frontend/src/components/charts/AreaChartWidget.tsx`
+  - `frontend/src/components/charts/PieChartWidget.tsx`
+- [x] Chart widgets support responsive containers, loading states, empty states, tooltips, legends, and dark-mode-aware colors.
+- [x] Added shared date range picker support through:
+  - `frontend/src/components/ui/date-range-picker.tsx`
+  - `frontend/src/components/shared/DateRangePicker.tsx`
+- [x] Date presets implemented: Last 7 Days, Last 30 Days, Last 3 Months, Last Year, Custom.
 
 ---
 
 ## Super Admin Charts
 
-### Revenue Trend (Line)
-- [ ] Update `src/pages/super-admin/Dashboard.tsx` to use `LineChartWidget`
-- [ ] Fetch from `/api/super-admin/dashboard/revenue-trend`
-- [ ] X-axis: months (Jan, Feb, ...), Y-axis: revenue ($)
-- [ ] Tooltip: "January 2025: $5,000"
-
-### Tenant Comparison (Bar)
-- [ ] Update Dashboard to use `BarChartWidget`
-- [ ] Fetch from `/api/super-admin/dashboard/tenant-comparison`
-- [ ] X-axis: tenant names, Y-axis: revenue
-- [ ] Horizontal bars for readability
-
-### License Timeline (Area)
-- [ ] Update Dashboard to use `AreaChartWidget`
-- [ ] Fetch from `/api/super-admin/reports/activations`
-- [ ] X-axis: dates, Y-axis: activation count
-- [ ] Blue gradient fill
-
-### Reports Page Charts
-- [ ] Update `src/pages/super-admin/Reports.tsx`
-- [ ] Add DateRangePicker at top
-- [ ] Revenue by Tenant bar chart
-- [ ] Growth trend line chart
-- [ ] Top Resellers table (DataTable)
-- [ ] Wire all to API with date range params
-
-### BIOS Blacklist Trend Chart
-- [ ] Update `src/pages/super-admin/BiosBlacklist.tsx`
-- [ ] Fetch from `/api/super-admin/bios-blacklist/stats`
-- [ ] Line chart: additions vs removals over time (monthly)
-
-### IP Country Distribution Chart
-- [ ] Update `src/pages/super-admin/Dashboard.tsx` (or dedicated IP page)
-- [ ] PieChartWidget showing top countries by login count
-- [ ] Fetch from `/api/super-admin/ip-analytics/countries`
-
-### Financial Revenue Breakdown
-- [ ] Update `src/pages/super-admin/FinancialReports.tsx`
-- [ ] Stacked BarChart: Revenue by tenant + program
-- [ ] Reseller Balances horizontal bar chart
+- [x] Dashboard revenue trend uses `LineChartWidget` and fetches from `/api/super-admin/dashboard/revenue-trend`.
+- [x] Dashboard tenant comparison uses `BarChartWidget` and fetches from `/api/super-admin/dashboard/tenant-comparison`.
+- [x] Dashboard license timeline uses `AreaChartWidget` and fetches from `/api/super-admin/dashboard/license-timeline`.
+- [x] Dashboard IP country distribution uses `PieChartWidget` and is sourced from `dashboard/stats -> ip_country_map`.
+- [x] `frontend/src/pages/super-admin/Reports.tsx` uses date range filtering and renders:
+  - revenue by tenant
+  - activations by tenant
+  - growth trend
+  - top resellers table
+- [x] `frontend/src/pages/super-admin/BiosBlacklist.tsx` renders the blacklist trend chart from `/api/super-admin/bios-blacklist/stats`.
+- [x] `frontend/src/pages/super-admin/FinancialReports.tsx` renders:
+  - stacked revenue breakdown by tenant and program
+  - reseller balances chart
+  - monthly revenue trend
 
 ---
 
 ## Manager Parent Charts
 
-### Monthly Revenue (Line)
-- [ ] Update `src/pages/manager-parent/Dashboard.tsx`
-- [ ] Fetch from `/api/dashboard/revenue-chart`
-- [ ] 12-month line chart
-
-### Expiry Forecast (Bar)
-- [ ] Add to Dashboard
-- [ ] Fetch from `/api/dashboard/expiry-forecast`
-- [ ] 3 bars: 30 days, 60 days, 90 days
-- [ ] Color: yellow (30d), orange (60d), red (90d)
-
-### Team Performance (Bar)
-- [ ] Add to Dashboard
-- [ ] Fetch from `/api/dashboard/team-performance`
-- [ ] Horizontal bars: team member name -> activations count
-
-### Reports Page Charts
-- [ ] Update `src/pages/manager-parent/Reports.tsx`
-- [ ] Revenue by Reseller (PieChartWidget - donut)
-- [ ] Revenue by Program (BarChartWidget)
-- [ ] Activation Success/Failure (PieChartWidget)
-- [ ] Retention trend (LineChartWidget)
-- [ ] DateRangePicker
-- [ ] Summary cards above charts
-
-### IP Country Distribution (Tenant)
-- [ ] Update `src/pages/manager-parent/IpAnalytics.tsx`
-- [ ] PieChartWidget showing top countries for tenant users
-- [ ] Fetch from `/api/ip-analytics/countries`
-
-### BIOS Conflict Rate (Tenant)
-- [ ] Add to Manager Parent Dashboard or BIOS History page
-- [ ] LineChartWidget: conflict attempts over time
-- [ ] Fetch from `/api/bios-history/conflict-stats`
-
-### Reseller Balances (Tenant)
-- [ ] Update `src/pages/manager-parent/FinancialReports.tsx`
-- [ ] BarChartWidget: Revenue per reseller
-- [ ] Fetch from `/api/financial-reports/reseller-balances`
+- [x] Dashboard monthly revenue chart fetches from `/api/dashboard/revenue-chart`.
+- [x] Dashboard expiry forecast chart fetches from `/api/dashboard/expiry-forecast`.
+- [x] Dashboard team performance chart fetches from `/api/dashboard/team-performance`.
+- [x] Dashboard BIOS conflict trend uses `LineChartWidget` and fetches from `/api/dashboard/conflict-rate`.
+- [x] `frontend/src/pages/manager-parent/Reports.tsx` renders:
+  - revenue by reseller donut chart
+  - revenue by program bar chart
+  - activation success/failure breakdown
+  - retention trend
+  - summary cards
+  - date range filtering
+- [x] `frontend/src/pages/manager-parent/IpAnalytics.tsx` renders tenant IP country distribution from `/api/ip-analytics/stats`.
+- [x] `frontend/src/pages/manager-parent/FinancialReports.tsx` renders reseller revenue/balance analytics from `/api/financial-reports`.
 
 ---
 
 ## Manager Charts
 
-### Team Activations (Line)
-- [ ] Update `src/pages/manager/Dashboard.tsx`
-- [ ] Fetch from `/api/manager/dashboard/activations-chart`
-- [ ] Monthly activation count across team resellers
-
-### Team Revenue (Bar)
-- [ ] Add to Manager Dashboard
-- [ ] Fetch from `/api/manager/dashboard/revenue-chart`
-- [ ] Revenue per reseller in team
+- [x] `frontend/src/pages/manager/Dashboard.tsx` renders team activations from `/api/manager/dashboard/activations-chart`.
+- [x] `frontend/src/pages/manager/Dashboard.tsx` renders team revenue from `/api/manager/dashboard/revenue-chart`.
 
 ---
 
 ## Reseller Charts
 
-### Activations Trend (Line)
-- [ ] Update `src/pages/manager-reseller/Dashboard.tsx`
-- [ ] Fetch from `/api/reseller/dashboard/activations-chart`
-- [ ] Monthly activation count line chart
-
-### Revenue Trend (Line)
-- [ ] Add to Dashboard
-- [ ] Fetch from `/api/reseller/dashboard/revenue-chart`
-- [ ] Monthly revenue line chart
-
-### Reports Page
-- [ ] Update `src/pages/manager-reseller/Reports.tsx`
-- [ ] Revenue chart with period toggle (daily/weekly/monthly)
-- [ ] Activation count bar chart
-- [ ] Top Programs horizontal bar chart
-- [ ] Summary cards: Total Revenue, Total Activations, Avg Price, Success Rate
+- [x] `frontend/src/pages/reseller/Dashboard.tsx` renders activations trend from `/api/reseller/dashboard/activations-chart`.
+- [x] `frontend/src/pages/reseller/Dashboard.tsx` renders revenue trend from `/api/reseller/dashboard/revenue-chart`.
+- [x] `frontend/src/pages/reseller/Reports.tsx` renders:
+  - revenue trend with daily/weekly/monthly period toggle
+  - activation count chart
+  - top programs horizontal chart
+  - summary cards
+- [x] Reseller Phase 6 page copy was cleaned up and the broken mojibake strings were replaced with valid UTF-8 text.
 
 ---
 
 ## Export: CSV
 
 ### Backend
-- [ ] Install nothing extra (Laravel has built-in streaming)
-- [ ] Create `app/Exports/ReportExporter.php` helper:
-  ```php
-  public function toCsv(array $headers, Collection $data): StreamedResponse
-  {
-      return response()->streamDownload(function () use ($headers, $data) {
-          echo "\xEF\xBB\xBF"; // UTF-8 BOM for Arabic
-          $handle = fopen('php://output', 'w');
-          fputcsv($handle, $headers);
-          foreach ($data as $row) {
-              fputcsv($handle, $row);
-          }
-          fclose($handle);
-      }, 'report-' . now()->format('Y-m-d') . '.csv');
-  }
-  ```
-- [ ] Add CSV export to Super Admin ReportController
-- [ ] Add CSV export to Manager Parent ReportController
-- [ ] Add CSV export to Reseller ReportController
+
+- [x] Added shared CSV export helper: `backend/app/Exports/ReportExporter.php`.
+- [x] CSV export writes UTF-8 BOM for Arabic-safe spreadsheet output.
+- [x] Super Admin report and financial controllers support CSV export.
+- [x] Manager Parent report and financial controllers support CSV export.
+- [x] Manager report controller supports CSV export.
+- [x] Reseller report controller supports CSV export.
 
 ### Frontend
-- [ ] Create `src/utils/download.ts`:
-  ```typescript
-  export async function downloadFile(url: string, filename: string) {
-    const response = await api.get(url, { responseType: 'blob' });
-    const blob = new Blob([response.data]);
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }
-  ```
-- [ ] Wire "Export CSV" buttons in all report pages
+
+- [x] Added shared download helper: `frontend/src/utils/download.ts`.
+- [x] Wired CSV export buttons in report and financial pages.
 
 ---
 
 ## Export: PDF
 
 ### Backend
-- [ ] Install: `composer require barryvdh/laravel-dompdf`
-- [ ] Create PDF template: `resources/views/reports/template.blade.php`
-  ```html
-  <html dir="{{ $lang === 'ar' ? 'rtl' : 'ltr' }}">
-  <head>
-    <style>
-      body { font-family: 'DejaVu Sans', sans-serif; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align: {{ $lang === 'ar' ? 'right' : 'left' }}; }
-    </style>
-  </head>
-  <body>
-    <h1>{{ $title }}</h1>
-    <p>{{ $dateRange }}</p>
-    <table>...</table>
-  </body>
-  </html>
-  ```
-- [ ] Add PDF export to all ReportControllers
-- [ ] Test Arabic characters render correctly in PDF
+
+- [x] Added PDF template: `backend/resources/views/reports/template.blade.php`.
+- [x] PDF template supports RTL layout and Arabic-safe font rendering.
+- [x] Super Admin report and financial controllers support PDF export.
+- [x] Manager Parent report and financial controllers support PDF export.
+- [x] Manager report controller supports PDF export.
+- [x] Reseller report controller supports PDF export.
 
 ### Frontend
-- [ ] Wire "Export PDF" buttons in all report pages
-- [ ] Same `downloadFile` utility
+
+- [x] Wired PDF export buttons in report and financial pages through the shared download helper.
 
 ---
 
 ## Chart Dark Mode
 
-- [ ] Define dark mode chart colors:
-  ```typescript
-  const chartColors = {
-    light: {
-      grid: '#E5E7EB',
-      text: '#374151',
-      primary: '#3B82F6',
-      secondary: '#10B981',
-    },
-    dark: {
-      grid: '#374151',
-      text: '#D1D5DB',
-      primary: '#60A5FA',
-      secondary: '#34D399',
-    }
-  };
-  ```
-- [ ] Use `useTheme` hook in chart components to select color set
-- [ ] Verify all charts look good in dark mode
+- [x] Added centralized chart theme handling in `frontend/src/components/charts/chart-theme.ts`.
+- [x] Chart widgets switch palette values based on the current theme.
+- [x] Dark mode rendering was verified in unit coverage and build validation.
 
 ---
 
 ## Chart RTL Support
 
-- [ ] Recharts supports RTL natively via CSS
-- [ ] Ensure Y-axis labels don't overlap in Arabic
-- [ ] Number formatting: use `Intl.NumberFormat('ar-EG')` for Arabic numbers (optional)
-- [ ] Month names in Arabic: "يناير", "فبراير", etc.
+- [x] Chart widgets use locale-aware number formatting.
+- [x] Dashboard/report pages localize month labels with `Intl.DateTimeFormat`.
+- [x] RTL spacing and axis margins are handled in the shared chart layer.
+- [x] Reseller Phase 6 Arabic UI copy was corrected where encoding issues existed.
 
 ---
 
-## Testing (20 Unit Tests)
+## Testing
 
-### Chart Components
-- [ ] Test 1: LineChartWidget renders with data
-- [ ] Test 2: LineChartWidget shows loading skeleton
-- [ ] Test 3: LineChartWidget shows empty state
-- [ ] Test 4: BarChartWidget renders bars
-- [ ] Test 5: BarChartWidget horizontal variant works
-- [ ] Test 6: PieChartWidget renders slices
-- [ ] Test 7: PieChartWidget shows legend
-- [ ] Test 8: AreaChartWidget renders with gradient
-- [ ] Test 9: ChartCard renders title and content
-- [ ] Test 10: DateRangePicker opens calendar
-
-### Export
-- [ ] Test 11: CSV export triggers download
-- [ ] Test 12: PDF export triggers download
-- [ ] Test 13: Export buttons show loading state
-- [ ] Test 14: ExportButtons component renders CSV + PDF options
-
-### Dashboard Charts
-- [ ] Test 15: Super Admin dashboard renders 4+ charts (including IP, financial)
-- [ ] Test 16: Manager Parent dashboard renders 5+ charts (including IP, BIOS conflict)
-- [ ] Test 17: Manager dashboard renders 2 charts (team activations, team revenue)
-- [ ] Test 18: Reseller dashboard renders 2 charts
-- [ ] Test 19: Charts update when date range changes
-
-### Dark Mode
-- [ ] Test 19: Chart colors change in dark mode
-- [ ] Test 20: Chart grid lines visible in dark mode
+- [x] Added widget/export/date-range coverage in `tests-frontend/tests/unit/AnalyticsWidgets.test.tsx`.
+- [x] Added manager/reseller Phase 6 page coverage in `tests-frontend/tests/unit/ManagerResellerPages.test.tsx`.
+- [x] Added shared download helper coverage in `tests-frontend/tests/unit/DownloadUtils.test.ts`.
+- [x] Existing Super Admin and Manager Parent page suites cover the Phase 6 dashboards and reports:
+  - `tests-frontend/tests/unit/SuperAdminPagesA.test.tsx`
+  - `tests-frontend/tests/unit/SuperAdminPagesB.test.tsx`
+  - `tests-frontend/tests/unit/ManagerParentPages.test.tsx`
+- [x] Full frontend unit suite passes: `131 / 131`.
 
 ---
 
-## Verification (End of Day 8)
+## Verification
 
 ```bash
-# Check each dashboard for charts:
-1. /super-admin/dashboard -> 4+ charts visible (incl. IP, financial)
-2. /super-admin/financial-reports -> Revenue breakdown + reseller balances
-3. /dashboard (as manager_parent) -> 5+ charts visible (incl. IP, BIOS conflicts)
-4. /manager/dashboard -> 2 charts visible (team activations, team revenue)
-5. /reseller/dashboard -> 2 charts visible
+# Frontend production build
+cd frontend
+npm run build
 
-# Test exports:
-4. /super-admin/reports -> Export CSV -> file downloads
-5. /super-admin/reports -> Export PDF -> file downloads
-
-# Test dark mode charts:
-6. Toggle dark mode -> charts adjust colors
-
-# 20 tests passing (run from tests-frontend/)
-cd tests-frontend && npm run test:unit -- --testPathPattern=charts
+# Frontend unit tests
+cd ../tests-frontend
+npm run test:unit
 ```
+
+Verified on February 28, 2026:
+
+- [x] `frontend npm run build` passed
+- [x] `tests-frontend npm run test:unit` passed
+- [x] Super Admin, Manager Parent, Manager, and Reseller Phase 6 charts are implemented
+- [x] CSV/PDF export flows are wired through the shared download/export layer
+- [x] Shared chart widgets, dark mode behavior, and date range filtering are covered by tests
 
 **Phase 06 complete. Proceed to PHASE-07-UIUXPolish.**

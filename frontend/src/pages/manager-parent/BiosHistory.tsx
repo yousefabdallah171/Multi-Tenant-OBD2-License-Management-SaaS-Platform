@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -16,6 +17,7 @@ import { teamService } from '@/services/team.service'
 import type { BiosHistoryEntry } from '@/types/manager-parent.types'
 
 export function BiosHistoryPage() {
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const initialBios = searchParams.get('bios') ?? ''
   const { lang } = useLanguage()
@@ -55,26 +57,26 @@ export function BiosHistoryPage() {
 
   const columns = useMemo<Array<DataTableColumn<BiosHistoryEntry>>>(
     () => [
-      { key: 'bios', label: 'BIOS ID', sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
-      { key: 'customer', label: 'Customer', sortable: true, sortValue: (row) => row.customer ?? '', render: (row) => row.customer ?? '-' },
-      { key: 'reseller', label: 'Reseller', sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
-      { key: 'action', label: 'Action', sortable: true, sortValue: (row) => row.action, render: (row) => row.action },
-      { key: 'status', label: 'Status', sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} /> },
-      { key: 'date', label: 'Date', sortable: true, sortValue: (row) => row.occurred_at ?? '', render: (row) => (row.occurred_at ? formatDate(row.occurred_at, locale) : '-') },
+      { key: 'bios', label: t('managerParent.pages.biosHistory.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
+      { key: 'customer', label: t('common.customer'), sortable: true, sortValue: (row) => row.customer ?? '', render: (row) => row.customer ?? '-' },
+      { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
+      { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => row.action },
+      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} /> },
+      { key: 'date', label: t('common.date'), sortable: true, sortValue: (row) => row.occurred_at ?? '', render: (row) => (row.occurred_at ? formatDate(row.occurred_at, locale) : '-') },
     ],
-    [locale],
+    [locale, t],
   )
 
   const timelineEntries = timelineQuery.data?.data.events ?? []
 
   return (
     <div className="space-y-6">
-      <PageHeader title="BIOS History" description="Search a BIOS identifier and review timeline events scoped to this tenant only." />
+      <PageHeader title={t('managerParent.pages.biosHistory.title')} description={t('managerParent.pages.biosHistory.description')} />
 
       <Card>
         <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_170px_220px_minmax(0,0.9fr)]">
           <div className="flex gap-2">
-            <Input value={biosInput} onChange={(event) => setBiosInput(event.target.value)} placeholder="Enter BIOS ID" />
+            <Input value={biosInput} onChange={(event) => setBiosInput(event.target.value)} placeholder={t('managerParent.pages.biosHistory.enterBiosId')} />
             <Button
               type="button"
               onClick={() => {
@@ -93,11 +95,11 @@ export function BiosHistoryPage() {
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="">All actions</option>
-            <option value="activation">Activation</option>
-            <option value="blacklist">Blacklist</option>
-            <option value="conflict">Conflict</option>
-            <option value="renewal">Renewal</option>
+            <option value="">{t('managerParent.pages.biosHistory.allActions')}</option>
+            <option value="activation">{t('managerParent.pages.biosHistory.activation')}</option>
+            <option value="blacklist">{t('managerParent.pages.biosHistory.blacklist')}</option>
+            <option value="conflict">{t('managerParent.pages.biosHistory.conflict')}</option>
+            <option value="renewal">{t('managerParent.pages.biosHistory.renewal')}</option>
           </select>
           <select
             value={resellerId}
@@ -107,7 +109,7 @@ export function BiosHistoryPage() {
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="">All resellers</option>
+            <option value="">{t('managerParent.pages.biosHistory.allResellers')}</option>
             {(resellerQuery.data?.data ?? []).map((reseller) => (
               <option key={reseller.id} value={reseller.id}>
                 {reseller.name}
@@ -120,11 +122,11 @@ export function BiosHistoryPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{activeBios ? `Timeline for ${activeBios}` : 'BIOS Timeline'}</CardTitle>
+          <CardTitle className="text-lg">{activeBios ? t('managerParent.pages.biosHistory.timelineFor', { biosId: activeBios }) : t('managerParent.pages.biosHistory.timelineTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {activeBios && timelineEntries.length === 0 ? <p className="text-sm text-slate-500 dark:text-slate-400">No timeline entries were found for this BIOS ID.</p> : null}
-          {!activeBios ? <p className="text-sm text-slate-500 dark:text-slate-400">Search for a BIOS ID to load the full tenant timeline.</p> : null}
+          {activeBios && timelineEntries.length === 0 ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.biosHistory.noTimelineEntries')}</p> : null}
+          {!activeBios ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.biosHistory.searchToLoadTimeline')}</p> : null}
           {timelineEntries.slice(0, 8).map((entry) => (
             <div key={entry.id} className="rounded-3xl border border-slate-200 p-4 dark:border-slate-800">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -132,7 +134,7 @@ export function BiosHistoryPage() {
                   <p className="font-semibold text-slate-950 dark:text-white">{entry.action}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description}</p>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    Customer: {entry.customer ?? '-'} | Reseller: {entry.reseller ?? '-'}
+                    {t('managerParent.pages.biosHistory.timelineMeta', { customer: entry.customer ?? '-', reseller: entry.reseller ?? '-' })}
                   </p>
                 </div>
                 <div className="text-right">

@@ -6,6 +6,11 @@ export const routePaths = {
   root: '/',
   login: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/login`,
   forgotPassword: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/forgot-password`,
+  errors: {
+    notFound: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/not-found`,
+    accessDenied: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/access-denied`,
+    serverError: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/server-error`,
+  },
   managerParent: {
     root: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/dashboard`,
     dashboard: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/dashboard`,

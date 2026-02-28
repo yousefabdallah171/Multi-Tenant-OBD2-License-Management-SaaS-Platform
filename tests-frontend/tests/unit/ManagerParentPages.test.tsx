@@ -52,12 +52,25 @@ jest.mock('@/components/charts/PieBreakdownChart', () => ({
   PieBreakdownChart: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
 }))
 
+jest.mock('@/components/charts/LineChartWidget', () => ({
+  LineChartWidget: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
+}))
+
+jest.mock('@/components/charts/BarChartWidget', () => ({
+  BarChartWidget: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
+}))
+
+jest.mock('@/components/charts/PieChartWidget', () => ({
+  PieChartWidget: ({ title }: { title: string }) => <div data-testid="chart">{title}</div>,
+}))
+
 jest.mock('@/services/manager-parent.service', () => ({
   managerParentService: {
     getDashboardStats: jest.fn(),
     getRevenueChart: jest.fn(),
     getExpiryForecast: jest.fn(),
     getTeamPerformance: jest.fn(),
+    getConflictRate: jest.fn(),
     getRevenueByReseller: jest.fn(),
     getRevenueByProgram: jest.fn(),
     getActivationRate: jest.fn(),
@@ -185,6 +198,7 @@ beforeEach(() => {
   mockManagerParentService.getRevenueChart.mockResolvedValue({ data: [{ month: 'Jan', revenue: 300 }] })
   mockManagerParentService.getExpiryForecast.mockResolvedValue({ data: [{ range: '0-7 days', count: 3 }] })
   mockManagerParentService.getTeamPerformance.mockResolvedValue({ data: [{ id: 1, name: 'Reseller One', role: 'reseller', activations: 12, revenue: 340, customers: 8 }] })
+  mockManagerParentService.getConflictRate.mockResolvedValue({ data: [{ month: 'Jan', count: 2 }] })
   mockManagerParentService.getRevenueByReseller.mockResolvedValue({ data: [{ reseller: 'Reseller One', revenue: 340, activations: 12 }] })
   mockManagerParentService.getRevenueByProgram.mockResolvedValue({ data: [{ program: 'Tool A', revenue: 340, activations: 12 }] })
   mockManagerParentService.getActivationRate.mockResolvedValue({ data: [{ label: 'Success', count: 10, percentage: 83.3 }, { label: 'Failure', count: 2, percentage: 16.7 }] })
@@ -606,8 +620,8 @@ test('manager parent dashboard renders cards and charts', async () => {
 
   expect(screen.getByText('Dashboard')).toBeInTheDocument()
   expect(screen.getByText('5')).toBeInTheDocument()
-  expect(screen.getAllByTestId('chart')).toHaveLength(3)
-  expect(screen.getByText('Top performers')).toBeInTheDocument()
+  expect(screen.getAllByTestId('chart')).toHaveLength(4)
+  expect(screen.getAllByText('Top performers').length).toBeGreaterThan(0)
 })
 
 test('team management renders tabs and invite dialog', async () => {
@@ -645,8 +659,8 @@ test('reports page renders charts and export buttons', async () => {
   await waitFor(() => expect(mockManagerParentService.getRevenueByReseller).toHaveBeenCalled())
   expect(screen.getAllByTestId('chart')).toHaveLength(4)
 
-  await user.click(screen.getByRole('button', { name: /export csv/i }))
-  await user.click(screen.getByRole('button', { name: /export pdf/i }))
+  await user.click(screen.getByRole('button', { name: /csv/i }))
+  await user.click(screen.getByRole('button', { name: /pdf/i }))
 
   expect(mockManagerParentService.exportReportsCsv).toHaveBeenCalledTimes(1)
   expect(mockManagerParentService.exportReportsPdf).toHaveBeenCalledTimes(1)
@@ -769,12 +783,12 @@ test('financial reports page renders summary cards and export buttons', async ()
 
   await renderManagerParentPage(<FinancialReportsPage />, '/en/financial-reports')
 
-  expect(await screen.findByText('Reseller Balances')).toBeInTheDocument()
+  expect((await screen.findAllByText('Reseller Balances')).length).toBeGreaterThan(0)
   expect(screen.getByText('Reseller One')).toBeInTheDocument()
-  expect(screen.getAllByTestId('chart')).toHaveLength(3)
+  expect(screen.getAllByTestId('chart')).toHaveLength(4)
 
-  await user.click(screen.getByRole('button', { name: /export csv/i }))
-  await user.click(screen.getByRole('button', { name: /export pdf/i }))
+  await user.click(screen.getByRole('button', { name: /csv/i }))
+  await user.click(screen.getByRole('button', { name: /pdf/i }))
 
   expect(mockManagerParentService.exportFinancialCsv).toHaveBeenCalledTimes(1)
   expect(mockManagerParentService.exportFinancialPdf).toHaveBeenCalledTimes(1)
@@ -981,7 +995,7 @@ test('software management validates program form fields before submit', async ()
 
   await user.type(within(dialog).getByLabelText(/program name/i), 'Tool B')
   await user.click(within(dialog).getByRole('button', { name: /create program/i }))
-  expect(mockToast.error).toHaveBeenLastCalledWith('Download link must be a valid URL.')
+  expect(mockToast.error).toHaveBeenLastCalledWith('Enter a valid download link.')
 })
 
 test('software management submits a new program payload', async () => {
@@ -1056,7 +1070,7 @@ test('software management table view renders program columns', async () => {
 
   expect(screen.getByText('Base Price')).toBeInTheDocument()
   expect(screen.getByText('Licenses Sold')).toBeInTheDocument()
-  expect(screen.getByText('Created')).toBeInTheDocument()
+  expect(screen.getByText('Created at')).toBeInTheDocument()
 })
 
 test('reseller pricing inline edit saves updated values', async () => {
@@ -1164,8 +1178,8 @@ test('reports export actions forward the active date range', async () => {
   fireEvent.change(await screen.findByLabelText(/^from$/i), { target: { value: '2026-02-01' } })
   fireEvent.change(screen.getByLabelText(/^to$/i), { target: { value: '2026-02-28' } })
 
-  await user.click(screen.getByRole('button', { name: /export csv/i }))
-  await user.click(screen.getByRole('button', { name: /export pdf/i }))
+  await user.click(screen.getByRole('button', { name: /csv/i }))
+  await user.click(screen.getByRole('button', { name: /pdf/i }))
 
   expect(mockManagerParentService.exportReportsCsv).toHaveBeenCalledWith({ from: '2026-02-01', to: '2026-02-28' })
   expect(mockManagerParentService.exportReportsPdf).toHaveBeenCalledWith({ from: '2026-02-01', to: '2026-02-28' })
@@ -1436,8 +1450,8 @@ test('financial report exports use the active date range', async () => {
   fireEvent.change(await screen.findByLabelText(/^from$/i), { target: { value: '2026-02-01' } })
   fireEvent.change(screen.getByLabelText(/^to$/i), { target: { value: '2026-02-28' } })
 
-  await user.click(screen.getByRole('button', { name: /export csv/i }))
-  await user.click(screen.getByRole('button', { name: /export pdf/i }))
+  await user.click(screen.getByRole('button', { name: /csv/i }))
+  await user.click(screen.getByRole('button', { name: /pdf/i }))
 
   expect(mockManagerParentService.exportFinancialCsv).toHaveBeenCalledWith({ from: '2026-02-01', to: '2026-02-28' })
   expect(mockManagerParentService.exportFinancialPdf).toHaveBeenCalledWith({ from: '2026-02-01', to: '2026-02-28' })

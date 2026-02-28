@@ -36,10 +36,10 @@ export function ConfirmDialog({
         </DialogHeader>
         {children}
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {cancelLabel ?? t('common.cancel')}
           </Button>
-          <Button type="button" variant={isDestructive ? 'default' : 'secondary'} className={isDestructive ? 'bg-rose-600 hover:bg-rose-500' : ''} onClick={onConfirm}>
+          <Button type="button" variant={isDestructive ? 'destructive' : 'secondary'} onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </DialogFooter>

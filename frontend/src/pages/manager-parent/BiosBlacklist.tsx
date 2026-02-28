@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -19,6 +20,7 @@ import { tenantBiosService } from '@/services/tenant-bios.service'
 import type { BiosBlacklistEntry } from '@/types/super-admin.types'
 
 export function BiosBlacklistPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { lang } = useLanguage()
@@ -38,7 +40,7 @@ export function BiosBlacklistPage() {
   const addMutation = useMutation({
     mutationFn: () => tenantBiosService.addToBlacklist(form),
     onSuccess: () => {
-      toast.success('BIOS added to blacklist.')
+      toast.success(t('managerParent.pages.biosBlacklist.saveSuccess'))
       setFormOpen(false)
       setForm({ bios_id: '', reason: '' })
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'bios-blacklist'] })
@@ -48,45 +50,45 @@ export function BiosBlacklistPage() {
   const removeMutation = useMutation({
     mutationFn: (id: number) => tenantBiosService.removeFromBlacklist(id),
     onSuccess: () => {
-      toast.success('Blacklist entry removed.')
+      toast.success(t('managerParent.pages.biosBlacklist.removeSuccess'))
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'bios-blacklist'] })
     },
   })
 
   const columns = useMemo<Array<DataTableColumn<BiosBlacklistEntry>>>(
     () => [
-      { key: 'bios', label: 'BIOS ID', sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
-      { key: 'addedBy', label: 'Added By', sortable: true, sortValue: (row) => row.added_by ?? '', render: (row) => row.added_by ?? '-' },
-      { key: 'reason', label: 'Reason', sortable: true, sortValue: (row) => row.reason, render: (row) => row.reason },
-      { key: 'status', label: 'Status', sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
-      { key: 'createdAt', label: 'Date Added', sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
+      { key: 'bios', label: t('managerParent.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
+      { key: 'addedBy', label: t('common.addedBy'), sortable: true, sortValue: (row) => row.added_by ?? '', render: (row) => row.added_by ?? '-' },
+      { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.reason, render: (row) => row.reason },
+      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'createdAt', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
       {
         key: 'actions',
-        label: 'Actions',
+        label: t('common.actions'),
         render: (row) => (
           <div className="flex gap-2">
             <Button type="button" size="sm" variant="ghost" onClick={() => navigate(`${routePaths.managerParent.biosHistory(lang)}?bios=${encodeURIComponent(row.bios_id)}`)}>
-              History
+              {t('managerParent.pages.biosBlacklist.history')}
             </Button>
             <Button type="button" size="sm" variant="ghost" disabled={row.status === 'removed'} onClick={() => removeMutation.mutate(row.id)}>
-              Remove
+              {t('managerParent.pages.biosBlacklist.remove')}
             </Button>
           </div>
         ),
       },
     ],
-    [lang, locale, navigate, removeMutation],
+    [lang, locale, navigate, removeMutation, t],
   )
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="BIOS Blacklist"
-        description="Manage tenant-level blocked BIOS identifiers and keep the list scoped to this organization."
+        title={t('managerParent.pages.biosBlacklist.title')}
+        description={t('managerParent.pages.biosBlacklist.description')}
         actions={
           <Button type="button" onClick={() => setFormOpen(true)}>
             <Plus className="me-2 h-4 w-4" />
-            Add to Blacklist
+            {t('managerParent.pages.biosBlacklist.add')}
           </Button>
         }
       />
@@ -99,7 +101,7 @@ export function BiosBlacklistPage() {
               setSearch(event.target.value)
               setPage(1)
             }}
-            placeholder="Search BIOS ID"
+            placeholder={t('managerParent.pages.biosBlacklist.searchPlaceholder')}
             className="min-w-[220px] flex-1"
           />
           <select
@@ -110,9 +112,9 @@ export function BiosBlacklistPage() {
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="removed">Removed</option>
+            <option value="">{t('common.allStatuses')}</option>
+            <option value="active">{t('common.active')}</option>
+            <option value="removed">{t('common.removed')}</option>
           </select>
         </CardContent>
       </Card>
@@ -138,28 +140,28 @@ export function BiosBlacklistPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add to Blacklist</DialogTitle>
-            <DialogDescription>Store a BIOS identifier and a required reason for the tenant blacklist.</DialogDescription>
+            <DialogTitle>{t('managerParent.pages.biosBlacklist.addTitle')}</DialogTitle>
+            <DialogDescription>{t('managerParent.pages.biosBlacklist.formDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="blacklist-bios-id">BIOS ID</Label>
+              <Label htmlFor="blacklist-bios-id">{t('managerParent.pages.biosBlacklist.biosId')}</Label>
               <Input id="blacklist-bios-id" value={form.bios_id} onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="blacklist-reason">Reason</Label>
+              <Label htmlFor="blacklist-reason">{t('common.reason')}</Label>
               <Textarea id="blacklist-reason" value={form.reason} onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))} />
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setFormOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
               onClick={() => {
                 if (!form.bios_id.trim() || !form.reason.trim()) {
-                  toast.error('BIOS ID and reason are required.')
+                  toast.error(t('managerParent.pages.biosBlacklist.validationRequired'))
                   return
                 }
 
@@ -167,7 +169,7 @@ export function BiosBlacklistPage() {
               }}
               disabled={addMutation.isPending}
             >
-              {addMutation.isPending ? 'Saving...' : 'Save'}
+              {addMutation.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

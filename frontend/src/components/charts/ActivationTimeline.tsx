@@ -1,8 +1,4 @@
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
+import { AreaChartWidget } from '@/components/charts/AreaChartWidget'
 
 interface ActivationTimelineProps {
   title: string
@@ -13,30 +9,7 @@ interface ActivationTimelineProps {
 }
 
 export function ActivationTimeline({ title, data, isLoading = false, dataKey = 'activations', xKey = 'month' }: ActivationTimelineProps) {
-  const { t } = useTranslation()
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="h-80">
-        {isLoading ? (
-          <LoadingSpinner fullPage label={t('common.loading')} />
-        ) : data.length === 0 ? (
-          <EmptyState title={t('common.noData')} description={t('superAdmin.pages.dashboard.noActivity')} />
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
-              <XAxis dataKey={xKey} stroke="#64748b" tickLine={false} axisLine={false} />
-              <YAxis stroke="#64748b" tickLine={false} axisLine={false} />
-              <Tooltip />
-              <Area type="monotone" dataKey={dataKey} stroke="#7c3aed" fill="#c4b5fd" fillOpacity={0.55} />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
+    <AreaChartWidget title={title} data={data} isLoading={isLoading} xKey={xKey} series={[{ key: dataKey, label: title }]} />
   )
 }

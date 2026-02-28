@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+use App\Exports\ReportExporter;
 use App\Models\ActivityLog;
 use App\Models\BiosBlacklist;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -35,6 +37,27 @@ class BiosBlacklistController extends BaseSuperAdminController
         return response()->json([
             'data' => collect($entries->items())->map(fn (BiosBlacklist $entry): array => $this->serializeEntry($entry))->values(),
             'meta' => $this->paginationMeta($entries),
+        ]);
+    }
+
+    public function stats(): JsonResponse
+    {
+        $months = collect(range(11, 0))
+            ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
+
+        $entries = BiosBlacklist::query()->whereNull('tenant_id')->get();
+        $created = $entries
+            ->groupBy(fn (BiosBlacklist $entry): string => $entry->created_at?->format('Y-m') ?? '');
+        $removed = $entries
+            ->where('status', 'removed')
+            ->groupBy(fn (BiosBlacklist $entry): string => $entry->updated_at?->format('Y-m') ?? '');
+
+        return response()->json([
+            'data' => $months->map(fn (CarbonImmutable $month): array => [
+                'month' => $month->format('M Y'),
+                'additions' => $created->get($month->format('Y-m'))?->count() ?? 0,
+                'removals' => $removed->get($month->format('Y-m'))?->count() ?? 0,
+            ])->values(),
         ]);
     }
 
@@ -116,23 +139,16 @@ class BiosBlacklistController extends BaseSuperAdminController
     {
         $entries = BiosBlacklist::query()->whereNull('tenant_id')->with('addedBy:id,name')->latest()->get();
 
-        return response()->streamDownload(function () use ($entries): void {
-            $handle = fopen('php://output', 'wb');
-
-            fputcsv($handle, ['BIOS ID', 'Reason', 'Status', 'Added By', 'Created At']);
-
-            foreach ($entries as $entry) {
-                fputcsv($handle, [
-                    $entry->bios_id,
-                    $entry->reason,
-                    $entry->status,
-                    $entry->addedBy?->name,
-                    $entry->created_at?->toDateTimeString(),
-                ]);
-            }
-
-            fclose($handle);
-        }, 'bios-blacklist.csv', ['Content-Type' => 'text/csv']);
+        return app(ReportExporter::class)->toCsv('bios-blacklist.csv', [[
+            'headers' => ['BIOS ID', 'Reason', 'Status', 'Added By', 'Created At'],
+            'rows' => $entries->map(fn (BiosBlacklist $entry): array => [
+                $entry->bios_id,
+                $entry->reason,
+                $entry->status,
+                $entry->addedBy?->name,
+                $entry->created_at?->toDateTimeString(),
+            ])->all(),
+        ]]);
     }
 
     /**

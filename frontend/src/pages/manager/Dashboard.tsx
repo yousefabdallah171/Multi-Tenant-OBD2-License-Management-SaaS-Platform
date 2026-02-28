@@ -1,22 +1,26 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Banknote, KeyRound, ShieldCheck, UserRound, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Banknote, KeyRound, ShieldCheck, UserRound, Users } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { ActivationTimeline } from '@/components/charts/ActivationTimeline'
-import { RevenueChart } from '@/components/charts/RevenueChart'
+import { BarChartWidget } from '@/components/charts/BarChartWidget'
+import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
+import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 
 export function DashboardPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
-  const { lang } = useLanguage()
+  const { lang, isRtl } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const ActionIcon = isRtl ? ArrowLeft : ArrowRight
 
   const statsQuery = useQuery({
     queryKey: ['manager', 'dashboard', 'stats'],
@@ -40,54 +44,73 @@ export function DashboardPage() {
 
   const stats = statsQuery.data?.stats
   const recentActivity = activityQuery.data?.data ?? []
+  const activationSeries = (activationsQuery.data?.data ?? []).map((point) => ({
+    ...point,
+    month: point.month ? localizeMonthLabel(point.month, locale) : point.month,
+  }))
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Manager"
-        title="Dashboard"
-        description="Track your reseller team, customer base, active licenses, and revenue without crossing into reseller-only workflows."
+        eyebrow={t('manager.layout.eyebrow')}
+        title={t('manager.pages.dashboard.title')}
+        description={t('manager.pages.dashboard.description')}
         actions={
           <>
             <Button type="button" variant="secondary" onClick={() => navigate(routePaths.manager.team(lang))}>
-              Team
+              {t('manager.pages.dashboard.actions.team')}
             </Button>
             <Button type="button" variant="secondary" onClick={() => navigate(routePaths.manager.usernameManagement(lang))}>
-              Username Mgmt
+              {t('manager.pages.dashboard.actions.usernameManagement')}
             </Button>
             <Button type="button" onClick={() => navigate(routePaths.manager.reports(lang))}>
-              Reports
+              {t('manager.pages.dashboard.actions.reports')}
             </Button>
           </>
         }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard title="Team Resellers" value={stats?.team_resellers ?? 0} icon={Users} color="sky" />
-        <StatsCard title="Team Customers" value={stats?.team_customers ?? 0} icon={UserRound} color="emerald" />
-        <StatsCard title="Active Licenses" value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        <StatsCard title="Team Revenue" value={formatCurrency(stats?.team_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+        <StatsCard title={t('manager.pages.dashboard.teamResellers')} value={stats?.team_resellers ?? 0} icon={Users} color="sky" />
+        <StatsCard title={t('manager.pages.dashboard.teamCustomers')} value={stats?.team_customers ?? 0} icon={UserRound} color="emerald" />
+        <StatsCard title={t('manager.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+        <StatsCard title={t('manager.pages.dashboard.teamRevenue')} value={formatCurrency(stats?.team_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <ActivationTimeline title="Team Activations" data={activationsQuery.data?.data ?? []} isLoading={activationsQuery.isLoading} dataKey="count" xKey="month" />
-        <RevenueChart title="Team Revenue" data={revenueQuery.data?.data ?? []} isLoading={revenueQuery.isLoading} dataKey="revenue" xKey="month" />
+        <LineChartWidget
+          title={t('manager.pages.dashboard.teamActivations')}
+          data={activationSeries}
+          isLoading={activationsQuery.isLoading}
+          xKey="month"
+          series={[{ key: 'count', label: t('common.activations') }]}
+        />
+        <BarChartWidget
+          title={t('manager.pages.dashboard.teamRevenue')}
+          data={revenueQuery.data?.data ?? []}
+          isLoading={revenueQuery.isLoading}
+          xKey="reseller"
+          horizontal
+          showLabels
+          series={[{ key: 'revenue', label: t('common.revenue') }]}
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Recent Team Activity</CardTitle>
+            <CardTitle className="text-lg">{t('manager.pages.dashboard.recentTeamActivity')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {recentActivity.length === 0 && !activityQuery.isLoading ? (
-              <EmptyState title="No team activity yet" description="Recent reseller and manager actions will appear here." />
+              <EmptyState title={t('manager.pages.dashboard.noTeamActivityTitle')} description={t('manager.pages.dashboard.noTeamActivityDescription')} />
             ) : null}
             {recentActivity.map((entry) => (
               <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <p className="font-medium text-slate-950 dark:text-white">{entry.user?.name ?? 'Team member'}</p>
+                    <p className="font-medium text-slate-950 dark:text-white">{entry.user?.name ?? t('manager.pages.dashboard.teamMember')}</p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">{entry.action}</p>
                     {entry.description ? <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description}</p> : null}
                   </div>
@@ -100,23 +123,23 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Manager Actions</CardTitle>
+            <CardTitle className="text-lg">{t('manager.pages.dashboard.managerActions')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button type="button" className="w-full justify-between" onClick={() => navigate(routePaths.manager.team(lang))}>
-              Review Team Resellers
-              <ArrowRight className="h-4 w-4" />
+              {t('manager.pages.dashboard.quickActions.reviewTeamResellers')}
+              <ActionIcon className="h-4 w-4" />
             </Button>
             <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.manager.customers(lang))}>
-              Customer Overview
-              <ArrowRight className="h-4 w-4" />
+              {t('manager.pages.dashboard.quickActions.customerOverview')}
+              <ActionIcon className="h-4 w-4" />
             </Button>
             <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.manager.usernameManagement(lang))}>
-              Unlock Usernames
+              {t('manager.pages.dashboard.quickActions.unlockUsernames')}
               <KeyRound className="h-4 w-4" />
             </Button>
             <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-950/40 dark:text-slate-300">
-              Monthly activations
+              {t('manager.pages.dashboard.monthlyActivations')}
               <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{stats?.monthly_activations ?? 0}</p>
             </div>
           </CardContent>

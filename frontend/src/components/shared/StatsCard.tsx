@@ -22,7 +22,7 @@ export function StatsCard({ title, value, icon: Icon, trend, color = 'sky' }: St
   const hasTrend = typeof trend === 'number'
 
   return (
-    <Card>
+    <Card className="hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-950/10">
       <CardContent className="flex items-start justify-between gap-4 p-6">
         <div className="space-y-2">
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>

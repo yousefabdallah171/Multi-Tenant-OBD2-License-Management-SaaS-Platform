@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Manager;
 
+use App\Exports\ReportExporter;
 use App\Models\License;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,31 +74,19 @@ class ReportController extends BaseManagerController
 
     public function exportCsv(Request $request): StreamedResponse
     {
-        $rows = $this->topResellers($request)->getData(true)['data'];
-
-        return response()->streamDownload(function () use ($rows): void {
-            $handle = fopen('php://output', 'wb');
-            fputcsv($handle, ['Reseller', 'Revenue', 'Activations', 'Customers']);
-
-            foreach ($rows as $row) {
-                fputcsv($handle, [$row['reseller'], $row['revenue'], $row['activations'], $row['customers']]);
-            }
-
-            fclose($handle);
-        }, 'manager-team-report.csv', ['Content-Type' => 'text/csv']);
+        return app(ReportExporter::class)->toCsv('manager-team-report.csv', $this->exportSections($request));
     }
 
     public function exportPdf(Request $request)
     {
-        $rows = $this->topResellers($request)->getData(true)['data'];
-
-        $pdf = Pdf::loadHTML(view('pdf.simple-table', [
-            'title' => 'Manager Team Report',
-            'columns' => ['Reseller', 'Revenue', 'Activations', 'Customers'],
-            'rows' => collect($rows)->map(fn (array $row): array => [$row['reseller'], $row['revenue'], $row['activations'], $row['customers']])->all(),
-        ])->render());
-
-        return $pdf->download('manager-team-report.pdf');
+        return app(ReportExporter::class)->toPdf(
+            'manager-team-report.pdf',
+            'Manager Team Report',
+            $this->exportSections($request),
+            [],
+            $this->dateRangeLabel($request),
+            $this->reportLanguage($request),
+        );
     }
 
     private function filteredLicenses(Request $request)
@@ -114,5 +102,60 @@ class ReportController extends BaseManagerController
             ->when(! empty($validated['from']), fn ($query) => $query->whereDate('activated_at', '>=', $validated['from']))
             ->when(! empty($validated['to']), fn ($query) => $query->whereDate('activated_at', '<=', $validated['to']))
             ->get();
+    }
+
+    /**
+     * @return array<int, array{title?: string|null, headers: array<int, string>, rows: array<int, array<int, string|int|float|null>>}>
+     */
+    private function exportSections(Request $request): array
+    {
+        $revenueRows = collect($this->revenue($request)->getData(true)['data']);
+        $activationRows = collect($this->activations($request)->getData(true)['data']);
+        $topRows = collect($this->topResellers($request)->getData(true)['data']);
+
+        return [
+            [
+                'title' => 'Revenue by Reseller',
+                'headers' => ['Reseller', 'Revenue', 'Activations'],
+                'rows' => $revenueRows->map(fn (array $row): array => [$row['reseller'], $row['revenue'], $row['activations']])->all(),
+            ],
+            [
+                'title' => 'Monthly Activations',
+                'headers' => ['Month', 'Activations'],
+                'rows' => $activationRows->map(fn (array $row): array => [$row['month'], $row['count']])->all(),
+            ],
+            [
+                'title' => 'Top Resellers',
+                'headers' => ['Reseller', 'Revenue', 'Activations', 'Customers'],
+                'rows' => $topRows->map(fn (array $row): array => [$row['reseller'], $row['revenue'], $row['activations'], $row['customers']])->all(),
+            ],
+        ];
+    }
+
+    private function dateRangeLabel(Request $request): string
+    {
+        $from = $request->string('from')->toString();
+        $to = $request->string('to')->toString();
+
+        if ($from !== '' && $to !== '') {
+            return sprintf('Date range: %s to %s', $from, $to);
+        }
+
+        if ($from !== '') {
+            return sprintf('From %s', $from);
+        }
+
+        if ($to !== '') {
+            return sprintf('Until %s', $to);
+        }
+
+        return 'All time';
+    }
+
+    private function reportLanguage(Request $request): string
+    {
+        $lang = $request->query('lang', $request->header('Accept-Language', 'en'));
+
+        return str_starts_with((string) $lang, 'ar') ? 'ar' : 'en';
     }
 }

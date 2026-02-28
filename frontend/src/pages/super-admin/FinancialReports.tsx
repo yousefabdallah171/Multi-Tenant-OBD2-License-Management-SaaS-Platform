@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Banknote, CircleDollarSign, Globe2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { RevenueChart } from '@/components/charts/RevenueChart'
-import { TenantComparisonChart } from '@/components/charts/TenantComparisonChart'
+import { BarChartWidget } from '@/components/charts/BarChartWidget'
+import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { ExportButtons } from '@/components/shared/ExportButtons'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { useLanguage } from '@/hooks/useLanguage'
+import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
 import { reportService } from '@/services/report.service'
 import type { FinancialReportPayload } from '@/types/super-admin.types'
@@ -18,9 +19,8 @@ export function FinancialReportsPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-  const params = { from: from || undefined, to: to || undefined }
+  const [dateRange, setDateRange] = useState({ from: '', to: '' })
+  const params = { from: dateRange.from || undefined, to: dateRange.to || undefined }
 
   const financialQuery = useQuery({
     queryKey: ['super-admin', 'financial-reports', params],
@@ -37,6 +37,11 @@ export function FinancialReportsPage() {
   ]
 
   const data = financialQuery.data?.data
+  const breakdownSeries = (data?.revenue_breakdown_series ?? []).map((program) => ({ key: program, label: program, stackId: 'revenue' }))
+  const monthlyRevenueData = (data?.monthly_revenue ?? []).map((item) => ({
+    ...item,
+    month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
+  }))
 
   return (
     <div className="space-y-6">
@@ -45,13 +50,12 @@ export function FinancialReportsPage() {
           <h2 className="text-3xl font-semibold">{t('superAdmin.pages.financialReports.title')}</h2>
           <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.financialReports.description')}</p>
         </div>
-        <ExportButtons onExportCsv={() => void reportService.exportFinancialCsv(params)} onExportPdf={() => void reportService.exportFinancialPdf(params)} />
+        <ExportButtons onExportCsv={() => reportService.exportFinancialCsv(params)} onExportPdf={() => reportService.exportFinancialPdf(params)} />
       </div>
 
       <Card>
-        <CardContent className="flex flex-wrap gap-3 p-4">
-          <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
-          <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+        <CardContent className="p-4">
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
         </CardContent>
       </Card>
 
@@ -63,12 +67,39 @@ export function FinancialReportsPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <TenantComparisonChart title={t('superAdmin.pages.financialReports.revenueByTenant')} data={data?.revenue_by_tenant ?? []} />
-        <TenantComparisonChart title={t('superAdmin.pages.financialReports.revenueByProgram')} data={data?.revenue_by_program ?? []} dataKey="revenue" xKey="program" />
-        <RevenueChart title={t('superAdmin.pages.financialReports.monthlyRevenue')} data={data?.monthly_revenue ?? []} />
+        <BarChartWidget
+          title={t('superAdmin.pages.financialReports.revenueBreakdown')}
+          description={t('superAdmin.pages.financialReports.revenueBreakdownDescription')}
+          data={(data?.revenue_breakdown ?? []) as Array<Record<string, string | number | null | undefined>>}
+          isLoading={financialQuery.isLoading}
+          xKey="tenant"
+          series={breakdownSeries}
+          showLegend
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
+        <BarChartWidget
+          title={t('superAdmin.pages.financialReports.resellerBalancesTitle')}
+          description={t('superAdmin.pages.financialReports.resellerBalancesDescription')}
+          data={data?.reseller_balances ?? []}
+          isLoading={financialQuery.isLoading}
+          xKey="reseller"
+          horizontal
+          showLabels
+          series={[{ key: 'balance', label: t('superAdmin.pages.financialReports.balance') }]}
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
       </div>
 
-      <DataTable columns={balancesColumns} data={data?.reseller_balances ?? []} rowKey={(row) => row.id} />
+      <LineChartWidget
+        title={t('superAdmin.pages.financialReports.monthlyRevenue')}
+        data={monthlyRevenueData}
+        isLoading={financialQuery.isLoading}
+        xKey="month"
+        series={[{ key: 'revenue', label: t('common.revenue') }]}
+        valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+      />
+
+      <DataTable columns={balancesColumns} data={data?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={financialQuery.isLoading} />
     </div>
   )
 }

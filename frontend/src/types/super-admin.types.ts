@@ -16,13 +16,18 @@ export interface SuperAdminDashboardStats {
 }
 
 export interface TrendPoint {
-  month: string
+  month?: string
   key?: string
+  date?: string
+  label?: string
+  count?: number
   revenue?: number
   activations?: number
   active?: number
   pending?: number
   users?: number
+  additions?: number
+  removals?: number
 }
 
 export interface TenantSummary {
@@ -142,6 +147,8 @@ export interface FinancialReportPayload {
   }
   revenue_by_tenant: Array<{ tenant: string; revenue: number }>
   revenue_by_program: Array<{ program: string; revenue: number; activations: number }>
+  revenue_breakdown: Array<Record<string, string | number>>
+  revenue_breakdown_series: string[]
   monthly_revenue: Array<{ month: string; revenue: number }>
   reseller_balances: Array<{
     id: number | string

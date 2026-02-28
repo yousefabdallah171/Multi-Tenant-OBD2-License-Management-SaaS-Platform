@@ -1,5 +1,6 @@
 import { api } from '@/services/api'
 import type { BiosBlacklistEntry, BiosHistoryEvent, ManagedUser, PaginationMeta } from '@/types/super-admin.types'
+import { downloadFile } from '@/utils/download'
 
 export interface BiosBlacklistParams {
   page?: number
@@ -18,18 +19,6 @@ export interface BiosHistoryParams {
   to?: string
 }
 
-async function downloadFile(url: string, filename: string) {
-  const response = await api.get<Blob>(url, { responseType: 'blob' })
-  const blobUrl = window.URL.createObjectURL(response.data)
-  const link = document.createElement('a')
-  link.href = blobUrl
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(blobUrl)
-}
-
 export const biosService = {
   async getBlacklist(params: BiosBlacklistParams) {
     const { data } = await api.get<{ data: BiosBlacklistEntry[]; meta: PaginationMeta }>('/super-admin/bios-blacklist', { params })
@@ -45,6 +34,10 @@ export const biosService = {
   },
   async exportBlacklist() {
     await downloadFile('/super-admin/bios-blacklist/export', 'bios-blacklist.csv')
+  },
+  async getBlacklistStats() {
+    const { data } = await api.get<{ data: Array<{ month: string; additions: number; removals: number }> }>('/super-admin/bios-blacklist/stats')
+    return data
   },
   async importBlacklist(file: File) {
     const formData = new FormData()

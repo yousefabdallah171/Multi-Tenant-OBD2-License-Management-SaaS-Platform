@@ -3,6 +3,7 @@ import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, Plus, RotateCw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -45,6 +46,7 @@ const EMPTY_ACTIVATION_FORM: ActivationFormState = {
 }
 
 export function CustomersPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -141,96 +143,110 @@ export function CustomersPage() {
         },
       }
     : {
-        eyebrow: 'Reseller',
-        title: 'Customers',
-        description: 'Create and activate customers, then manage renewals and deactivations from your personal reseller workspace.',
-        addCustomer: 'Add Customer',
-        statusOptions: { all: 'All', active: 'Active', expired: 'Expired', suspended: 'Suspended', pending: 'Pending' },
-        searchPlaceholder: 'Search by name, email, or BIOS ID',
-        table: {
-          customer: 'Customer',
-          bios: 'BIOS ID',
-          program: 'Program',
-          status: 'Status',
-          price: 'Price',
-          expiry: 'Expiry',
-          actions: 'Actions',
+        eyebrow: t('roles.reseller'),
+        title: t('reseller.pages.customers.title'),
+        description: t('reseller.pages.customers.description'),
+        addCustomer: t('reseller.pages.customers.addCustomer'),
+        statusOptions: {
+          all: t('common.all'),
+          active: t('common.active'),
+          expired: t('common.expired'),
+          suspended: t('common.suspended'),
+          pending: t('common.pending'),
         },
-        actions: { view: 'View', renew: 'Renew', deactivate: 'Deactivate' },
+        searchPlaceholder: t('reseller.pages.customers.searchPlaceholder'),
+        table: {
+          customer: t('common.customer'),
+          bios: t('reseller.pages.customers.table.bios'),
+          program: t('common.program'),
+          status: t('common.status'),
+          price: t('common.price'),
+          expiry: t('common.expiry'),
+          actions: t('common.actions'),
+        },
+        actions: {
+          view: t('common.view'),
+          renew: t('common.renew'),
+          deactivate: t('common.deactivate'),
+        },
         activationDialog: {
-          title: 'Add Customer',
-          description: 'Move through each step to create the customer and activate the license.',
-          steps: ['Customer Info', 'BIOS Activation', 'Pricing & Duration', 'Review'],
-          stepLabel: 'Step',
-          customerName: 'Customer Name',
-          customerEmail: 'Customer Email',
-          phone: 'Phone',
-          biosId: 'BIOS ID',
-          program: 'Program',
-          selectProgram: 'Select program',
-          basePrice: 'Base Price',
-          trialDays: 'Trial Days',
-          noDescription: 'No description provided.',
-          duration: 'Duration',
-          unit: 'Unit',
-          price: 'Price',
-          durationDays: 'Duration in Days',
-          expiryPreview: 'Expiry Preview',
-          review: 'Review & Confirm',
-          customer: 'Customer',
-          email: 'Email',
-          expiry: 'Expiry',
-          cancel: 'Cancel',
-          back: 'Back',
-          next: 'Next',
-          activate: 'Activate',
-          activating: 'Activating...',
+          title: t('reseller.pages.customers.activationDialog.title'),
+          description: t('reseller.pages.customers.activationDialog.description'),
+          steps: t('reseller.pages.customers.activationDialog.steps', { returnObjects: true }) as string[],
+          stepLabel: t('reseller.pages.customers.activationDialog.stepLabel'),
+          customerName: t('reseller.pages.customers.activationDialog.customerName'),
+          customerEmail: t('reseller.pages.customers.activationDialog.customerEmail'),
+          phone: t('common.phone'),
+          biosId: t('reseller.pages.customers.activationDialog.biosId'),
+          program: t('common.program'),
+          selectProgram: t('reseller.pages.customers.activationDialog.selectProgram'),
+          basePrice: t('reseller.pages.customers.activationDialog.basePrice'),
+          trialDays: t('reseller.pages.customers.activationDialog.trialDays'),
+          noDescription: t('reseller.pages.customers.activationDialog.noDescription'),
+          duration: t('common.duration'),
+          unit: t('common.unit'),
+          price: t('common.price'),
+          durationDays: t('reseller.pages.customers.activationDialog.durationDays'),
+          expiryPreview: t('reseller.pages.customers.activationDialog.expiryPreview'),
+          review: t('reseller.pages.customers.activationDialog.review'),
+          customer: t('common.customer'),
+          email: t('common.email'),
+          expiry: t('common.expiry'),
+          cancel: t('common.cancel'),
+          back: t('common.back'),
+          next: t('common.next'),
+          activate: t('common.activate'),
+          activating: t('reseller.pages.customers.activationDialog.activating'),
         },
         detail: {
-          titleFallback: 'Customer details',
-          descriptionFallback: 'Inspect license history for this customer.',
-          phone: 'Phone',
-          bios: 'BIOS ID',
-          program: 'Program',
-          status: 'Status',
-          activationHistory: 'Activation History',
-          unknownProgram: 'Unknown program',
-          activated: 'Activated',
-          expires: 'Expires',
+          titleFallback: t('reseller.pages.customers.detail.titleFallback'),
+          descriptionFallback: t('reseller.pages.customers.detail.descriptionFallback'),
+          phone: t('common.phone'),
+          bios: t('reseller.pages.customers.detail.bios'),
+          program: t('common.program'),
+          status: t('common.status'),
+          activationHistory: t('reseller.pages.customers.detail.activationHistory'),
+          unknownProgram: t('reseller.pages.customers.detail.unknownProgram'),
+          activated: t('reseller.pages.customers.detail.activated'),
+          expires: t('reseller.pages.customers.detail.expires'),
         },
         renewDialog: {
-          title: 'Renew License',
-          descriptionFallback: 'Update duration and price, then renew.',
-          descriptionWithProgram: (program: string, biosId: string) => `Renew ${program} for BIOS ID ${biosId}.`,
-          duration: 'Duration',
-          unit: 'Unit',
-          price: 'Price',
-          cancel: 'Cancel',
-          renew: 'Renew',
-          renewing: 'Renewing...',
+          title: t('reseller.pages.customers.renewDialog.title'),
+          descriptionFallback: t('reseller.pages.customers.renewDialog.descriptionFallback'),
+          descriptionWithProgram: (program: string, biosId: string) => t('reseller.pages.customers.renewDialog.descriptionWithProgram', { program, biosId }),
+          duration: t('common.duration'),
+          unit: t('common.unit'),
+          price: t('common.price'),
+          cancel: t('common.cancel'),
+          renew: t('common.renew'),
+          renewing: t('reseller.pages.customers.renewDialog.renewing'),
         },
         deactivateDialog: {
-          title: 'Deactivate license?',
-          description: (biosId: string) => `This will deactivate the license for BIOS ID: ${biosId}`,
-          confirm: 'Deactivate',
+          title: t('reseller.pages.customers.deactivateDialog.title'),
+          description: (biosId: string) => t('reseller.pages.customers.deactivateDialog.description', { biosId }),
+          confirm: t('common.deactivate'),
         },
-        units: { days: 'Days', months: 'Months', years: 'Years' },
+        units: {
+          days: t('common.days'),
+          months: t('common.months'),
+          years: t('common.years'),
+        },
         toasts: {
-          activated: 'License activated successfully.',
-          renewed: 'License renewed successfully.',
-          deactivated: 'License deactivated successfully.',
+          activated: t('reseller.pages.customers.toasts.activated'),
+          renewed: t('reseller.pages.customers.toasts.renewed'),
+          deactivated: t('reseller.pages.customers.toasts.deactivated'),
         },
         validation: {
-          customerName: 'Customer name must be at least 2 characters.',
-          customerEmail: 'Enter a valid customer email address.',
-          biosId: 'BIOS ID must be at least 5 characters.',
-          selectProgram: 'Select a program before continuing.',
-          duration: 'Duration must be at least 1.',
-          price: 'Enter a valid price.',
-          renew: 'Enter a valid duration and price before renewing.',
-          requestFailed: 'The request failed.',
+          customerName: t('reseller.pages.customers.validation.customerName'),
+          customerEmail: t('reseller.pages.customers.validation.customerEmail'),
+          biosId: t('reseller.pages.customers.validation.biosId'),
+          selectProgram: t('reseller.pages.customers.validation.selectProgram'),
+          duration: t('reseller.pages.customers.validation.duration'),
+          price: t('reseller.pages.customers.validation.price'),
+          renew: t('reseller.pages.customers.validation.renew'),
+          requestFailed: t('reseller.pages.customers.validation.requestFailed'),
         },
-      }), [lang])
+      }), [lang, t])
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [search, setSearch] = useState('')
@@ -676,7 +692,7 @@ export function CustomersPage() {
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="font-medium text-slate-950 dark:text-white">{license.program ?? text.detail.unknownProgram}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">BIOS {license.bios_id}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{text.detail.bios} {license.bios_id}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400">{text.detail.activated} {license.activated_at ? formatDate(license.activated_at, locale) : '-'}</p>
                       </div>
                       <div className="text-right">
@@ -704,7 +720,7 @@ export function CustomersPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{text.renewDialog.title}</DialogTitle>
-            <DialogDescription>{renewLicense ? text.renewDialog.descriptionWithProgram(renewLicense.program ?? 'license', renewLicense.bios_id) : text.renewDialog.descriptionFallback}</DialogDescription>
+            <DialogDescription>{renewLicense ? text.renewDialog.descriptionWithProgram(renewLicense.program ?? text.detail.program, renewLicense.bios_id) : text.renewDialog.descriptionFallback}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-3">
             <FormField label={text.renewDialog.duration} htmlFor="renew-duration">

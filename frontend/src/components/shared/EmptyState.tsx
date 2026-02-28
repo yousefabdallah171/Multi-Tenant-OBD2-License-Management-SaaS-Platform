@@ -13,7 +13,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, actionLabel, onAction, icon: Icon = Inbox }: EmptyStateProps) {
   return (
-    <Card>
+    <Card className="border-dashed shadow-none">
       <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
         <div className="rounded-full bg-sky-100 p-4 text-sky-600 dark:bg-sky-950/40 dark:text-sky-400">
           <Icon className="h-6 w-6" />
@@ -23,7 +23,7 @@ export function EmptyState({ title, description, actionLabel, onAction, icon: Ic
           {description ? <p className="max-w-md text-sm text-slate-500 dark:text-slate-400">{description}</p> : null}
         </div>
         {actionLabel && onAction ? (
-          <Button type="button" onClick={onAction}>
+          <Button type="button" variant="outline" onClick={onAction}>
             {actionLabel}
           </Button>
         ) : null}

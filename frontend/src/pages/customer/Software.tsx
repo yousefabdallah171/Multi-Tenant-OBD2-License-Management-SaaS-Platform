@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ProgramCard } from '@/components/customer/ProgramCard'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { SkeletonCard } from '@/components/shared/SkeletonCard'
+import { StaggerGroup, StaggerItem } from '@/components/shared/PageTransition'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { customerPortalService } from '@/services/customer.service'
@@ -38,16 +40,7 @@ export function SoftwarePage() {
 
       {softwareQuery.isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Card key={index} className="animate-pulse">
-              <CardContent className="space-y-4 p-5">
-                <div className="h-12 w-12 rounded-2xl bg-slate-200 dark:bg-slate-800" />
-                <div className="h-5 w-1/2 rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="h-16 rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="h-10 rounded bg-slate-200 dark:bg-slate-800" />
-              </CardContent>
-            </Card>
-          ))}
+          {Array.from({ length: 3 }).map((_, index) => <SkeletonCard key={index} lines={4} />)}
         </div>
       ) : null}
 
@@ -60,21 +53,22 @@ export function SoftwarePage() {
       ) : null}
 
       {filteredPrograms.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <StaggerGroup className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredPrograms.map((program) => (
-            <ProgramCard
-              key={program.license_id}
-              licenseId={program.license_id}
-              name={program.name ?? t('customerPortal.dashboard.unknownProgram')}
-              version={program.version}
-              description={program.description}
-              icon={program.icon}
-              status={program.status}
-              downloadLink={program.download_link}
-              canDownload={program.can_download}
-            />
+            <StaggerItem key={program.license_id}>
+              <ProgramCard
+                licenseId={program.license_id}
+                name={program.name ?? t('customerPortal.dashboard.unknownProgram')}
+                version={program.version}
+                description={program.description}
+                icon={program.icon}
+                status={program.status}
+                downloadLink={program.download_link}
+                canDownload={program.can_download}
+              />
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerGroup>
       ) : null}
     </div>
   )

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+use App\Exports\ReportExporter;
 use App\Enums\UserRole;
 use App\Models\License;
 use App\Models\Tenant;
 use App\Models\UserBalance;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,11 +45,33 @@ class FinancialReportController extends BaseSuperAdminController
             ->sortByDesc('revenue')
             ->values();
 
+        $breakdownPrograms = $licenses
+            ->map(fn (License $license): string => $license->program?->name ?? 'Unknown')
+            ->unique()
+            ->values();
+
+        $revenueBreakdown = $licenses
+            ->groupBy(fn (License $license): string => $license->tenant?->name ?? 'Unknown')
+            ->map(function ($group, string $tenant) use ($breakdownPrograms): array {
+                $row = ['tenant' => $tenant];
+
+                foreach ($breakdownPrograms as $program) {
+                    $row[$program] = round((float) $group
+                        ->filter(fn (License $license): bool => ($license->program?->name ?? 'Unknown') === $program)
+                        ->sum('price'), 2);
+                }
+
+                return $row;
+            })
+            ->values();
+
         return response()->json([
             'data' => [
                 'summary' => $summary,
                 'revenue_by_tenant' => $revenueByTenant,
                 'revenue_by_program' => $revenueByProgram,
+                'revenue_breakdown' => $revenueBreakdown,
+                'revenue_breakdown_series' => $breakdownPrograms,
                 'monthly_revenue' => $this->monthlyRevenue($licenses),
                 'reseller_balances' => $this->resellerBalances($licenses),
             ],
@@ -60,37 +82,21 @@ class FinancialReportController extends BaseSuperAdminController
     {
         $report = $this->index($request)->getData(true)['data'];
 
-        return response()->streamDownload(function () use ($report): void {
-            $handle = fopen('php://output', 'wb');
-            fputcsv($handle, ['Metric', 'Value']);
-
-            foreach ($report['summary'] as $metric => $value) {
-                fputcsv($handle, [$metric, $value]);
-            }
-
-            fputcsv($handle, []);
-            fputcsv($handle, ['Tenant', 'Revenue']);
-
-            foreach ($report['revenue_by_tenant'] as $row) {
-                fputcsv($handle, [$row['tenant'], $row['revenue']]);
-            }
-
-            fclose($handle);
-        }, 'super-admin-financial-report.csv', ['Content-Type' => 'text/csv']);
+        return app(ReportExporter::class)->toCsv('super-admin-financial-report.csv', $this->exportSections($report));
     }
 
     public function exportPdf(Request $request)
     {
         $report = $this->index($request)->getData(true)['data'];
-        $rows = collect($report['revenue_by_tenant'])->map(fn (array $row): array => [$row['tenant'], $row['revenue']])->all();
 
-        $pdf = Pdf::loadHTML(view('pdf.simple-table', [
-            'title' => 'Super Admin Financial Report',
-            'columns' => ['Tenant', 'Revenue'],
-            'rows' => $rows,
-        ])->render());
-
-        return $pdf->download('super-admin-financial-report.pdf');
+        return app(ReportExporter::class)->toPdf(
+            'super-admin-financial-report.pdf',
+            'Super Admin Financial Report',
+            $this->exportSections($report),
+            $this->summaryLabels($report['summary']),
+            $this->dateRangeLabel($request),
+            $this->reportLanguage($request),
+        );
     }
 
     private function filteredLicenses(Request $request)
@@ -153,5 +159,86 @@ class FinancialReportController extends BaseSuperAdminController
             ])
             ->sortByDesc('total_revenue')
             ->values();
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @return array<int, array{title?: string|null, headers: array<int, string>, rows: array<int, array<int, string|int|float|null>>}>
+     */
+    private function exportSections(array $report): array
+    {
+        return [
+            [
+                'title' => 'Summary',
+                'headers' => ['Metric', 'Value'],
+                'rows' => collect($this->summaryLabels($report['summary']))
+                    ->map(fn ($value, $label): array => [$label, $value])
+                    ->values()
+                    ->all(),
+            ],
+            [
+                'title' => 'Revenue by Tenant',
+                'headers' => ['Tenant', 'Revenue'],
+                'rows' => collect($report['revenue_by_tenant'])->map(fn (array $row): array => [$row['tenant'], $row['revenue']])->all(),
+            ],
+            [
+                'title' => 'Revenue by Program',
+                'headers' => ['Program', 'Revenue', 'Activations'],
+                'rows' => collect($report['revenue_by_program'])->map(fn (array $row): array => [$row['program'], $row['revenue'], $row['activations']])->all(),
+            ],
+            [
+                'title' => 'Reseller Balances',
+                'headers' => ['Reseller', 'Tenant', 'Revenue', 'Activations', 'Average Price', 'Balance'],
+                'rows' => collect($report['reseller_balances'])->map(fn (array $row): array => [
+                    $row['reseller'],
+                    $row['tenant'],
+                    $row['total_revenue'],
+                    $row['total_activations'],
+                    $row['avg_price'],
+                    $row['balance'],
+                ])->all(),
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, int|float> $summary
+     * @return array<string, int|float>
+     */
+    private function summaryLabels(array $summary): array
+    {
+        return [
+            'Total Platform Revenue' => $summary['total_platform_revenue'],
+            'Total Activations' => $summary['total_activations'],
+            'Active Licenses' => $summary['active_licenses'],
+            'Average Revenue per Tenant' => $summary['avg_revenue_per_tenant'],
+        ];
+    }
+
+    private function dateRangeLabel(Request $request): string
+    {
+        $from = $request->string('from')->toString();
+        $to = $request->string('to')->toString();
+
+        if ($from !== '' && $to !== '') {
+            return sprintf('Date range: %s to %s', $from, $to);
+        }
+
+        if ($from !== '') {
+            return sprintf('From %s', $from);
+        }
+
+        if ($to !== '') {
+            return sprintf('Until %s', $to);
+        }
+
+        return 'All time';
+    }
+
+    private function reportLanguage(Request $request): string
+    {
+        $lang = $request->query('lang', $request->header('Accept-Language', 'en'));
+
+        return str_starts_with((string) $lang, 'ar') ? 'ar' : 'en';
     }
 }

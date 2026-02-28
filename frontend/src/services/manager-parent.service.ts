@@ -9,22 +9,7 @@ import type {
   TenantSettings,
   UsernameManagedUser,
 } from '@/types/manager-parent.types'
-
-async function downloadFile(url: string, filename: string, params?: object) {
-  const response = await api.get<Blob>(url, {
-    params,
-    responseType: 'blob',
-  })
-
-  const blobUrl = window.URL.createObjectURL(response.data)
-  const link = document.createElement('a')
-  link.href = blobUrl
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(blobUrl)
-}
+import { downloadFile } from '@/utils/download'
 
 export const managerParentService = {
   async getDashboardStats() {
@@ -41,6 +26,10 @@ export const managerParentService = {
   },
   async getTeamPerformance() {
     const { data } = await api.get<{ data: Array<{ id: number; name: string; role: string; activations: number; revenue: number; customers: number }> }>('/dashboard/team-performance')
+    return data
+  },
+  async getConflictRate() {
+    const { data } = await api.get<{ data: Array<{ month: string; count: number }> }>('/dashboard/conflict-rate')
     return data
   },
   async getRevenueByReseller(params?: { from?: string; to?: string }) {

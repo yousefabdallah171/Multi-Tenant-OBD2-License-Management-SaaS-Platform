@@ -4,9 +4,11 @@ export type PeriodFilter = 'daily' | 'weekly' | 'monthly'
 export type DurationUnit = 'days' | 'months' | 'years'
 
 export interface DashboardSeriesPoint {
-  month: string
-  count: number
-  revenue: number
+  month?: string
+  reseller?: string
+  count?: number
+  revenue?: number
+  activations?: number
 }
 
 export interface ManagerDashboardStats {

@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { LoaderCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { PageLoader } from '@/components/shared/PageLoader'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { managerParentService } from '@/services/manager-parent.service'
@@ -14,6 +17,7 @@ function isValidEmail(value: string) {
 }
 
 export function SettingsPage() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const settingsQuery = useQuery({
     queryKey: ['manager-parent', 'settings'],
@@ -24,10 +28,8 @@ export function SettingsPage() {
   if (settingsQuery.isLoading && !settings) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Settings" description="Maintain tenant business information, onboarding defaults, and notification preferences." />
-        <Card>
-          <CardContent className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading settings...</CardContent>
-        </Card>
+        <PageHeader title={t('managerParent.pages.settings.title')} description={t('managerParent.pages.settings.description')} />
+        <PageLoader title={t('managerParent.pages.settings.loadingTitle')} description={t('managerParent.pages.settings.loadingDescription')} />
       </div>
     )
   }
@@ -62,24 +64,25 @@ export function SettingsPage() {
 }
 
 function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; onSaved: () => void }) {
+  const { t } = useTranslation()
   const [form, setForm] = useState<TenantSettings>(settings)
 
   const updateMutation = useMutation({
     mutationFn: () => managerParentService.updateSettings(form),
     onSuccess: () => {
-      toast.success('Settings saved successfully.')
+      toast.success(t('managerParent.pages.settings.saveSuccess'))
       onSaved()
     },
   })
 
   function saveSettings() {
     if (!form.business.company_name.trim()) {
-      toast.error('Company name is required.')
+      toast.error(t('managerParent.pages.settings.companyNameRequired'))
       return
     }
 
     if (form.business.email && !isValidEmail(form.business.email)) {
-      toast.error('Business email must be valid.')
+      toast.error(t('managerParent.pages.settings.businessEmailInvalid'))
       return
     }
 
@@ -89,11 +92,12 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Settings"
-        description="Maintain tenant business information, onboarding defaults, and notification preferences."
+        title={t('managerParent.pages.settings.title')}
+        description={t('managerParent.pages.settings.description')}
         actions={
           <Button type="button" onClick={saveSettings} disabled={updateMutation.isPending}>
-            {updateMutation.isPending ? 'Saving...' : 'Save Settings'}
+            {updateMutation.isPending ? <LoaderCircle className="me-2 h-4 w-4 animate-spin" /> : null}
+            {updateMutation.isPending ? t('common.saving') : t('managerParent.pages.settings.saveSettings')}
           </Button>
         }
       />
@@ -101,23 +105,23 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Business Info</CardTitle>
+            <CardTitle className="text-lg">{t('managerParent.pages.settings.businessInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="settings-company">Company Name</Label>
+              <Label htmlFor="settings-company">{t('managerParent.pages.settings.companyName')}</Label>
               <Input id="settings-company" value={form.business.company_name} onChange={(event) => setForm((current) => ({ ...current, business: { ...current.business, company_name: event.target.value } }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="settings-email">Email</Label>
+              <Label htmlFor="settings-email">{t('common.email')}</Label>
               <Input id="settings-email" type="email" value={form.business.email ?? ''} onChange={(event) => setForm((current) => ({ ...current, business: { ...current.business, email: event.target.value || null } }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="settings-phone">Phone</Label>
+              <Label htmlFor="settings-phone">{t('common.phone')}</Label>
               <Input id="settings-phone" value={form.business.phone ?? ''} onChange={(event) => setForm((current) => ({ ...current, business: { ...current.business, phone: event.target.value || null } }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="settings-address">Address</Label>
+              <Label htmlFor="settings-address">{t('managerParent.pages.settings.address')}</Label>
               <Input id="settings-address" value={form.business.address ?? ''} onChange={(event) => setForm((current) => ({ ...current, business: { ...current.business, address: event.target.value || null } }))} />
             </div>
           </CardContent>
@@ -126,11 +130,11 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Defaults</CardTitle>
+              <CardTitle className="text-lg">{t('managerParent.pages.settings.defaults')}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="space-y-2">
-                <Label htmlFor="settings-trial">Default Trial Days</Label>
+                <Label htmlFor="settings-trial">{t('managerParent.pages.settings.defaultTrialDays')}</Label>
                 <Input
                   id="settings-trial"
                   type="number"
@@ -139,7 +143,7 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="settings-price">Default Pricing</Label>
+                <Label htmlFor="settings-price">{t('managerParent.pages.settings.defaultPricing')}</Label>
                 <Input
                   id="settings-price"
                   type="number"
@@ -153,7 +157,7 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Notifications</CardTitle>
+              <CardTitle className="text-lg">{t('managerParent.pages.settings.notifications')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
               <label className="flex items-center gap-3">
@@ -162,7 +166,7 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
                   checked={form.notifications.new_activations}
                   onChange={(event) => setForm((current) => ({ ...current, notifications: { ...current.notifications, new_activations: event.target.checked } }))}
                 />
-                <span>Email alerts for new activations</span>
+                <span>{t('managerParent.pages.settings.newActivationsAlerts')}</span>
               </label>
               <label className="flex items-center gap-3">
                 <input
@@ -170,7 +174,7 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
                   checked={form.notifications.expiry_warnings}
                   onChange={(event) => setForm((current) => ({ ...current, notifications: { ...current.notifications, expiry_warnings: event.target.checked } }))}
                 />
-                <span>Email alerts for expiry warnings</span>
+                <span>{t('managerParent.pages.settings.expiryWarningsAlerts')}</span>
               </label>
             </CardContent>
           </Card>
