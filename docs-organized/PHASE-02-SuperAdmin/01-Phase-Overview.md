@@ -430,15 +430,17 @@ const { lang, switchLanguage } = useLanguage();
 
 ## Acceptance Criteria
 
-- [ ] DashboardLayout renders correctly with Navbar + Sidebar + Content
-- [ ] Sidebar collapses on mobile (hamburger menu)
-- [ ] All 8 Super Admin pages render without errors
-- [ ] Tenant CRUD operations work (create, read, update, delete)
-- [ ] DataTable supports sorting, filtering, pagination
-- [ ] Charts render with mock data (API integration can be simulated)
-- [ ] API logs page shows log entries with expandable detail
-- [ ] RTL Arabic layout works (sidebar on right, text right-aligned)
-- [ ] Language toggle switches between Arabic and English
-- [ ] All text uses i18next translation keys (no hardcoded strings)
-- [ ] Responsive on mobile (640px), tablet (768px), desktop (1024px+)
-- [ ] 25 component tests passing
+> Verified on 2026-02-28 against the current implementation and test/build pipeline.
+
+- [x] DashboardLayout renders correctly with Navbar + Sidebar + Content
+- [x] Sidebar collapses on mobile (hamburger menu)
+- [x] All Super Admin pages render without errors
+- [x] Tenant CRUD operations work (create, read, update, delete)
+- [x] DataTable supports sorting, filtering, pagination
+- [x] Charts render with mock data (API integration can be simulated)
+- [x] API logs page shows log entries with expandable detail
+- [x] RTL Arabic layout works (sidebar on right, text right-aligned)
+- [x] Language toggle switches between Arabic and English
+- [x] All text uses i18next translation keys (no hardcoded strings)
+- [x] Responsive on mobile (640px), tablet (768px), desktop (1024px+)
+- [x] 44 component/page tests passing

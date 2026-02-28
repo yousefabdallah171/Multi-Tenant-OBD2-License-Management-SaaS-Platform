@@ -9,7 +9,7 @@ export const LANGUAGE_STORAGE_KEY = 'license-language'
 export const USER_ROLES: UserRole[] = ['super_admin', 'manager_parent', 'manager', 'reseller', 'customer']
 
 export const ROLE_DASHBOARD_SEGMENTS: Record<UserRole, string> = {
-  super_admin: 'super-admin',
+  super_admin: 'super-admin/dashboard',
   manager_parent: 'dashboard',
   manager: 'manager',
   reseller: 'reseller',

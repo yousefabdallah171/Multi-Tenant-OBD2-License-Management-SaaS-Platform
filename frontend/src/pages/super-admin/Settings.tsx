@@ -1,0 +1,168 @@
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { settingsService } from '@/services/settings.service'
+import type { SystemSettings } from '@/types/super-admin.types'
+
+export function SettingsPage() {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [draft, setDraft] = useState<SystemSettings | null>(null)
+
+  const settingsQuery = useQuery({
+    queryKey: ['super-admin', 'settings'],
+    queryFn: () => settingsService.get(),
+  })
+
+  const form = draft ?? settingsQuery.data?.data ?? null
+
+  const saveMutation = useMutation({
+    mutationFn: () => settingsService.update(form as SystemSettings),
+    onSuccess: () => {
+      toast.success(t('superAdmin.pages.settings.saveSuccess'))
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'settings'] })
+    },
+  })
+
+  if (!form) {
+    return <div className="py-20 text-center text-sm text-slate-500">{t('common.loading')}</div>
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h2 className="text-3xl font-semibold">{t('superAdmin.pages.settings.title')}</h2>
+        <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.settings.description')}</p>
+      </div>
+
+      <Tabs defaultValue="general">
+        <TabsList>
+          <TabsTrigger value="general">{t('superAdmin.pages.settings.general')}</TabsTrigger>
+          <TabsTrigger value="api">{t('superAdmin.pages.settings.api')}</TabsTrigger>
+          <TabsTrigger value="notifications">{t('superAdmin.pages.settings.notifications')}</TabsTrigger>
+          <TabsTrigger value="security">{t('superAdmin.pages.settings.security')}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general">
+          <Card>
+            <CardContent className="grid gap-4 p-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="platform-name">{t('superAdmin.pages.settings.platformName')}</Label>
+                <Input id="platform-name" value={form.general.platform_name} onChange={(event) => setDraft((current) => ({ ...(current ?? form), general: { ...(current ?? form).general, platform_name: event.target.value } }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="trial-days">{t('superAdmin.pages.settings.defaultTrialDays')}</Label>
+                <Input
+                  id="trial-days"
+                  type="number"
+                  value={form.general.default_trial_days}
+                  onChange={(event) => setDraft((current) => ({ ...(current ?? form), general: { ...(current ?? form).general, default_trial_days: Number(event.target.value) } }))}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={form.general.maintenance_mode}
+                  onChange={(event) => setDraft((current) => ({ ...(current ?? form), general: { ...(current ?? form).general, maintenance_mode: event.target.checked } }))}
+                />
+                {t('superAdmin.pages.settings.maintenanceMode')}
+              </label>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="api">
+          <Card>
+            <CardContent className="grid gap-4 p-6 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="api-url">{t('superAdmin.pages.settings.apiUrl')}</Label>
+                <Input id="api-url" value={form.api.url} readOnly className="cursor-not-allowed bg-slate-100 dark:bg-slate-900" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="api-key">{t('superAdmin.pages.settings.apiKey')}</Label>
+                <div className="flex gap-3">
+                  <Input
+                    id="api-key"
+                    type={showApiKey ? 'text' : 'password'}
+                    value={form.api.key}
+                    onChange={(event) => setDraft((current) => ({ ...(current ?? form), api: { ...(current ?? form).api, key: event.target.value } }))}
+                  />
+                  <Button type="button" variant="secondary" onClick={() => setShowApiKey((current) => !current)}>
+                    {showApiKey ? t('common.hide') : t('common.show')}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="timeout">{t('superAdmin.pages.settings.timeout')}</Label>
+                <Input id="timeout" type="number" value={form.api.timeout} onChange={(event) => setDraft((current) => ({ ...(current ?? form), api: { ...(current ?? form).api, timeout: Number(event.target.value) } }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="retries">{t('superAdmin.pages.settings.retries')}</Label>
+                <Input id="retries" type="number" value={form.api.retries} onChange={(event) => setDraft((current) => ({ ...(current ?? form), api: { ...(current ?? form).api, retries: Number(event.target.value) } }))} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <Card>
+            <CardContent className="grid gap-4 p-6">
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={form.notifications.email_enabled}
+                  onChange={(event) => setDraft((current) => ({ ...(current ?? form), notifications: { ...(current ?? form).notifications, email_enabled: event.target.checked } }))}
+                />
+                {t('superAdmin.pages.settings.emailNotifications')}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={form.notifications.pusher_enabled}
+                  onChange={(event) => setDraft((current) => ({ ...(current ?? form), notifications: { ...(current ?? form).notifications, pusher_enabled: event.target.checked } }))}
+                />
+                {t('superAdmin.pages.settings.pusherNotifications')}
+              </label>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="security">
+          <Card>
+            <CardContent className="grid gap-4 p-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="min-password">{t('superAdmin.pages.settings.minPasswordLength')}</Label>
+                <Input
+                  id="min-password"
+                  type="number"
+                  value={form.security.min_password_length}
+                  onChange={(event) => setDraft((current) => ({ ...(current ?? form), security: { ...(current ?? form).security, min_password_length: Number(event.target.value) } }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="session-timeout">{t('superAdmin.pages.settings.sessionTimeout')}</Label>
+                <Input
+                  id="session-timeout"
+                  type="number"
+                  value={form.security.session_timeout}
+                  onChange={(event) => setDraft((current) => ({ ...(current ?? form), security: { ...(current ?? form).security, session_timeout: Number(event.target.value) } }))}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <Button type="button" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+        {saveMutation.isPending ? t('common.saving') : t('common.save')}
+      </Button>
+    </div>
+  )
+}

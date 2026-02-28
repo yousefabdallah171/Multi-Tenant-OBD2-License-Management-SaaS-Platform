@@ -7,18 +7,29 @@ interface ThemeState {
   theme: ThemeMode
   setTheme: (theme: ThemeMode) => void
   toggleTheme: () => void
+  hydrateTheme: () => void
 }
 
-function readTheme(): ThemeMode {
+export function resolveThemePreference(): ThemeMode {
   if (typeof window === 'undefined') {
-    return 'dark'
+    return 'light'
   }
 
-  return window.localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark'
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+
+  if (storedTheme === 'light' || storedTheme === 'dark') {
+    return storedTheme
+  }
+
+  if (typeof window.matchMedia !== 'function') {
+    return 'light'
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
-  theme: readTheme(),
+  theme: resolveThemePreference(),
   setTheme: (theme) => {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(THEME_STORAGE_KEY, theme)
@@ -29,5 +40,8 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   toggleTheme: () => {
     const nextTheme: ThemeMode = get().theme === 'dark' ? 'light' : 'dark'
     get().setTheme(nextTheme)
+  },
+  hydrateTheme: () => {
+    set({ theme: resolveThemePreference() })
   },
 }))

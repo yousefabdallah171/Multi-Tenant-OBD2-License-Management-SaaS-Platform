@@ -6,6 +6,22 @@ export const routePaths = {
   root: '/',
   login: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/login`,
   forgotPassword: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/forgot-password`,
+  superAdmin: {
+    root: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin`,
+    dashboard: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/dashboard`,
+    tenants: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/tenants`,
+    users: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/users`,
+    adminManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/admin-management`,
+    biosBlacklist: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-blacklist`,
+    biosHistory: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-history`,
+    usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/username-management`,
+    financialReports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/financial-reports`,
+    reports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/reports`,
+    logs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/logs`,
+    apiStatus: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/api-status`,
+    settings: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/settings`,
+    profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/profile`,
+  },
 }
 
 export function getDashboardPath(role: UserRole, lang: SupportedLanguage = DEFAULT_LANGUAGE) {

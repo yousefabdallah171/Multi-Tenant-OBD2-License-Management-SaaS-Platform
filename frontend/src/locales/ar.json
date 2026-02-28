@@ -1,21 +1,21 @@
 {
   "brand": {
     "badge": "منصة التراخيص",
-    "title": "الأساس التقني لـ OBD2SW أصبح جاهزاً"
+    "title": "أصبح أساس OBD2SW جاهزًا"
   },
   "auth": {
     "loginTitle": "تسجيل الدخول",
-    "loginSubtitle": "مسار دخول واحد لكل الأدوار الخمسة.",
-    "heroDescription": "هذا هيكل المرحلة الأولى يربط واجهة React مع Laravel API ويحفظ الجلسة في Zustand ويوجه كل مستخدم إلى لوحة التحكم المناسبة له.",
+    "loginSubtitle": "استخدم مسار دخول واحد لكل الأدوار الخمسة.",
+    "heroDescription": "هذا هيكل المرحلة الأولى الذي يربط واجهة React مع Laravel API ويحفظ الجلسة في Zustand ويوجه كل مستخدم إلى لوحة التحكم المناسبة له.",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
     "submit": "دخول",
-    "loading": "جاري التنفيذ...",
+    "loading": "جارٍ التنفيذ...",
     "forgotPassword": "هل نسيت كلمة المرور؟",
     "invalidCredentials": "بيانات الدخول غير صحيحة.",
     "networkError": "الواجهة الأمامية لا تستطيع الوصول إلى الـ API. أعد تشغيل الواجهة وتأكد من رابط الـ API.",
     "serverError": "فشل طلب تسجيل الدخول من جهة الخادم.",
-    "validation": "أدخل بريداً إلكترونياً صحيحاً وكلمة مرور.",
+    "validation": "أدخل بريدًا إلكترونيًا صحيحًا وكلمة مرور.",
     "loginSuccess": "تم تسجيل الدخول بنجاح.",
     "resetSubtitle": "أدخل بريدك الإلكتروني لطلب رابط إعادة تعيين كلمة المرور.",
     "resetSubmit": "إرسال رابط الإعادة",
@@ -23,16 +23,16 @@
     "logout": "تسجيل الخروج",
     "cards": {
       "secure": {
-        "title": "دخول آمن من الخلفية",
-        "description": "تدفق توكنات عبر Sanctum مع API فقط."
+        "title": "مصادقة خلفية آمنة",
+        "description": "تدفق توكن عبر Sanctum مع مسارات API فقط."
       },
       "roles": {
         "title": "توجيه حسب الدور",
-        "description": "كل دور ينتقل تلقائياً إلى مساحة لوحة التحكم الخاصة به."
+        "description": "كل دور يُعاد توجيهه إلى مساحة لوحة التحكم الخاصة به."
       },
       "speed": {
-        "title": "جاهز للمرحلة الأولى",
-        "description": "الأساس الآن مطابق للوثائق وجاهز لبناء المزايا."
+        "title": "المرحلة الأولى جاهزة",
+        "description": "الأساس مطابق للوثائق وجاهز لبناء المزايا."
       }
     }
   },
@@ -48,8 +48,8 @@
     "lightMode": "الوضع الفاتح",
     "darkMode": "الوضع الداكن",
     "foundationTitle": "أساس المرحلة الأولى",
-    "foundationDescription": "الهيكل أصبح جاهزاً لباقي وحدات النظام.",
-    "foundationCopy": "تم ربط المصادقة والحمايات والمكونات المشتركة وحفظ الثيم وإحصاءات اللوحة داخل واجهة الإنتاج.",
+    "foundationDescription": "أصبح الهيكل جاهزًا لباقي وحدات النظام.",
+    "foundationCopy": "تم ربط المصادقة والحمايات والواجهة المشتركة وحفظ الثيم وإحصاءات اللوحة داخل الواجهة الإنتاجية.",
     "nextSteps": "الخطوة التالية هي تعبئة الصفحات والخدمات وتدفقات الأعمال المتبقية من قائمة الإنشاء.",
     "stats": {
       "users": "المستخدمون",
@@ -57,6 +57,263 @@
       "licenses": "التراخيص",
       "activeLicenses": "التراخيص النشطة",
       "revenue": "الإيراد"
+    }
+  },
+  "common": {
+    "lightMode": "الوضع الفاتح",
+    "darkMode": "الوضع الداكن",
+    "loading": "جارٍ التحميل...",
+    "noData": "لا توجد بيانات",
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "phone": "الهاتف",
+    "status": "الحالة",
+    "revenue": "الإيراد",
+    "users": "المستخدمون",
+    "actions": "الإجراءات",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ...",
+    "cancel": "إلغاء",
+    "view": "عرض",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "search": "بحث",
+    "all": "الكل",
+    "active": "نشط",
+    "suspended": "معلق",
+    "inactive": "غير نشط",
+    "allRoles": "كل الأدوار",
+    "allTenants": "كل الشركاء",
+    "allStatuses": "كل الحالات",
+    "allMethods": "كل الطرق",
+    "selectTenant": "اختر الشريك",
+    "resetPassword": "إعادة تعيين كلمة المرور",
+    "addedBy": "أضيف بواسطة",
+    "removed": "تمت الإزالة",
+    "reason": "السبب",
+    "action": "الإجراء",
+    "customer": "العميل",
+    "user": "المستخدم",
+    "username": "اسم المستخدم",
+    "date": "التاريخ",
+    "timestamp": "الوقت",
+    "lastChecked": "آخر فحص",
+    "hide": "إخفاء",
+    "show": "إظهار",
+    "clear": "مسح",
+    "from": "من",
+    "to": "إلى",
+    "csv": "CSV",
+    "pdf": "PDF",
+    "activate": "تفعيل",
+    "suspend": "تعليق",
+    "createdAt": "تاريخ الإنشاء",
+    "role": "الدور",
+    "tenant": "الشريك",
+    "activations": "التفعيلات",
+    "rowsPerPage": "عدد الصفوف",
+    "totalCount": "الإجمالي {{count}}",
+    "selectAllVisible": "تحديد الظاهر",
+    "clearVisible": "إلغاء الظاهر",
+    "clearSelection": "إلغاء التحديد",
+    "selectedCount": "{{count}} محدد",
+    "selectRow": "تحديد {{name}}",
+    "previous": "السابق",
+    "next": "التالي"
+  },
+  "superAdmin": {
+    "layout": {
+      "title": "مركز تحكم المدير العام",
+      "copyright": "حقوق النشر 2025 OBD2SW.com"
+    },
+    "nav": {
+      "dashboard": "الرئيسية",
+      "tenants": "الشركاء",
+      "users": "المستخدمون",
+      "adminManagement": "إدارة المشرفين",
+      "biosBlacklist": "قائمة BIOS السوداء",
+      "biosHistory": "سجل BIOS",
+      "usernameManagement": "إدارة اسم المستخدم",
+      "financialReports": "المالية",
+      "reports": "التقارير",
+      "logs": "السجلات",
+      "apiStatus": "حالة API",
+      "settings": "الإعدادات",
+      "profile": "الملف الشخصي"
+    },
+    "cards": {
+      "totalTenants": "إجمالي الشركاء",
+      "totalRevenue": "إجمالي الإيرادات",
+      "activeLicenses": "التراخيص النشطة",
+      "totalUsers": "إجمالي المستخدمين",
+      "countryCoverage": "الدول المتتبعة"
+    },
+    "pages": {
+      "dashboard": {
+        "eyebrow": "المرحلة 02",
+        "title": "لوحة المدير العام",
+        "description": "عرض شامل للشركاء والإيرادات وحجم التراخيص وآخر نشاط للنظام.",
+        "revenueTrend": "اتجاه الإيراد",
+        "recentActivity": "النشاط الأخير",
+        "tenantComparison": "مقارنة الشركاء",
+        "noActivity": "لا توجد أحداث نشاط حديثة حتى الآن."
+      },
+      "tenants": {
+        "title": "إدارة الشركاء",
+        "description": "أنشئ شركاء جدد، جهز حساب المدير الرئيسي، وراقب الإيرادات والتفعيلات.",
+        "saveSuccess": "تم حفظ الشريك بنجاح.",
+        "deleteSuccess": "تم تحديث حالة الشريك بنجاح.",
+        "managers": "المديرون",
+        "resellers": "الموزعون",
+        "customers": "العملاء",
+        "activeLicenses": "التراخيص النشطة",
+        "add": "إضافة شريك",
+        "editTitle": "تعديل الشريك",
+        "addTitle": "إنشاء شريك",
+        "formDescription": "أنشئ شريكًا جديدًا مع إمكانية تجهيز حساب المدير الرئيسي.",
+        "managerName": "اسم المدير الرئيسي",
+        "statsTitle": "إحصاءات الشريك",
+        "deleteTitle": "تعطيل الشريك"
+      },
+      "users": {
+        "title": "جميع المستخدمين",
+        "description": "راجع المستخدمين عبر كل الشركاء وقم بتحديث حالتهم.",
+        "statusUpdated": "تم تحديث حالة المستخدم بنجاح.",
+        "deleteSuccess": "تم حذف المستخدم بنجاح.",
+        "deleteTitle": "حذف المستخدم"
+      },
+      "reports": {
+        "title": "تقارير عبر الشركاء",
+        "description": "راجع الإيرادات والتفعيلات ونمو المستخدمين وأفضل الموزعين على مستوى المنصة.",
+        "revenueByTenant": "الإيراد حسب الشريك",
+        "activationsByTenant": "التفعيلات حسب الشريك",
+        "growthTrend": "اتجاه النمو",
+        "topResellers": "أفضل الموزعين"
+      },
+      "logs": {
+        "title": "سجل النظام",
+        "description": "افحص سجل API الخارجي، وراجع الطلبات والاستجابات بالتفصيل.",
+        "endpoint": "النقطة",
+        "method": "الطريقة",
+        "statusCode": "رمز الحالة",
+        "responseTime": "زمن الاستجابة",
+        "autoRefresh": "تحديث تلقائي",
+        "detailTitle": "تفاصيل السجل"
+      },
+      "apiStatus": {
+        "title": "مراقبة صحة API",
+        "description": "تتبع صحة API الخارجي، وراقب زمن الاستجابة، ونفذ فحصًا مباشرًا عند الطلب.",
+        "pingSuccess": "تم تنفيذ الفحص بنجاح.",
+        "pingNow": "فحص الآن",
+        "endpoint": "النقطة",
+        "responseTime": "زمن الاستجابة",
+        "uptime24": "توفر 24 ساعة",
+        "uptime30": "توفر 30 يومًا",
+        "historyTitle": "سجل زمن الاستجابة",
+        "summaryTitle": "الحالة الحالية"
+      },
+      "settings": {
+        "title": "إعدادات النظام",
+        "description": "أدر الإعدادات العامة وإعدادات API والإشعارات وحدود الأمان.",
+        "saveSuccess": "تم حفظ الإعدادات بنجاح.",
+        "general": "عام",
+        "api": "API",
+        "notifications": "الإشعارات",
+        "security": "الأمان",
+        "platformName": "اسم المنصة",
+        "defaultTrialDays": "أيام التجربة الافتراضية",
+        "maintenanceMode": "وضع الصيانة",
+        "apiUrl": "رابط API الخارجي",
+        "apiKey": "مفتاح API",
+        "timeout": "المهلة",
+        "retries": "إعادات المحاولة",
+        "emailNotifications": "إشعارات البريد الإلكتروني",
+        "pusherNotifications": "إشعارات Pusher",
+        "minPasswordLength": "أدنى طول لكلمة المرور",
+        "sessionTimeout": "مهلة الجلسة بالدقائق"
+      },
+      "profile": {
+        "title": "الملف الشخصي",
+        "description": "أدر بياناتك الشخصية وكلمة المرور وتفضيلات الإشعارات.",
+        "profileSaved": "تم تحديث الملف الشخصي بنجاح.",
+        "passwordSaved": "تم تحديث كلمة المرور بنجاح.",
+        "accountCard": "ملخص الحساب",
+        "editProfile": "تعديل الملف الشخصي",
+        "changePassword": "تغيير كلمة المرور",
+        "currentPassword": "كلمة المرور الحالية",
+        "newPassword": "كلمة المرور الجديدة",
+        "confirmPassword": "تأكيد كلمة المرور",
+        "updatePassword": "تحديث كلمة المرور",
+        "preferences": "تفضيلات الإشعارات",
+        "emailNotifications": "إشعارات البريد الإلكتروني",
+        "pusherNotifications": "إشعارات Pusher"
+      },
+      "adminManagement": {
+        "title": "إدارة المشرفين",
+        "description": "أدر حسابات المديرين والمديرين الرئيسيين والموزعين والمدير العام من شاشة واحدة.",
+        "saveSuccess": "تم حفظ حساب المشرف بنجاح.",
+        "statusUpdated": "تم تحديث حالة المشرف بنجاح.",
+        "deleteSuccess": "تم حذف المشرف بنجاح.",
+        "resetSuccess": "تم إنشاء كلمة مرور مؤقتة",
+        "bulkSuspendSuccess": "تم تعليق المشرفين المحددين بنجاح.",
+        "bulkDeleteSuccess": "تم حذف المشرفين المحددين بنجاح.",
+        "add": "إضافة مشرف",
+        "editTitle": "تعديل المشرف",
+        "addTitle": "إنشاء مشرف",
+        "formDescription": "أنشئ أو عدل حسابات المشرفين وحدد نطاق الشريك عند الحاجة.",
+        "deleteTitle": "حذف المشرف",
+        "bulkSuspend": "تعليق المحدد",
+        "bulkDelete": "حذف المحدد"
+      },
+      "biosBlacklist": {
+        "title": "القائمة السوداء BIOS",
+        "description": "حافظ على القائمة السوداء العالمية لأجهزة BIOS وأزل الحظر عند الحاجة.",
+        "saveSuccess": "تمت إضافة السجل بنجاح.",
+        "removeSuccess": "تم تحديث السجل بنجاح.",
+        "importSuccess": "تم استيراد {{count}} من السجلات.",
+        "biosId": "معرّف BIOS",
+        "add": "إضافة BIOS",
+        "remove": "إزالة",
+        "viewHistory": "عرض السجل",
+        "import": "استيراد CSV",
+        "export": "تصدير CSV",
+        "addTitle": "إضافة إلى القائمة السوداء",
+        "formDescription": "أدخل معرّف BIOS والسبب الذي أدى إلى حظره."
+      },
+      "biosHistory": {
+        "title": "سجل BIOS",
+        "description": "ابحث عن معرّفات BIOS وراجع التفعيلات والتعارضات وأحداث الحظر عبر كل الشركاء.",
+        "searchPlaceholder": "ابحث بمعرّف BIOS",
+        "biosId": "معرّف BIOS",
+        "timelineTitle": "الخط الزمني لـ BIOS"
+      },
+      "usernameManagement": {
+        "title": "إدارة اسم المستخدم",
+        "description": "افتح أقفال أسماء المستخدمين وغيّرها وأعد تعيين كلمات المرور لأي مستخدم.",
+        "unlockSuccess": "تم فتح اسم المستخدم بنجاح.",
+        "renameSuccess": "تم تحديث اسم المستخدم بنجاح.",
+        "resetPasswordSuccess": "تم إنشاء كلمة مرور مؤقتة",
+        "locked": "مقفل",
+        "unlock": "فتح",
+        "changeUsername": "تغيير اسم المستخدم",
+        "unlocked": "مفتوح",
+        "unlockTitle": "فتح اسم المستخدم",
+        "renameTitle": "تغيير اسم المستخدم"
+      },
+      "financialReports": {
+        "title": "التقارير المالية",
+        "description": "تتبع إيرادات المنصة وتوزيع البرامج وحجم التفعيلات وأرصدة الموزعين من شاشة واحدة.",
+        "totalPlatformRevenue": "إجمالي إيراد المنصة",
+        "totalActivations": "إجمالي التفعيلات",
+        "activeLicenses": "التراخيص النشطة",
+        "avgRevenuePerTenant": "متوسط الإيراد لكل شريك",
+        "revenueByTenant": "الإيراد حسب الشريك",
+        "revenueByProgram": "الإيراد حسب البرنامج",
+        "monthlyRevenue": "الإيراد الشهري",
+        "avgPrice": "متوسط السعر",
+        "balance": "الرصيد"
+      }
     }
   }
 }

@@ -1,0 +1,227 @@
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Building2, Search, UserCog, UserRound, Users as UsersIcon } from 'lucide-react'
+import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { RoleBadge } from '@/components/shared/RoleBadge'
+import { StatsCard } from '@/components/shared/StatsCard'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { useLanguage } from '@/hooks/useLanguage'
+import { formatDate } from '@/lib/utils'
+import { tenantService } from '@/services/tenant.service'
+import { userService } from '@/services/user.service'
+import type { ManagedUser } from '@/types/super-admin.types'
+
+const statusTabs = [
+  { value: '', labelKey: 'common.all' },
+  { value: 'active', labelKey: 'common.active' },
+  { value: 'suspended', labelKey: 'common.suspended' },
+  { value: 'inactive', labelKey: 'common.inactive' },
+] as const
+
+export function UsersPage() {
+  const { t } = useTranslation()
+  const { lang } = useLanguage()
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const queryClient = useQueryClient()
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+  const [role, setRole] = useState('')
+  const [tenantId, setTenantId] = useState<number | ''>('')
+  const [status, setStatus] = useState('')
+  const [search, setSearch] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null)
+
+  const usersQuery = useQuery({
+    queryKey: ['super-admin', 'users', page, perPage, role, tenantId, status, search],
+    queryFn: () => userService.getAll({ page, per_page: perPage, role, tenant_id: tenantId, status, search }),
+  })
+
+  const tenantsQuery = useQuery({
+    queryKey: ['super-admin', 'tenant-options'],
+    queryFn: () => tenantService.getAll({ per_page: 100 }),
+  })
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'suspended' | 'inactive' }) => userService.updateStatus(id, nextStatus),
+    onSuccess: () => {
+      toast.success(t('superAdmin.pages.users.statusUpdated'))
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'users'] })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => userService.delete(id),
+    onSuccess: () => {
+      toast.success(t('superAdmin.pages.users.deleteSuccess'))
+      setDeleteTarget(null)
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'users'] })
+    },
+  })
+
+  const columns = useMemo<Array<DataTableColumn<ManagedUser>>>(
+    () => [
+      {
+        key: 'name',
+        label: t('common.name'),
+        sortable: true,
+        sortValue: (row) => row.name,
+        render: (row) => (
+          <div>
+            <div className="font-medium text-slate-950 dark:text-white">{row.name}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">{row.email}</div>
+          </div>
+        ),
+      },
+      { key: 'role', label: t('common.role'), sortable: true, sortValue: (row) => row.role, render: (row) => <RoleBadge role={row.role} /> },
+      { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? '-' },
+      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'created', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
+      {
+        key: 'actions',
+        label: t('common.actions'),
+        render: (row) => (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}
+            >
+              {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(row)}>
+              {t('common.delete')}
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [locale, statusMutation, t],
+  )
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h2 className="text-3xl font-semibold">{t('superAdmin.pages.users.title')}</h2>
+        <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.users.description')}</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatsCard title={t('roles.super_admin')} value={usersQuery.data?.role_counts.super_admin ?? 0} icon={UserCog} color="rose" />
+        <StatsCard title={t('roles.manager_parent')} value={usersQuery.data?.role_counts.manager_parent ?? 0} icon={Building2} color="sky" />
+        <StatsCard title={t('roles.reseller')} value={usersQuery.data?.role_counts.reseller ?? 0} icon={UsersIcon} color="emerald" />
+        <StatsCard title={t('roles.customer')} value={usersQuery.data?.role_counts.customer ?? 0} icon={UserRound} color="amber" />
+      </div>
+
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                className="ps-10"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value)
+                  setPage(1)
+                }}
+                placeholder={t('common.search')}
+              />
+            </div>
+            <select
+              value={role}
+              onChange={(event) => {
+                setRole(event.target.value)
+                setPage(1)
+              }}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+            >
+              <option value="">{t('common.allRoles')}</option>
+              <option value="super_admin">{t('roles.super_admin')}</option>
+              <option value="manager_parent">{t('roles.manager_parent')}</option>
+              <option value="manager">{t('roles.manager')}</option>
+              <option value="reseller">{t('roles.reseller')}</option>
+              <option value="customer">{t('roles.customer')}</option>
+            </select>
+            <select
+              value={tenantId}
+              onChange={(event) => {
+                setTenantId(event.target.value ? Number(event.target.value) : '')
+                setPage(1)
+              }}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+            >
+              <option value="">{t('common.allTenants')}</option>
+              {tenantsQuery.data?.data.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('common.status')}>
+            {statusTabs.map((tab) => (
+              <Button
+                key={tab.value || 'all'}
+                type="button"
+                size="sm"
+                variant={status === tab.value ? 'default' : 'secondary'}
+                onClick={() => {
+                  setStatus(tab.value)
+                  setPage(1)
+                }}
+              >
+                {t(tab.labelKey)}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {usersQuery.isLoading ? (
+        <DataTable columns={columns} data={[]} rowKey={(row) => row.id} isLoading />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={usersQuery.data?.data ?? []}
+          rowKey={(row) => row.id}
+          pagination={{
+            page: usersQuery.data?.meta.current_page ?? 1,
+            lastPage: usersQuery.data?.meta.last_page ?? 1,
+            total: usersQuery.data?.meta.total ?? 0,
+            perPage: usersQuery.data?.meta.per_page ?? perPage,
+          }}
+          onPageChange={setPage}
+          onPageSizeChange={(nextPageSize) => {
+            setPerPage(nextPageSize)
+            setPage(1)
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+          }
+        }}
+        title={t('superAdmin.pages.users.deleteTitle')}
+        description={deleteTarget ? `${deleteTarget.name} - ${deleteTarget.email}` : ''}
+        confirmLabel={t('common.delete')}
+        isDestructive
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteMutation.mutate(deleteTarget.id)
+          }
+        }}
+      />
+    </div>
+  )
+}
