@@ -1,4 +1,5 @@
 import { api } from '@/services/api'
+import type { CustomerDashboardData, CustomerDownloadItem, CustomerSoftwareItem } from '@/types/customer.types'
 import type { CustomerDetails, CustomerSummary, PaginatedResponse } from '@/types/manager-parent.types'
 
 export interface CustomerParams {
@@ -17,6 +18,25 @@ export const customerService = {
   },
   async getOne(id: number) {
     const { data } = await api.get<{ data: CustomerDetails }>(`/customers/${id}`)
+    return data
+  },
+}
+
+export const customerPortalService = {
+  async getDashboard() {
+    const { data } = await api.get<{ data: CustomerDashboardData }>('/customer/dashboard')
+    return data.data
+  },
+  async getSoftware() {
+    const { data } = await api.get<{ data: CustomerSoftwareItem[] }>('/customer/software')
+    return data.data
+  },
+  async getDownloads() {
+    const { data } = await api.get<{ data: CustomerDownloadItem[] }>('/customer/downloads')
+    return data.data
+  },
+  async logDownload(id: number) {
+    const { data } = await api.post<{ message: string; logged_at: string }>(`/customer/downloads/${id}/log`)
     return data
   },
 }

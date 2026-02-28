@@ -13,5 +13,5 @@ export const ROLE_DASHBOARD_SEGMENTS: Record<UserRole, string> = {
   manager_parent: 'dashboard',
   manager: 'manager/dashboard',
   reseller: 'reseller/dashboard',
-  customer: 'customer',
+  customer: 'customer/dashboard',
 }

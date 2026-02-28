@@ -44,6 +44,12 @@ export const routePaths = {
     activity: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/activity`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/profile`,
   },
+  customer: {
+    root: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/customer`,
+    dashboard: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/customer/dashboard`,
+    software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/customer/software`,
+    download: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/customer/download`,
+  },
   superAdmin: {
     root: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin`,
     dashboard: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/dashboard`,

@@ -24,6 +24,171 @@ export function LicensesPage() {
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const text = useMemo(() => (lang === 'ar'
+    ? {
+        eyebrow: 'موزع',
+        title: 'التراخيص',
+        description: 'تابع جميع التراخيص التي قمت بتفعيلها، وجدّدها بشكل جماعي، وتحرك مبكراً قبل انتهاء الصلاحية.',
+        expiryLabels: {
+          day1: 'تنتهي خلال يوم واحد',
+          day3: 'تنتهي خلال 3 أيام',
+          day7: 'تنتهي خلال 7 أيام',
+          licenses: 'ترخيص',
+        },
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', suspended: 'معلق', pending: 'قيد الانتظار' },
+        searchPlaceholder: 'ابحث بالعميل أو BIOS ID أو البرنامج',
+        bulkActionPlaceholder: 'إجراء جماعي',
+        bulkRenew: 'تجديد المحدد',
+        bulkDeactivate: 'إلغاء المحدد',
+        apply: 'تطبيق',
+        selectVisible: 'تحديد الظاهر',
+        clearVisible: 'مسح الظاهر',
+        table: {
+          select: 'تحديد',
+          customer: 'العميل',
+          bios: 'BIOS ID',
+          program: 'البرنامج',
+          duration: 'المدة',
+          price: 'السعر',
+          activated: 'تم التفعيل',
+          expires: 'ينتهي',
+          status: 'الحالة',
+          actions: 'الإجراءات',
+        },
+        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء' },
+        units: { days: 'أيام', months: 'أشهر', years: 'سنوات' },
+        details: {
+          titleFallback: 'تفاصيل الترخيص',
+          descriptionFallback: 'راجع السجل الكامل للترخيص.',
+          customer: 'العميل',
+          program: 'البرنامج',
+          version: 'الإصدار',
+          status: 'الحالة',
+          bios: 'BIOS ID',
+          duration: 'المدة',
+          price: 'السعر',
+          expires: 'ينتهي',
+          activity: 'النشاط',
+          openDownload: 'فتح رابط التحميل',
+        },
+        renewDialog: {
+          title: 'تجديد الترخيص',
+          fallback: 'حدّث المدة والسعر ثم قم بالتجديد.',
+          description: (program: string, biosId: string) => `قم بتجديد ${program} لـ BIOS ID ${biosId}.`,
+          duration: 'المدة',
+          unit: 'الوحدة',
+          price: 'السعر',
+          cancel: 'إلغاء',
+          renew: 'تجديد',
+          renewing: 'جارٍ التجديد...',
+        },
+        bulkRenewDialog: {
+          title: 'تجديد جماعي',
+          description: (count: number) => `طبّق نفس المدة والسعر على ${count} من التراخيص المحددة.`,
+        },
+        confirm: {
+          bulkDeactivateTitle: 'إلغاء التراخيص المحددة؟',
+          bulkDeactivateDescription: (count: number) => `سيؤدي هذا إلى إلغاء ${count} من التراخيص المحددة.`,
+          deactivateTitle: 'إلغاء الترخيص؟',
+          deactivateDescription: (biosId: string) => `سيؤدي هذا إلى إلغاء الترخيص الخاص بـ BIOS ID: ${biosId}`,
+          deactivateSelected: 'إلغاء المحدد',
+          deactivate: 'إلغاء',
+        },
+        toasts: {
+          renewed: 'تم تجديد الترخيص بنجاح.',
+          deactivated: 'تم إلغاء الترخيص بنجاح.',
+          bulkRenewed: 'تم تجديد التراخيص المحددة بنجاح.',
+          bulkDeactivated: 'تم إلغاء التراخيص المحددة بنجاح.',
+        },
+        errors: {
+          selectAction: 'حدد التراخيص والإجراء الجماعي أولاً.',
+          renew: 'أدخل مدة وسعراً صالحين قبل التجديد.',
+          bulkRenew: 'حدد التراخيص وأدخل مدة وسعراً صالحين أولاً.',
+          requestFailed: 'فشل تنفيذ الطلب.',
+        },
+      }
+    : {
+        eyebrow: 'Reseller',
+        title: 'Licenses',
+        description: 'Track all licenses you have activated, renew them in bulk, and act early on upcoming expirations.',
+        expiryLabels: {
+          day1: 'Expire in 1 day',
+          day3: 'Expire in 3 days',
+          day7: 'Expire in 7 days',
+          licenses: 'licenses',
+        },
+        statusOptions: { all: 'All', active: 'Active', expired: 'Expired', suspended: 'Suspended', pending: 'Pending' },
+        searchPlaceholder: 'Search by customer, BIOS ID, or program',
+        bulkActionPlaceholder: 'Bulk action',
+        bulkRenew: 'Renew Selected',
+        bulkDeactivate: 'Deactivate Selected',
+        apply: 'Apply',
+        selectVisible: 'Select Visible',
+        clearVisible: 'Clear Visible',
+        table: {
+          select: 'Select',
+          customer: 'Customer',
+          bios: 'BIOS ID',
+          program: 'Program',
+          duration: 'Duration',
+          price: 'Price',
+          activated: 'Activated',
+          expires: 'Expires',
+          status: 'Status',
+          actions: 'Actions',
+        },
+        actions: { view: 'View', renew: 'Renew', deactivate: 'Deactivate' },
+        units: { days: 'Days', months: 'Months', years: 'Years' },
+        details: {
+          titleFallback: 'License detail',
+          descriptionFallback: 'Inspect the full license record.',
+          customer: 'Customer',
+          program: 'Program',
+          version: 'Version',
+          status: 'Status',
+          bios: 'BIOS ID',
+          duration: 'Duration',
+          price: 'Price',
+          expires: 'Expires',
+          activity: 'Activity',
+          openDownload: 'Open Download Link',
+        },
+        renewDialog: {
+          title: 'Renew License',
+          fallback: 'Update duration and price, then renew.',
+          description: (program: string, biosId: string) => `Renew ${program} for BIOS ID ${biosId}.`,
+          duration: 'Duration',
+          unit: 'Unit',
+          price: 'Price',
+          cancel: 'Cancel',
+          renew: 'Renew',
+          renewing: 'Renewing...',
+        },
+        bulkRenewDialog: {
+          title: 'Bulk Renew',
+          description: (count: number) => `Apply the same duration and price to ${count} selected licenses.`,
+        },
+        confirm: {
+          bulkDeactivateTitle: 'Bulk deactivate licenses?',
+          bulkDeactivateDescription: (count: number) => `This will deactivate ${count} selected licenses.`,
+          deactivateTitle: 'Deactivate license?',
+          deactivateDescription: (biosId: string) => `This will deactivate the license for BIOS ID: ${biosId}`,
+          deactivateSelected: 'Deactivate Selected',
+          deactivate: 'Deactivate',
+        },
+        toasts: {
+          renewed: 'License renewed successfully.',
+          deactivated: 'License deactivated successfully.',
+          bulkRenewed: 'Selected licenses renewed successfully.',
+          bulkDeactivated: 'Selected licenses deactivated successfully.',
+        },
+        errors: {
+          selectAction: 'Select licenses and a bulk action first.',
+          renew: 'Enter a valid duration and price before renewing.',
+          bulkRenew: 'Select licenses and enter a valid duration and price first.',
+          requestFailed: 'The request failed.',
+        },
+      }), [lang])
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [search, setSearch] = useState('')
@@ -77,21 +242,21 @@ export function LicensesPage() {
         price: Number(renewPrice),
       }),
     onSuccess: () => {
-      toast.success('License renewed successfully.')
+      toast.success(text.toasts.renewed)
       setRenewTargetId(null)
       invalidateLicenseQueries(queryClient)
     },
-    onError: (error) => toast.error(getApiErrorMessage(error)),
+    onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
   })
 
   const deactivateMutation = useMutation({
     mutationFn: (licenseId: number) => licenseService.deactivate(licenseId),
     onSuccess: () => {
-      toast.success('License deactivated successfully.')
+      toast.success(text.toasts.deactivated)
       setDeactivateTarget(null)
       invalidateLicenseQueries(queryClient)
     },
-    onError: (error) => toast.error(getApiErrorMessage(error)),
+    onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
   })
 
   const bulkRenewMutation = useMutation({
@@ -101,23 +266,23 @@ export function LicensesPage() {
         price: Number(bulkPrice),
       }),
     onSuccess: () => {
-      toast.success('Selected licenses renewed successfully.')
+      toast.success(text.toasts.bulkRenewed)
       setBulkRenewOpen(false)
       setSelectedIds([])
       invalidateLicenseQueries(queryClient)
     },
-    onError: (error) => toast.error(getApiErrorMessage(error)),
+    onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
   })
 
   const bulkDeactivateMutation = useMutation({
     mutationFn: () => licenseService.bulkDeactivate(selectedIds),
     onSuccess: () => {
-      toast.success('Selected licenses deactivated successfully.')
+      toast.success(text.toasts.bulkDeactivated)
       setBulkDeactivateOpen(false)
       setSelectedIds([])
       invalidateLicenseQueries(queryClient)
     },
-    onError: (error) => toast.error(getApiErrorMessage(error)),
+    onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
   })
 
   const rows = licensesQuery.data?.data ?? []
@@ -132,7 +297,7 @@ export function LicensesPage() {
     () => [
       {
         key: 'select',
-        label: 'Select',
+        label: text.table.select,
         render: (row) => (
           <input
             type="checkbox"
@@ -150,7 +315,7 @@ export function LicensesPage() {
       },
       {
         key: 'customer',
-        label: 'Customer',
+        label: text.table.customer,
         sortable: true,
         sortValue: (row) => row.customer_name ?? '',
         render: (row) => (
@@ -160,21 +325,21 @@ export function LicensesPage() {
           </div>
         ),
       },
-      { key: 'bios', label: 'BIOS ID', sortable: true, sortValue: (row) => row.bios_id, render: (row) => row.bios_id },
-      { key: 'program', label: 'Program', sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
-      { key: 'duration', label: 'Duration', sortable: true, sortValue: (row) => row.duration_days, render: (row) => `${row.duration_days} days` },
-      { key: 'price', label: 'Price', sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },
-      { key: 'activated', label: 'Activated', sortable: true, sortValue: (row) => row.activated_at ?? '', render: (row) => (row.activated_at ? formatDate(row.activated_at, locale) : '-') },
-      { key: 'expires', label: 'Expires', sortable: true, sortValue: (row) => row.expires_at ?? '', render: (row) => (row.expires_at ? formatDate(row.expires_at, locale) : '-') },
-      { key: 'status', label: 'Status', sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'bios', label: text.table.bios, sortable: true, sortValue: (row) => row.bios_id, render: (row) => row.bios_id },
+      { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+      { key: 'duration', label: text.table.duration, sortable: true, sortValue: (row) => row.duration_days, render: (row) => `${row.duration_days} ${text.units.days}` },
+      { key: 'price', label: text.table.price, sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },
+      { key: 'activated', label: text.table.activated, sortable: true, sortValue: (row) => row.activated_at ?? '', render: (row) => (row.activated_at ? formatDate(row.activated_at, locale) : '-') },
+      { key: 'expires', label: text.table.expires, sortable: true, sortValue: (row) => row.expires_at ?? '', render: (row) => (row.expires_at ? formatDate(row.expires_at, locale) : '-') },
+      { key: 'status', label: text.table.status, sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
       {
         key: 'actions',
-        label: 'Actions',
+        label: text.table.actions,
         render: (row) => (
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" variant="ghost" onClick={() => setDetailLicenseId(row.id)}>
               <Eye className="me-1 h-4 w-4" />
-              View
+              {text.actions.view}
             </Button>
             <Button
               type="button"
@@ -188,17 +353,17 @@ export function LicensesPage() {
               }}
             >
               <RotateCw className="me-1 h-4 w-4" />
-              Renew
+              {text.actions.renew}
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setDeactivateTarget(row)}>
               <ShieldOff className="me-1 h-4 w-4" />
-              Deactivate
+              {text.actions.deactivate}
             </Button>
           </div>
         ),
       },
     ],
-    [locale, selectedIds],
+    [locale, selectedIds, text],
   )
 
   const detailLicense = detailQuery.data?.data
@@ -206,12 +371,12 @@ export function LicensesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Reseller" title="Licenses" description="Track all licenses you have activated, renew them in bulk, and act early on upcoming expirations." />
+      <PageHeader eyebrow={text.eyebrow} title={text.title} description={text.description} />
 
       <div className="grid gap-3 md:grid-cols-3">
-        <ExpiryAlert count={oneDay} label="Expire in 1 day" tone="rose" />
-        <ExpiryAlert count={threeDays} label="Expire in 3 days" tone="amber" />
-        <ExpiryAlert count={sevenDays} label="Expire in 7 days" tone="yellow" />
+        <ExpiryAlert count={oneDay} label={text.expiryLabels.day1} licensesLabel={text.expiryLabels.licenses} tone="rose" />
+        <ExpiryAlert count={threeDays} label={text.expiryLabels.day3} licensesLabel={text.expiryLabels.licenses} tone="amber" />
+        <ExpiryAlert count={sevenDays} label={text.expiryLabels.day7} licensesLabel={text.expiryLabels.licenses} tone="yellow" />
       </div>
 
       <Tabs
@@ -225,7 +390,7 @@ export function LicensesPage() {
         <TabsList>
           {STATUS_OPTIONS.map((option) => (
             <TabsTrigger key={option} value={option}>
-              {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
+              {text.statusOptions[option]}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -238,23 +403,23 @@ export function LicensesPage() {
                   setSearch(event.target.value)
                   setPage(1)
                 }}
-                placeholder="Search by customer, BIOS ID, or program"
+                placeholder={text.searchPlaceholder}
               />
               <select
                 value={bulkAction}
                 onChange={(event) => setBulkAction(event.target.value as 'renew' | 'deactivate' | '')}
                 className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                <option value="">Bulk action</option>
-                <option value="renew">Renew Selected</option>
-                <option value="deactivate">Deactivate Selected</option>
+                <option value="">{text.bulkActionPlaceholder}</option>
+                <option value="renew">{text.bulkRenew}</option>
+                <option value="deactivate">{text.bulkDeactivate}</option>
               </select>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => {
                   if (!bulkAction || selectedIds.length === 0) {
-                    toast.error('Select licenses and a bulk action first.')
+                    toast.error(text.errors.selectAction)
                     return
                   }
 
@@ -266,7 +431,7 @@ export function LicensesPage() {
                   setBulkDeactivateOpen(true)
                 }}
               >
-                Apply
+                {text.apply}
               </Button>
               <Button
                 type="button"
@@ -274,7 +439,7 @@ export function LicensesPage() {
                 onClick={() => setSelectedIds(allVisibleSelected ? [] : visibleIds)}
               >
                 <CheckSquare className="me-2 h-4 w-4" />
-                {allVisibleSelected ? 'Clear' : 'Select'} Visible
+                {allVisibleSelected ? text.clearVisible : text.selectVisible}
               </Button>
             </CardContent>
           </Card>
@@ -302,30 +467,30 @@ export function LicensesPage() {
       <Dialog open={detailLicenseId !== null} onOpenChange={(open) => !open && setDetailLicenseId(null)}>
         <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
           <DialogHeader>
-            <DialogTitle>{detailLicense?.program ?? 'License detail'}</DialogTitle>
-            <DialogDescription>{detailLicense ? `BIOS ID ${detailLicense.bios_id}` : 'Inspect the full license record.'}</DialogDescription>
+            <DialogTitle>{detailLicense?.program ?? text.details.titleFallback}</DialogTitle>
+            <DialogDescription>{detailLicense ? `BIOS ID ${detailLicense.bios_id}` : text.details.descriptionFallback}</DialogDescription>
           </DialogHeader>
           {detailLicense ? (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-4">
-                <InfoCard label="Customer" value={detailLicense.customer?.name ?? '-'} />
-                <InfoCard label="Program" value={detailLicense.program ?? '-'} />
-                <InfoCard label="Version" value={detailLicense.program_version ?? '-'} />
-                <InfoCard label="Status" value={<StatusBadge status={detailLicense.status} />} />
+                <InfoCard label={text.details.customer} value={detailLicense.customer?.name ?? '-'} />
+                <InfoCard label={text.details.program} value={detailLicense.program ?? '-'} />
+                <InfoCard label={text.details.version} value={detailLicense.program_version ?? '-'} />
+                <InfoCard label={text.details.status} value={<StatusBadge status={detailLicense.status} />} />
               </div>
 
               <Card>
                 <CardContent className="grid gap-4 p-4 md:grid-cols-2">
-                  <InfoBlock label="BIOS ID" value={detailLicense.bios_id} />
-                  <InfoBlock label="Duration" value={`${detailLicense.duration_days} days`} />
-                  <InfoBlock label="Price" value={formatCurrency(detailLicense.price, 'USD', locale)} />
-                  <InfoBlock label="Expires" value={detailLicense.expires_at ? formatDate(detailLicense.expires_at, locale) : '-'} />
+                  <InfoBlock label={text.details.bios} value={detailLicense.bios_id} />
+                  <InfoBlock label={text.details.duration} value={`${detailLicense.duration_days} ${text.units.days}`} />
+                  <InfoBlock label={text.details.price} value={formatCurrency(detailLicense.price, 'USD', locale)} />
+                  <InfoBlock label={text.details.expires} value={detailLicense.expires_at ? formatDate(detailLicense.expires_at, locale) : '-'} />
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Activity</CardTitle>
+                  <CardTitle className="text-lg">{text.details.activity}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {detailLicense.activity.map((entry) => (
@@ -344,7 +509,7 @@ export function LicensesPage() {
 
               {detailLicense.download_link ? (
                 <Button type="button" variant="secondary" className="w-full" onClick={() => window.open(detailLicense.download_link ?? '', '_blank', 'noopener,noreferrer')}>
-                  Open Download Link
+                  {text.details.openDownload}
                 </Button>
               ) : null}
             </div>
@@ -355,38 +520,38 @@ export function LicensesPage() {
       <Dialog open={renewTargetId !== null} onOpenChange={(open) => !open && setRenewTargetId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Renew License</DialogTitle>
-            <DialogDescription>{renewLicense ? `Renew ${renewLicense.program ?? 'license'} for BIOS ID ${renewLicense.bios_id}.` : 'Update duration and price, then renew.'}</DialogDescription>
+            <DialogTitle>{text.renewDialog.title}</DialogTitle>
+            <DialogDescription>{renewLicense ? text.renewDialog.description(renewLicense.program ?? 'license', renewLicense.bios_id) : text.renewDialog.fallback}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-3">
-            <Field label="Duration" htmlFor="renew-duration">
+            <Field label={text.renewDialog.duration} htmlFor="renew-duration">
               <Input id="renew-duration" type="number" min={1} value={renewDuration} onChange={(event) => setRenewDuration(event.target.value)} />
             </Field>
-            <Field label="Unit" htmlFor="renew-unit">
+            <Field label={text.renewDialog.unit} htmlFor="renew-unit">
               <select
                 id="renew-unit"
                 value={renewUnit}
                 onChange={(event) => setRenewUnit(event.target.value as DurationUnit)}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                <option value="days">Days</option>
-                <option value="months">Months</option>
-                <option value="years">Years</option>
+                <option value="days">{text.units.days}</option>
+                <option value="months">{text.units.months}</option>
+                <option value="years">{text.units.years}</option>
               </select>
             </Field>
-            <Field label="Price" htmlFor="renew-price">
+            <Field label={text.renewDialog.price} htmlFor="renew-price">
               <Input id="renew-price" type="number" step="0.01" min={0} value={renewPrice} onChange={(event) => setRenewPrice(event.target.value)} />
             </Field>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setRenewTargetId(null)}>
-              Cancel
+              {text.renewDialog.cancel}
             </Button>
             <Button
               type="button"
               onClick={() => {
                 if (Number(renewDuration) < 1 || Number(renewPrice) < 0) {
-                  toast.error('Enter a valid duration and price before renewing.')
+                  toast.error(text.errors.renew)
                   return
                 }
 
@@ -394,7 +559,7 @@ export function LicensesPage() {
               }}
               disabled={renewMutation.isPending}
             >
-              {renewMutation.isPending ? 'Renewing...' : 'Renew'}
+              {renewMutation.isPending ? text.renewDialog.renewing : text.renewDialog.renew}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -403,38 +568,38 @@ export function LicensesPage() {
       <Dialog open={bulkRenewOpen} onOpenChange={setBulkRenewOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Bulk Renew</DialogTitle>
-            <DialogDescription>Apply the same duration and price to {selectedIds.length} selected licenses.</DialogDescription>
+            <DialogTitle>{text.bulkRenewDialog.title}</DialogTitle>
+            <DialogDescription>{text.bulkRenewDialog.description(selectedIds.length)}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-3">
-            <Field label="Duration" htmlFor="bulk-duration">
+            <Field label={text.renewDialog.duration} htmlFor="bulk-duration">
               <Input id="bulk-duration" type="number" min={1} value={bulkDuration} onChange={(event) => setBulkDuration(event.target.value)} />
             </Field>
-            <Field label="Unit" htmlFor="bulk-unit">
+            <Field label={text.renewDialog.unit} htmlFor="bulk-unit">
               <select
                 id="bulk-unit"
                 value={bulkUnit}
                 onChange={(event) => setBulkUnit(event.target.value as DurationUnit)}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                <option value="days">Days</option>
-                <option value="months">Months</option>
-                <option value="years">Years</option>
+                <option value="days">{text.units.days}</option>
+                <option value="months">{text.units.months}</option>
+                <option value="years">{text.units.years}</option>
               </select>
             </Field>
-            <Field label="Price" htmlFor="bulk-price">
+            <Field label={text.renewDialog.price} htmlFor="bulk-price">
               <Input id="bulk-price" type="number" step="0.01" min={0} value={bulkPrice} onChange={(event) => setBulkPrice(event.target.value)} />
             </Field>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setBulkRenewOpen(false)}>
-              Cancel
+              {text.renewDialog.cancel}
             </Button>
             <Button
               type="button"
               onClick={() => {
                 if (selectedIds.length === 0 || Number(bulkDuration) < 1 || Number(bulkPrice) < 0) {
-                  toast.error('Select licenses and enter a valid duration and price first.')
+                  toast.error(text.errors.bulkRenew)
                   return
                 }
 
@@ -442,7 +607,7 @@ export function LicensesPage() {
               }}
               disabled={bulkRenewMutation.isPending}
             >
-              {bulkRenewMutation.isPending ? 'Renewing...' : 'Renew Selected'}
+              {bulkRenewMutation.isPending ? text.renewDialog.renewing : text.bulkRenew}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -451,9 +616,9 @@ export function LicensesPage() {
       <ConfirmDialog
         open={bulkDeactivateOpen}
         onOpenChange={setBulkDeactivateOpen}
-        title="Bulk deactivate licenses?"
-        description={`This will deactivate ${selectedIds.length} selected licenses.`}
-        confirmLabel="Deactivate Selected"
+        title={text.confirm.bulkDeactivateTitle}
+        description={text.confirm.bulkDeactivateDescription(selectedIds.length)}
+        confirmLabel={text.confirm.deactivateSelected}
         isDestructive
         onConfirm={() => bulkDeactivateMutation.mutate()}
       />
@@ -465,9 +630,9 @@ export function LicensesPage() {
             setDeactivateTarget(null)
           }
         }}
-        title="Deactivate license?"
-        description={deactivateTarget ? `This will deactivate the license for BIOS ID: ${deactivateTarget.bios_id}` : undefined}
-        confirmLabel="Deactivate"
+        title={text.confirm.deactivateTitle}
+        description={deactivateTarget ? text.confirm.deactivateDescription(deactivateTarget.bios_id) : undefined}
+        confirmLabel={text.confirm.deactivate}
         isDestructive
         onConfirm={() => {
           if (deactivateTarget) {
@@ -508,7 +673,7 @@ function InfoBlock({ label, value }: { label: string; value: React.ReactNode }) 
   )
 }
 
-function ExpiryAlert({ count, label, tone }: { count: number; label: string; tone: 'rose' | 'amber' | 'yellow' }) {
+function ExpiryAlert({ count, label, licensesLabel, tone }: { count: number; label: string; licensesLabel: string; tone: 'rose' | 'amber' | 'yellow' }) {
   const styles = {
     rose: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300',
     amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
@@ -521,7 +686,7 @@ function ExpiryAlert({ count, label, tone }: { count: number; label: string; ton
         <AlertTriangle className="h-5 w-5" />
         <div>
           <p className="text-xs uppercase tracking-wide">{label}</p>
-          <p className="text-lg font-semibold">{count} licenses</p>
+          <p className="text-lg font-semibold">{count} {licensesLabel}</p>
         </div>
       </div>
     </div>
@@ -560,12 +725,12 @@ function invalidateLicenseQueries(queryClient: ReturnType<typeof useQueryClient>
   ])
 }
 
-function getApiErrorMessage(error: unknown) {
+function getApiErrorMessage(error: unknown, fallback: string) {
   if (axios.isAxiosError(error)) {
     return (error.response?.data as { message?: string; errors?: Record<string, string[]> } | undefined)?.message
       ?? Object.values((error.response?.data as { errors?: Record<string, string[]> } | undefined)?.errors ?? {})[0]?.[0]
-      ?? 'The request failed.'
+      ?? fallback
   }
 
-  return 'The request failed.'
+  return fallback
 }

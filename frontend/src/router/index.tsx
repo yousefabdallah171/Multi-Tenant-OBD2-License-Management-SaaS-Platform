@@ -1,8 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
 import { LoginPage } from '@/pages/auth/Login'
-import { RoleDashboard } from '@/pages/dashboard/RoleDashboard'
+import { CustomerLayout } from '@/components/layout/CustomerLayout'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { DashboardPage as CustomerDashboardPage } from '@/pages/customer/Dashboard'
+import { DownloadPage as CustomerDownloadPage } from '@/pages/customer/Download'
+import { SoftwarePage as CustomerSoftwarePage } from '@/pages/customer/Software'
 import { ActivityPage as ManagerActivityPage } from '@/pages/manager/Activity'
 import { CustomersPage as ManagerCustomersPage } from '@/pages/manager/Customers'
 import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/Dashboard'
@@ -121,7 +124,12 @@ export function AppRouter() {
             </Route>
           </Route>
           <Route element={<RoleGuard allowedRoles={['customer']} />}>
-            <Route path="customer" element={<RoleDashboard role="customer" />} />
+            <Route path="customer" element={<CustomerLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<CustomerDashboardPage />} />
+              <Route path="software" element={<CustomerSoftwarePage />} />
+              <Route path="download" element={<CustomerDownloadPage />} />
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<LanguageNotFound />} />

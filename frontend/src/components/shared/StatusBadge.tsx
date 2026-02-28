@@ -1,3 +1,4 @@
+import { useLanguage } from '@/hooks/useLanguage'
 import { cn } from '@/lib/utils'
 
 type Status = 'active' | 'suspended' | 'inactive' | 'expired' | 'pending' | 'removed' | 'online' | 'offline' | 'degraded' | 'unknown'
@@ -16,5 +17,32 @@ const statusStyles: Record<Status, string> = {
 }
 
 export function StatusBadge({ status }: { status: Status }) {
-  return <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize', statusStyles[status])}>{status.replace('_', ' ')}</span>
+  const { lang } = useLanguage()
+  const labels: Record<Status, string> = lang === 'ar'
+    ? {
+        active: 'نشط',
+        suspended: 'معلق',
+        inactive: 'غير نشط',
+        expired: 'منتهي',
+        pending: 'قيد الانتظار',
+        removed: 'تمت الإزالة',
+        online: 'متصل',
+        offline: 'غير متصل',
+        degraded: 'متدهور',
+        unknown: 'غير معروف',
+      }
+    : {
+        active: 'Active',
+        suspended: 'Suspended',
+        inactive: 'Inactive',
+        expired: 'Expired',
+        pending: 'Pending',
+        removed: 'Removed',
+        online: 'Online',
+        offline: 'Offline',
+        degraded: 'Degraded',
+        unknown: 'Unknown',
+      }
+
+  return <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', statusStyles[status])}>{labels[status]}</span>
 }

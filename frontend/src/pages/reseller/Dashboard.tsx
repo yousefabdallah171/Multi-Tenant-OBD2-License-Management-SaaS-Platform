@@ -13,10 +13,77 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { resellerService } from '@/services/reseller.service'
 
+const MONTHS: Record<string, number> = {
+  Jan: 0,
+  Feb: 1,
+  Mar: 2,
+  Apr: 3,
+  May: 4,
+  Jun: 5,
+  Jul: 6,
+  Aug: 7,
+  Sep: 8,
+  Oct: 9,
+  Nov: 10,
+  Dec: 11,
+}
+
+function localizeMonthLabel(label: string, locale: string) {
+  const [monthToken, yearToken] = label.split(' ')
+  const monthIndex = MONTHS[monthToken]
+
+  if (monthIndex === undefined || !yearToken) {
+    return label
+  }
+
+  return new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(new Date(Number(yearToken), monthIndex, 1))
+}
+
 export function DashboardPage() {
   const navigate = useNavigate()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const text = lang === 'ar'
+    ? {
+        eyebrow: 'موزع',
+        title: 'لوحة التحكم',
+        description: 'تابع العملاء والتراخيص النشطة والإيرادات الحالية وأحدث أعمال التفعيل ضمن نطاقك الشخصي كموزع.',
+        customers: 'العملاء',
+        activeLicenses: 'التراخيص النشطة',
+        licenses: 'التراخيص',
+        reports: 'التقارير',
+        revenue: 'الإيراد',
+        monthlyActivations: 'التفعيلات الشهرية',
+        activationTrend: 'اتجاه التفعيل',
+        revenueTrend: 'اتجاه الإيراد',
+        recentActivity: 'النشاط الأخير',
+        noActivityTitle: 'لا يوجد نشاط حتى الآن',
+        noActivityDescription: 'ستظهر هنا أحدث عمليات التفعيل والتجديد والإلغاء الخاصة بك.',
+        quickActions: 'إجراءات سريعة',
+        activateNewCustomer: 'تفعيل عميل جديد',
+        manageLicenses: 'إدارة التراخيص',
+        exportReports: 'تصدير التقارير',
+      }
+    : {
+        eyebrow: 'Reseller',
+        title: 'Dashboard',
+        description: 'Track your customers, active licenses, current revenue, and the latest activation work from your personal reseller scope.',
+        customers: 'Customers',
+        activeLicenses: 'Active Licenses',
+        licenses: 'Licenses',
+        reports: 'Reports',
+        revenue: 'Revenue',
+        monthlyActivations: 'Monthly Activations',
+        activationTrend: 'Activation Trend',
+        revenueTrend: 'Revenue Trend',
+        recentActivity: 'Recent Activity',
+        noActivityTitle: 'No activity yet',
+        noActivityDescription: 'Your recent activation, renewal, and deactivation actions will appear here.',
+        quickActions: 'Quick Actions',
+        activateNewCustomer: 'Activate New Customer',
+        manageLicenses: 'Manage Licenses',
+        exportReports: 'Export Reports',
+      }
 
   const statsQuery = useQuery({
     queryKey: ['reseller', 'dashboard', 'stats'],
@@ -40,48 +107,56 @@ export function DashboardPage() {
 
   const stats = statsQuery.data?.stats
   const recentActivity = activityQuery.data?.data ?? []
+  const activationSeries = (activationsQuery.data?.data ?? []).map((point) => ({
+    ...point,
+    month: localizeMonthLabel(point.month, locale),
+  }))
+  const revenueSeries = (revenueQuery.data?.data ?? []).map((point) => ({
+    ...point,
+    month: localizeMonthLabel(point.month, locale),
+  }))
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Reseller"
-        title="Dashboard"
-        description="Track your customers, active licenses, current revenue, and the latest activation work from your personal reseller scope."
+        eyebrow={text.eyebrow}
+        title={text.title}
+        description={text.description}
         actions={
           <>
             <Button type="button" variant="secondary" onClick={() => navigate(routePaths.reseller.customers(lang))}>
-              Customers
+              {text.customers}
             </Button>
             <Button type="button" variant="secondary" onClick={() => navigate(routePaths.reseller.licenses(lang))}>
-              Licenses
+              {text.licenses}
             </Button>
             <Button type="button" onClick={() => navigate(routePaths.reseller.reports(lang))}>
-              Reports
+              {text.reports}
             </Button>
           </>
         }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard title="Customers" value={stats?.customers ?? 0} icon={UserRound} color="sky" />
-        <StatsCard title="Active Licenses" value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
-        <StatsCard title="Revenue" value={formatCurrency(stats?.revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
-        <StatsCard title="Monthly Activations" value={stats?.monthly_activations ?? 0} icon={KeyRound} color="amber" />
+        <StatsCard title={text.customers} value={stats?.customers ?? 0} icon={UserRound} color="sky" />
+        <StatsCard title={text.activeLicenses} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
+        <StatsCard title={text.revenue} value={formatCurrency(stats?.revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+        <StatsCard title={text.monthlyActivations} value={stats?.monthly_activations ?? 0} icon={KeyRound} color="amber" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <ActivationTimeline title="Activation Trend" data={activationsQuery.data?.data ?? []} isLoading={activationsQuery.isLoading} dataKey="count" xKey="month" />
-        <RevenueChart title="Revenue Trend" data={revenueQuery.data?.data ?? []} isLoading={revenueQuery.isLoading} dataKey="revenue" xKey="month" />
+        <ActivationTimeline title={text.activationTrend} data={activationSeries} isLoading={activationsQuery.isLoading} dataKey="count" xKey="month" />
+        <RevenueChart title={text.revenueTrend} data={revenueSeries} isLoading={revenueQuery.isLoading} dataKey="revenue" xKey="month" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Recent Activity</CardTitle>
+            <CardTitle className="text-lg">{text.recentActivity}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {recentActivity.length === 0 && !activityQuery.isLoading ? (
-              <EmptyState title="No activity yet" description="Your recent activation, renewal, and deactivation actions will appear here." />
+              <EmptyState title={text.noActivityTitle} description={text.noActivityDescription} />
             ) : null}
             {recentActivity.map((entry) => (
               <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
@@ -99,19 +174,19 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
+            <CardTitle className="text-lg">{text.quickActions}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button type="button" className="w-full justify-between" onClick={() => navigate(routePaths.reseller.customers(lang))}>
-              Activate New Customer
+              {text.activateNewCustomer}
               <ArrowRight className="h-4 w-4" />
             </Button>
             <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.reseller.licenses(lang))}>
-              Manage Licenses
+              {text.manageLicenses}
               <ArrowRight className="h-4 w-4" />
             </Button>
             <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.reseller.reports(lang))}>
-              Export Reports
+              {text.exportReports}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardContent>

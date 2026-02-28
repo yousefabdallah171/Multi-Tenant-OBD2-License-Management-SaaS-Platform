@@ -9,12 +9,49 @@ import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
+import { useLanguage } from '@/hooks/useLanguage'
 import { resellerService } from '@/services/reseller.service'
 import { formatCurrency } from '@/lib/utils'
 
 export function ReportsPage() {
+  const { lang } = useLanguage()
   const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly')
+  const text = lang === 'ar'
+    ? {
+        eyebrow: 'موزع',
+        title: 'التقارير',
+        description: 'حلل إيرادات الموزع الشخصية وحجم التفعيل والبرامج الأكثر مبيعاً ضمن النطاق الزمني المحدد.',
+        exportCsv: 'تصدير CSV',
+        exportPdf: 'تصدير PDF',
+        daily: 'يومي',
+        weekly: 'أسبوعي',
+        monthly: 'شهري',
+        totalRevenue: 'إجمالي الإيراد',
+        totalActivations: 'إجمالي التفعيلات',
+        avgPrice: 'متوسط السعر',
+        successRate: 'معدل النجاح',
+        revenue: 'الإيراد',
+        activationCount: 'عدد التفعيلات',
+        topPrograms: 'أفضل البرامج مبيعاً',
+      }
+    : {
+        eyebrow: 'Reseller',
+        title: 'Reports',
+        description: 'Analyze personal reseller revenue, activation volume, and top-selling programs across the selected date range.',
+        exportCsv: 'Export CSV',
+        exportPdf: 'Export PDF',
+        daily: 'Daily',
+        weekly: 'Weekly',
+        monthly: 'Monthly',
+        totalRevenue: 'Total Revenue',
+        totalActivations: 'Total Activations',
+        avgPrice: 'Avg Price',
+        successRate: 'Success Rate',
+        revenue: 'Revenue',
+        activationCount: 'Activation Count',
+        topPrograms: 'Top Programs by Sales',
+      }
 
   const revenueQuery = useQuery({
     queryKey: ['reseller', 'reports', 'revenue', range.from, range.to, period],
@@ -44,18 +81,18 @@ export function ReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Reseller"
-        title="Reports"
-        description="Analyze personal reseller revenue, activation volume, and top-selling programs across the selected date range."
+        eyebrow={text.eyebrow}
+        title={text.title}
+        description={text.description}
         actions={
           <>
             <Button type="button" variant="secondary" onClick={() => void resellerService.exportCsv({ ...range, period })}>
               <Download className="me-2 h-4 w-4" />
-              Export CSV
+              {text.exportCsv}
             </Button>
             <Button type="button" onClick={() => void resellerService.exportPdf({ ...range, period })}>
               <Download className="me-2 h-4 w-4" />
-              Export PDF
+              {text.exportPdf}
             </Button>
           </>
         }
@@ -69,28 +106,28 @@ export function ReportsPage() {
             onChange={(event) => setPeriod(event.target.value as 'daily' | 'weekly' | 'monthly')}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
+            <option value="daily">{text.daily}</option>
+            <option value="weekly">{text.weekly}</option>
+            <option value="monthly">{text.monthly}</option>
           </select>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard title="Total Revenue" value={formatCurrency(totalRevenue)} icon={Banknote} color="emerald" />
-        <StatsCard title="Total Activations" value={totalActivations} icon={Activity} color="sky" />
-        <StatsCard title="Avg Price" value={formatCurrency(avgPrice)} icon={Target} color="amber" />
-        <StatsCard title="Success Rate" value={`${Math.max(0, Math.min(100, successRate)).toFixed(1)}%`} icon={Target} color="rose" />
+        <StatsCard title={text.totalRevenue} value={formatCurrency(totalRevenue)} icon={Banknote} color="emerald" />
+        <StatsCard title={text.totalActivations} value={totalActivations} icon={Activity} color="sky" />
+        <StatsCard title={text.avgPrice} value={formatCurrency(avgPrice)} icon={Target} color="amber" />
+        <StatsCard title={text.successRate} value={`${Math.max(0, Math.min(100, successRate)).toFixed(1)}%`} icon={Target} color="rose" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <RevenueChart title="Revenue" data={revenueQuery.data?.data ?? []} dataKey="revenue" xKey="period" isLoading={revenueQuery.isLoading} />
-        <TenantComparisonChart title="Activation Count" data={activationsQuery.data?.data ?? []} dataKey="count" xKey="period" isLoading={activationsQuery.isLoading} />
+        <RevenueChart title={text.revenue} data={revenueQuery.data?.data ?? []} dataKey="revenue" xKey="period" isLoading={revenueQuery.isLoading} />
+        <TenantComparisonChart title={text.activationCount} data={activationsQuery.data?.data ?? []} dataKey="count" xKey="period" isLoading={activationsQuery.isLoading} />
       </div>
 
       <Card>
         <CardContent className="h-96 p-4">
-          <h3 className="mb-4 text-lg font-semibold">Top Programs by Sales</h3>
+          <h3 className="mb-4 text-lg font-semibold">{text.topPrograms}</h3>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={programsQuery.data?.data ?? []} layout="vertical" margin={{ left: 40, right: 20, top: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />

@@ -22,6 +22,9 @@ interface ProgramFormState {
   description: string
   version: string
   download_link: string
+  file_size: string
+  system_requirements: string
+  installation_guide_url: string
   trial_days: string
   base_price: string
   status: 'active' | 'inactive'
@@ -33,6 +36,9 @@ const EMPTY_FORM: ProgramFormState = {
   description: '',
   version: '1.0',
   download_link: '',
+  file_size: '',
+  system_requirements: '',
+  installation_guide_url: '',
   trial_days: '0',
   base_price: '0',
   status: 'active',
@@ -143,6 +149,9 @@ export function SoftwareManagementPage() {
       description: program.description ?? '',
       version: program.version,
       download_link: program.download_link,
+      file_size: program.file_size ?? '',
+      system_requirements: program.system_requirements ?? '',
+      installation_guide_url: program.installation_guide_url ?? '',
       trial_days: String(program.trial_days),
       base_price: String(program.base_price),
       status: program.status,
@@ -168,6 +177,11 @@ export function SoftwareManagementPage() {
       return
     }
 
+    if (form.installation_guide_url.trim() && !isValidUrl(form.installation_guide_url.trim())) {
+      toast.error('Installation guide must be a valid URL.')
+      return
+    }
+
     const basePrice = Number(form.base_price)
     const trialDays = Number(form.trial_days)
 
@@ -181,6 +195,9 @@ export function SoftwareManagementPage() {
       description: form.description.trim() || null,
       version: form.version.trim() || '1.0',
       download_link: form.download_link.trim(),
+      file_size: form.file_size.trim() || null,
+      system_requirements: form.system_requirements.trim() || null,
+      installation_guide_url: form.installation_guide_url.trim() || null,
       trial_days: trialDays,
       base_price: basePrice,
       status: form.status,
@@ -344,6 +361,18 @@ export function SoftwareManagementPage() {
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="program-download">Download Link</Label>
               <Input id="program-download" value={form.download_link} onChange={(event) => setForm((current) => ({ ...current, download_link: event.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="program-file-size">File Size</Label>
+              <Input id="program-file-size" value={form.file_size} onChange={(event) => setForm((current) => ({ ...current, file_size: event.target.value }))} placeholder="e.g. 245 MB" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="program-guide">Installation Guide URL</Label>
+              <Input id="program-guide" value={form.installation_guide_url} onChange={(event) => setForm((current) => ({ ...current, installation_guide_url: event.target.value }))} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="program-requirements">System Requirements</Label>
+              <Textarea id="program-requirements" value={form.system_requirements} onChange={(event) => setForm((current) => ({ ...current, system_requirements: event.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="program-trial">Trial Days</Label>

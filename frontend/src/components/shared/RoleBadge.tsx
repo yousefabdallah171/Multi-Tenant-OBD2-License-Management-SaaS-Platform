@@ -1,4 +1,5 @@
 import type { UserRole } from '@/types/user.types'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 const roleStyles: Record<UserRole, string> = {
@@ -10,5 +11,7 @@ const roleStyles: Record<UserRole, string> = {
 }
 
 export function RoleBadge({ role }: { role: UserRole }) {
-  return <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', roleStyles[role])}>{role.replace('_', ' ')}</span>
+  const { t } = useTranslation()
+
+  return <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', roleStyles[role])}>{t(`roles.${role}`)}</span>
 }

@@ -20,6 +20,31 @@ interface ProgramCatalogPageProps {
 export function ProgramCatalogPage({ eyebrow, title, description }: ProgramCatalogPageProps) {
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const copy = lang === 'ar'
+    ? {
+        searchPlaceholder: 'ابحث باسم البرنامج',
+        emptyTitle: 'لم يتم العثور على برامج',
+        emptyDescription: 'عدّل عبارة البحث أو فعّل البرامج أولاً من كتالوج البرامج الخاص بالمدير الرئيسي.',
+        version: 'الإصدار',
+        noDescription: 'لا يوجد وصف متاح.',
+        basePrice: 'السعر الأساسي',
+        trialDays: 'أيام التجربة',
+        licensesSold: 'التراخيص المباعة',
+        activeLicenses: 'التراخيص النشطة',
+        openDownload: 'فتح التحميل',
+      }
+    : {
+        searchPlaceholder: 'Search by program name',
+        emptyTitle: 'No programs found',
+        emptyDescription: 'Adjust the search term or activate programs from the manager parent software catalog first.',
+        version: 'Version',
+        noDescription: 'No description provided.',
+        basePrice: 'Base Price',
+        trialDays: 'Trial Days',
+        licensesSold: 'Licenses Sold',
+        activeLicenses: 'Active Licenses',
+        openDownload: 'Open Download',
+      }
   const [search, setSearch] = useState('')
 
   const programsQuery = useQuery({
@@ -38,13 +63,13 @@ export function ProgramCatalogPage({ eyebrow, title, description }: ProgramCatal
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by program name"
+            placeholder={copy.searchPlaceholder}
           />
         </CardContent>
       </Card>
 
       {programs.length === 0 && !programsQuery.isLoading ? (
-        <EmptyState title="No programs found" description="Adjust the search term or activate programs from the manager parent software catalog first." icon={PackageSearch} />
+        <EmptyState title={copy.emptyTitle} description={copy.emptyDescription} icon={PackageSearch} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {programs.map((program) => (
@@ -53,35 +78,35 @@ export function ProgramCatalogPage({ eyebrow, title, description }: ProgramCatal
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
                     <CardTitle className="text-lg">{program.name}</CardTitle>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Version {program.version}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{copy.version} {program.version}</p>
                   </div>
                   <StatusBadge status={program.status} />
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 p-5">
-                <p className="min-h-16 text-sm text-slate-600 dark:text-slate-300">{program.description || 'No description provided.'}</p>
+                <p className="min-h-16 text-sm text-slate-600 dark:text-slate-300">{program.description || copy.noDescription}</p>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Base Price</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{copy.basePrice}</p>
                     <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Trial Days</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{copy.trialDays}</p>
                     <p className="mt-1 font-semibold">{program.trial_days}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Licenses Sold</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{copy.licensesSold}</p>
                     <p className="mt-1 font-semibold">{program.licenses_sold}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Active Licenses</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{copy.activeLicenses}</p>
                     <p className="mt-1 font-semibold">{program.active_licenses_count}</p>
                   </div>
                 </div>
 
                 <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => window.open(program.download_link, '_blank', 'noopener,noreferrer')}>
-                  Open Download
+                  {copy.openDownload}
                   <ArrowUpRight className="h-4 w-4" />
                 </Button>
               </CardContent>

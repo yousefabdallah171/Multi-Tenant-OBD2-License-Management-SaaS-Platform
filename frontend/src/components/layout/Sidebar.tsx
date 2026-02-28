@@ -13,6 +13,7 @@ interface NavItem {
   icon: LucideIcon
   href: (lang: 'ar' | 'en') => string
   label?: string
+  labelAr?: string
   translationKey?: string
 }
 
@@ -33,20 +34,20 @@ const superAdminItems: NavItem[] = [
 ]
 
 const managerParentItems: NavItem[] = [
-  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.managerParent.dashboard, label: 'Dashboard' },
-  { key: 'teamManagement', icon: Users, href: routePaths.managerParent.teamManagement, label: 'Team Management' },
-  { key: 'resellerPricing', icon: Wallet, href: routePaths.managerParent.resellerPricing, label: 'Reseller Pricing' },
-  { key: 'softwareManagement', icon: Package, href: routePaths.managerParent.softwareManagement, label: 'Software Management' },
-  { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, label: 'BIOS Blacklist' },
-  { key: 'biosHistory', icon: History, href: routePaths.managerParent.biosHistory, label: 'BIOS History' },
-  { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, label: 'IP Analytics' },
-  { key: 'usernameManagement', icon: KeyRound, href: routePaths.managerParent.usernameManagement, label: 'Username Management' },
-  { key: 'financialReports', icon: BarChart3, href: routePaths.managerParent.financialReports, label: 'Financial Reports' },
-  { key: 'reports', icon: ScrollText, href: routePaths.managerParent.reports, label: 'Reports' },
-  { key: 'activity', icon: ScrollText, href: routePaths.managerParent.activity, label: 'Activity' },
-  { key: 'customers', icon: Users, href: routePaths.managerParent.customers, label: 'Customers' },
-  { key: 'settings', icon: Settings, href: routePaths.managerParent.settings, label: 'Settings' },
-  { key: 'profile', icon: User, href: routePaths.managerParent.profile, label: 'Profile' },
+  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.managerParent.dashboard, translationKey: 'managerParent.nav.dashboard' },
+  { key: 'teamManagement', icon: Users, href: routePaths.managerParent.teamManagement, translationKey: 'managerParent.nav.teamManagement' },
+  { key: 'resellerPricing', icon: Wallet, href: routePaths.managerParent.resellerPricing, translationKey: 'managerParent.nav.resellerPricing' },
+  { key: 'softwareManagement', icon: Package, href: routePaths.managerParent.softwareManagement, translationKey: 'managerParent.nav.softwareManagement' },
+  { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
+  { key: 'biosHistory', icon: History, href: routePaths.managerParent.biosHistory, translationKey: 'managerParent.nav.biosHistory' },
+  { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, translationKey: 'managerParent.nav.ipAnalytics' },
+  { key: 'usernameManagement', icon: KeyRound, href: routePaths.managerParent.usernameManagement, translationKey: 'managerParent.nav.usernameManagement' },
+  { key: 'financialReports', icon: BarChart3, href: routePaths.managerParent.financialReports, translationKey: 'managerParent.nav.financialReports' },
+  { key: 'reports', icon: ScrollText, href: routePaths.managerParent.reports, translationKey: 'managerParent.nav.reports' },
+  { key: 'activity', icon: ScrollText, href: routePaths.managerParent.activity, translationKey: 'managerParent.nav.activity' },
+  { key: 'customers', icon: Users, href: routePaths.managerParent.customers, translationKey: 'managerParent.nav.customers' },
+  { key: 'settings', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
+  { key: 'profile', icon: User, href: routePaths.managerParent.profile, translationKey: 'managerParent.nav.profile' },
 ]
 
 const managerItems: NavItem[] = [
@@ -61,13 +62,13 @@ const managerItems: NavItem[] = [
 ]
 
 const resellerItems: NavItem[] = [
-  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.reseller.dashboard, label: 'Dashboard' },
-  { key: 'customers', icon: Users, href: routePaths.reseller.customers, label: 'Customers' },
-  { key: 'software', icon: Package, href: routePaths.reseller.software, label: 'Software' },
-  { key: 'licenses', icon: KeyRound, href: routePaths.reseller.licenses, label: 'Licenses' },
-  { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, label: 'Reports' },
-  { key: 'activity', icon: Activity, href: routePaths.reseller.activity, label: 'Activity' },
-  { key: 'profile', icon: User, href: routePaths.reseller.profile, label: 'Profile' },
+  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.reseller.dashboard, label: 'Dashboard', labelAr: 'لوحة التحكم' },
+  { key: 'customers', icon: Users, href: routePaths.reseller.customers, label: 'Customers', labelAr: 'العملاء' },
+  { key: 'software', icon: Package, href: routePaths.reseller.software, label: 'Software', labelAr: 'البرامج' },
+  { key: 'licenses', icon: KeyRound, href: routePaths.reseller.licenses, label: 'Licenses', labelAr: 'التراخيص' },
+  { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, label: 'Reports', labelAr: 'التقارير' },
+  { key: 'activity', icon: Activity, href: routePaths.reseller.activity, label: 'Activity', labelAr: 'النشاط' },
+  { key: 'profile', icon: User, href: routePaths.reseller.profile, label: 'Profile', labelAr: 'الملف الشخصي' },
 ]
 
 export function Sidebar() {
@@ -91,7 +92,7 @@ export function Sidebar() {
     <nav className="space-y-2">
       {items.map((item) => {
         const Icon = item.icon
-        const label = item.translationKey ? t(item.translationKey) : item.label ?? item.key
+        const label = item.translationKey ? t(item.translationKey) : lang === 'ar' && item.labelAr ? item.labelAr : item.label ?? item.key
 
         return (
           <NavLink

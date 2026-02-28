@@ -4,18 +4,48 @@ import { KeyRound, LogIn, ShieldOff, ShieldPlus, Undo2 } from 'lucide-react'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { useLanguage } from '@/hooks/useLanguage'
 import { resellerService } from '@/services/reseller.service'
 import { formatDate } from '@/lib/utils'
 
-const ACTION_FILTERS = [
-  { value: '', label: 'All Actions' },
-  { value: 'license.activate', label: 'Activation' },
-  { value: 'license.renew', label: 'Renewal' },
-  { value: 'license.deactivate', label: 'Deactivation' },
-  { value: 'auth.login', label: 'Login' },
-] as const
-
 export function ActivityPage() {
+  const { lang } = useLanguage()
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const text = lang === 'ar'
+    ? {
+        eyebrow: 'موزع',
+        title: 'النشاط',
+        description: 'راجع إجراءات التفعيل والتجديد والإلغاء وتسجيل الدخول الخاصة بك.',
+        filters: [
+          { value: '', label: 'كل الإجراءات' },
+          { value: 'license.activate', label: 'تفعيل' },
+          { value: 'license.renew', label: 'تجديد' },
+          { value: 'license.deactivate', label: 'إلغاء' },
+          { value: 'auth.login', label: 'تسجيل الدخول' },
+        ],
+        empty: 'لا يوجد نشاط شخصي مطابق للفلاتر الحالية.',
+        totalEntries: 'إجمالي السجلات',
+        rows: 'الصفوف',
+        previous: 'السابق',
+        next: 'التالي',
+      }
+    : {
+        eyebrow: 'Reseller',
+        title: 'Activity',
+        description: 'Review your activation, renewal, deactivation, and sign-in actions.',
+        filters: [
+          { value: '', label: 'All Actions' },
+          { value: 'license.activate', label: 'Activation' },
+          { value: 'license.renew', label: 'Renewal' },
+          { value: 'license.deactivate', label: 'Deactivation' },
+          { value: 'auth.login', label: 'Login' },
+        ],
+        empty: 'No personal activity matches the current filters.',
+        totalEntries: 'Total entries',
+        rows: 'Rows',
+        previous: 'Previous',
+        next: 'Next',
+      }
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(12)
   const [action, setAction] = useState('')
@@ -31,7 +61,7 @@ export function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Reseller" title="Activity" description="Review your activation, renewal, deactivation, and sign-in actions." />
+      <PageHeader eyebrow={text.eyebrow} title={text.title} description={text.description} />
 
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 p-4">
@@ -43,7 +73,7 @@ export function ActivityPage() {
             }}
             className="h-11 min-w-[220px] rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
-            {ACTION_FILTERS.map((filter) => (
+            {text.filters.map((filter) => (
               <option key={filter.label} value={filter.value}>
                 {filter.label}
               </option>
@@ -70,7 +100,7 @@ export function ActivityPage() {
                       </span>
                       {entry.description ? <p className="text-sm text-slate-600 dark:text-slate-300">{entry.description}</p> : null}
                     </div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at) : '-'}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(entry.metadata ?? {}).slice(0, 5).map(([key, value]) => (
@@ -88,17 +118,17 @@ export function ActivityPage() {
 
         {!activityQuery.isLoading && entries.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">No personal activity matches the current filters.</CardContent>
+            <CardContent className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">{text.empty}</CardContent>
           </Card>
         ) : null}
       </div>
 
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-slate-500 dark:text-slate-400">
-          <span>Total entries: {meta?.total ?? 0}</span>
+          <span>{text.totalEntries}: {meta?.total ?? 0}</span>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2">
-              <span>Rows</span>
+              <span>{text.rows}</span>
               <select
                 value={perPage}
                 onChange={(event) => {
@@ -113,13 +143,13 @@ export function ActivityPage() {
               </select>
             </label>
             <Button type="button" variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
-              Previous
+              {text.previous}
             </Button>
             <span>
               {page} / {totalPages}
             </span>
             <Button type="button" variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>
-              Next
+              {text.next}
             </Button>
           </div>
         </CardContent>

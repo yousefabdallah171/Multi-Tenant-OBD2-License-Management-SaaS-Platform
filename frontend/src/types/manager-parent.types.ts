@@ -51,6 +51,9 @@ export interface ProgramSummary {
   description: string | null
   version: string
   download_link: string
+  file_size?: string | null
+  system_requirements?: string | null
+  installation_guide_url?: string | null
   trial_days: number
   base_price: number
   icon: string | null

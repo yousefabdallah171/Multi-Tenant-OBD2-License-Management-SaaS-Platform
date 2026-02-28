@@ -7,30 +7,26 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { useTheme } from '@/hooks/useTheme'
 import { useSidebarStore } from '@/stores/sidebarStore'
 
-const ROLE_TITLES = {
-  super_admin: 'Super Admin Console',
-  manager_parent: 'Manager Parent Console',
-  manager: 'Manager Console',
-  reseller: 'Reseller Console',
-  customer: 'Customer Portal',
-} as const
-
-const ROLE_EYEBROWS = {
-  super_admin: 'OBD2SW',
-  manager_parent: 'Tenant Operations',
-  manager: 'Operations',
-  reseller: 'Channel',
-  customer: 'License',
-} as const
-
 export function Navbar() {
   const { t } = useTranslation()
   const { lang, switchLanguage } = useLanguage()
   const { toggleTheme, isDark } = useTheme()
   const { user, logout } = useAuth()
   const toggleSidebar = useSidebarStore((state) => state.toggle)
-  const title = user ? ROLE_TITLES[user.role] : ROLE_TITLES.super_admin
-  const eyebrow = user ? ROLE_EYEBROWS[user.role] : ROLE_EYEBROWS.super_admin
+  const title = user
+    ? user.role === 'super_admin'
+      ? t('superAdmin.layout.title')
+      : user.role === 'manager_parent'
+        ? t('managerParent.layout.title')
+        : t(`roles.${user.role}`)
+    : t('superAdmin.layout.title')
+  const eyebrow = user
+    ? user.role === 'super_admin'
+      ? 'OBD2SW'
+      : user.role === 'manager_parent'
+        ? t('managerParent.layout.eyebrow')
+        : t(`roles.${user.role}`)
+    : 'OBD2SW'
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
@@ -41,7 +37,7 @@ export function Navbar() {
           </Button>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400">{eyebrow}</p>
-            <h1 className="text-sm font-semibold text-slate-950 dark:text-white">{user?.role === 'super_admin' ? t('superAdmin.layout.title') : title}</h1>
+            <h1 className="text-sm font-semibold text-slate-950 dark:text-white">{title}</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">

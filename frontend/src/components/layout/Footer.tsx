@@ -1,5 +1,8 @@
+import { useTranslation } from 'react-i18next'
+
 export function Footer() {
+  const { t } = useTranslation()
   const year = new Date().getFullYear()
 
-  return <footer className="border-t border-slate-200 px-4 py-4 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">{year} OBD2SW License Platform</footer>
+  return <footer className="border-t border-slate-200 px-4 py-4 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">{year} OBD2SW {t('brand.badge')}</footer>
 }

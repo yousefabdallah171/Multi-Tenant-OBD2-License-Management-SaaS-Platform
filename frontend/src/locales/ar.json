@@ -315,5 +315,128 @@
         "balance": "الرصيد"
       }
     }
+  },
+  "managerParent": {
+    "layout": {
+      "title": "وحدة تحكم المدير الرئيسي",
+      "eyebrow": "عمليات الشريك"
+    },
+    "nav": {
+      "dashboard": "الرئيسية",
+      "teamManagement": "إدارة الفريق",
+      "resellerPricing": "تسعير الموزعين",
+      "softwareManagement": "إدارة البرامج",
+      "biosBlacklist": "القائمة السوداء لـ BIOS",
+      "biosHistory": "سجل BIOS",
+      "ipAnalytics": "تحليلات IP",
+      "usernameManagement": "إدارة اسم المستخدم",
+      "financialReports": "التقارير المالية",
+      "reports": "التقارير",
+      "activity": "النشاط",
+      "customers": "العملاء",
+      "settings": "الإعدادات",
+      "profile": "الملف الشخصي"
+    },
+    "pages": {
+      "dashboard": {
+        "title": "لوحة التحكم",
+        "description": "نظرة عامة على مستوى الشريك لفريقك وقاعدة العملاء والتفعيلات وزخم الإيرادات الحالي.",
+        "teamMembers": "أعضاء الفريق",
+        "customers": "العملاء",
+        "activeLicenses": "التراخيص النشطة",
+        "monthlyRevenue": "الإيراد الشهري",
+        "licenseExpiryForecast": "توقع انتهاء التراخيص",
+        "teamPerformance": "أداء الفريق",
+        "quickActions": "إجراءات سريعة",
+        "topPerformers": "أفضل العناصر أداءً",
+        "noTeamActivity": "لا يوجد نشاط للفريق حتى الآن.",
+        "activationsCount": "{{count}} عمليات تفعيل",
+        "actions": {
+          "teamManagement": "إدارة الفريق",
+          "managePrograms": "إدارة البرامج",
+          "inviteTeamMember": "دعوة عضو فريق",
+          "updateResellerPricing": "تحديث تسعير الموزعين",
+          "reviewCustomers": "مراجعة العملاء",
+          "openReports": "فتح التقارير"
+        }
+      }
+    }
+  },
+  "customerPortal": {
+    "layout": {
+      "eyebrow": "بوابة العميل",
+      "title": "تراخيصي"
+    },
+    "nav": {
+      "dashboard": "الرئيسية",
+      "software": "البرامج",
+      "download": "مركز التحميل",
+      "openMenu": "فتح قائمة التنقل",
+      "menuTitle": "تنقل العميل"
+    },
+    "common": {
+      "expired": "منتهي"
+    },
+    "actions": {
+      "download": "تحميل البرنامج",
+      "requestRenewal": "طلب تجديد",
+      "contactReseller": "تواصل مع الموزع",
+      "renewalEmailBody": "أرغب في طلب تجديد لهذا الترخيص.",
+      "renewalStarted": "تم فتح برنامج البريد لإرسال طلب التجديد."
+    },
+    "status": {
+      "active": "نشط",
+      "expired": "منتهي",
+      "suspended": "معلق",
+      "pending": "قيد الانتظار"
+    },
+    "dashboard": {
+      "title": "لوحة التراخيص",
+      "description": "راجع تراخيصك الحالية وتابع تاريخ الانتهاء وحمّل البرامج المرتبطة بالتراخيص النشطة.",
+      "totalLicenses": "إجمالي التراخيص",
+      "activeLicenses": "التراخيص النشطة",
+      "expiredLicenses": "التراخيص المنتهية",
+      "noLicenses": "لا توجد تراخيص نشطة",
+      "noLicensesDescription": "عند تفعيل ترخيص جديد لمعرف BIOS الخاص بك سيظهر هنا.",
+      "unknownProgram": "برنامج مرخّص",
+      "licenseCard": "حالة الترخيص",
+      "biosId": "معرّف BIOS",
+      "activatedAt": "تاريخ التفعيل",
+      "expiresAt": "تاريخ الانتهاء",
+      "progressLabel": "المدة المتبقية من الترخيص",
+      "daysRemaining_one": "متبقي يوم واحد",
+      "daysRemaining_two": "متبقي يومان",
+      "daysRemaining_few": "متبقي {{count}} أيام",
+      "daysRemaining_many": "متبقي {{count}} يوماً",
+      "daysRemaining_other": "متبقي {{count}} يوم",
+      "programName": "البرنامج"
+    },
+    "software": {
+      "title": "البرامج المتاحة",
+      "description": "تظهر هنا فقط البرامج التي تملك لها ترخيصاً نشطاً.",
+      "searchPlaceholder": "ابحث باسم البرنامج",
+      "emptyTitle": "لا توجد برامج متاحة",
+      "emptyDescription": "ستظهر البرامج المرخصة هنا عندما تصبح متاحة للتحميل.",
+      "noDescription": "لا يوجد وصف متاح.",
+      "version": "الإصدار"
+    },
+    "download": {
+      "title": "مركز التحميل",
+      "description": "حمّل ملفات التثبيت الخاصة ببرامجك المرخصة وراجع آخر نشاط تحميل.",
+      "emptyTitle": "لا توجد تنزيلات متاحة",
+      "emptyDescription": "ستظهر ملفات التثبيت هنا عندما يكون لديك برنامج بترخيص نشط.",
+      "downloadNow": "حمّل الآن",
+      "lastDownloaded": "آخر تحميل",
+      "fileSize": "حجم الملف",
+      "systemRequirements": "متطلبات النظام",
+      "daysRemaining": "الوقت المتبقي",
+      "installationGuide": "دليل التثبيت",
+      "notAvailable": "غير متاح",
+      "notProvided": "غير متوفر",
+      "availableGuide": "الدليل متاح",
+      "openGuide": "فتح دليل التثبيت",
+      "disabledTooltip": "هذا التحميل غير متاح لأن الترخيص غير نشط.",
+      "logFailed": "بدأ التحميل لكن تعذر تحديث سجل النشاط."
+    }
   }
 }

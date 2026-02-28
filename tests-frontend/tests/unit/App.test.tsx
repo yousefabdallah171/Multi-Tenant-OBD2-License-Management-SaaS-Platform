@@ -146,7 +146,7 @@ test('role guard redirects wrong role users to their own dashboard', async () =>
           <Route element={<RoleGuard allowedRoles={['manager']} />}>
             <Route path="manager" element={<div>manager page</div>} />
           </Route>
-          <Route path="customer" element={<div>customer page</div>} />
+          <Route path="customer/dashboard" element={<div>customer page</div>} />
         </Route>
       </Routes>
     </MemoryRouter>,

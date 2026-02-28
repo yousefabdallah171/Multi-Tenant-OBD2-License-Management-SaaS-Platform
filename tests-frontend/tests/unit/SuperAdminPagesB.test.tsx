@@ -235,7 +235,7 @@ test('Profile page renders profile details and edit form fields', async () => {
 
   expect(screen.getByDisplayValue('Super Admin')).toBeInTheDocument()
   expect(screen.getByDisplayValue('admin@example.com')).toBeInTheDocument()
-  expect(screen.getByText('super admin')).toBeInTheDocument()
+  expect(screen.getAllByText(/super admin/i).length).toBeGreaterThan(0)
 })
 
 test('Admin Management page renders admin data and opens the add admin modal', async () => {

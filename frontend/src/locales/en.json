@@ -315,5 +315,125 @@
         "balance": "Balance"
       }
     }
+  },
+  "managerParent": {
+    "layout": {
+      "title": "Manager Parent Console",
+      "eyebrow": "Tenant Operations"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "teamManagement": "Team Management",
+      "resellerPricing": "Reseller Pricing",
+      "softwareManagement": "Software Management",
+      "biosBlacklist": "BIOS Blacklist",
+      "biosHistory": "BIOS History",
+      "ipAnalytics": "IP Analytics",
+      "usernameManagement": "Username Management",
+      "financialReports": "Financial Reports",
+      "reports": "Reports",
+      "activity": "Activity",
+      "customers": "Customers",
+      "settings": "Settings",
+      "profile": "Profile"
+    },
+    "pages": {
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Tenant-level overview for your team, customer base, activations, and current revenue momentum.",
+        "teamMembers": "Team Members",
+        "customers": "Customers",
+        "activeLicenses": "Active Licenses",
+        "monthlyRevenue": "Monthly Revenue",
+        "licenseExpiryForecast": "License Expiry Forecast",
+        "teamPerformance": "Team Performance",
+        "quickActions": "Quick Actions",
+        "topPerformers": "Top performers",
+        "noTeamActivity": "No team activity yet.",
+        "activationsCount": "{{count}} activations",
+        "actions": {
+          "teamManagement": "Team Management",
+          "managePrograms": "Manage Programs",
+          "inviteTeamMember": "Invite team member",
+          "updateResellerPricing": "Update reseller pricing",
+          "reviewCustomers": "Review customers",
+          "openReports": "Open reports"
+        }
+      }
+    }
+  },
+  "customerPortal": {
+    "layout": {
+      "eyebrow": "Customer Portal",
+      "title": "My Licenses"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "software": "Software",
+      "download": "Download Center",
+      "openMenu": "Open navigation menu",
+      "menuTitle": "Customer navigation"
+    },
+    "common": {
+      "expired": "Expired"
+    },
+    "actions": {
+      "download": "Download Software",
+      "requestRenewal": "Request Renewal",
+      "contactReseller": "Contact Reseller",
+      "renewalEmailBody": "I would like to request a renewal for this license.",
+      "renewalStarted": "Your mail client has been opened for the renewal request."
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "suspended": "Suspended",
+      "pending": "Pending"
+    },
+    "dashboard": {
+      "title": "License Dashboard",
+      "description": "Review your current licenses, track expiry, and download the software tied to your active subscriptions.",
+      "totalLicenses": "Total Licenses",
+      "activeLicenses": "Active Licenses",
+      "expiredLicenses": "Expired Licenses",
+      "noLicenses": "No active licenses",
+      "noLicensesDescription": "When a reseller activates a license for your BIOS ID, it will appear here.",
+      "unknownProgram": "Licensed Program",
+      "licenseCard": "License Status",
+      "biosId": "BIOS ID",
+      "activatedAt": "Activated",
+      "expiresAt": "Expires",
+      "progressLabel": "License duration remaining",
+      "daysRemaining_one": "{{count}} day remaining",
+      "daysRemaining_other": "{{count}} days remaining",
+      "programName": "Program"
+    },
+    "software": {
+      "title": "Available Software",
+      "description": "Only programs backed by an active license are shown here.",
+      "searchPlaceholder": "Search by program name",
+      "emptyTitle": "No software available",
+      "emptyDescription": "Active licensed programs will appear here once they are available for download.",
+      "noDescription": "No description provided.",
+      "version": "Version"
+    },
+    "download": {
+      "title": "Download Center",
+      "description": "Download the installers assigned to your licensed programs and review the latest download activity.",
+      "emptyTitle": "No downloads available",
+      "emptyDescription": "Downloadable installers will appear here when you have an active licensed program.",
+      "downloadNow": "Download Now",
+      "lastDownloaded": "Last Downloaded",
+      "fileSize": "File Size",
+      "systemRequirements": "System Requirements",
+      "daysRemaining": "Time Remaining",
+      "installationGuide": "Installation Guide",
+      "notAvailable": "Not available",
+      "notProvided": "Not provided",
+      "availableGuide": "Guide available",
+      "openGuide": "Open installation guide",
+      "disabledTooltip": "This download is unavailable because the license is not active.",
+      "logFailed": "The download started, but the activity log could not be updated."
+    }
   }
 }

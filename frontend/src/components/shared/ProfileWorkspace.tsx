@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { useAuth } from '@/hooks/useAuth'
+import { useLanguage } from '@/hooks/useLanguage'
 import { profileService } from '@/services/profile.service'
 
 interface ProfileWorkspaceProps {
@@ -17,6 +18,48 @@ interface ProfileWorkspaceProps {
 
 export function ProfileWorkspace({ eyebrow, description }: ProfileWorkspaceProps) {
   const { user, setAuthenticatedUser } = useAuth()
+  const { lang } = useLanguage()
+  const copy = lang === 'ar'
+    ? {
+        title: 'الملف الشخصي',
+        accountCard: 'بطاقة الحساب',
+        editProfile: 'تعديل الملف الشخصي',
+        saveProfile: 'حفظ الملف الشخصي',
+        saving: 'جارٍ الحفظ...',
+        changePassword: 'تغيير كلمة المرور',
+        currentPassword: 'كلمة المرور الحالية',
+        newPassword: 'كلمة المرور الجديدة',
+        confirmPassword: 'تأكيد كلمة المرور',
+        updatePassword: 'تحديث كلمة المرور',
+        preferences: 'تفضيلات الإشعارات',
+        emailNotifications: 'إشعارات البريد الإلكتروني',
+        productUpdates: 'تحديثات المنتجات وتغييرات المنصة',
+        profileSaved: 'تم تحديث الملف الشخصي بنجاح.',
+        passwordSaved: 'تم تحديث كلمة المرور بنجاح.',
+        name: 'الاسم',
+        email: 'البريد الإلكتروني',
+        phone: 'الهاتف',
+      }
+    : {
+        title: 'Profile',
+        accountCard: 'Account Card',
+        editProfile: 'Edit Profile',
+        saveProfile: 'Save Profile',
+        saving: 'Saving...',
+        changePassword: 'Change Password',
+        currentPassword: 'Current Password',
+        newPassword: 'New Password',
+        confirmPassword: 'Confirm Password',
+        updatePassword: 'Update Password',
+        preferences: 'Notification Preferences',
+        emailNotifications: 'Email notifications',
+        productUpdates: 'Product updates and platform changes',
+        profileSaved: 'Profile updated successfully.',
+        passwordSaved: 'Password updated successfully.',
+        name: 'Name',
+        email: 'Email',
+        phone: 'Phone',
+      }
   const [profileForm, setProfileForm] = useState({
     name: user?.name ?? '',
     email: user?.email ?? '',
@@ -36,26 +79,26 @@ export function ProfileWorkspace({ eyebrow, description }: ProfileWorkspaceProps
     mutationFn: () => profileService.updateProfile(profileForm),
     onSuccess: (data) => {
       setAuthenticatedUser(data.user)
-      toast.success('Profile updated successfully.')
+      toast.success(copy.profileSaved)
     },
   })
 
   const passwordMutation = useMutation({
     mutationFn: () => profileService.updatePassword(passwordForm),
     onSuccess: () => {
-      toast.success('Password updated successfully.')
+      toast.success(copy.passwordSaved)
       setPasswordForm({ current_password: '', password: '', password_confirmation: '' })
     },
   })
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={eyebrow} title="Profile" description={description} />
+      <PageHeader eyebrow={eyebrow} title={copy.title} description={description} />
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Account Card</CardTitle>
+            <CardTitle>{copy.accountCard}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-sky-100 text-2xl font-semibold text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
@@ -71,23 +114,23 @@ export function ProfileWorkspace({ eyebrow, description }: ProfileWorkspaceProps
 
         <Card>
           <CardHeader>
-            <CardTitle>Edit Profile</CardTitle>
+            <CardTitle>{copy.editProfile}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="profile-name">Name</Label>
+              <Label htmlFor="profile-name">{copy.name}</Label>
               <Input id="profile-name" value={profileForm.name} onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="profile-email">Email</Label>
+              <Label htmlFor="profile-email">{copy.email}</Label>
               <Input id="profile-email" type="email" value={profileForm.email} onChange={(event) => setProfileForm((current) => ({ ...current, email: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="profile-phone">Phone</Label>
+              <Label htmlFor="profile-phone">{copy.phone}</Label>
               <Input id="profile-phone" value={profileForm.phone ?? ''} onChange={(event) => setProfileForm((current) => ({ ...current, phone: event.target.value }))} />
             </div>
             <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending}>
-              {profileMutation.isPending ? 'Saving...' : 'Save Profile'}
+              {profileMutation.isPending ? copy.saving : copy.saveProfile}
             </Button>
           </CardContent>
         </Card>
@@ -96,19 +139,19 @@ export function ProfileWorkspace({ eyebrow, description }: ProfileWorkspaceProps
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Change Password</CardTitle>
+            <CardTitle>{copy.changePassword}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
+              <Label htmlFor="current-password">{copy.currentPassword}</Label>
               <Input id="current-password" type="password" value={passwordForm.current_password} onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
+              <Label htmlFor="new-password">{copy.newPassword}</Label>
               <Input id="new-password" type="password" value={passwordForm.password} onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Label htmlFor="confirm-password">{copy.confirmPassword}</Label>
               <Input
                 id="confirm-password"
                 type="password"
@@ -117,14 +160,14 @@ export function ProfileWorkspace({ eyebrow, description }: ProfileWorkspaceProps
               />
             </div>
             <Button type="button" onClick={() => passwordMutation.mutate()} disabled={passwordMutation.isPending}>
-              {passwordMutation.isPending ? 'Saving...' : 'Update Password'}
+              {passwordMutation.isPending ? copy.saving : copy.updatePassword}
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Notification Preferences</CardTitle>
+            <CardTitle>{copy.preferences}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
@@ -133,7 +176,7 @@ export function ProfileWorkspace({ eyebrow, description }: ProfileWorkspaceProps
                 checked={preferences.emailNotifications}
                 onChange={(event) => setPreferences((current) => ({ ...current, emailNotifications: event.target.checked }))}
               />
-              Email notifications
+              {copy.emailNotifications}
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
               <input
@@ -141,7 +184,7 @@ export function ProfileWorkspace({ eyebrow, description }: ProfileWorkspaceProps
                 checked={preferences.productUpdates}
                 onChange={(event) => setPreferences((current) => ({ ...current, productUpdates: event.target.checked }))}
               />
-              Product updates and platform changes
+              {copy.productUpdates}
             </label>
           </CardContent>
         </Card>

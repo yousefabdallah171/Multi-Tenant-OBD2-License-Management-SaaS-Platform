@@ -5,6 +5,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BalanceController;
 use App\Http\Controllers\BiosBlacklistController;
 use App\Http\Controllers\BiosConflictController;
+use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
+use App\Http\Controllers\Customer\DownloadController as CustomerDownloadController;
+use App\Http\Controllers\Customer\SoftwareController as CustomerSoftwareController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Manager\ActivityController as ManagerActivityController;
 use App\Http\Controllers\Manager\CustomerController as ManagerCustomerController;
@@ -198,6 +201,13 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::post('/licenses/activate', [ResellerLicenseController::class, 'activate']);
         Route::post('/licenses/{license}/renew', [ResellerLicenseController::class, 'renew']);
         Route::post('/licenses/{license}/deactivate', [ResellerLicenseController::class, 'deactivate']);
+    });
+
+    Route::prefix('customer')->middleware('role:customer')->group(function (): void {
+        Route::get('/dashboard', [CustomerDashboardController::class, 'index']);
+        Route::get('/software', [CustomerSoftwareController::class, 'index']);
+        Route::get('/downloads', [CustomerDownloadController::class, 'index']);
+        Route::post('/downloads/{license}/log', [CustomerDownloadController::class, 'logDownload']);
     });
 
     Route::prefix('super-admin')->middleware('role:super_admin')->group(function (): void {

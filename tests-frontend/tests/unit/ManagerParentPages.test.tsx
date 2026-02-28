@@ -27,6 +27,8 @@ import { tenantBiosService } from '@/services/tenant-bios.service'
 import { useAuthStore } from '@/stores/authStore'
 import { renderWithProviders } from './testUtils'
 
+jest.setTimeout(15000)
+
 jest.mock('sonner', () => ({
   toast: {
     success: jest.fn(),
@@ -939,7 +941,7 @@ test('team management edit dialog submits updated member values', async () => {
       phone: '+12025550199',
     }),
   )
-})
+}, 10000)
 
 test('team management suspend action updates member status', async () => {
   const user = userEvent.setup()

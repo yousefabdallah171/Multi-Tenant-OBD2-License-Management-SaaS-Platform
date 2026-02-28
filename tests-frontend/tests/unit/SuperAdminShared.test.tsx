@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatsCard } from '@/components/shared/StatsCard'
@@ -147,9 +148,15 @@ test('DataTable search filters rows', () => {
 })
 
 test('StatusBadge renders active styling', () => {
-  render(<StatusBadge status="active" />)
+  render(
+    <MemoryRouter initialEntries={['/en/super-admin/dashboard']}>
+      <Routes>
+        <Route path="/:lang/*" element={<StatusBadge status="active" />} />
+      </Routes>
+    </MemoryRouter>,
+  )
 
-  const badge = screen.getByText('active')
+  const badge = screen.getByText(/active/i)
 
   expect(badge).toHaveClass('bg-emerald-100')
 })
@@ -157,5 +164,5 @@ test('StatusBadge renders active styling', () => {
 test('RoleBadge renders the role label', () => {
   render(<RoleBadge role="manager_parent" />)
 
-  expect(screen.getByText('manager parent')).toBeInTheDocument()
+  expect(screen.getByText(/manager parent/i)).toBeInTheDocument()
 })

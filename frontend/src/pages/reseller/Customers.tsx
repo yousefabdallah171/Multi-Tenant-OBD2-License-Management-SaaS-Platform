@@ -21,7 +21,6 @@ import { resellerService } from '@/services/reseller.service'
 import type { DurationUnit, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
 const STATUS_OPTIONS = ['all', 'active', 'expired', 'suspended', 'pending'] as const
-const ACTIVATION_STEPS = ['Customer Info', 'BIOS Activation', 'Pricing & Duration', 'Review'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -49,6 +48,189 @@ export function CustomersPage() {
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const text = useMemo(() => (lang === 'ar'
+    ? {
+        eyebrow: 'موزع',
+        title: 'العملاء',
+        description: 'أنشئ العملاء وفعلهم ثم أدِر عمليات التجديد والإلغاء من مساحة عملك الشخصية كموزع.',
+        addCustomer: 'إضافة عميل',
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', suspended: 'معلق', pending: 'قيد الانتظار' },
+        searchPlaceholder: 'ابحث بالاسم أو البريد الإلكتروني أو BIOS ID',
+        table: {
+          customer: 'العميل',
+          bios: 'BIOS ID',
+          program: 'البرنامج',
+          status: 'الحالة',
+          price: 'السعر',
+          expiry: 'الانتهاء',
+          actions: 'الإجراءات',
+        },
+        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء' },
+        activationDialog: {
+          title: 'إضافة عميل',
+          description: 'انتقل بين الخطوات لإنشاء العميل وتفعيل الترخيص.',
+          steps: ['بيانات العميل', 'تفعيل BIOS', 'السعر والمدة', 'المراجعة'],
+          stepLabel: 'الخطوة',
+          customerName: 'اسم العميل',
+          customerEmail: 'بريد العميل الإلكتروني',
+          phone: 'الهاتف',
+          biosId: 'BIOS ID',
+          program: 'البرنامج',
+          selectProgram: 'اختر برنامجاً',
+          basePrice: 'السعر الأساسي',
+          trialDays: 'أيام التجربة',
+          noDescription: 'لا يوجد وصف متاح.',
+          duration: 'المدة',
+          unit: 'الوحدة',
+          price: 'السعر',
+          durationDays: 'المدة بالأيام',
+          expiryPreview: 'معاينة تاريخ الانتهاء',
+          review: 'المراجعة والتأكيد',
+          customer: 'العميل',
+          email: 'البريد الإلكتروني',
+          expiry: 'الانتهاء',
+          cancel: 'إلغاء',
+          back: 'رجوع',
+          next: 'التالي',
+          activate: 'تفعيل',
+          activating: 'جارٍ التفعيل...',
+        },
+        detail: {
+          titleFallback: 'تفاصيل العميل',
+          descriptionFallback: 'راجع سجل التراخيص لهذا العميل.',
+          phone: 'الهاتف',
+          bios: 'BIOS ID',
+          program: 'البرنامج',
+          status: 'الحالة',
+          activationHistory: 'سجل التفعيل',
+          unknownProgram: 'برنامج غير معروف',
+          activated: 'تم التفعيل',
+          expires: 'ينتهي',
+        },
+        renewDialog: {
+          title: 'تجديد الترخيص',
+          descriptionFallback: 'حدّث المدة والسعر ثم قم بالتجديد.',
+          descriptionWithProgram: (program: string, biosId: string) => `قم بتجديد ${program} لـ BIOS ID ${biosId}.`,
+          duration: 'المدة',
+          unit: 'الوحدة',
+          price: 'السعر',
+          cancel: 'إلغاء',
+          renew: 'تجديد',
+          renewing: 'جارٍ التجديد...',
+        },
+        deactivateDialog: {
+          title: 'إلغاء الترخيص؟',
+          description: (biosId: string) => `سيؤدي هذا إلى إلغاء الترخيص الخاص بـ BIOS ID: ${biosId}`,
+          confirm: 'إلغاء',
+        },
+        units: { days: 'أيام', months: 'أشهر', years: 'سنوات' },
+        toasts: {
+          activated: 'تم تفعيل الترخيص بنجاح.',
+          renewed: 'تم تجديد الترخيص بنجاح.',
+          deactivated: 'تم إلغاء الترخيص بنجاح.',
+        },
+        validation: {
+          customerName: 'يجب أن يكون اسم العميل مكوناً من حرفين على الأقل.',
+          customerEmail: 'أدخل بريداً إلكترونياً صحيحاً للعميل.',
+          biosId: 'يجب أن يكون BIOS ID مكوناً من 5 أحرف على الأقل.',
+          selectProgram: 'اختر برنامجاً قبل المتابعة.',
+          duration: 'يجب أن تكون المدة 1 على الأقل.',
+          price: 'أدخل سعراً صحيحاً.',
+          renew: 'أدخل مدة وسعراً صالحين قبل التجديد.',
+          requestFailed: 'فشل تنفيذ الطلب.',
+        },
+      }
+    : {
+        eyebrow: 'Reseller',
+        title: 'Customers',
+        description: 'Create and activate customers, then manage renewals and deactivations from your personal reseller workspace.',
+        addCustomer: 'Add Customer',
+        statusOptions: { all: 'All', active: 'Active', expired: 'Expired', suspended: 'Suspended', pending: 'Pending' },
+        searchPlaceholder: 'Search by name, email, or BIOS ID',
+        table: {
+          customer: 'Customer',
+          bios: 'BIOS ID',
+          program: 'Program',
+          status: 'Status',
+          price: 'Price',
+          expiry: 'Expiry',
+          actions: 'Actions',
+        },
+        actions: { view: 'View', renew: 'Renew', deactivate: 'Deactivate' },
+        activationDialog: {
+          title: 'Add Customer',
+          description: 'Move through each step to create the customer and activate the license.',
+          steps: ['Customer Info', 'BIOS Activation', 'Pricing & Duration', 'Review'],
+          stepLabel: 'Step',
+          customerName: 'Customer Name',
+          customerEmail: 'Customer Email',
+          phone: 'Phone',
+          biosId: 'BIOS ID',
+          program: 'Program',
+          selectProgram: 'Select program',
+          basePrice: 'Base Price',
+          trialDays: 'Trial Days',
+          noDescription: 'No description provided.',
+          duration: 'Duration',
+          unit: 'Unit',
+          price: 'Price',
+          durationDays: 'Duration in Days',
+          expiryPreview: 'Expiry Preview',
+          review: 'Review & Confirm',
+          customer: 'Customer',
+          email: 'Email',
+          expiry: 'Expiry',
+          cancel: 'Cancel',
+          back: 'Back',
+          next: 'Next',
+          activate: 'Activate',
+          activating: 'Activating...',
+        },
+        detail: {
+          titleFallback: 'Customer details',
+          descriptionFallback: 'Inspect license history for this customer.',
+          phone: 'Phone',
+          bios: 'BIOS ID',
+          program: 'Program',
+          status: 'Status',
+          activationHistory: 'Activation History',
+          unknownProgram: 'Unknown program',
+          activated: 'Activated',
+          expires: 'Expires',
+        },
+        renewDialog: {
+          title: 'Renew License',
+          descriptionFallback: 'Update duration and price, then renew.',
+          descriptionWithProgram: (program: string, biosId: string) => `Renew ${program} for BIOS ID ${biosId}.`,
+          duration: 'Duration',
+          unit: 'Unit',
+          price: 'Price',
+          cancel: 'Cancel',
+          renew: 'Renew',
+          renewing: 'Renewing...',
+        },
+        deactivateDialog: {
+          title: 'Deactivate license?',
+          description: (biosId: string) => `This will deactivate the license for BIOS ID: ${biosId}`,
+          confirm: 'Deactivate',
+        },
+        units: { days: 'Days', months: 'Months', years: 'Years' },
+        toasts: {
+          activated: 'License activated successfully.',
+          renewed: 'License renewed successfully.',
+          deactivated: 'License deactivated successfully.',
+        },
+        validation: {
+          customerName: 'Customer name must be at least 2 characters.',
+          customerEmail: 'Enter a valid customer email address.',
+          biosId: 'BIOS ID must be at least 5 characters.',
+          selectProgram: 'Select a program before continuing.',
+          duration: 'Duration must be at least 1.',
+          price: 'Enter a valid price.',
+          renew: 'Enter a valid duration and price before renewing.',
+          requestFailed: 'The request failed.',
+        },
+      }), [lang])
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [search, setSearch] = useState('')
@@ -92,6 +274,8 @@ export function CustomersPage() {
     enabled: renewLicenseId !== null,
   })
 
+  const activationSteps = text.activationDialog.steps
+
   const activateMutation = useMutation({
     mutationFn: () =>
       licenseService.activate({
@@ -104,7 +288,7 @@ export function CustomersPage() {
         price: Number(activationForm.price),
       }),
     onSuccess: () => {
-      toast.success('License activated successfully.')
+      toast.success(text.toasts.activated)
       resetActivationDialog()
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
@@ -113,7 +297,7 @@ export function CustomersPage() {
       ])
     },
     onError: (error) => {
-      const message = getApiErrorMessage(error)
+      const message = getApiErrorMessage(error, text.validation.requestFailed)
       setActivationError(message)
       toast.error(message)
     },
@@ -126,7 +310,7 @@ export function CustomersPage() {
         price: Number(renewPrice),
       }),
     onSuccess: () => {
-      toast.success('License renewed successfully.')
+      toast.success(text.toasts.renewed)
       setRenewLicenseId(null)
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
@@ -134,13 +318,13 @@ export function CustomersPage() {
         queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
       ])
     },
-    onError: (error) => toast.error(getApiErrorMessage(error)),
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
   const deactivateMutation = useMutation({
     mutationFn: (licenseId: number) => licenseService.deactivate(licenseId),
     onSuccess: () => {
-      toast.success('License deactivated successfully.')
+      toast.success(text.toasts.deactivated)
       setDeactivateTarget(null)
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
@@ -148,14 +332,14 @@ export function CustomersPage() {
         queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
       ])
     },
-    onError: (error) => toast.error(getApiErrorMessage(error)),
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
   const columns = useMemo<Array<DataTableColumn<ResellerCustomerSummary>>>(
     () => [
       {
         key: 'customer',
-        label: 'Customer',
+        label: text.table.customer,
         sortable: true,
         sortValue: (row) => row.name,
         render: (row) => (
@@ -165,14 +349,14 @@ export function CustomersPage() {
           </div>
         ),
       },
-      { key: 'bios', label: 'BIOS ID', sortable: true, sortValue: (row) => row.bios_id ?? '', render: (row) => row.bios_id ?? '-' },
-      { key: 'program', label: 'Program', sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
-      { key: 'status', label: 'Status', sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
-      { key: 'price', label: 'Price', sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },
-      { key: 'expiry', label: 'Expiry', sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
+      { key: 'bios', label: text.table.bios, sortable: true, sortValue: (row) => row.bios_id ?? '', render: (row) => row.bios_id ?? '-' },
+      { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+      { key: 'status', label: text.table.status, sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'price', label: text.table.price, sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },
+      { key: 'expiry', label: text.table.expiry, sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
       {
         key: 'actions',
-        label: 'Actions',
+        label: text.table.actions,
         render: (row) => (
           <div className="flex flex-wrap gap-2">
             <Button
@@ -185,7 +369,7 @@ export function CustomersPage() {
               }}
             >
               <Eye className="me-1 h-4 w-4" />
-              View
+              {text.actions.view}
             </Button>
             <Button
               type="button"
@@ -201,7 +385,7 @@ export function CustomersPage() {
               }}
             >
               <RotateCw className="me-1 h-4 w-4" />
-              Renew
+              {text.actions.renew}
             </Button>
             <Button
               type="button"
@@ -214,13 +398,13 @@ export function CustomersPage() {
               }}
             >
               <ShieldOff className="me-1 h-4 w-4" />
-              Deactivate
+              {text.actions.deactivate}
             </Button>
           </div>
         ),
       },
     ],
-    [locale],
+    [locale, text],
   )
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
@@ -232,13 +416,13 @@ export function CustomersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Reseller"
-        title="Customers"
-        description="Create and activate customers, then manage renewals and deactivations from your personal reseller workspace."
+        eyebrow={text.eyebrow}
+        title={text.title}
+        description={text.description}
         actions={
           <Button type="button" onClick={() => setActivationOpen(true)}>
             <Plus className="me-2 h-4 w-4" />
-            Add Customer
+            {text.addCustomer}
           </Button>
         }
       />
@@ -253,7 +437,7 @@ export function CustomersPage() {
         <TabsList>
           {STATUS_OPTIONS.map((option) => (
             <TabsTrigger key={option} value={option}>
-              {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
+              {text.statusOptions[option]}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -266,7 +450,7 @@ export function CustomersPage() {
                   setSearch(event.target.value)
                   setPage(1)
                 }}
-                placeholder="Search by name, email, or BIOS ID"
+                placeholder={text.searchPlaceholder}
               />
             </CardContent>
           </Card>
@@ -305,17 +489,17 @@ export function CustomersPage() {
       >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Add Customer</DialogTitle>
-            <DialogDescription>Move through each step to create the customer and activate the license.</DialogDescription>
+            <DialogTitle>{text.activationDialog.title}</DialogTitle>
+            <DialogDescription>{text.activationDialog.description}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3 md:grid-cols-4">
-            {ACTIVATION_STEPS.map((label, index) => (
+            {activationSteps.map((label, index) => (
               <div
                 key={label}
                 className={`rounded-2xl border px-4 py-3 text-sm ${index === activationStep ? 'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-400 dark:bg-sky-950/30 dark:text-sky-300' : 'border-slate-200 text-slate-500 dark:border-slate-800 dark:text-slate-400'}`}
               >
-                <div className="text-xs uppercase tracking-wide">Step {index + 1}</div>
+                <div className="text-xs uppercase tracking-wide">{text.activationDialog.stepLabel} {index + 1}</div>
                 <div className="mt-1 font-semibold">{label}</div>
               </div>
             ))}
@@ -324,13 +508,13 @@ export function CustomersPage() {
           <div className="space-y-4">
             {activationStep === 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
-                <FormField label="Customer Name" htmlFor="customer-name">
+                <FormField label={text.activationDialog.customerName} htmlFor="customer-name">
                   <Input id="customer-name" value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} />
                 </FormField>
-                <FormField label="Customer Email" htmlFor="customer-email">
+                <FormField label={text.activationDialog.customerEmail} htmlFor="customer-email">
                   <Input id="customer-email" type="email" value={activationForm.customer_email} onChange={(event) => setActivationForm((current) => ({ ...current, customer_email: event.target.value }))} />
                 </FormField>
-                <FormField label="Phone" htmlFor="customer-phone">
+                <FormField label={text.activationDialog.phone} htmlFor="customer-phone">
                   <Input id="customer-phone" value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value }))} />
                 </FormField>
               </div>
@@ -338,10 +522,10 @@ export function CustomersPage() {
 
             {activationStep === 1 ? (
               <div className="grid gap-4 md:grid-cols-2">
-                <FormField label="BIOS ID" htmlFor="bios-id">
+                <FormField label={text.activationDialog.biosId} htmlFor="bios-id">
                   <Input id="bios-id" value={activationForm.bios_id} onChange={(event) => setActivationForm((current) => ({ ...current, bios_id: event.target.value }))} />
                 </FormField>
-                <FormField label="Program" htmlFor="program-id">
+                <FormField label={text.activationDialog.program} htmlFor="program-id">
                   <select
                     id="program-id"
                     value={activationForm.program_id}
@@ -357,7 +541,7 @@ export function CustomersPage() {
                     }}
                     className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                   >
-                    <option value="">Select program</option>
+                    <option value="">{text.activationDialog.selectProgram}</option>
                     {(programsQuery.data?.data ?? []).map((program) => (
                       <option key={program.id} value={program.id}>
                         {program.name}
@@ -368,10 +552,10 @@ export function CustomersPage() {
                 {selectedProgram ? (
                   <Card className="md:col-span-2">
                     <CardContent className="grid gap-4 p-4 md:grid-cols-3">
-                      <InfoPair label="Program" value={selectedProgram.name} />
-                      <InfoPair label="Base Price" value={formatCurrency(selectedProgram.base_price, 'USD', locale)} />
-                      <InfoPair label="Trial Days" value={selectedProgram.trial_days} />
-                      <div className="md:col-span-3 text-sm text-slate-500 dark:text-slate-400">{selectedProgram.description || 'No description provided.'}</div>
+                      <InfoPair label={text.activationDialog.program} value={selectedProgram.name} />
+                      <InfoPair label={text.activationDialog.basePrice} value={formatCurrency(selectedProgram.base_price, 'USD', locale)} />
+                      <InfoPair label={text.activationDialog.trialDays} value={selectedProgram.trial_days} />
+                      <div className="md:col-span-3 text-sm text-slate-500 dark:text-slate-400">{selectedProgram.description || text.activationDialog.noDescription}</div>
                     </CardContent>
                   </Card>
                 ) : null}
@@ -380,28 +564,28 @@ export function CustomersPage() {
 
             {activationStep === 2 ? (
               <div className="grid gap-4 md:grid-cols-3">
-                <FormField label="Duration" htmlFor="duration-value">
+                <FormField label={text.activationDialog.duration} htmlFor="duration-value">
                   <Input id="duration-value" type="number" min={1} value={activationForm.duration_value} onChange={(event) => setActivationForm((current) => ({ ...current, duration_value: event.target.value }))} />
                 </FormField>
-                <FormField label="Unit" htmlFor="duration-unit">
+                <FormField label={text.activationDialog.unit} htmlFor="duration-unit">
                   <select
                     id="duration-unit"
                     value={activationForm.duration_unit}
                     onChange={(event) => setActivationForm((current) => ({ ...current, duration_unit: event.target.value as DurationUnit }))}
                     className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                   >
-                    <option value="days">Days</option>
-                    <option value="months">Months</option>
-                    <option value="years">Years</option>
+                    <option value="days">{text.units.days}</option>
+                    <option value="months">{text.units.months}</option>
+                    <option value="years">{text.units.years}</option>
                   </select>
                 </FormField>
-                <FormField label="Price" htmlFor="price">
+                <FormField label={text.activationDialog.price} htmlFor="price">
                   <Input id="price" type="number" step="0.01" min={0} value={activationForm.price} onChange={(event) => setActivationForm((current) => ({ ...current, price: event.target.value }))} />
                 </FormField>
                 <Card className="md:col-span-3">
                   <CardContent className="grid gap-4 p-4 md:grid-cols-2">
-                    <InfoPair label="Duration in Days" value={durationDays || 0} />
-                    <InfoPair label="Expiry Preview" value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
+                    <InfoPair label={text.activationDialog.durationDays} value={durationDays || 0} />
+                    <InfoPair label={text.activationDialog.expiryPreview} value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
                   </CardContent>
                 </Card>
               </div>
@@ -411,17 +595,17 @@ export function CustomersPage() {
               <div className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Review & Confirm</CardTitle>
+                    <CardTitle className="text-lg">{text.activationDialog.review}</CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-4 md:grid-cols-2">
-                    <InfoPair label="Customer" value={activationForm.customer_name || '-'} />
-                    <InfoPair label="Email" value={activationForm.customer_email || '-'} />
-                    <InfoPair label="Phone" value={activationForm.customer_phone || '-'} />
-                    <InfoPair label="BIOS ID" value={activationForm.bios_id || '-'} />
-                    <InfoPair label="Program" value={selectedProgram?.name ?? '-'} />
-                    <InfoPair label="Duration" value={`${activationForm.duration_value || 0} ${activationForm.duration_unit}`} />
-                    <InfoPair label="Price" value={formatCurrency(Number(activationForm.price || 0), 'USD', locale)} />
-                    <InfoPair label="Expiry" value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
+                    <InfoPair label={text.activationDialog.customer} value={activationForm.customer_name || '-'} />
+                    <InfoPair label={text.activationDialog.email} value={activationForm.customer_email || '-'} />
+                    <InfoPair label={text.activationDialog.phone} value={activationForm.customer_phone || '-'} />
+                    <InfoPair label={text.activationDialog.biosId} value={activationForm.bios_id || '-'} />
+                    <InfoPair label={text.activationDialog.program} value={selectedProgram?.name ?? '-'} />
+                    <InfoPair label={text.activationDialog.duration} value={`${activationForm.duration_value || 0} ${text.units[activationForm.duration_unit]}`} />
+                    <InfoPair label={text.activationDialog.price} value={formatCurrency(Number(activationForm.price || 0), 'USD', locale)} />
+                    <InfoPair label={text.activationDialog.expiry} value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
                   </CardContent>
                 </Card>
                 {activationError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">{activationError}</div> : null}
@@ -431,13 +615,13 @@ export function CustomersPage() {
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => (activationStep === 0 ? resetActivationDialog() : setActivationStep((current) => current - 1))}>
-              {activationStep === 0 ? 'Cancel' : 'Back'}
+              {activationStep === 0 ? text.activationDialog.cancel : text.activationDialog.back}
             </Button>
-            {activationStep < ACTIVATION_STEPS.length - 1 ? (
+            {activationStep < activationSteps.length - 1 ? (
               <Button
                 type="button"
                 onClick={() => {
-                  const error = validateActivationStep(activationStep, activationForm)
+                  const error = validateActivationStep(activationStep, activationForm, text)
                   if (error) {
                     toast.error(error)
                     return
@@ -446,13 +630,13 @@ export function CustomersPage() {
                   setActivationStep((current) => current + 1)
                 }}
               >
-                Next
+                {text.activationDialog.next}
               </Button>
             ) : (
               <Button
                 type="button"
                 onClick={() => {
-                  const error = validateActivationStep(activationStep, activationForm)
+                  const error = validateActivationStep(activationStep, activationForm, text)
                   if (error) {
                     toast.error(error)
                     return
@@ -463,7 +647,7 @@ export function CustomersPage() {
                 }}
                 disabled={activateMutation.isPending}
               >
-                {activateMutation.isPending ? 'Activating...' : 'Activate'}
+                {activateMutation.isPending ? text.activationDialog.activating : text.activationDialog.activate}
               </Button>
             )}
           </DialogFooter>
@@ -473,32 +657,32 @@ export function CustomersPage() {
       <Dialog open={selectedCustomerId !== null} onOpenChange={(open) => !open && setSelectedCustomerId(null)}>
         <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
           <DialogHeader>
-            <DialogTitle>{detailCustomer?.name ?? 'Customer details'}</DialogTitle>
-            <DialogDescription>{detailCustomer?.email ?? 'Inspect license history for this customer.'}</DialogDescription>
+            <DialogTitle>{detailCustomer?.name ?? text.detail.titleFallback}</DialogTitle>
+            <DialogDescription>{detailCustomer?.email ?? text.detail.descriptionFallback}</DialogDescription>
           </DialogHeader>
           {detailCustomer ? (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-4">
-                <InfoCard label="Phone" value={detailCustomer.phone ?? '-'} />
-                <InfoCard label="BIOS ID" value={detailCustomer.bios_id ?? '-'} />
-                <InfoCard label="Program" value={detailCustomer.program ?? '-'} />
-                <InfoCard label="Status" value={<StatusBadge status={detailCustomer.status} />} />
+                <InfoCard label={text.detail.phone} value={detailCustomer.phone ?? '-'} />
+                <InfoCard label={text.detail.bios} value={detailCustomer.bios_id ?? '-'} />
+                <InfoCard label={text.detail.program} value={detailCustomer.program ?? '-'} />
+                <InfoCard label={text.detail.status} value={<StatusBadge status={detailCustomer.status} />} />
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold">Activation History</h3>
+                <h3 className="text-lg font-semibold">{text.detail.activationHistory}</h3>
                 {detailCustomer.licenses.map((license) => (
                   <div key={license.id} className="rounded-3xl border border-slate-200 p-4 dark:border-slate-800">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <p className="font-medium text-slate-950 dark:text-white">{license.program ?? 'Unknown program'}</p>
+                        <p className="font-medium text-slate-950 dark:text-white">{license.program ?? text.detail.unknownProgram}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400">BIOS {license.bios_id}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Activated {license.activated_at ? formatDate(license.activated_at, locale) : '-'}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{text.detail.activated} {license.activated_at ? formatDate(license.activated_at, locale) : '-'}</p>
                       </div>
                       <div className="text-right">
                         <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />
                         <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-white">{formatCurrency(license.price, 'USD', locale)}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Expires {license.expires_at ? formatDate(license.expires_at, locale) : '-'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{text.detail.expires} {license.expires_at ? formatDate(license.expires_at, locale) : '-'}</p>
                       </div>
                     </div>
                   </div>
@@ -519,38 +703,38 @@ export function CustomersPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Renew License</DialogTitle>
-            <DialogDescription>{renewLicense ? `Renew ${renewLicense.program ?? 'license'} for BIOS ID ${renewLicense.bios_id}.` : 'Update duration and price, then renew.'}</DialogDescription>
+            <DialogTitle>{text.renewDialog.title}</DialogTitle>
+            <DialogDescription>{renewLicense ? text.renewDialog.descriptionWithProgram(renewLicense.program ?? 'license', renewLicense.bios_id) : text.renewDialog.descriptionFallback}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-3">
-            <FormField label="Duration" htmlFor="renew-duration">
+            <FormField label={text.renewDialog.duration} htmlFor="renew-duration">
               <Input id="renew-duration" type="number" min={1} value={renewDuration} onChange={(event) => setRenewDuration(event.target.value)} />
             </FormField>
-            <FormField label="Unit" htmlFor="renew-unit">
+            <FormField label={text.renewDialog.unit} htmlFor="renew-unit">
               <select
                 id="renew-unit"
                 value={renewUnit}
                 onChange={(event) => setRenewUnit(event.target.value as DurationUnit)}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                <option value="days">Days</option>
-                <option value="months">Months</option>
-                <option value="years">Years</option>
+                <option value="days">{text.units.days}</option>
+                <option value="months">{text.units.months}</option>
+                <option value="years">{text.units.years}</option>
               </select>
             </FormField>
-            <FormField label="Price" htmlFor="renew-price">
+            <FormField label={text.renewDialog.price} htmlFor="renew-price">
               <Input id="renew-price" type="number" step="0.01" min={0} value={renewPrice} onChange={(event) => setRenewPrice(event.target.value)} />
             </FormField>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setRenewLicenseId(null)}>
-              Cancel
+              {text.renewDialog.cancel}
             </Button>
             <Button
               type="button"
               onClick={() => {
                 if (Number(renewDuration) < 1 || Number(renewPrice) < 0) {
-                  toast.error('Enter a valid duration and price before renewing.')
+                  toast.error(text.validation.renew)
                   return
                 }
 
@@ -558,7 +742,7 @@ export function CustomersPage() {
               }}
               disabled={renewMutation.isPending}
             >
-              {renewMutation.isPending ? 'Renewing...' : 'Renew'}
+              {renewMutation.isPending ? text.renewDialog.renewing : text.renewDialog.renew}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -571,9 +755,9 @@ export function CustomersPage() {
             setDeactivateTarget(null)
           }
         }}
-        title="Deactivate license?"
-        description={deactivateTarget ? `This will deactivate the license for BIOS ID: ${deactivateTarget.bios_id ?? '-'}` : undefined}
-        confirmLabel="Deactivate"
+        title={text.deactivateDialog.title}
+        description={deactivateTarget ? text.deactivateDialog.description(deactivateTarget.bios_id ?? '-') : undefined}
+        confirmLabel={text.deactivateDialog.confirm}
         isDestructive
         onConfirm={() => {
           if (deactivateTarget?.license_id) {
@@ -636,46 +820,55 @@ function durationToDays(value: number, unit: DurationUnit) {
   }
 }
 
-function validateActivationStep(step: number, form: ActivationFormState) {
+function validateActivationStep(step: number, form: ActivationFormState, text: {
+  validation: {
+    customerName: string
+    customerEmail: string
+    biosId: string
+    selectProgram: string
+    duration: string
+    price: string
+  }
+}) {
   if (step === 0) {
     if (form.customer_name.trim().length < 2) {
-      return 'Customer name must be at least 2 characters.'
+      return text.validation.customerName
     }
 
     if (!/\S+@\S+\.\S+/.test(form.customer_email)) {
-      return 'Enter a valid customer email address.'
+      return text.validation.customerEmail
     }
   }
 
   if (step === 1) {
     if (form.bios_id.trim().length < 5) {
-      return 'BIOS ID must be at least 5 characters.'
+      return text.validation.biosId
     }
 
     if (!form.program_id) {
-      return 'Select a program before continuing.'
+      return text.validation.selectProgram
     }
   }
 
   if (step >= 2) {
     if (Number(form.duration_value) < 1) {
-      return 'Duration must be at least 1.'
+      return text.validation.duration
     }
 
     if (Number(form.price) < 0 || Number.isNaN(Number(form.price))) {
-      return 'Enter a valid price.'
+      return text.validation.price
     }
   }
 
   return ''
 }
 
-function getApiErrorMessage(error: unknown) {
+function getApiErrorMessage(error: unknown, fallback: string) {
   if (axios.isAxiosError(error)) {
     return (error.response?.data as { message?: string; errors?: Record<string, string[]> } | undefined)?.message
       ?? Object.values((error.response?.data as { errors?: Record<string, string[]> } | undefined)?.errors ?? {})[0]?.[0]
-      ?? 'The request failed.'
+      ?? fallback
   }
 
-  return 'The request failed.'
+  return fallback
 }
