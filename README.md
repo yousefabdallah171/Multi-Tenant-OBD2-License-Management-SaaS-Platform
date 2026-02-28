@@ -39,6 +39,7 @@ featuring 5-role RBAC, hardware-locked licensing via BIOS ID, RTL Arabic support
 14. [Production Deployment](#14-production-deployment)
 15. [Environment Variables](#15-environment-variables)
 16. [License & Ownership](#16-license--ownership)
+17. [Laragon Local Setup Guide](#17-laragon-local-setup-guide)
 
 ---
 
@@ -1759,6 +1760,226 @@ cd ../tests-frontend && npm install && npm run test:unit -- --watchAll=false
 # Open: http://localhost:3000
 # Login: admin@obd2sw.com / password
 ```
+
+---
+
+## 17. Laragon Local Setup Guide
+
+Use this guide if you want to run the Laravel backend with **Laragon + Apache + MySQL** on Windows and keep the React frontend on the Vite dev server.
+
+### Target Local URLs
+
+- Backend domain: `http://license.test`
+- Health check: `http://license.test/api/health`
+- Frontend dev server: `http://localhost:3000`
+
+### 1. Move the Project Into Laragon
+
+Place the repository here:
+
+```text
+C:\laragon\www\License
+```
+
+If Laragon auto virtual hosts are enabled, restarting Laragon should register:
+
+```text
+http://license.test
+```
+
+### 2. Point Apache to Laravel `public/`
+
+By default, Laragon may point `license.test` to the repository root, which only shows a folder index.  
+Change the Apache vhost so `DocumentRoot` points to:
+
+```text
+C:/laragon/www/License/backend/public
+```
+
+Example Apache vhost:
+
+```apache
+<VirtualHost *:80>
+    ServerName license.test
+    DocumentRoot "C:/laragon/www/License/backend/public"
+
+    <Directory "C:/laragon/www/License/backend/public">
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+Optional during backend-only development:
+
+```apache
+RedirectMatch 302 ^/$ /api/health
+```
+
+This is useful while the frontend is still being served from Vite on `localhost:3000`.
+
+### 3. Create the Local MySQL Database
+
+Using Laragon MySQL, create this database:
+
+```sql
+CREATE DATABASE license CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Default local setup used in this project:
+
+- Host: `127.0.0.1`
+- Port: `3306`
+- Username: `root`
+- Password: empty
+- Database: `license`
+
+### 4. Backend Environment
+
+Create `backend/.env` from `backend/.env.example` and use values like these:
+
+```env
+APP_NAME=License
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://license.test
+FRONTEND_URLS=http://license.test,http://localhost:3000,http://127.0.0.1:3000
+
+APP_LOCALE=ar
+APP_FALLBACK_LOCALE=en
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=license
+DB_USERNAME=root
+DB_PASSWORD=
+
+SANCTUM_STATEFUL_DOMAINS=license.test,localhost:3000,127.0.0.1:3000
+
+EXTERNAL_API_URL=http://72.60.69.185
+EXTERNAL_API_KEY=L9H2F7Q8XK6M4A
+EXTERNAL_API_TIMEOUT=10
+EXTERNAL_API_RETRIES=3
+```
+
+### 5. Backend Setup Commands
+
+Run these from `backend/`:
+
+```powershell
+composer install
+copy .env.example .env
+php artisan key:generate
+php artisan jwt:secret
+php artisan storage:link
+php artisan migrate --seed
+php artisan config:clear
+php artisan route:list
+php artisan test
+```
+
+### 6. Frontend Environment
+
+Create `frontend/.env` from `frontend/.env.example`:
+
+```env
+VITE_API_URL=http://license.test/api
+VITE_PUSHER_KEY=REPLACE_ME
+VITE_DEFAULT_LOCALE=ar
+```
+
+This value is important.  
+If `VITE_API_URL` is wrong, the frontend may try to call `http://localhost:3000/api/...` or `http://127.0.0.1:8000/api/...`, which will fail.
+
+### 7. Frontend and Test Workspace Setup
+
+Run these from the project root:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+In a second terminal:
+
+```powershell
+cd tests-frontend
+npm install
+npx jest --runInBand --no-cache
+```
+
+### 8. Verification Checklist
+
+Backend checks:
+
+- Open `http://license.test/api/health`
+- Expected result: JSON response with `status: ok`
+
+Frontend checks:
+
+- Open `http://localhost:3000`
+- Sign in with:
+
+```text
+admin@obd2sw.com
+password
+```
+
+Expected result:
+
+- Login succeeds
+- Token is stored
+- User is redirected to the correct dashboard route
+
+### 9. Common Issues
+
+**Issue: `http://license.test` shows `Index of /`**
+
+Cause:
+- Apache is pointing to the repository root instead of `backend/public`
+
+Fix:
+- Update the vhost `DocumentRoot` to `C:/laragon/www/License/backend/public`
+- Restart Apache or restart Laragon
+
+**Issue: `POST http://localhost:3000/api/auth/login 404`**
+
+Cause:
+- Vite is not using the correct `VITE_API_URL`
+
+Fix:
+- Set `frontend/.env` to `VITE_API_URL=http://license.test/api`
+- Stop and restart `npm run dev`
+- Hard refresh the browser
+
+**Issue: `http://license.test/api/auth/login` shows `405 Method Not Allowed` in the browser**
+
+Cause:
+- This route is `POST` only, and opening it in the browser sends `GET`
+
+Fix:
+- This is expected
+- Test it from the login form or with Postman/cURL
+
+**Issue: MySQL connection fails**
+
+Check:
+
+- Laragon MySQL is running
+- Database `license` exists
+- `backend/.env` uses `127.0.0.1`, `3306`, `root`, empty password
+
+### 10. Local Dev Summary
+
+For this project, the current recommended local development split is:
+
+- Laravel backend via Laragon Apache: `http://license.test`
+- React frontend via Vite: `http://localhost:3000`
+- MySQL via Laragon local server
+
+This setup keeps backend routing, Sanctum, and database access stable while frontend development stays fast with Vite hot reload.
 
 ---
 
