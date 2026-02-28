@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -16,6 +17,7 @@ import type { ManagerCustomerSummary } from '@/types/manager-reseller.types'
 const STATUS_OPTIONS = ['all', 'active', 'expired', 'suspended', 'pending'] as const
 
 export function CustomersPage() {
+  const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
@@ -57,28 +59,32 @@ export function CustomersPage() {
 
   const columns = useMemo<Array<DataTableColumn<ManagerCustomerSummary>>>(
     () => [
-      { key: 'name', label: 'Name', sortable: true, sortValue: (row) => row.name, render: (row) => row.name },
-      { key: 'email', label: 'Email', sortable: true, sortValue: (row) => row.email, render: (row) => row.email },
-      { key: 'bios', label: 'BIOS ID', sortable: true, sortValue: (row) => row.bios_id ?? '', render: (row) => row.bios_id ?? '-' },
-      { key: 'reseller', label: 'Reseller', sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
-      { key: 'program', label: 'Program', sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+      { key: 'name', label: t('common.name'), sortable: true, sortValue: (row) => row.name, render: (row) => row.name },
+      { key: 'email', label: t('common.email'), sortable: true, sortValue: (row) => row.email, render: (row) => row.email },
+      { key: 'bios', label: t('manager.pages.customers.biosId'), sortable: true, sortValue: (row) => row.bios_id ?? '', render: (row) => row.bios_id ?? '-' },
+      { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
+      { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       {
         key: 'status',
-        label: 'Status',
+        label: t('common.status'),
         sortable: true,
         sortValue: (row) => row.status ?? '',
         render: (row) => (row.status ? <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-'),
       },
-      { key: 'expiry', label: 'Expiry', sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
+      { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
     ],
-    [locale],
+    [locale, t],
   )
 
   const selectedCustomer = detailQuery.data?.data
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Manager" title="Customers" description="Review all customers across your reseller team with read-only filters for reseller, program, status, and BIOS search." />
+      <PageHeader
+        eyebrow={t('manager.layout.eyebrow')}
+        title={t('manager.pages.customers.title')}
+        description={t('manager.pages.customers.description')}
+      />
 
       <Tabs
         value={status}
@@ -90,7 +96,15 @@ export function CustomersPage() {
         <TabsList>
           {STATUS_OPTIONS.map((option) => (
             <TabsTrigger key={option} value={option}>
-              {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
+              {option === 'all'
+                ? t('common.all')
+                : option === 'active'
+                  ? t('common.active')
+                  : option === 'expired'
+                    ? t('common.expired')
+                    : option === 'suspended'
+                      ? t('common.suspended')
+                      : t('common.pending')}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -103,7 +117,7 @@ export function CustomersPage() {
                   setSearch(event.target.value)
                   setPage(1)
                 }}
-                placeholder="Search by customer, email, or BIOS ID"
+                placeholder={t('manager.pages.customers.searchPlaceholder')}
               />
               <select
                 value={resellerId}
@@ -113,7 +127,7 @@ export function CustomersPage() {
                 }}
                 className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                <option value="">All resellers</option>
+                <option value="">{t('manager.pages.customers.allResellers')}</option>
                 {(resellerQuery.data?.data ?? []).map((reseller) => (
                   <option key={reseller.id} value={reseller.id}>
                     {reseller.name}
@@ -128,7 +142,7 @@ export function CustomersPage() {
                 }}
                 className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                <option value="">All programs</option>
+                <option value="">{t('manager.pages.customers.allPrograms')}</option>
                 {(programsQuery.data?.data ?? []).map((program) => (
                   <option key={program.id} value={program.id}>
                     {program.name}
@@ -162,35 +176,39 @@ export function CustomersPage() {
       <Dialog open={selectedCustomerId !== null} onOpenChange={(open) => !open && setSelectedCustomerId(null)}>
         <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
           <DialogHeader>
-            <DialogTitle>{selectedCustomer?.name ?? 'Customer details'}</DialogTitle>
-            <DialogDescription>{selectedCustomer?.email ?? 'Inspect customer license history across your team.'}</DialogDescription>
+            <DialogTitle>{selectedCustomer?.name ?? t('manager.pages.customers.customerDetails')}</DialogTitle>
+            <DialogDescription>{selectedCustomer?.email ?? t('manager.pages.customers.customerDetailsDescription')}</DialogDescription>
           </DialogHeader>
           {selectedCustomer ? (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-4">
-                <InfoCard label="BIOS ID" value={selectedCustomer.bios_id ?? '-'} />
-                <InfoCard label="Reseller" value={selectedCustomer.reseller ?? '-'} />
-                <InfoCard label="Program" value={selectedCustomer.program ?? '-'} />
+                <InfoCard label={t('manager.pages.customers.biosId')} value={selectedCustomer.bios_id ?? '-'} />
+                <InfoCard label={t('common.reseller')} value={selectedCustomer.reseller ?? '-'} />
+                <InfoCard label={t('common.program')} value={selectedCustomer.program ?? '-'} />
                 <InfoCard
-                  label="Status"
+                  label={t('common.status')}
                   value={selectedCustomer.status ? <StatusBadge status={selectedCustomer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-'}
                 />
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold">License History</h3>
+                <h3 className="text-lg font-semibold">{t('manager.pages.customers.licenseHistory')}</h3>
                 {selectedCustomer.licenses.map((license) => (
                   <div key={license.id} className="rounded-3xl border border-slate-200 p-4 dark:border-slate-800">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <p className="font-medium text-slate-950 dark:text-white">{license.program ?? 'Unknown program'}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">BIOS {license.bios_id}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Reseller {license.reseller ?? 'Unknown reseller'}</p>
+                        <p className="font-medium text-slate-950 dark:text-white">{license.program ?? t('manager.pages.customers.unknownProgram')}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{t('manager.pages.customers.biosId')} {license.bios_id}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {t('common.reseller')} {license.reseller ?? t('manager.pages.customers.unknownReseller')}
+                        </p>
                       </div>
                       <div className="text-right">
                         <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />
                         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{license.activated_at ? formatDate(license.activated_at, locale) : '-'}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Expires {license.expires_at ? formatDate(license.expires_at, locale) : '-'}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {t('manager.pages.customers.expires')} {license.expires_at ? formatDate(license.expires_at, locale) : '-'}
+                        </p>
                       </div>
                     </div>
                   </div>

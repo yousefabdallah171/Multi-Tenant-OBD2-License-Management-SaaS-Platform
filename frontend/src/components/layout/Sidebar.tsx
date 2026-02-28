@@ -51,14 +51,14 @@ const managerParentItems: NavItem[] = [
 ]
 
 const managerItems: NavItem[] = [
-  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.manager.dashboard, label: 'Dashboard' },
-  { key: 'team', icon: Users, href: routePaths.manager.team, label: 'Team' },
-  { key: 'usernameManagement', icon: KeyRound, href: routePaths.manager.usernameManagement, label: 'Username Mgmt' },
-  { key: 'customers', icon: UserRound, href: routePaths.manager.customers, label: 'Customers' },
-  { key: 'software', icon: Package, href: routePaths.manager.software, label: 'Software' },
-  { key: 'reports', icon: BarChart3, href: routePaths.manager.reports, label: 'Reports' },
-  { key: 'activity', icon: ScrollText, href: routePaths.manager.activity, label: 'Activity' },
-  { key: 'profile', icon: User, href: routePaths.manager.profile, label: 'Profile' },
+  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.manager.dashboard, translationKey: 'manager.nav.dashboard' },
+  { key: 'team', icon: Users, href: routePaths.manager.team, translationKey: 'manager.nav.team' },
+  { key: 'usernameManagement', icon: KeyRound, href: routePaths.manager.usernameManagement, translationKey: 'manager.nav.usernameManagement' },
+  { key: 'customers', icon: UserRound, href: routePaths.manager.customers, translationKey: 'manager.nav.customers' },
+  { key: 'software', icon: Package, href: routePaths.manager.software, translationKey: 'manager.nav.software' },
+  { key: 'reports', icon: BarChart3, href: routePaths.manager.reports, translationKey: 'manager.nav.reports' },
+  { key: 'activity', icon: ScrollText, href: routePaths.manager.activity, translationKey: 'manager.nav.activity' },
+  { key: 'profile', icon: User, href: routePaths.manager.profile, translationKey: 'manager.nav.profile' },
 ]
 
 const resellerItems: NavItem[] = [

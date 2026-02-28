@@ -18,6 +18,8 @@ export function Navbar() {
       ? t('superAdmin.layout.title')
       : user.role === 'manager_parent'
         ? t('managerParent.layout.title')
+        : user.role === 'manager'
+          ? t('manager.layout.title')
         : t(`roles.${user.role}`)
     : t('superAdmin.layout.title')
   const eyebrow = user
@@ -25,6 +27,8 @@ export function Navbar() {
       ? 'OBD2SW'
       : user.role === 'manager_parent'
         ? t('managerParent.layout.eyebrow')
+        : user.role === 'manager'
+          ? t('manager.layout.eyebrow')
         : t(`roles.${user.role}`)
     : 'OBD2SW'
 

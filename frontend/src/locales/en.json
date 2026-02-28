@@ -81,8 +81,10 @@
     "search": "Search",
     "all": "All",
     "active": "Active",
+    "expired": "Expired",
     "suspended": "Suspended",
     "inactive": "Inactive",
+    "pending": "Pending",
     "allRoles": "All roles",
     "allTenants": "All tenants",
     "allStatuses": "All statuses",
@@ -111,6 +113,9 @@
     "createdAt": "Created at",
     "role": "Role",
     "tenant": "Tenant",
+    "reseller": "Reseller",
+    "program": "Program",
+    "expiry": "Expiry",
     "activations": "Activations",
     "rowsPerPage": "Rows per page",
     "totalCount": "{{count}} total",
@@ -359,6 +364,38 @@
           "reviewCustomers": "Review customers",
           "openReports": "Open reports"
         }
+      }
+    }
+  },
+  "manager": {
+    "layout": {
+      "title": "Manager Workspace",
+      "eyebrow": "Manager"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "team": "Team",
+      "usernameManagement": "Username Mgmt",
+      "customers": "Customers",
+      "software": "Software",
+      "reports": "Reports",
+      "activity": "Activity",
+      "profile": "Profile"
+    },
+    "pages": {
+      "customers": {
+        "title": "Customers",
+        "description": "Review all customers across your reseller team with read-only filters for reseller, program, status, and BIOS search.",
+        "searchPlaceholder": "Search by customer, email, or BIOS ID",
+        "allResellers": "All resellers",
+        "allPrograms": "All programs",
+        "biosId": "BIOS ID",
+        "customerDetails": "Customer details",
+        "customerDetailsDescription": "Inspect customer license history across your team.",
+        "licenseHistory": "License History",
+        "unknownProgram": "Unknown program",
+        "unknownReseller": "Unknown reseller",
+        "expires": "Expires"
       }
     }
   },

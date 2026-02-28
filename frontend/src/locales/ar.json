@@ -81,8 +81,10 @@
     "search": "بحث",
     "all": "الكل",
     "active": "نشط",
+    "expired": "منتهي",
     "suspended": "معلق",
     "inactive": "غير نشط",
+    "pending": "قيد الانتظار",
     "allRoles": "كل الأدوار",
     "allTenants": "كل الشركاء",
     "allStatuses": "كل الحالات",
@@ -111,6 +113,9 @@
     "createdAt": "تاريخ الإنشاء",
     "role": "الدور",
     "tenant": "الشريك",
+    "reseller": "الموزع",
+    "program": "البرنامج",
+    "expiry": "الانتهاء",
     "activations": "التفعيلات",
     "rowsPerPage": "عدد الصفوف",
     "totalCount": "الإجمالي {{count}}",
@@ -359,6 +364,38 @@
           "reviewCustomers": "مراجعة العملاء",
           "openReports": "فتح التقارير"
         }
+      }
+    }
+  },
+  "manager": {
+    "layout": {
+      "title": "مساحة المدير",
+      "eyebrow": "مدير"
+    },
+    "nav": {
+      "dashboard": "لوحة التحكم",
+      "team": "الفريق",
+      "usernameManagement": "إدارة اسم المستخدم",
+      "customers": "العملاء",
+      "software": "البرامج",
+      "reports": "التقارير",
+      "activity": "النشاط",
+      "profile": "الملف الشخصي"
+    },
+    "pages": {
+      "customers": {
+        "title": "العملاء",
+        "description": "راجع جميع العملاء عبر فريق الموزعين لديك باستخدام فلاتر للموزع والبرنامج والحالة ومعرّف BIOS للعرض فقط.",
+        "searchPlaceholder": "ابحث بالعميل أو البريد الإلكتروني أو معرّف BIOS",
+        "allResellers": "كل الموزعين",
+        "allPrograms": "كل البرامج",
+        "biosId": "معرّف BIOS",
+        "customerDetails": "تفاصيل العميل",
+        "customerDetailsDescription": "راجع سجل تراخيص العميل عبر فريقك.",
+        "licenseHistory": "سجل التراخيص",
+        "unknownProgram": "برنامج غير معروف",
+        "unknownReseller": "موزع غير معروف",
+        "expires": "ينتهي"
       }
     }
   },
