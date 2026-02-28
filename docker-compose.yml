@@ -1,0 +1,72 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: obd2sw-backend
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - obd2sw
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: obd2sw-frontend
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    networks:
+      - obd2sw
+
+  mysql:
+    image: mysql:8.0
+    container_name: obd2sw-mysql
+    environment:
+      MYSQL_DATABASE: obd2sw
+      MYSQL_USER: obd2sw_user
+      MYSQL_PASSWORD: obd2sw_pass
+      MYSQL_ROOT_PASSWORD: root_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - obd2sw
+
+  redis:
+    image: redis:7-alpine
+    container_name: obd2sw-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - obd2sw
+
+  nginx:
+    image: nginx:alpine
+    container_name: obd2sw-nginx
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./backend:/var/www/html
+    networks:
+      - obd2sw
+
+volumes:
+  mysql_data:
+
+networks:
+  obd2sw:
+    driver: bridge
+

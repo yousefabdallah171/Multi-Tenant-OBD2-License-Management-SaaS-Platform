@@ -1,0 +1,22 @@
+{
+  "extends": "../frontend/tsconfig.app.json",
+  "compilerOptions": {
+    "baseUrl": "../frontend",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "verbatimModuleSyntax": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../frontend/src/**/*.ts",
+    "../frontend/src/**/*.tsx"
+  ],
+  "exclude": [
+    "../frontend/node_modules",
+    "../frontend/dist"
+  ]
+}

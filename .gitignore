@@ -1,0 +1,31 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Backend
+backend/vendor/
+backend/storage/logs/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+tests-frontend/node_modules/
+tests-frontend/coverage-report/
+tests-frontend/cypress/screenshots/
+tests-frontend/cypress/videos/
+tests-frontend/jest-cache/
+tests-frontend/reports/
+
+# IDE
+.idea/
+.vscode/
+.claude/

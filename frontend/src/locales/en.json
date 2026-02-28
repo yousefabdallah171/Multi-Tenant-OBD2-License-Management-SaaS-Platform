@@ -1,0 +1,62 @@
+{
+  "brand": {
+    "badge": "License Platform",
+    "title": "OBD2SW foundation is now live"
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginSubtitle": "Use one login flow for all five roles.",
+    "heroDescription": "This Phase 01 shell connects the React frontend to the Laravel API, keeps auth state in Zustand, and routes each user to the correct dashboard.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "loading": "Please wait...",
+    "forgotPassword": "Forgot password?",
+    "invalidCredentials": "The credentials are invalid.",
+    "networkError": "The frontend cannot reach the backend API. Restart the frontend and verify the API URL.",
+    "serverError": "The login request failed on the server.",
+    "validation": "Enter a valid email and password.",
+    "loginSuccess": "Login succeeded.",
+    "resetSubtitle": "Enter your email to request a password reset link.",
+    "resetSubmit": "Send reset link",
+    "resetError": "The reset request failed.",
+    "logout": "Logout",
+    "cards": {
+      "secure": {
+        "title": "Secure backend auth",
+        "description": "Sanctum-backed token flow with API-only routes."
+      },
+      "roles": {
+        "title": "Role-aware routing",
+        "description": "Each role is redirected to its own dashboard namespace."
+      },
+      "speed": {
+        "title": "Phase 01 ready",
+        "description": "The foundation is aligned with the docs and ready for feature work."
+      }
+    }
+  },
+  "roles": {
+    "super_admin": "Super Admin",
+    "manager_parent": "Manager Parent",
+    "manager": "Manager",
+    "reseller": "Reseller",
+    "customer": "Customer"
+  },
+  "dashboard": {
+    "roleLabel": "Role dashboard",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "foundationTitle": "Phase 01 foundation",
+    "foundationDescription": "The shell is ready for the remaining business modules.",
+    "foundationCopy": "Auth, guards, shared UI, theme persistence, and dashboard metrics are now wired together across the production frontend.",
+    "nextSteps": "Next work should fill the role pages, services, and module-specific flows from the creation checklist.",
+    "stats": {
+      "users": "Users",
+      "programs": "Programs",
+      "licenses": "Licenses",
+      "activeLicenses": "Active licenses",
+      "revenue": "Revenue"
+    }
+  }
+}
