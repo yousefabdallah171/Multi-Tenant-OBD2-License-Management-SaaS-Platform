@@ -6,6 +6,18 @@ use App\Http\Controllers\BalanceController;
 use App\Http\Controllers\BiosBlacklistController;
 use App\Http\Controllers\BiosConflictController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ManagerParent\ActivityController as ManagerParentActivityController;
+use App\Http\Controllers\ManagerParent\BiosHistoryController as ManagerParentBiosHistoryController;
+use App\Http\Controllers\ManagerParent\CustomerController as ManagerParentCustomerController;
+use App\Http\Controllers\ManagerParent\DashboardController as ManagerParentDashboardController;
+use App\Http\Controllers\ManagerParent\FinancialReportController as ManagerParentFinancialReportController;
+use App\Http\Controllers\ManagerParent\IpAnalyticsController as ManagerParentIpAnalyticsController;
+use App\Http\Controllers\ManagerParent\PricingController as ManagerParentPricingController;
+use App\Http\Controllers\ManagerParent\ProgramController as ManagerParentProgramController;
+use App\Http\Controllers\ManagerParent\ReportController as ManagerParentReportController;
+use App\Http\Controllers\ManagerParent\SettingsController as ManagerParentSettingsController;
+use App\Http\Controllers\ManagerParent\TeamController as ManagerParentTeamController;
+use App\Http\Controllers\ManagerParent\UsernameManagementController as ManagerParentUsernameManagementController;
 use App\Http\Controllers\SuperAdmin\AdminManagementController;
 use App\Http\Controllers\SuperAdmin\ApiStatusController;
 use App\Http\Controllers\SuperAdmin\BiosBlacklistController as SuperAdminBiosBlacklistController;
@@ -56,6 +68,64 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
     Route::get('/bios-conflicts', [BiosConflictController::class, 'index'])->middleware('role:super_admin,manager_parent,manager');
     Route::get('/balances/me', [BalanceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::post('/balances/{user}/adjust', [BalanceController::class, 'adjust'])->middleware('role:super_admin,manager_parent');
+
+    Route::middleware('role:manager_parent')->group(function (): void {
+        Route::get('/dashboard/revenue-chart', [ManagerParentDashboardController::class, 'revenueChart']);
+        Route::get('/dashboard/expiry-forecast', [ManagerParentDashboardController::class, 'expiryForecast']);
+        Route::get('/dashboard/team-performance', [ManagerParentDashboardController::class, 'teamPerformance']);
+
+        Route::get('/team', [ManagerParentTeamController::class, 'index']);
+        Route::post('/team', [ManagerParentTeamController::class, 'store']);
+        Route::put('/team/{user}', [ManagerParentTeamController::class, 'update']);
+        Route::delete('/team/{user}', [ManagerParentTeamController::class, 'destroy']);
+        Route::put('/team/{user}/status', [ManagerParentTeamController::class, 'updateStatus']);
+        Route::get('/team/{user}/stats', [ManagerParentTeamController::class, 'stats']);
+
+        Route::get('/programs', [ManagerParentProgramController::class, 'index']);
+        Route::post('/programs', [ManagerParentProgramController::class, 'store']);
+        Route::get('/programs/{program}', [ManagerParentProgramController::class, 'show']);
+        Route::put('/programs/{program}', [ManagerParentProgramController::class, 'update']);
+        Route::delete('/programs/{program}', [ManagerParentProgramController::class, 'destroy']);
+        Route::get('/programs/{program}/stats', [ManagerParentProgramController::class, 'stats']);
+
+        Route::get('/pricing/history', [ManagerParentPricingController::class, 'history']);
+        Route::get('/pricing', [ManagerParentPricingController::class, 'index']);
+        Route::post('/pricing/bulk', [ManagerParentPricingController::class, 'bulkUpdate']);
+        Route::put('/pricing/{program}', [ManagerParentPricingController::class, 'update']);
+
+        Route::prefix('reports')->group(function (): void {
+            Route::get('/revenue-by-reseller', [ManagerParentReportController::class, 'revenueByReseller']);
+            Route::get('/revenue-by-program', [ManagerParentReportController::class, 'revenueByProgram']);
+            Route::get('/activation-rate', [ManagerParentReportController::class, 'activationRate']);
+            Route::get('/retention', [ManagerParentReportController::class, 'retention']);
+            Route::get('/export/csv', [ManagerParentReportController::class, 'exportCsv']);
+            Route::get('/export/pdf', [ManagerParentReportController::class, 'exportPdf']);
+        });
+
+        Route::get('/activity/export', [ManagerParentActivityController::class, 'export']);
+        Route::get('/activity', [ManagerParentActivityController::class, 'index']);
+
+        Route::get('/customers', [ManagerParentCustomerController::class, 'index']);
+        Route::get('/customers/{user}', [ManagerParentCustomerController::class, 'show']);
+
+        Route::get('/settings', [ManagerParentSettingsController::class, 'index']);
+        Route::put('/settings', [ManagerParentSettingsController::class, 'update']);
+
+        Route::get('/bios-history', [ManagerParentBiosHistoryController::class, 'index']);
+        Route::get('/bios-history/{biosId}', [ManagerParentBiosHistoryController::class, 'show']);
+
+        Route::get('/ip-analytics/stats', [ManagerParentIpAnalyticsController::class, 'stats']);
+        Route::get('/ip-analytics', [ManagerParentIpAnalyticsController::class, 'index']);
+
+        Route::get('/username-management', [ManagerParentUsernameManagementController::class, 'index']);
+        Route::post('/username-management/{user}/unlock', [ManagerParentUsernameManagementController::class, 'unlock']);
+        Route::put('/username-management/{user}/username', [ManagerParentUsernameManagementController::class, 'changeUsername']);
+        Route::post('/username-management/{user}/reset-password', [ManagerParentUsernameManagementController::class, 'resetPassword']);
+
+        Route::get('/financial-reports', [ManagerParentFinancialReportController::class, 'index']);
+        Route::get('/financial-reports/export/csv', [ManagerParentFinancialReportController::class, 'exportCsv']);
+        Route::get('/financial-reports/export/pdf', [ManagerParentFinancialReportController::class, 'exportPdf']);
+    });
 
     Route::prefix('super-admin')->middleware('role:super_admin')->group(function (): void {
         Route::get('/dashboard/stats', [SuperAdminDashboardController::class, 'stats']);

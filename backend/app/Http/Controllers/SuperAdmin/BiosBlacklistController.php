@@ -20,7 +20,7 @@ class BiosBlacklistController extends BaseSuperAdminController
 
         $perPage = (int) ($validated['per_page'] ?? 10);
 
-        $query = BiosBlacklist::query()->with('addedBy:id,name')->latest();
+        $query = BiosBlacklist::query()->whereNull('tenant_id')->with('addedBy:id,name')->latest();
 
         if (! empty($validated['search'])) {
             $query->where('bios_id', 'like', '%'.$validated['search'].'%');
@@ -46,7 +46,7 @@ class BiosBlacklistController extends BaseSuperAdminController
         ]);
 
         $entry = BiosBlacklist::query()->updateOrCreate(
-            ['bios_id' => $validated['bios_id']],
+            ['tenant_id' => null, 'bios_id' => $validated['bios_id']],
             [
                 'added_by' => $request->user()?->id,
                 'reason' => $validated['reason'],
@@ -93,7 +93,7 @@ class BiosBlacklistController extends BaseSuperAdminController
             }
 
             BiosBlacklist::query()->updateOrCreate(
-                ['bios_id' => trim((string) $biosId)],
+                ['tenant_id' => null, 'bios_id' => trim((string) $biosId)],
                 [
                     'added_by' => $request->user()?->id,
                     'reason' => trim((string) ($reason ?: 'Imported entry')),
@@ -114,7 +114,7 @@ class BiosBlacklistController extends BaseSuperAdminController
 
     public function export(): StreamedResponse
     {
-        $entries = BiosBlacklist::query()->with('addedBy:id,name')->latest()->get();
+        $entries = BiosBlacklist::query()->whereNull('tenant_id')->with('addedBy:id,name')->latest()->get();
 
         return response()->streamDownload(function () use ($entries): void {
             $handle = fopen('php://output', 'wb');

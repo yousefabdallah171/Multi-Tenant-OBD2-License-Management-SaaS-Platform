@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, BarChart3, Building2, History, KeyRound, LayoutDashboard, ScrollText, Settings, ShieldBan, User, UserCog, Users } from 'lucide-react'
+import { Activity, BarChart3, Building2, History, KeyRound, LayoutDashboard, Package, ScrollText, Settings, ShieldBan, User, UserCog, Users, Wallet } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
@@ -12,22 +12,41 @@ interface NavItem {
   key: string
   icon: LucideIcon
   href: (lang: 'ar' | 'en') => string
+  label?: string
+  translationKey?: string
 }
 
 const superAdminItems: NavItem[] = [
-  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.superAdmin.dashboard },
-  { key: 'tenants', icon: Building2, href: routePaths.superAdmin.tenants },
-  { key: 'users', icon: Users, href: routePaths.superAdmin.users },
-  { key: 'adminManagement', icon: UserCog, href: routePaths.superAdmin.adminManagement },
-  { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist },
-  { key: 'biosHistory', icon: History, href: routePaths.superAdmin.biosHistory },
-  { key: 'usernameManagement', icon: KeyRound, href: routePaths.superAdmin.usernameManagement },
-  { key: 'financialReports', icon: BarChart3, href: routePaths.superAdmin.financialReports },
-  { key: 'reports', icon: BarChart3, href: routePaths.superAdmin.reports },
-  { key: 'logs', icon: ScrollText, href: routePaths.superAdmin.logs },
-  { key: 'apiStatus', icon: Activity, href: routePaths.superAdmin.apiStatus },
-  { key: 'settings', icon: Settings, href: routePaths.superAdmin.settings },
-  { key: 'profile', icon: User, href: routePaths.superAdmin.profile },
+  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.superAdmin.dashboard, translationKey: 'superAdmin.nav.dashboard' },
+  { key: 'tenants', icon: Building2, href: routePaths.superAdmin.tenants, translationKey: 'superAdmin.nav.tenants' },
+  { key: 'users', icon: Users, href: routePaths.superAdmin.users, translationKey: 'superAdmin.nav.users' },
+  { key: 'adminManagement', icon: UserCog, href: routePaths.superAdmin.adminManagement, translationKey: 'superAdmin.nav.adminManagement' },
+  { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },
+  { key: 'biosHistory', icon: History, href: routePaths.superAdmin.biosHistory, translationKey: 'superAdmin.nav.biosHistory' },
+  { key: 'usernameManagement', icon: KeyRound, href: routePaths.superAdmin.usernameManagement, translationKey: 'superAdmin.nav.usernameManagement' },
+  { key: 'financialReports', icon: BarChart3, href: routePaths.superAdmin.financialReports, translationKey: 'superAdmin.nav.financialReports' },
+  { key: 'reports', icon: BarChart3, href: routePaths.superAdmin.reports, translationKey: 'superAdmin.nav.reports' },
+  { key: 'logs', icon: ScrollText, href: routePaths.superAdmin.logs, translationKey: 'superAdmin.nav.logs' },
+  { key: 'apiStatus', icon: Activity, href: routePaths.superAdmin.apiStatus, translationKey: 'superAdmin.nav.apiStatus' },
+  { key: 'settings', icon: Settings, href: routePaths.superAdmin.settings, translationKey: 'superAdmin.nav.settings' },
+  { key: 'profile', icon: User, href: routePaths.superAdmin.profile, translationKey: 'superAdmin.nav.profile' },
+]
+
+const managerParentItems: NavItem[] = [
+  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.managerParent.dashboard, label: 'Dashboard' },
+  { key: 'teamManagement', icon: Users, href: routePaths.managerParent.teamManagement, label: 'Team Management' },
+  { key: 'resellerPricing', icon: Wallet, href: routePaths.managerParent.resellerPricing, label: 'Reseller Pricing' },
+  { key: 'softwareManagement', icon: Package, href: routePaths.managerParent.softwareManagement, label: 'Software Management' },
+  { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, label: 'BIOS Blacklist' },
+  { key: 'biosHistory', icon: History, href: routePaths.managerParent.biosHistory, label: 'BIOS History' },
+  { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, label: 'IP Analytics' },
+  { key: 'usernameManagement', icon: KeyRound, href: routePaths.managerParent.usernameManagement, label: 'Username Management' },
+  { key: 'financialReports', icon: BarChart3, href: routePaths.managerParent.financialReports, label: 'Financial Reports' },
+  { key: 'reports', icon: ScrollText, href: routePaths.managerParent.reports, label: 'Reports' },
+  { key: 'activity', icon: ScrollText, href: routePaths.managerParent.activity, label: 'Activity' },
+  { key: 'customers', icon: Users, href: routePaths.managerParent.customers, label: 'Customers' },
+  { key: 'settings', icon: Settings, href: routePaths.managerParent.settings, label: 'Settings' },
+  { key: 'profile', icon: User, href: routePaths.managerParent.profile, label: 'Profile' },
 ]
 
 export function Sidebar() {
@@ -37,11 +56,13 @@ export function Sidebar() {
   const collapsed = useSidebarStore((state) => state.collapsed)
   const setCollapsed = useSidebarStore((state) => state.setCollapsed)
 
-  const items = user?.role === 'super_admin' ? superAdminItems : []
+  const items = user?.role === 'super_admin' ? superAdminItems : user?.role === 'manager_parent' ? managerParentItems : []
   const navContent = (
     <nav className="space-y-2">
       {items.map((item) => {
         const Icon = item.icon
+        const label = item.translationKey ? t(item.translationKey) : item.label ?? item.key
+
         return (
           <NavLink
             key={item.key}
@@ -53,7 +74,7 @@ export function Sidebar() {
                 collapsed && 'justify-center lg:px-0',
               )
             }
-            title={t(`superAdmin.nav.${item.key}`)}
+            title={label}
             onClick={() => {
               if (window.innerWidth < 1024) {
                 setCollapsed(true)
@@ -61,7 +82,7 @@ export function Sidebar() {
             }}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{t(`superAdmin.nav.${item.key}`)}</span>
+            <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
           </NavLink>
         )
       })}

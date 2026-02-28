@@ -3,6 +3,20 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
 import { LoginPage } from '@/pages/auth/Login'
 import { RoleDashboard } from '@/pages/dashboard/RoleDashboard'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { ActivityPage as ManagerParentActivityPage } from '@/pages/manager-parent/Activity'
+import { BiosBlacklistPage as ManagerParentBiosBlacklistPage } from '@/pages/manager-parent/BiosBlacklist'
+import { BiosHistoryPage as ManagerParentBiosHistoryPage } from '@/pages/manager-parent/BiosHistory'
+import { CustomersPage as ManagerParentCustomersPage } from '@/pages/manager-parent/Customers'
+import { DashboardPage as ManagerParentDashboardPage } from '@/pages/manager-parent/Dashboard'
+import { FinancialReportsPage as ManagerParentFinancialReportsPage } from '@/pages/manager-parent/FinancialReports'
+import { IpAnalyticsPage as ManagerParentIpAnalyticsPage } from '@/pages/manager-parent/IpAnalytics'
+import { ProfilePage as ManagerParentProfilePage } from '@/pages/manager-parent/Profile'
+import { ReportsPage as ManagerParentReportsPage } from '@/pages/manager-parent/Reports'
+import { ResellerPricingPage } from '@/pages/manager-parent/ResellerPricing'
+import { SettingsPage as ManagerParentSettingsPage } from '@/pages/manager-parent/Settings'
+import { SoftwareManagementPage } from '@/pages/manager-parent/SoftwareManagement'
+import { TeamManagementPage } from '@/pages/manager-parent/TeamManagement'
+import { UsernameManagementPage as ManagerParentUsernameManagementPage } from '@/pages/manager-parent/UsernameManagement'
 import { AdminManagementPage } from '@/pages/super-admin/AdminManagement'
 import { ApiStatusPage } from '@/pages/super-admin/ApiStatus'
 import { BiosBlacklistPage } from '@/pages/super-admin/BiosBlacklist'
@@ -49,7 +63,22 @@ export function AppRouter() {
             </Route>
           </Route>
           <Route element={<RoleGuard allowedRoles={['manager_parent']} />}>
-            <Route path="dashboard" element={<RoleDashboard role="manager_parent" />} />
+            <Route element={<DashboardLayout />}>
+              <Route path="dashboard" element={<ManagerParentDashboardPage />} />
+              <Route path="team-management" element={<TeamManagementPage />} />
+              <Route path="reseller-pricing" element={<ResellerPricingPage />} />
+              <Route path="software-management" element={<SoftwareManagementPage />} />
+              <Route path="bios-blacklist" element={<ManagerParentBiosBlacklistPage />} />
+              <Route path="bios-history" element={<ManagerParentBiosHistoryPage />} />
+              <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />
+              <Route path="username-management" element={<ManagerParentUsernameManagementPage />} />
+              <Route path="financial-reports" element={<ManagerParentFinancialReportsPage />} />
+              <Route path="reports" element={<ManagerParentReportsPage />} />
+              <Route path="activity" element={<ManagerParentActivityPage />} />
+              <Route path="customers" element={<ManagerParentCustomersPage />} />
+              <Route path="settings" element={<ManagerParentSettingsPage />} />
+              <Route path="profile" element={<ManagerParentProfilePage />} />
+            </Route>
           </Route>
           <Route element={<RoleGuard allowedRoles={['manager']} />}>
             <Route path="manager" element={<RoleDashboard role="manager" />} />

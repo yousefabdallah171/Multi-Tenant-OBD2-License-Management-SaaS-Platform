@@ -20,6 +20,7 @@ interface DataTableProps<T> {
   isLoading?: boolean
   emptyMessage?: string
   rowKey: (row: T) => string | number
+  onRowClick?: (row: T) => void
   searchTerm?: string
   searchValue?: (row: T) => string
   pagination?: {
@@ -39,6 +40,7 @@ export function DataTable<T>({
   isLoading = false,
   emptyMessage = '',
   rowKey,
+  onRowClick,
   searchTerm,
   searchValue,
   pagination,
@@ -160,7 +162,11 @@ export function DataTable<T>({
             ) : null}
             {!isLoading
               ? sortedData.map((row) => (
-                  <tr key={rowKey(row)} className="transition hover:bg-slate-50/80 dark:hover:bg-slate-950/60">
+                  <tr
+                    key={rowKey(row)}
+                    className={cn('transition hover:bg-slate-50/80 dark:hover:bg-slate-950/60', onRowClick ? 'cursor-pointer' : '')}
+                    onClick={() => onRowClick?.(row)}
+                  >
                     {columns.map((column) => (
                       <td key={`${rowKey(row)}-${column.key}`} className={cn('px-4 py-4 align-top text-sm text-slate-700 dark:text-slate-200', column.className)}>
                         {column.render(row)}

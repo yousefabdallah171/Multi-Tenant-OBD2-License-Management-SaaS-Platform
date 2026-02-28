@@ -19,4 +19,7 @@ export interface DashboardStats {
   licenses: number
   active_licenses: number
   revenue: number
+  team_members?: number
+  total_customers?: number
+  monthly_revenue?: number
 }

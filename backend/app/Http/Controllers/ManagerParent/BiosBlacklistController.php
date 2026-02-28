@@ -1,29 +1,25 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\ManagerParent;
 
-use App\Enums\UserRole;
-use App\Http\Controllers\ManagerParent\BiosBlacklistController as ManagerParentBiosBlacklistController;
 use App\Models\BiosBlacklist;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 
-class BiosBlacklistController extends Controller
+class BiosBlacklistController extends BaseManagerParentController
 {
     public function index(Request $request): JsonResponse
     {
-        if ($request->user()?->role === UserRole::MANAGER_PARENT) {
-            return app(ManagerParentBiosBlacklistController::class)->index($request);
-        }
-
         $validated = $request->validate([
             'search' => ['nullable', 'string'],
             'status' => ['nullable', 'in:active,removed'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $query = BiosBlacklist::query()->with('addedBy:id,name')->latest();
+        $query = BiosBlacklist::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->with('addedBy:id,name')
+            ->latest();
 
         if (! empty($validated['search'])) {
             $query->where('bios_id', 'like', '%'.$validated['search'].'%');
@@ -36,17 +32,15 @@ class BiosBlacklistController extends Controller
         $entries = $query->paginate((int) ($validated['per_page'] ?? 10));
 
         return response()->json([
-            'data' => collect($entries->items())->map(fn (BiosBlacklist $entry): array => $this->serializeEntry($entry))->values(),
+            'data' => collect($entries->items())
+                ->map(fn (BiosBlacklist $entry): array => $this->serializeEntry($entry))
+                ->values(),
             'meta' => $this->paginationMeta($entries),
         ]);
     }
 
     public function store(Request $request): JsonResponse
     {
-        if ($request->user()?->role === UserRole::MANAGER_PARENT) {
-            return app(ManagerParentBiosBlacklistController::class)->store($request);
-        }
-
         $validated = $request->validate([
             'bios_id' => ['required', 'string', 'max:255'],
             'reason' => ['required', 'string'],
@@ -54,7 +48,7 @@ class BiosBlacklistController extends Controller
 
         $entry = BiosBlacklist::query()->updateOrCreate(
             [
-                'tenant_id' => $request->user()?->tenant_id,
+                'tenant_id' => $this->currentTenantId($request),
                 'bios_id' => $validated['bios_id'],
             ],
             [
@@ -64,30 +58,30 @@ class BiosBlacklistController extends Controller
             ],
         );
 
+        $this->logActivity(
+            $request,
+            'bios.blacklist.add',
+            sprintf('Added BIOS %s to the tenant blacklist.', $entry->bios_id),
+            ['bios_id' => $entry->bios_id],
+        );
+
         return response()->json(['data' => $this->serializeEntry($entry->fresh('addedBy'))], 201);
     }
 
-    public function destroy(BiosBlacklist $biosBlacklist): JsonResponse
+    public function destroy(Request $request, BiosBlacklist $biosBlacklist): JsonResponse
     {
-        if (request()->user()?->role === UserRole::MANAGER_PARENT) {
-            return app(ManagerParentBiosBlacklistController::class)->destroy(request(), $biosBlacklist);
-        }
+        abort_unless($biosBlacklist->tenant_id === $this->currentTenantId($request), 404);
 
         $biosBlacklist->update(['status' => 'removed']);
 
-        return response()->json(['message' => 'Blacklist entry removed.']);
-    }
+        $this->logActivity(
+            $request,
+            'bios.blacklist.remove',
+            sprintf('Removed BIOS %s from the tenant blacklist.', $biosBlacklist->bios_id),
+            ['bios_id' => $biosBlacklist->bios_id],
+        );
 
-    private function paginationMeta(LengthAwarePaginator $paginator): array
-    {
-        return [
-            'current_page' => $paginator->currentPage(),
-            'last_page' => $paginator->lastPage(),
-            'per_page' => $paginator->perPage(),
-            'total' => $paginator->total(),
-            'from' => $paginator->firstItem(),
-            'to' => $paginator->lastItem(),
-        ];
+        return response()->json(['message' => 'Blacklist entry removed.']);
     }
 
     private function serializeEntry(BiosBlacklist $entry): array
