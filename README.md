@@ -76,9 +76,9 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | PHASE-02-SuperAdmin | :green_circle: Complete | Day 3 |
 | PHASE-03-ManagerParent | :green_circle: Complete | Day 4-5 |
 | PHASE-04-ManagerReseller | :green_circle: Complete | Day 6 |
-| PHASE-05-CustomerPortal | :red_circle: Not Started | Day 7 |
-| PHASE-06-ReportsAnalytics | :red_circle: Not Started | Day 8 |
-| PHASE-07-UIUXPolish | :red_circle: Not Started | Day 9-10 |
+| PHASE-05-CustomerPortal | :green_circle: Complete | Day 7 |
+| PHASE-06-ReportsAnalytics | :green_circle: Complete | Day 8 |
+| PHASE-07-UIUXPolish | :green_circle: Complete | Day 9-10 |
 | PHASE-08-Testing | :green_circle: Complete | Day 11 |
 | PHASE-09-Deployment | :red_circle: Not Started | Day 12-13 |
 | PHASE-10-Documentation | :red_circle: Not Started | Day 14 |
