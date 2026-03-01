@@ -3,6 +3,7 @@ import type { UserRole } from '@/types/user.types'
 
 export const DEFAULT_LANGUAGE: SupportedLanguage = 'ar'
 export const AUTH_STORAGE_KEY = 'license-auth'
+export const AUTH_SESSION_STORAGE_KEY = 'license-auth-session'
 export const THEME_STORAGE_KEY = 'license-theme'
 export const LANGUAGE_STORAGE_KEY = 'license-language'
 

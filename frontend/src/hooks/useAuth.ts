@@ -14,9 +14,9 @@ export function useAuth() {
 
   const isAuthenticated = Boolean(token && user)
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, remember = true) => {
     const result = await authService.login({ email, password })
-    setSession(result.token, result.user)
+    setSession(result.token, result.user, remember)
     return result
   }
 

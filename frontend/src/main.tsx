@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import { initI18n, resolveInitialLanguage } from './i18n'
 
@@ -18,5 +19,7 @@ async function bootstrap() {
     </StrictMode>,
   )
 }
+
+registerSW({ immediate: true })
 
 void bootstrap()

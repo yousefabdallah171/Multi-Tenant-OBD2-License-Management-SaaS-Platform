@@ -26,6 +26,9 @@ tests-frontend/cypress/screenshots/
 tests-frontend/cypress/videos/
 tests-frontend/jest-cache/
 tests-frontend/reports/
+docs-organized/
+nginx/
+scripts/
 frontend/lighthouse-*.report.html
 frontend/lighthouse-*.report.json
 frontend/lighthouse-*

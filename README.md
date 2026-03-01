@@ -2040,6 +2040,149 @@ npx cypress run --spec "cypress/e2e/auth/*.cy.ts"
 
 ---
 
+### 12. VPS Deployment Runbook (Hostinger + CloudPanel)
+
+This is the production deployment flow used for `panel.obd2sw.com` on Hostinger VPS with CloudPanel.
+
+### Server Stack
+
+- OS: Ubuntu 24.04 (noble)
+- Web server: Nginx (CloudPanel managed)
+- PHP: `php8.3-fpm`
+- Backend: Laravel (`/home/obd2sw-panel/htdocs/panel.obd2sw.com/backend`)
+- Frontend: React/Vite (`/home/obd2sw-panel/htdocs/panel.obd2sw.com/frontend`)
+
+### One-Time Vhost Pattern (CloudPanel)
+
+Use one site root for frontend and route API paths to Laravel public:
+
+- Site root: `/home/obd2sw-panel/htdocs/panel.obd2sw.com`
+- Frontend fallback: `try_files $uri $uri/ /index.html;`
+- API locations:
+  - `/api` -> `backend/public/index.php`
+  - `/sanctum` -> `backend/public/index.php`
+- PHP location should pass to the correct CloudPanel PHP-FPM port for this site.
+
+### Deployment Steps (Fast Path)
+
+1. Pull latest code on server.
+2. Backend install/update:
+```bash
+cd /home/obd2sw-panel/htdocs/panel.obd2sw.com/backend
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan db:seed --class=SuperAdminSeeder --force
+php artisan db:seed --class=ProductionSeeder --force
+```
+3. Frontend build:
+```bash
+cd /home/obd2sw-panel/htdocs/panel.obd2sw.com/frontend
+npm ci
+npm run build
+```
+4. Laravel writable paths and permissions:
+```bash
+cd /home/obd2sw-panel/htdocs/panel.obd2sw.com/backend
+mkdir -p storage/logs storage/framework/{views,cache/data,sessions} bootstrap/cache
+chown -R obd2sw-panel:obd2sw-panel storage bootstrap/cache
+find storage bootstrap/cache -type d -exec chmod 775 {} \;
+find storage bootstrap/cache -type f -exec chmod 664 {} \;
+```
+5. Cache and service restart:
+```bash
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+systemctl restart php8.3-fpm
+systemctl reload nginx
+```
+6. Health checks:
+```bash
+curl -sS https://panel.obd2sw.com/api/health
+curl -I https://panel.obd2sw.com
+```
+
+### Production .env Baseline
+
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- `APP_URL=https://panel.obd2sw.com`
+- `FRONTEND_URL=https://panel.obd2sw.com`
+- `LOG_CHANNEL=single` or `stack`
+- `SESSION_DRIVER=file` (or your intended production driver)
+- `CACHE_STORE=file` (or your intended production store)
+- `QUEUE_CONNECTION=database` (or your intended queue driver)
+
+### Real Issues We Faced and Fixes
+
+**Issue: `curl -I https://panel.obd2sw.com` returned `403` and `/api/health` returned `404`**
+
+- Cause: Nginx routing was not correctly sending `/api` to Laravel.
+- Fix: Update CloudPanel vhost to route `/api` and `/sanctum` to `backend/public` with `index.php` fallback.
+
+**Issue: TLS error `tlsv1 unrecognized name`**
+
+- Cause: wrong SNI/certificate mapping in Nginx site configuration.
+- Fix: correct `server_name` + certificate binding for `panel.obd2sw.com`, then `nginx -t` and reload.
+
+**Issue: Laravel boot failed with `Class "L5Swagger\Generator" not found`**
+
+- Cause: Swagger config loaded in production while package/class unavailable.
+- Fix: disable/remove `config/l5-swagger.php` from production deployment.
+
+**Issue: Logging failed with `Log [] is not defined`**
+
+- Cause: invalid `LOG_CHANNEL` value in `.env`.
+- Fix: set `LOG_CHANNEL=single` or `LOG_CHANNEL=stack` and rebuild config cache.
+
+**Issue: Redis auth error during artisan cache clear**
+
+- Cause: Redis env mismatch (`AUTH called without password configured`).
+- Fix: use correct Redis credentials, or temporarily use file drivers for session/cache in production until Redis is correctly configured.
+
+**Issue: Login API returned 500 with `tempnam(): file created in the system's temporary directory`**
+
+- Cause: PHP-FPM pool user could not write Laravel storage/cache paths.
+- Fix:
+  - Find pool user/group:
+```bash
+grep -RniE "^\s*(user|group)\s*=" /etc/php/8.3/fpm/pool.d
+```
+  - In this deployment, correct pool was:
+  - `user = obd2sw-panel`
+  - `group = obd2sw-panel`
+  - Re-apply ownership/permissions on `storage` and `bootstrap/cache`.
+
+### Post-Deploy Validation (Must Pass)
+
+1. `curl -sS https://panel.obd2sw.com/api/health` returns JSON `status: ok`.
+2. Login API returns `200` and token:
+```bash
+curl -i -X POST https://panel.obd2sw.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@obd2sw.com","password":"password"}'
+```
+3. Browser login works and dashboard loads without `/server-error` redirect.
+
+### Security Follow-Up After Go-Live
+
+1. Rotate any exposed admin passwords.
+2. Revoke/regenerate leaked API tokens.
+3. Keep `APP_DEBUG=false` in production.
+4. Review `storage/logs/laravel.log` after first live login.
+
+### Quick Redeploy Checklist
+
+1. Pull code.
+2. `composer install --no-dev --optimize-autoloader`
+3. `php artisan migrate --force`
+4. Build frontend `npm ci && npm run build`
+5. Fix `storage/bootstrap` ownership to pool user.
+6. `php artisan optimize:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache`
+7. Restart `php8.3-fpm` and reload `nginx`
+8. Run health/login smoke tests.
+
 **Author:** Yousef Abdallah | Full Stack Developer | Tanta, Egypt
 
 
