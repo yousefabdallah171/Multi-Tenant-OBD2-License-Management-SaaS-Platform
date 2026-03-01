@@ -46,7 +46,12 @@ class BiosActivationService
             throw ValidationException::withMessages(['bios_id' => 'An active license already exists for this BIOS ID.']);
         }
 
-        $response = $this->externalApiService->activateUser($apiKey, $biosId, $biosId);
+        $externalUsername = trim((string) ($customer->name ?? ''));
+        if ($externalUsername === '') {
+            $externalUsername = $biosId;
+        }
+
+        $response = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId);
 
         BiosAccessLog::query()->create([
             'bios_id' => $biosId,
@@ -67,7 +72,7 @@ class BiosActivationService
             'reseller_id' => $reseller->id,
             'program_id' => $program->id,
             'bios_id' => $biosId,
-            'external_username' => $biosId,
+            'external_username' => $externalUsername,
             'external_activation_response' => (string) ($response['data']['response'] ?? ''),
             'duration_days' => $durationDays,
             'price' => $program->base_price,

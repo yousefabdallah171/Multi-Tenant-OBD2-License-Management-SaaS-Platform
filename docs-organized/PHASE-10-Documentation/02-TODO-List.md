@@ -1,441 +1,332 @@
-# PHASE 10: Documentation & Handoff - TODO List
+# PHASE 10: Documentation & Handoff — TODO List
 
-**Duration:** Day 14
-**Deadline:** End of Day 14 (PROJECT COMPLETE)
-
----
-
-## README.md Final Review
-
-- [ ] Read through entire README.md
-- [ ] Verify tech stack versions match actual installed versions
-- [ ] Verify all 43 page routes are listed
-- [ ] Test Quick Start instructions on a fresh machine (or Docker)
-- [ ] Verify environment variable list is complete
-- [ ] Update any sections that changed during development
-- [ ] Add actual GitHub repo URL
-- [ ] Add actual production URL
+**Updated for Phase 11 SaaS Refactor + Production Readiness**
+**This is the final phase. Everything must be production-clean before handoff.**
 
 ---
 
-## Swagger API Documentation
+## DOC-0: Final Code Cleanup (Before Any Documentation)
 
-### Setup
+### DOC-0.1 Remove Console Logs and Debug Code
+
+- [ ] Find console.log in frontend:
+  ```bash
+  grep -r "console\.log\|console\.warn\|debugger" frontend/src/ --include="*.tsx" --include="*.ts" | grep -v ".test."
+  ```
+- [ ] Remove all found instances (keep only intentional error logging in ErrorBoundary)
+- [ ] Find debug dumps in backend:
+  ```bash
+  grep -r "dd(\|dump(\|var_dump(\|print_r(" backend/app/ --include="*.php"
+  ```
+- [ ] Remove all found instances
+
+### DOC-0.2 Remove TODO Comments from Code
+
+- [ ] Search:
+  ```bash
+  grep -r "TODO\|FIXME\|HACK\|XXX\|@todo" frontend/src/ backend/app/ --include="*.tsx" --include="*.ts" --include="*.php"
+  ```
+- [ ] Resolve or remove all found instances
+
+### DOC-0.3 Linting Pass
+
+- [ ] Frontend: `cd frontend && npm run lint` — 0 errors
+- [ ] Backend: `cd backend && vendor/bin/pint` — 0 errors
+- [ ] TypeScript: `cd frontend && npx tsc --noEmit` — 0 errors
+
+### DOC-0.4 Final Build Verification
+
+- [ ] `cd frontend && npm run build` — passes clean
+- [ ] `cd backend && php artisan test` — all tests pass
+- [ ] `cd backend && php artisan route:list | grep forgot` — zero results
+
+### DOC-0.5 Security Final Check
+
+- [ ] No hardcoded secrets in committed code:
+  ```bash
+  grep -r "72\.60\.69\.185\|L9H2F7Q8XK6M4A" --include="*.php" --include="*.ts" --include="*.tsx" backend/ frontend/
+  # Expected: zero results
+  ```
+- [ ] `.env` is not in git history: `git log --all --full-history -- "**/.env"`
+- [ ] `.env.example` has only placeholder values
+
+---
+
+## DOC-1: README.md Final Review
+
+- [ ] Update role page counts: Super Admin (11), Manager Parent (18), Manager (9), Reseller (5) — **NO Customer Portal**
+- [ ] Remove any mention of customer portal pages or forgot-password
+- [ ] External API section: reference `EXTERNAL_API_URL` env var — NO hardcoded IP
+- [ ] Add security section: login rate limiting, progressive lockout, SecurityLocks page
+- [ ] Update Quick Start `.env` requirements: `EXTERNAL_API_URL`, `EXTERNAL_API_KEY`, `EXTERNAL_SOFTWARE_ID`
+- [ ] Default seed credentials: `manager@obd2sw.com`, `reseller1@obd2sw.com`, `reseller2@obd2sw.com`
+- [ ] Add production URL: `https://obd2sw.com`
+- [ ] Add GitHub repo URL
+
+---
+
+## DOC-2: Swagger API Documentation
+
+### DOC-2.1 Setup
 
 - [ ] Install L5-Swagger:
   ```bash
-  cd backend
-  composer require darkaonline/l5-swagger
+  cd backend && composer require darkaonline/l5-swagger
   php artisan vendor:publish --provider "L5Swagger\L5SwaggerServiceProvider"
   ```
-- [ ] Configure in `.env`:
+- [ ] Configure `.env`:
   ```
   L5_SWAGGER_GENERATE_ALWAYS=true
   L5_SWAGGER_CONST_HOST=https://obd2sw.com/api
   ```
 
-### Document Endpoints
+### DOC-2.2 Document Endpoints
 
-#### Auth (4 endpoints)
-- [ ] POST /api/auth/login
-- [ ] POST /api/auth/logout
-- [ ] GET /api/auth/me
-- [ ] POST /api/auth/forgot-password
+**Auth (3 endpoints — forgot-password REMOVED)**
+- [ ] `POST /api/auth/login` — include lockout response schema (`locked: true`, `seconds_remaining`, `reason`)
+- [ ] `POST /api/auth/logout`
+- [ ] `GET /api/auth/me`
 
-#### Super Admin (35 endpoints)
-- [ ] GET /api/super-admin/dashboard/stats
-- [ ] GET /api/super-admin/dashboard/revenue-trend
-- [ ] GET /api/super-admin/dashboard/tenant-comparison
-- [ ] GET /api/super-admin/dashboard/recent-activity
-- [ ] GET /api/super-admin/tenants (CRUD - 5 endpoints)
-- [ ] GET /api/super-admin/tenants/{id}/stats
-- [ ] GET /api/super-admin/users
-- [ ] PUT /api/super-admin/users/{id}/status
-- [ ] DELETE /api/super-admin/users/{id}
-- [ ] GET/POST/PUT/DELETE /api/super-admin/admin-management (CRUD - 4 endpoints)
-- [ ] POST /api/super-admin/admin-management/{id}/reset-password
-- [ ] GET/POST /api/super-admin/bios-blacklist (3 endpoints)
-- [ ] POST /api/super-admin/bios-blacklist/import
-- [ ] GET /api/super-admin/bios-blacklist/export
-- [ ] GET /api/super-admin/bios-history
-- [ ] GET /api/super-admin/bios-history/{biosId}
-- [ ] GET /api/super-admin/username-management
-- [ ] POST /api/super-admin/username-management/{id}/unlock
-- [ ] POST /api/super-admin/username-management/{id}/change
-- [ ] POST /api/super-admin/username-management/{id}/reset-password
-- [ ] GET /api/super-admin/financial-reports/* (4 endpoints)
-- [ ] GET /api/super-admin/reports/* (5 endpoints)
-- [ ] GET /api/super-admin/logs (2 endpoints)
-- [ ] GET /api/super-admin/api-status (3 endpoints)
-- [ ] GET/PUT /api/super-admin/settings
+**Super Admin (38 endpoints — SecurityLocks added)**
+- [ ] Dashboard stats + charts (4)
+- [ ] Tenants CRUD + stats (6)
+- [ ] Users list + status + delete (3)
+- [ ] Admin management CRUD + reset-password (5)
+- [ ] BIOS Blacklist + import + export (5)
+- [ ] BIOS History + search (2)
+- [ ] Username management (3)
+- [ ] Financial reports + export (4)
+- [ ] Reports + export (5)
+- [ ] Logs (2)
+- [ ] API Status + ping (3)
+- [ ] **Security Locks: list + unblock-email + unblock-ip + audit-log (4)** ← NEW
+- [ ] Settings (2)
 
-#### Manager Parent (28 endpoints)
-- [ ] GET /api/dashboard/stats + charts (4 endpoints)
-- [ ] GET /api/team (CRUD - 5 endpoints)
-- [ ] GET /api/programs (CRUD - 5 endpoints)
-- [ ] GET /api/pricing (3 endpoints)
-- [ ] GET/POST /api/bios-blacklist (3 endpoints)
-- [ ] GET /api/bios-history (2 endpoints)
-- [ ] GET /api/ip-analytics (2 endpoints)
-- [ ] GET/POST /api/username-management (4 endpoints)
-- [ ] GET /api/financial-reports (3 endpoints)
-- [ ] GET /api/reports/* (4 endpoints)
-- [ ] GET /api/activity (2 endpoints)
-- [ ] GET /api/customers (2 endpoints)
-- [ ] GET/PUT /api/settings
+**Manager Parent (32 endpoints — ProgramLogs + CustomerDetail added)**
+- [ ] Dashboard (4), Team CRUD (5), Programs CRUD (6), Pricing (3)
+- [ ] BIOS Blacklist tenant (3), BIOS History tenant (2), IP Analytics (2)
+- [ ] Username management tenant (3), Financial reports (3), Reports (3)
+- [ ] Activity (1), Customers list (1)
+- [ ] **Program Logs: `GET /api/manager-parent/programs/{id}/logs` (1)** ← NEW
+- [ ] **Customer Detail: `GET /api/manager-parent/customers/{id}` (1)** ← NEW
+- [ ] Settings (2)
 
-#### Manager (15 endpoints)
-- [ ] GET /api/manager/dashboard/* (4 endpoints)
-- [ ] GET /api/manager/team (2 endpoints)
-- [ ] GET/POST /api/manager/username-management (4 endpoints)
-- [ ] GET /api/manager/customers (2 endpoints)
-- [ ] GET /api/manager/reports/* (2 endpoints)
-- [ ] GET /api/manager/activity
+**Manager (15 endpoints)**
+- [ ] Dashboard (4), Team (2), Username management team-scoped (4), Customers (2), Reports (2), Activity (1)
 
-#### Reseller (15 endpoints)
-- [ ] GET /api/reseller/dashboard/stats
-- [ ] GET/POST /api/reseller/customers
-- [ ] POST /api/licenses/activate
-- [ ] POST /api/licenses/{id}/renew
-- [ ] POST /api/licenses/{id}/deactivate
-- [ ] GET /api/reseller/licenses
-- [ ] GET /api/reseller/reports/*
-- [ ] GET /api/reseller/activity
+**Reseller (17 endpoints — Software page added)**
+- [ ] Dashboard (2), Customers (2), Licenses activate/renew/deactivate/list/expiring/bulk (7)
+- [ ] **Software list + activate (2)** ← NEW
+- [ ] Reports (2), Activity (1), Profile (1)
 
-#### Customer (4 endpoints)
-- [ ] GET /api/customer/dashboard
-- [ ] GET /api/customer/software
-- [ ] GET /api/customer/downloads
-- [ ] POST /api/customer/downloads/{id}/log
+**Security (4 endpoints — new)**
+- [ ] `GET /api/super-admin/security/locks`
+- [ ] `POST /api/super-admin/security/unblock-email`
+- [ ] `POST /api/super-admin/security/unblock-ip`
+- [ ] `GET /api/super-admin/security/audit-log`
 
-### Generate Docs
+### DOC-2.3 Generate
 
-- [ ] Run: `php artisan l5-swagger:generate`
-- [ ] Verify at: `https://obd2sw.com/api/documentation`
-- [ ] Test: Try executing endpoints from Swagger UI
-- [ ] Screenshot Swagger UI for admin manual
+- [ ] `php artisan l5-swagger:generate`
+- [ ] Open `https://obd2sw.com/api/documentation` — verify all groups visible
+- [ ] Test executing login endpoint from Swagger UI
 
 ---
 
-## Admin Manual (Arabic)
+## DOC-3: Admin Manual (Arabic)
 
-- [ ] Create `docs-organized/PHASE-10-Documentation/admin-manual-ar.md`
+**File:** `docs-organized/PHASE-10-Documentation/admin-manual-ar.md`
 
-### Content Structure
-
-```markdown
-# دليل إدارة OBD2SW.com
-
-## 1. مقدمة
-- نظرة عامة على النظام
-- الأدوار والصلاحيات
-
-## 2. تسجيل الدخول
-- الدخول عبر صفحة /login
-- تغيير كلمة المرور
-- استعادة كلمة المرور
-
-## 3. لوحة تحكم المدير الأعلى (Super Admin) - 13 صفحة
-### 3.1 الصفحة الرئيسية
-- إحصائيات النظام
-- الرسوم البيانية
-
-### 3.2 إدارة الشركاء (Tenants)
-- إضافة شريك جديد
-- تعديل بيانات الشريك
-- تعليق/تفعيل شريك
-- حذف شريك
-
-### 3.3 إدارة المشرفين (Admin Management)
-- إضافة/تعديل/حذف مشرف
-- تعيين الأدوار والشركاء
-- إعادة تعيين كلمة المرور
-
-### 3.4 القائمة السوداء BIOS (عام)
-- إضافة/إزالة BIOS من القائمة
-- استيراد/تصدير CSV
-
-### 3.5 سجل BIOS (عام)
-- البحث بمعرف BIOS
-- عرض التسلسل الزمني عبر جميع الشركاء
-
-### 3.6 إدارة اسم المستخدم/كلمة المرور (عام)
-- فتح قفل اسم المستخدم
-- تغيير اسم المستخدم
-- إعادة تعيين كلمة المرور
-- نطاق: جميع المستخدمين (GLOBAL)
-
-### 3.7 التقارير المالية وأرصدة الموزعين
-- إيرادات حسب الشريك والبرنامج
-- أرصدة الموزعين عبر الشركاء
-
-### 3.8 سجل النظام (Logs)
-- عرض سجلات API
-- تصفية حسب التاريخ والشريك
-
-### 3.9 حالة API الخارجي
-- مراقبة حالة الاتصال
-- فحص يدوي
-
-### 3.10 الإعدادات
-- إعدادات النظام العامة
-
-## 4. لوحة تحكم مدير الشريك (Manager Parent) - 12 صفحة
-### 4.1 إدارة البرامج
-- إضافة برنامج جديد
-  - الاسم والوصف
-  - رابط التحميل (رابط الـ EXE)
-  - السعر وأيام التجربة
-- تعديل/حذف برنامج
-
-### 4.2 إدارة الفريق
-- إضافة مدير (Manager)
-- إضافة موزع (Reseller)
-- تعليق/تفعيل عضو
-
-### 4.3 تسعير الموزعين
-- تحديد السعر لكل برنامج
-
-### 4.4 القائمة السوداء BIOS (مستوى الشريك)
-- إدارة القائمة السوداء داخل الشريك
-
-### 4.5 سجل BIOS (مستوى الشريك)
-- عرض سجل BIOS داخل الشريك فقط
-
-### 4.6 تحليلات IP (مستوى الشريك)
-- توزيع الدول
-- نشاط IP المشبوه
-
-### 4.7 إدارة اسم المستخدم/كلمة المرور (مستوى الشريك)
-- نطاق: مستخدمين الشريك فقط (TENANT)
-
-### 4.8 التقارير المالية وأرصدة الموزعين
-- إيرادات حسب الموزع والبرنامج
-
-### 4.9 التقارير
-- تقارير الإيرادات
-- تصدير CSV/PDF
-
-## 5. لوحة تحكم المدير (Manager) - 8 صفحات - قائد الفريق
-### 5.1 لوحة المعلومات
-- إحصائيات الفريق
-### 5.2 الفريق/الموزعين
-- عرض الموزعين التابعين (للقراءة فقط)
-### 5.3 إدارة اسم المستخدم/كلمة المرور (مستوى الفريق)
-- نطاق: موزعين الفريق وعملائهم (TEAM)
-### 5.4 نظرة على العملاء
-- عرض تجميعي للقراءة فقط
-
-## 6. لوحة تحكم الموزع (Reseller) - 7 صفحات - المفعّل
-### 6.1 تفعيل عميل جديد
-- خطوة 1: بيانات العميل
-- خطوة 2: إدخال BIOS ID واختيار البرنامج
-- خطوة 3: تحديد المدة والسعر
-- خطوة 4: التأكيد والتفعيل
-
-### 6.2 إدارة التراخيص
-- تجديد ترخيص
-- إلغاء ترخيص
-- تنبيهات انتهاء الصلاحية
-
-**ملاحظة: الموزع لا يملك صلاحية تعديل اسم المستخدم/كلمة المرور**
-
-## 7. بوابة العميل (Customer) - 3 صفحات
-- عرض حالة الترخيص
-- تحميل البرنامج المرخص
-- **ملاحظة: اسم المستخدم مقفل بمعرف BIOS للأبد**
-
-## 8. حل المشاكل
-- مشاكل تسجيل الدخول
-- مشاكل التفعيل
-- مشاكل التحميل
-- التواصل مع الدعم
-```
-
-- [ ] Write full content for each section
-- [ ] Add screenshots for key workflows
-- [ ] Review Arabic spelling and grammar
+- [ ] Create with structure:
+  ```
+  1. مقدمة — الأدوار والصلاحيات (لا بوابة عملاء)
+  2. تسجيل الدخول — قفل الحساب (5 محاولات)، لا "نسيت كلمة المرور"
+  3. Super Admin — 11 صفحة (3.12: قفل الأمان جديد)
+  4. Manager Parent — 18 صفحة (4.15: سجلات البرنامج جديد)
+  5. Manager — 9 صفحات
+  6. Reseller — 5 صفحات (6.5: البرامج جديد)
+  7. حل المشاكل (IP محظور → support@obd2sw.com)
+  ```
+- [ ] Write full paragraph content for each section
+- [ ] Arabic grammar review
 
 ---
 
-## Admin Manual (English)
+## DOC-4: Admin Manual (English)
 
-- [ ] Create `docs-organized/PHASE-10-Documentation/admin-manual-en.md`
-- [ ] Same structure as Arabic but in English
-- [ ] Add screenshots
+**File:** `docs-organized/PHASE-10-Documentation/admin-manual-en.md`
+
+- [ ] Create with same structure as Arabic version
+- [ ] Include: role counts, lockout progression (5→1min→5min→1hr→10hr→24hr→IP block)
+- [ ] SecurityLocks page: 3 tabs, unblock workflow, audit log
+- [ ] Note: No Customer Portal — closed SaaS system
+- [ ] Note: No Forgot Password — contact Super Admin for reset
 
 ---
 
-## Test Reports
+## DOC-5: Test Reports
 
-- [ ] Generate Jest coverage report (from `tests-frontend/`):
+- [ ] Jest coverage:
   ```bash
   cd tests-frontend && npm run test:unit -- --coverage --watchAll=false
   ```
-- [ ] Save coverage report: `tests-frontend/coverage-report/lcov-report/index.html`
-- [ ] Run Cypress with recordings (from `tests-frontend/`):
+  Target: **320+ tests, 0 failures, coverage > 80%**
+
+- [ ] Cypress:
   ```bash
   cd tests-frontend && npx cypress run --record
   ```
-- [ ] Save Cypress screenshots: `tests-frontend/cypress/screenshots/`
-- [ ] Save Cypress videos: `tests-frontend/cypress/videos/`
-- [ ] Generate Lighthouse report:
-  ```bash
-  npx lighthouse https://obd2sw.com --output html --output-path ./lighthouse-report.html
-  ```
-- [ ] Run PHPUnit with report:
+  Target: **51 scenarios, 0 failures**
+
+- [ ] PHPUnit:
   ```bash
   cd backend && php artisan test --log-junit tests/report.xml
   ```
-- [ ] Create test summary document:
-  ```markdown
-  # Test Results Summary
+  Target: **110+ tests, 0 failures**
 
-  | Suite | Tests | Passed | Failed | Coverage |
-  |-------|-------|--------|--------|----------|
-  | Jest | 250+ | 250+ | 0 | 80%+ |
-  | Cypress | 35 | 35 | 0 | N/A |
-  | PHPUnit | 75+ | 75+ | 0 | N/A |
-  | Lighthouse | N/A | N/A | N/A | 95+ |
+- [ ] Lighthouse:
+  ```bash
+  npx lighthouse https://obd2sw.com --output html --output-path ./lighthouse-report.html
+  ```
+  Target: **Performance 95+, Accessibility 90+**
+
+- [ ] Create `docs-organized/PHASE-10-Documentation/test-results-summary.md`:
+  ```markdown
+  # Test Results Summary — OBD2SW v1.0.0
+
+  | Suite      | Tests | Passed | Failed | Score    |
+  |------------|-------|--------|--------|----------|
+  | Jest       | 320+  | 320+   | 0      | 80%+ cov |
+  | Cypress    | 51    | 51     | 0      | —        |
+  | PHPUnit    | 110+  | 110+   | 0      | —        |
+  | Lighthouse | —     | —      | —      | Perf 95+ |
+
+  Security:
+  - Login lockout (5 attempts) → 429 ✓
+  - Customer Silent Deny → 401 identical to wrong password ✓
+  - /forgot-password → 404 ✓
+  - No hardcoded secrets in production build ✓
   ```
 
 ---
 
-## Final QA Pass
+## DOC-6: Final QA Workflow Pass (All Roles on Production)
 
-### Super Admin Workflow (13 pages)
-- [ ] Login as admin@obd2sw.com on production
-- [ ] Dashboard loads with stats and charts
-- [ ] Create a test tenant
-- [ ] View tenant in list
-- [ ] Admin Management: Add a new admin
-- [ ] BIOS Blacklist: Add a BIOS to blacklist
-- [ ] BIOS History: Search a BIOS ID and view timeline
-- [ ] Username Management: Unlock a user's username
-- [ ] Financial Reports: View revenue charts and reseller balances
-- [ ] Check logs page
-- [ ] Check API status
-- [ ] View reports + export CSV
-- [ ] Update settings
-- [ ] Update profile
+### Super Admin (11 pages)
 
-### Manager Parent Workflow (12 pages)
-- [ ] Login as Manager Parent
-- [ ] Add a new program with download link
-- [ ] Invite a new reseller
-- [ ] Set reseller pricing
-- [ ] BIOS Blacklist (Tenant): Add/remove BIOS
-- [ ] BIOS History (Tenant): Search BIOS ID
-- [ ] IP Analytics: View country distribution
-- [ ] Username Management (Tenant): Unlock username for tenant user
-- [ ] Financial Reports (Tenant): View balances
-- [ ] View reports
-- [ ] View activity log
+- [ ] Login → dashboard shows seeded stats
+- [ ] Security Locks: 3 tabs visible — Locked Accounts / Blocked IPs / Audit Log
+- [ ] BIOS Blacklist: add + remove test BIOS
+- [ ] BIOS History: search `DEMO-BIOS-001` → timeline shown
+- [ ] Financial Reports: $125 total revenue (5 × $25) shown
+- [ ] API Status: external server URL shows from env — Online badge
 
-### Manager Workflow (8 pages)
-- [ ] Login as Manager
-- [ ] Verify redirected to /manager/dashboard (SEPARATE from reseller)
-- [ ] View Team/Resellers page
-- [ ] Username Management (Team): Unlock/change username for team member
-- [ ] Customer Overview: View aggregated data
-- [ ] View team reports
-- [ ] Verify CANNOT access reseller-only routes
+### Manager Parent (18 pages)
 
-### Reseller Workflow (7 pages)
-- [ ] Login as Reseller
-- [ ] Verify redirected to /reseller/dashboard (SEPARATE from manager)
-- [ ] Add new customer with BIOS ID
-- [ ] Verify activation succeeds
-- [ ] Renew a license
-- [ ] View personal reports
-- [ ] Verify CANNOT access /manager/username-management
+- [ ] Software Management: "Add Program" → full page navigation (NOT modal)
+- [ ] Edit program → API Key field empty + "API Configured ✓" badge
+- [ ] Program Logs: select OBD2SW Pro → events with "Activated By" column load
+- [ ] IP Analytics: real IPs with country flags shown (not `127.0.0.1`)
+- [ ] Customers: click username → CustomerDetail page with 5 sections loads
 
-### Customer Workflow (3 pages)
-- [ ] Login as Customer
-- [ ] License card shows with progress bar
-- [ ] Download button works
-- [ ] Try downloading expired license (should be disabled)
-- [ ] Verify username is locked (cannot change)
+### Manager (9 pages)
+
+- [ ] Redirected to `/manager/dashboard` (not manager-parent dashboard)
+- [ ] Cannot access `/super-admin/*` routes
+
+### Reseller (5 pages)
+
+- [ ] Licenses: BIOS ID cells show BIOS ID + `@username` subtext
+- [ ] Software page: ACTIVATE button on OBD2SW Pro card
+- [ ] ACTIVATE modal: DurationPicker (not plain number) — 30 min quick button works
+- [ ] Cannot access manager-parent routes
+
+### Security QA (all on production)
+
+- [ ] 5 wrong passwords → lockout countdown banner visible
+- [ ] Countdown ticks to 0 → form re-enables automatically
+- [ ] 10th wrong → permanent block banner with `mailto:support@obd2sw.com`
+- [ ] Super Admin unblocks IP from SecurityLocks → login works immediately
+- [ ] New-IP login → suspicious login email received within 60 seconds
+- [ ] DevTools: `X-RateLimit-Remaining` header visible on login responses
+- [ ] `securityheaders.io` scan → A grade
 
 ### Cross-Cutting
-- [ ] Switch to Arabic on each dashboard -> RTL correct
-- [ ] Switch to Dark Mode on each dashboard -> looks correct
-- [ ] Test on mobile phone (real device)
-- [ ] Test on tablet (real device or emulator)
-- [ ] Verify no console errors (F12)
+
+- [ ] `/ar/forgot-password` → 404
+- [ ] `/ar/login` → no "Forgot Password?" link present in DOM
+- [ ] Arabic RTL correct on all 11 Super Admin pages, 18 Manager Parent pages, etc.
+- [ ] Dark mode works across all pages
+- [ ] Mobile real device: sidebar, tables, modals all usable
 
 ---
 
-## Source Code Cleanup
+## DOC-7: Source Code Cleanup Before Handoff
 
-- [ ] Remove all `console.log` statements
-- [ ] Remove all `TODO` comments (or resolve them)
-- [ ] Remove any test/debug code
-- [ ] Verify `.gitignore` includes: `.env`, `node_modules/`, `vendor/`, `storage/logs/`
-- [ ] Verify no secrets in committed code
-- [ ] Run linter: `cd frontend && npm run lint`
-- [ ] Run PHP linter: `cd backend && composer run-script lint` (if configured)
-
----
-
-## Handoff
-
-- [ ] Push final code to GitHub
-- [ ] Tag release: `git tag v1.0.0 && git push --tags`
-- [ ] Share with client:
-  - [ ] GitHub repository access (transfer ownership or add as admin)
-  - [ ] VPS SSH credentials
-  - [ ] MySQL credentials
-  - [ ] Production .env values
-  - [ ] Domain registrar access (if applicable)
-  - [ ] Pusher account credentials
-  - [ ] UptimeRobot account access
-- [ ] Verify client can:
-  - [ ] Access GitHub repo
-  - [ ] SSH into VPS
-  - [ ] Access production site
-  - [ ] Run Docker Compose locally
-- [ ] Delete local copies:
-  - [ ] Source code
-  - [ ] Environment files
-  - [ ] SSH keys
-  - [ ] Database credentials
+- [ ] Remove all `console.log` — zero remaining (from DOC-0.1)
+- [ ] Remove all TODO comments — zero remaining (from DOC-0.2)
+- [ ] `tests-frontend/` NOT on production server (verified in Phase 09)
+- [ ] `TestDataSeeder.php` deleted
+- [ ] No hardcoded secrets in any committed file
+- [ ] `.gitignore` verified: `.env`, `node_modules/`, `vendor/`, `storage/logs/`, `tests-frontend/cypress/videos/`
+- [ ] Run: `cd frontend && npm run lint` — 0 errors
+- [ ] Run: `cd backend && vendor/bin/pint` — 0 errors
 
 ---
 
-## Project Sign-Off
+## DOC-8: Handoff
+
+- [ ] Push final: `git push origin main`
+- [ ] Tag: `git tag v1.0.0 && git push --tags`
+- [ ] Share with client (via secure channel):
+  - [ ] GitHub repo access (transfer or admin)
+  - [ ] VPS SSH + IP
+  - [ ] Production `.env` values
+  - [ ] Super Admin credentials (`admin@obd2sw.com` + password)
+  - [ ] Domain registrar access
+  - [ ] UptimeRobot account
+- [ ] Verify client can SSH into VPS + login to `https://obd2sw.com`
+- [ ] Delete developer local copies:
+  - [ ] Source code folders
+  - [ ] `.env` files with real credentials
+  - [ ] VPS SSH keys
+
+---
+
+## DOC-9: Project Sign-Off
 
 ```
 Project: OBD2SW.com
 Version: 1.0.0
-Date: ___________
+Date:    ___________
 
 Deliverables:
-[x] Full source code (frontend + backend)
-[x] Docker Compose for local development
-[x] Production deployment on Hostinger VPS
-[x] SSL certificate (Let's Encrypt)
+[x] Full source code — no customer portal, no forgot-password, no hardcoded secrets
+[x] Production deployment on VPS with SSL
 [x] CI/CD pipeline (GitHub Actions)
-[x] API documentation (Swagger)
-[x] Admin manual (Arabic + English)
-[x] Test reports (250+ tests)
+[x] Swagger API docs (110+ endpoints)
+[x] Admin manual Arabic + English
+[x] Test reports: 320+ Jest · 51 Cypress · 110+ PHPUnit · Lighthouse 95+
 [x] Automated daily backups
-[x] Monitoring (UptimeRobot)
+[x] UptimeRobot monitoring
+[x] Login rate limiting + progressive lockout + SecurityLocks page
+[x] Production seed: 2 resellers · 5 customers · 4 active licenses
+[x] No hardcoded secrets anywhere (all via .env)
+[x] No test files on production server
 
-Terms:
-[x] Source code 100% owned by client
-[x] Intellectual property transferred
-[x] Lifetime NDA on project concept
-[x] 6 months free technical support
-[x] All developer copies deleted
+Security assurances:
+[x] EXTERNAL_API_KEY — in server .env only, never in git
+[x] EXTERNAL_API_URL — in server .env only, never in git
+[x] Customer portal deleted — Silent Deny active
+[x] Forgot-password removed
+[x] Brute-force protection active
 
 Developer: Yousef Abdallah
-Client: ___________
-
+Client:    ___________
 Signature: ___________
-Date: ___________
+Date:      ___________
 ```
 
 ---
 
-**PROJECT COMPLETE. OBD2SW.com is live and ready!**
+**PROJECT COMPLETE. OBD2SW.com is live, secure, and fully production-ready.**

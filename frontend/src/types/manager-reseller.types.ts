@@ -81,7 +81,9 @@ export interface TeamManagedUser {
 export interface ManagerCustomerSummary {
   id: number
   name: string
-  email: string
+  email: string | null
+  phone?: string | null
+  license_id?: number | null
   bios_id: string | null
   reseller: string | null
   reseller_id: number | null
@@ -107,7 +109,7 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
 export interface ResellerCustomerSummary {
   id: number
   name: string
-  email: string
+  email: string | null
   phone: string | null
   license_id: number | null
   bios_id: string | null
@@ -165,7 +167,7 @@ export interface LicenseDetails extends LicenseSummary {
 
 export interface ActivateLicenseData {
   customer_name: string
-  customer_email: string
+  customer_email?: string
   customer_phone?: string
   bios_id: string
   program_id: number

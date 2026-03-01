@@ -1,0 +1,20 @@
+[
+  {
+    "id": 8,
+    "name": "OBD2 Pro",
+    "status": "active",
+    "base_price": 19.99,
+    "active_licenses_count": 42,
+    "has_external_api": true,
+    "external_software_id": 8
+  },
+  {
+    "id": 9,
+    "name": "OBD2 Lite",
+    "status": "inactive",
+    "base_price": 9.99,
+    "active_licenses_count": 3,
+    "has_external_api": true,
+    "external_software_id": 8
+  }
+]

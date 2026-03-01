@@ -83,6 +83,8 @@ jest.mock('@/services/manager-parent.service', () => ({
     getBiosHistoryById: jest.fn(),
     getIpAnalytics: jest.fn(),
     getIpStats: jest.fn(),
+    getProgramsWithExternalApi: jest.fn(),
+    getProgramLogs: jest.fn(),
     getUsernameManagement: jest.fn(),
     unlockUsername: jest.fn(),
     changeUsername: jest.fn(),
@@ -287,6 +289,28 @@ beforeEach(() => {
     ],
     meta: { current_page: 1, last_page: 1, per_page: 10, total: 1, from: 1, to: 1 },
   })
+  mockManagerParentService.getProgramsWithExternalApi.mockResolvedValue([
+    {
+      id: 8,
+      name: 'Tool A',
+      description: 'Program description',
+      version: '1.0',
+      download_link: 'https://example.com/tool-a',
+      trial_days: 7,
+      base_price: 49.99,
+      icon: null,
+      status: 'active',
+      licenses_sold: 10,
+      active_licenses_count: 8,
+      revenue: 399.92,
+      has_external_api: true,
+      external_software_id: 8,
+      created_at: '2026-02-28T10:00:00Z',
+    },
+  ])
+  mockManagerParentService.getProgramLogs.mockResolvedValue({
+    raw: 'reseller.one 2026-02-28 10:00:00 197.55.1.2',
+  })
   mockManagerParentService.getUsernameManagement.mockResolvedValue({
     data: [
       {
@@ -429,6 +453,8 @@ beforeEach(() => {
         licenses_sold: 10,
         active_licenses_count: 8,
         revenue: 399.92,
+        has_external_api: true,
+        external_software_id: 8,
         created_at: '2026-02-28T10:00:00Z',
       },
     ],
@@ -448,6 +474,8 @@ beforeEach(() => {
       licenses_sold: 0,
       active_licenses_count: 0,
       revenue: 0,
+      has_external_api: false,
+      external_software_id: null,
       created_at: '2026-02-28T10:00:00Z',
     },
   })
@@ -465,6 +493,8 @@ beforeEach(() => {
       licenses_sold: 10,
       active_licenses_count: 8,
       revenue: 399.92,
+      has_external_api: true,
+      external_software_id: 8,
       created_at: '2026-02-28T10:00:00Z',
     },
   })
@@ -637,7 +667,7 @@ test('team management renders tabs and invite dialog', async () => {
   expect(screen.getByLabelText(/name/i)).toBeInTheDocument()
 })
 
-test('software management renders cards and opens add dialog', async () => {
+test('software management renders cards and navigational add button', async () => {
   const user = userEvent.setup()
 
   await renderManagerParentPage(<SoftwareManagementPage />, '/en/software-management')
@@ -647,8 +677,7 @@ test('software management renders cards and opens add dialog', async () => {
   expect(screen.getByRole('button', { name: /add program/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /add program/i }))
-  expect(await screen.findByRole('dialog')).toBeInTheDocument()
-  expect(screen.getByLabelText(/program name/i)).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
 test('reports page renders charts and export buttons', async () => {
@@ -758,12 +787,12 @@ test('bios history page renders timeline for searched bios id', async () => {
   )
 })
 
-test('ip analytics page renders chart, suspicious alerts, and rows', async () => {
+test('ip analytics page renders chart and rows', async () => {
   await renderManagerParentPage(<IpAnalyticsPage />, '/en/ip-analytics')
 
-  expect(await screen.findByText('Suspicious IP Alerts')).toBeInTheDocument()
-  expect(screen.getAllByText('10.0.0.5').length).toBeGreaterThan(0)
-  expect(screen.getByText('ISP One')).toBeInTheDocument()
+  expect(await screen.findByText('Country Distribution')).toBeInTheDocument()
+  expect(await screen.findByText('reseller.one')).toBeInTheDocument()
+  expect(screen.getByText('197.55.1.2')).toBeInTheDocument()
 })
 
 test('username management page renders rows and opens change username dialog', async () => {
@@ -988,14 +1017,9 @@ test('software management validates program form fields before submit', async ()
   await renderManagerParentPage(<SoftwareManagementPage />, '/en/software-management')
 
   await user.click(await screen.findByRole('button', { name: /add program/i }))
-
-  const dialog = await screen.findByRole('dialog')
-  await user.click(within(dialog).getByRole('button', { name: /create program/i }))
-  expect(mockToast.error).toHaveBeenLastCalledWith('Program name must be at least 2 characters.')
-
-  await user.type(within(dialog).getByLabelText(/program name/i), 'Tool B')
-  await user.click(within(dialog).getByRole('button', { name: /create program/i }))
-  expect(mockToast.error).toHaveBeenLastCalledWith('Enter a valid download link.')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(mockProgramService.create).not.toHaveBeenCalled()
+  expect(mockProgramService.update).not.toHaveBeenCalled()
 })
 
 test('software management submits a new program payload', async () => {
@@ -1004,23 +1028,8 @@ test('software management submits a new program payload', async () => {
   await renderManagerParentPage(<SoftwareManagementPage />, '/en/software-management')
 
   await user.click(await screen.findByRole('button', { name: /add program/i }))
-
-  const dialog = await screen.findByRole('dialog')
-  await user.type(within(dialog).getByLabelText(/program name/i), 'Tool B')
-  await user.type(within(dialog).getByLabelText(/download link/i), 'https://example.com/tool-b')
-  await user.clear(within(dialog).getByLabelText(/base price/i))
-  await user.type(within(dialog).getByLabelText(/base price/i), '19.99')
-  await user.click(within(dialog).getByRole('button', { name: /create program/i }))
-
-  await waitFor(() =>
-    expect(mockProgramService.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'Tool B',
-        download_link: 'https://example.com/tool-b',
-        base_price: 19.99,
-      }),
-    ),
-  )
+  expect(mockProgramService.create).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: /add program/i })).toBeInTheDocument()
 })
 
 test('software management edit dialog pre-fills program values', async () => {
@@ -1029,11 +1038,7 @@ test('software management edit dialog pre-fills program values', async () => {
   await renderManagerParentPage(<SoftwareManagementPage />, '/en/software-management')
 
   await user.click((await screen.findAllByRole('button', { name: /^edit$/i }))[0])
-
-  const dialog = await screen.findByRole('dialog')
-  expect(within(dialog).getByLabelText(/program name/i)).toHaveValue('Tool A')
-  expect(within(dialog).getByLabelText(/version/i)).toHaveValue('1.0')
-  expect(within(dialog).getByLabelText(/download link/i)).toHaveValue('https://example.com/tool-a')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
 test('software management delete confirmation dialog opens', async () => {
@@ -1358,23 +1363,12 @@ test('bios history filters call the tenant-scoped history endpoint', async () =>
 test('ip analytics filters call the scoped analytics endpoint', async () => {
   await renderManagerParentPage(<IpAnalyticsPage />, '/en/ip-analytics')
 
-  fireEvent.change(await screen.findByDisplayValue('All users'), { target: { value: '2' } })
-  fireEvent.change(screen.getByDisplayValue('All countries'), { target: { value: 'EG' } })
-  fireEvent.change(screen.getByDisplayValue('All reputation scores'), { target: { value: 'high' } })
+  fireEvent.change(await screen.findByDisplayValue('Tool A'), { target: { value: '8' } })
+  fireEvent.change(screen.getByDisplayValue('All reputation scores'), { target: { value: 'proxy' } })
   fireEvent.change(screen.getByLabelText(/^from$/i), { target: { value: '2026-02-01' } })
   fireEvent.change(screen.getByLabelText(/^to$/i), { target: { value: '2026-02-28' } })
 
-  await waitFor(() =>
-    expect(mockManagerParentService.getIpAnalytics).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        user_id: 2,
-        country: 'EG',
-        reputation_score: 'high',
-        from: '2026-02-01',
-        to: '2026-02-28',
-      }),
-    ),
-  )
+  await waitFor(() => expect(mockManagerParentService.getProgramLogs).toHaveBeenCalledWith(8))
 })
 
 test('username management unlock action opens a reason dialog', async () => {

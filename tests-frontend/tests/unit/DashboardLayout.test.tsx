@@ -117,7 +117,7 @@ test('language toggle preserves the current super admin path', async () => {
 
   renderDashboard('/ar/super-admin/settings')
 
-  await user.click(screen.getByRole('button', { name: /^en$/i }))
+  await user.click(screen.getByRole('button', { name: /toggle language|تبديل اللغة/i }))
 
   await waitFor(() => expect(screen.getByTestId('current-path')).toHaveTextContent('/en/super-admin/settings'))
   await waitFor(() => expect(document.documentElement.dir).toBe('ltr'))
@@ -129,7 +129,7 @@ test('theme toggle applies the dark class to the document root', async () => {
 
   renderDashboard('/en/super-admin/dashboard')
 
-  await user.click(screen.getByRole('button', { name: /dark mode/i }))
+  await user.click(screen.getByRole('button', { name: /toggle theme|dark mode|تبديل السمة/i }))
 
   await waitFor(() => expect(document.documentElement).toHaveClass('dark'))
 })
@@ -140,7 +140,7 @@ test('theme toggle preserves the dark mode class across dashboard navigation', a
 
   renderDashboard('/en/super-admin/dashboard')
 
-  await user.click(screen.getByRole('button', { name: /dark mode/i }))
+  await user.click(screen.getByRole('button', { name: /toggle theme|dark mode|تبديل السمة/i }))
   await waitFor(() => expect(document.documentElement).toHaveClass('dark'))
 
   await user.click(screen.getAllByRole('link', { name: /settings/i })[0])

@@ -32,6 +32,7 @@ class User extends Authenticatable
         'status',
         'created_by',
         'username_locked',
+        'last_seen_at',
     ];
 
     /**
@@ -53,6 +54,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_seen_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
             'username_locked' => 'boolean',

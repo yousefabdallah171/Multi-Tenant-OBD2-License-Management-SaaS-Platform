@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+﻿import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -22,7 +22,6 @@ jest.mock('@/services/auth.service', () => ({
     login: (...args: unknown[]) => loginMock(...args),
     logout: jest.fn(),
     getMe: jest.fn(),
-    forgotPassword: jest.fn(),
   },
 }))
 
@@ -64,7 +63,7 @@ test('redirects root to /ar/login', async () => {
   renderWithQuery(<App />)
 
   await waitFor(() => expect(window.location.pathname).toBe('/ar/login'))
-  expect(await screen.findByText(/تسجيل الدخول/i)).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: /sign in|تسجيل الدخول/i })).toBeInTheDocument()
 })
 
 test('login form renders email and password fields', async () => {
@@ -76,13 +75,13 @@ test('login form renders email and password fields', async () => {
   renderWithQuery(
     <MemoryRouter initialEntries={['/ar/login']}>
       <Routes>
-        <Route path="/:lang/login" element={<LoginPage />} />
+        <Route path='/:lang/login' element={<LoginPage />} />
       </Routes>
     </MemoryRouter>,
   )
 
-  expect(await screen.findByLabelText(/البريد الإلكتروني/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/كلمة المرور/i)).toBeInTheDocument()
+  expect(await screen.findByLabelText(/email|البريد/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/password|كلمة المرور/i)).toBeInTheDocument()
 })
 
 test('login form shows error on invalid credentials', async () => {
@@ -98,18 +97,18 @@ test('login form shows error on invalid credentials', async () => {
   renderWithQuery(
     <MemoryRouter initialEntries={['/ar/login']}>
       <Routes>
-        <Route path="/:lang/login" element={<LoginPage />} />
+        <Route path='/:lang/login' element={<LoginPage />} />
       </Routes>
     </MemoryRouter>,
   )
 
-  await user.clear(screen.getByLabelText(/البريد الإلكتروني/i))
-  await user.type(screen.getByLabelText(/البريد الإلكتروني/i), 'admin@example.com')
-  await user.clear(screen.getByLabelText(/كلمة المرور/i))
-  await user.type(screen.getByLabelText(/كلمة المرور/i), 'wrong-password')
-  await user.click(screen.getByRole('button', { name: /دخول/i }))
+  await user.clear(screen.getByLabelText(/email|البريد/i))
+  await user.type(screen.getByLabelText(/email|البريد/i), 'admin@example.com')
+  await user.clear(screen.getByLabelText(/password|كلمة المرور/i))
+  await user.type(screen.getByLabelText(/password|كلمة المرور/i), 'wrong-password')
+  await user.click(screen.getByRole('button', { name: /sign in|تسجيل الدخول/i }))
 
-  expect(await screen.findByText(/بيانات الدخول غير صحيحة/i)).toBeInTheDocument()
+  expect(await screen.findByRole('alert')).toBeInTheDocument()
 })
 
 test('auth store persists token in localStorage', () => {
@@ -125,10 +124,10 @@ test('protected route redirects unauthenticated users', async () => {
   renderWithQuery(
     <MemoryRouter initialEntries={['/ar/dashboard']}>
       <Routes>
-        <Route path="/:lang" element={<ProtectedRoute />}>
-          <Route path="dashboard" element={<div>dashboard</div>} />
+        <Route path='/:lang' element={<ProtectedRoute />}>
+          <Route path='dashboard' element={<div>dashboard</div>} />
         </Route>
-        <Route path="/:lang/login" element={<div>login page</div>} />
+        <Route path='/:lang/login' element={<div>login page</div>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -137,20 +136,20 @@ test('protected route redirects unauthenticated users', async () => {
 })
 
 test('role guard redirects wrong role users to their own dashboard', async () => {
-  useAuthStore.getState().setSession('token', fakeUser('customer'))
+  useAuthStore.getState().setSession('token', fakeUser('reseller'))
 
   renderWithQuery(
     <MemoryRouter initialEntries={['/ar/manager']}>
       <Routes>
-        <Route path="/:lang" element={<ProtectedRoute />}>
+        <Route path='/:lang' element={<ProtectedRoute />}>
           <Route element={<RoleGuard allowedRoles={['manager']} />}>
-            <Route path="manager" element={<div>manager page</div>} />
+            <Route path='manager' element={<div>manager page</div>} />
           </Route>
-          <Route path="customer/dashboard" element={<div>customer page</div>} />
+          <Route path='reseller/dashboard' element={<div>reseller page</div>} />
         </Route>
       </Routes>
     </MemoryRouter>,
   )
 
-  expect(await screen.findByText(/customer page/i)).toBeInTheDocument()
+  expect(await screen.findByText(/reseller page/i)).toBeInTheDocument()
 })

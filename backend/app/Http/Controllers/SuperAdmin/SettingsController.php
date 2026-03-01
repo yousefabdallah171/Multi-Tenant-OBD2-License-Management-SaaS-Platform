@@ -37,6 +37,8 @@ class SettingsController extends BaseSuperAdminController
             'security' => ['sometimes', 'array'],
             'security.min_password_length' => ['sometimes', 'integer', 'min:6', 'max:64'],
             'security.session_timeout' => ['sometimes', 'integer', 'min:5', 'max:1440'],
+            'widgets' => ['sometimes', 'array'],
+            'widgets.show_online_widget_to_resellers' => ['sometimes', 'boolean'],
         ]);
 
         return response()->json([

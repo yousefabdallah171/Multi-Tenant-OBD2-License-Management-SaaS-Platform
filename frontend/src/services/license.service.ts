@@ -20,7 +20,7 @@ export const licenseService = {
     return data
   },
   async getById(id: number) {
-    const { data } = await api.get<{ data: LicenseDetails }>(`/reseller/licenses/${id}`)
+    const { data } = await api.get<{ data: LicenseDetails }>(`/licenses/${id}`)
     return data
   },
   async getExpiring(days = 7) {
@@ -30,14 +30,14 @@ export const licenseService = {
     return data
   },
   async bulkRenew(ids: number[], data: RenewLicenseData) {
-    const response = await api.post<{ message: string; count: number }>('/reseller/licenses/bulk-renew', {
+    const response = await api.post<{ message: string; count: number }>('/licenses/bulk-renew', {
       ids,
       ...data,
     })
     return response.data
   },
   async bulkDeactivate(ids: number[]) {
-    const response = await api.post<{ message: string; count: number }>('/reseller/licenses/bulk-deactivate', {
+    const response = await api.post<{ message: string; count: number }>('/licenses/bulk-deactivate', {
       ids,
     })
     return response.data

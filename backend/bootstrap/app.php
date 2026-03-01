@@ -6,6 +6,7 @@ use App\Http\Middleware\BiosBlacklistCheck;
 use App\Http\Middleware\IpTracker;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\TenantScope;
+use App\Http\Middleware\UpdateLastSeen;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.logger' => ApiLogger::class,
             'bios.blacklist' => BiosBlacklistCheck::class,
             'ip.tracker' => IpTracker::class,
+            'update.last_seen' => UpdateLastSeen::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

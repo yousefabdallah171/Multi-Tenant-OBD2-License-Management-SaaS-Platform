@@ -13,6 +13,7 @@ use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\Manager\ActivityController as ManagerActivityController;
 use App\Http\Controllers\Manager\CustomerController as ManagerCustomerController;
 use App\Http\Controllers\Manager\DashboardController as ManagerDashboardController;
+use App\Http\Controllers\Manager\LicenseController as ManagerLicenseController;
 use App\Http\Controllers\Manager\ReportController as ManagerReportController;
 use App\Http\Controllers\Manager\SoftwareController as ManagerSoftwareController;
 use App\Http\Controllers\Manager\TeamController as ManagerTeamController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\ManagerParent\CustomerController as ManagerParentCustom
 use App\Http\Controllers\ManagerParent\DashboardController as ManagerParentDashboardController;
 use App\Http\Controllers\ManagerParent\FinancialReportController as ManagerParentFinancialReportController;
 use App\Http\Controllers\ManagerParent\IpAnalyticsController as ManagerParentIpAnalyticsController;
+use App\Http\Controllers\ManagerParent\LicenseController as ManagerParentLicenseController;
 use App\Http\Controllers\ManagerParent\LogController as ManagerParentLogController;
 use App\Http\Controllers\ManagerParent\PricingController as ManagerParentPricingController;
 use App\Http\Controllers\ManagerParent\ProgramController as ManagerParentProgramController;
@@ -33,6 +35,7 @@ use App\Http\Controllers\ManagerParent\ReportController as ManagerParentReportCo
 use App\Http\Controllers\ManagerParent\SettingsController as ManagerParentSettingsController;
 use App\Http\Controllers\ManagerParent\TeamController as ManagerParentTeamController;
 use App\Http\Controllers\ManagerParent\UsernameManagementController as ManagerParentUsernameManagementController;
+use App\Http\Controllers\OnlineUsersController;
 use App\Http\Controllers\Reseller\CustomerController as ResellerCustomerController;
 use App\Http\Controllers\Reseller\DashboardController as ResellerDashboardController;
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
@@ -64,7 +67,7 @@ Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login']);
 });
 
-Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(function (): void {
+Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_seen'])->group(function (): void {
     Route::prefix('auth')->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
@@ -87,6 +90,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
     Route::get('/balances/me', [BalanceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::post('/balances/{user}/adjust', [BalanceController::class, 'adjust'])->middleware('role:super_admin,manager_parent');
     Route::post('/licenses/activate', [LicenseController::class, 'activateLicense'])->middleware('role:reseller,manager,manager_parent');
+    Route::get('/online-widget/settings', [OnlineUsersController::class, 'widgetSettings'])->middleware('role:super_admin,manager_parent,manager,reseller');
 
     Route::get('/programs', [ManagerParentProgramController::class, 'index'])->middleware('role:manager_parent,manager,reseller');
     Route::get('/programs/{program}/stats', [ManagerParentProgramController::class, 'stats'])->middleware('role:manager_parent,manager,reseller');
@@ -131,6 +135,9 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
 
         Route::get('/customers', [ManagerParentCustomerController::class, 'index']);
         Route::get('/customers/{user}', [ManagerParentCustomerController::class, 'show']);
+        Route::get('/licenses', [ManagerParentLicenseController::class, 'index']);
+        Route::get('/licenses/expiring', [ManagerParentLicenseController::class, 'expiring']);
+        Route::get('/licenses/{license}', [ManagerParentLicenseController::class, 'show']);
 
         Route::get('/settings', [ManagerParentSettingsController::class, 'index']);
         Route::put('/settings', [ManagerParentSettingsController::class, 'update']);
@@ -158,6 +165,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::get('/financial-reports', [ManagerParentFinancialReportController::class, 'index']);
         Route::get('/financial-reports/export/csv', [ManagerParentFinancialReportController::class, 'exportCsv']);
         Route::get('/financial-reports/export/pdf', [ManagerParentFinancialReportController::class, 'exportPdf']);
+        Route::get('/online-users', [OnlineUsersController::class, 'index']);
     });
 
     Route::prefix('manager')->middleware('role:manager')->group(function (): void {
@@ -176,6 +184,9 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
 
         Route::get('/customers', [ManagerCustomerController::class, 'index']);
         Route::get('/customers/{user}', [ManagerCustomerController::class, 'show']);
+        Route::get('/licenses', [ManagerLicenseController::class, 'index']);
+        Route::get('/licenses/expiring', [ManagerLicenseController::class, 'expiring']);
+        Route::get('/licenses/{license}', [ManagerLicenseController::class, 'show']);
 
         Route::get('/software', [ManagerSoftwareController::class, 'index']);
         Route::post('/software', [ManagerSoftwareController::class, 'store']);
@@ -192,6 +203,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         });
 
         Route::get('/activity', [ManagerActivityController::class, 'index']);
+        Route::get('/online-users', [OnlineUsersController::class, 'index']);
     });
 
     Route::prefix('reseller')->middleware('role:reseller')->group(function (): void {
@@ -210,6 +222,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::post('/licenses/bulk-renew', [ResellerLicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-deactivate', [ResellerLicenseController::class, 'bulkDeactivate']);
         Route::get('/software', [ResellerSoftwareController::class, 'index']);
+        Route::get('/online-users', [OnlineUsersController::class, 'index']);
 
         Route::prefix('reports')->group(function (): void {
             Route::get('/revenue', [ResellerReportController::class, 'revenue']);
@@ -220,9 +233,12 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         });
     });
 
-    Route::middleware('role:reseller')->group(function (): void {
-        Route::post('/licenses/{license}/renew', [ResellerLicenseController::class, 'renew']);
-        Route::post('/licenses/{license}/deactivate', [ResellerLicenseController::class, 'deactivate']);
+    Route::middleware('role:reseller,manager,manager_parent')->group(function (): void {
+        Route::get('/licenses/{license}', [LicenseController::class, 'show']);
+        Route::post('/licenses/{license}/renew', [LicenseController::class, 'renew']);
+        Route::post('/licenses/{license}/deactivate', [LicenseController::class, 'deactivate']);
+        Route::post('/licenses/bulk-renew', [LicenseController::class, 'bulkRenew']);
+        Route::post('/licenses/bulk-deactivate', [LicenseController::class, 'bulkDeactivate']);
     });
 
     // ============================================================
@@ -292,5 +308,6 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
 
         Route::get('/settings', [SettingsController::class, 'index']);
         Route::put('/settings', [SettingsController::class, 'update']);
+        Route::get('/online-users', [OnlineUsersController::class, 'index']);
     });
 });

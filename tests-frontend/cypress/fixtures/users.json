@@ -1,0 +1,22 @@
+{
+  "super_admin": {
+    "email": "superadmin@obd2sw.com",
+    "password": "password",
+    "role": "super_admin"
+  },
+  "manager_parent": {
+    "email": "managerparent@obd2sw.com",
+    "password": "password",
+    "role": "manager_parent"
+  },
+  "manager": {
+    "email": "manager@obd2sw.com",
+    "password": "password",
+    "role": "manager"
+  },
+  "reseller": {
+    "email": "reseller@obd2sw.com",
+    "password": "password",
+    "role": "reseller"
+  }
+}

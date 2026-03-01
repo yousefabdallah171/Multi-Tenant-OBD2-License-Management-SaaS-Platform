@@ -10,4 +10,8 @@ export const settingsService = {
     const { data } = await api.put<{ data: SystemSettings; message: string }>('/super-admin/settings', payload)
     return data
   },
+  async getOnlineWidgetSettings() {
+    const { data } = await api.get<{ data: { show_online_widget_to_resellers: boolean } }>('/online-widget/settings')
+    return data
+  },
 }

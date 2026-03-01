@@ -43,10 +43,59 @@ class ProgramLogsController extends BaseManagerParentController
                 ]],
             ]);
 
+        $raw = (string) ($response['data']['raw'] ?? '');
+        $lines = preg_split('/\r\n|\r|\n/', $raw) ?: [];
+        $rows = [];
+
+        foreach ($lines as $line) {
+            $trimmed = trim((string) $line);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            if (preg_match('/new user added - (.+?) with bios - (.+?) at time (.+)$/i', $trimmed, $matches)) {
+                $username = trim($matches[1]);
+                $licenseInfo = ($licensesMap->get($username) ?? [])[0] ?? null;
+                $rows[] = [
+                    'type' => 'add',
+                    'username' => $username,
+                    'bios_id' => trim($matches[2]),
+                    'timestamp' => trim($matches[3]),
+                    'customer_id' => $licenseInfo['customer_id'] ?? null,
+                ];
+                continue;
+            }
+
+            if (preg_match('/user deleted - (.+?) at time (.+)$/i', $trimmed, $matches)) {
+                $username = trim($matches[1]);
+                $licenseInfo = ($licensesMap->get($username) ?? [])[0] ?? null;
+                $rows[] = [
+                    'type' => 'delete',
+                    'username' => $username,
+                    'timestamp' => trim($matches[2]),
+                    'customer_id' => $licenseInfo['customer_id'] ?? null,
+                ];
+                continue;
+            }
+
+            if (preg_match('/^(\S+)\s+(.+?)\s+((?:\d{1,3}\.){3}\d{1,3})$/', $trimmed, $matches)) {
+                $username = trim($matches[1]);
+                $licenseInfo = ($licensesMap->get($username) ?? [])[0] ?? null;
+                $rows[] = [
+                    'type' => 'login',
+                    'username' => $username,
+                    'timestamp' => trim($matches[2]),
+                    'ip' => trim($matches[3]),
+                    'customer_id' => $licenseInfo['customer_id'] ?? null,
+                ];
+            }
+        }
+
         return response()->json([
             'data' => [
                 ...$response['data'],
                 'licenses' => $licensesMap,
+                'rows' => $rows,
             ],
         ], $response['status_code'] ?? 200);
     }

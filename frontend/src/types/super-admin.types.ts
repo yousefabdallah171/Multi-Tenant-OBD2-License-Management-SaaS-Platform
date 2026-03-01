@@ -181,6 +181,9 @@ export interface SystemSettings {
     min_password_length: number
     session_timeout: number
   }
+  widgets: {
+    show_online_widget_to_resellers: boolean
+  }
 }
 
 export interface LockedAccount {

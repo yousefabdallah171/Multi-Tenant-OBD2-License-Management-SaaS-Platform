@@ -72,6 +72,9 @@ class SystemSettingsStore
                 'min_password_length' => 8,
                 'session_timeout' => 120,
             ],
+            'widgets' => [
+                'show_online_widget_to_resellers' => false,
+            ],
         ];
     }
 }

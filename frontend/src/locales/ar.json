@@ -289,7 +289,8 @@
         "sessionTimeout": "مهلة الجلسة بالدقائق",
         "profileTab": "الملف الشخصي",
         "saveProfile": "حفظ الملف الشخصي",
-        "savePassword": "حفظ كلمة المرور"
+        "savePassword": "حفظ كلمة المرور",
+        "showOnlineWidgetToResellers": "عرض ويدجت المستخدمين المتصلين للموزعين"
       },
       "profile": {
         "title": "الملف الشخصي",
@@ -405,7 +406,10 @@
       "activity": "النشاط",
       "customers": "العملاء",
       "settings": "الإعدادات",
-      "profile": "الملف الشخصي"
+      "profile": "الملف الشخصي",
+      "software": "البرامج",
+      "licenses": "التراخيص",
+      "logsGroup": "السجلات"
     },
     "pages": {
       "dashboard": {
@@ -752,6 +756,14 @@
           "bios_mismatch": "عدم تطابق BIOS",
           "multi_tenant_conflict": "تعارض متعدد بين الشركاء"
         }
+      },
+      "software": {
+        "title": "كتالوج البرامج",
+        "description": "تصفح جميع البرامج المتاحة للتفعيل في نطاق عملك."
+      },
+      "licenses": {
+        "title": "التراخيص",
+        "description": "تتبع جميع تراخيص المستأجر عبر جميع الموزعين والعملاء."
       }
     }
   },
@@ -769,7 +781,8 @@
       "reports": "التقارير",
       "activity": "النشاط",
       "profile": "الملف الشخصي",
-      "softwareManagement": "إدارة البرامج"
+      "softwareManagement": "إدارة البرامج",
+      "licenses": "التراخيص"
     },
     "pages": {
       "dashboard": {
@@ -947,6 +960,10 @@
         "numberValidation": "أيام التجربة والسعر يجب أن يكونا أرقامًا صحيحة.",
         "deleteProgramTitle": "حذف البرنامج؟",
         "deleteProgramDescription": "سيؤدي هذا إلى إزالة {{name}} نهائيًا من الكتالوج."
+      },
+      "licenses": {
+        "title": "التراخيص",
+        "description": "عرض وإدارة تراخيص فريقك عبر جميع الموزعين والعملاء."
       }
     }
   },
@@ -1227,7 +1244,8 @@
   "ipAnalytics": {
     "columns": {
       "country": "الدولة",
-      "location": "الموقع"
+      "location": "الموقع",
+      "biosId": "معرف البيوس"
     },
     "vpnProxy": "VPN/Proxy"
   },
@@ -1236,7 +1254,7 @@
     "customerName": "اسم العميل",
     "customerEmail": "البريد الإلكتروني للعميل",
     "biosId": "معرّف BIOS",
-    "biosIdHint": "سيُستخدم كاسم مستخدم (مقفل)",
+    "biosIdHint": "الرقم التسلسلي لبيوس الجهاز.",
     "duration": "المدة",
     "durationMode": "المدة",
     "endDateMode": "تاريخ الانتهاء",
@@ -1245,12 +1263,16 @@
     "days": "أيام",
     "price": "السعر الإجمالي",
     "priceAuto": "يُحسب تلقائيًا",
+    "priceModeAuto": "تلقائي",
+    "priceModeManual": "يدوي",
+    "priceManualHint": "تم تفعيل تعديل السعر يدويًا.",
     "submit": "إنشاء وتفعيل",
     "successTitle": "تم تفعيل الترخيص",
     "successMessage": "مفتاح الترخيص: {{key}}",
     "errorTitle": "فشل التفعيل",
     "biosAlreadyActive": "معرف BIOS هذا لديه ترخيص نشط بالفعل لهذا البرنامج.",
-    "biosBlacklisted": "معرف BIOS هذا محظور ولا يمكن تفعيله."
+    "biosBlacklisted": "معرف BIOS هذا محظور ولا يمكن تفعيله.",
+    "customerNameHint": "سيُستخدم كاسم مستخدم خارجي على خادم الترخيص."
   },
   "customerPortal": {
     "layout": {
@@ -1328,5 +1350,13 @@
       "disabledTooltip": "هذا التحميل غير متاح لأن الترخيص غير نشط.",
       "logFailed": "بدأ التحميل لكن تعذر تحديث سجل النشاط."
     }
+  },
+  "validation": {
+    "nameNotBiosId": "أدخل الاسم الكامل للعميل (مثال: أحمد محمد)"
+  },
+  "onlineWidget": {
+    "title": "متصل الآن",
+    "collapsed": "{{count}} متصل",
+    "empty": "لا يوجد مستخدمون متصلون"
   }
 }

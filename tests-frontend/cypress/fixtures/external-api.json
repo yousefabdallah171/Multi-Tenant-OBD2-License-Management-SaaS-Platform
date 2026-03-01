@@ -1,0 +1,11 @@
+{
+  "success": {
+    "response": "True"
+  },
+  "failure": {
+    "response": "False"
+  },
+  "timeout": {
+    "error": "Connection timeout"
+  }
+}

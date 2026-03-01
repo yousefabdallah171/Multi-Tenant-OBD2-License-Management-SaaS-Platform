@@ -13,10 +13,12 @@ import type {
   ManagerParentLogEntry,
   PaginatedResponse,
   ProgramLogLicenseInfo,
+  ProgramLog,
   ProgramSummary,
   TenantSettings,
   UsernameManagedUser,
 } from '@/types/manager-parent.types'
+import type { LicenseFilters, LicenseSummary } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
 export const managerParentService = {
@@ -78,8 +80,8 @@ export const managerParentService = {
     const { data } = await api.get<{ data: { bios_id: string; events: BiosHistoryEntry[] } }>(`/bios-history/${biosId}`)
     return data
   },
-  async getIpAnalytics(params?: { page?: number; per_page?: number; user_id?: number | ''; country?: string; reputation_score?: string; from?: string; to?: string }) {
-    const { data } = await api.get<PaginatedResponse<IpAnalyticsEntry>>('/ip-analytics', { params })
+  async getIpAnalytics() {
+    const { data } = await api.get<{ data: IpAnalyticsEntry[] }>('/ip-analytics')
     return data
   },
   async getIpStats() {
@@ -142,9 +144,17 @@ export const managerParentService = {
     const { data } = await api.get<PaginatedResponse<ProgramSummary>>('/programs', { params: { per_page: 100, status: 'active' } })
     return data.data.filter((program) => program.has_external_api)
   },
-  async getProgramLogs(programId: number): Promise<{ raw: string; licenses?: Record<string, ProgramLogLicenseInfo[]> }> {
-    const { data } = await api.get<{ data: { raw: string; licenses?: Record<string, ProgramLogLicenseInfo[]> } }>(`/manager-parent/programs/${programId}/logs`)
+  async getProgramLogs(programId: number): Promise<{ raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]> }> {
+    const { data } = await api.get<{ data: { raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]> } }>(`/manager-parent/programs/${programId}/logs`)
     return data.data
+  },
+  async getLicenses(params?: LicenseFilters & { reseller_id?: number | '' }) {
+    const { data } = await api.get<PaginatedResponse<LicenseSummary>>('/licenses', { params })
+    return data
+  },
+  async getLicensesExpiring() {
+    const { data } = await api.get<{ data: { day1: number; day3: number; day7: number } }>('/licenses/expiring')
+    return data
   },
   async getProgramActiveUsers(programId: number): Promise<{ users: Record<string, string> }> {
     const { data } = await api.get<{ data: { users: Record<string, string> } }>(`/manager-parent/programs/${programId}/active-users`)
@@ -153,6 +163,10 @@ export const managerParentService = {
   async getProgramStats(programId: number): Promise<{ count: number }> {
     const { data } = await api.get<{ data: { count: number } }>(`/manager-parent/programs/${programId}/stats`)
     return data.data
+  },
+  async getOnlineUsers() {
+    const { data } = await api.get<{ data: Array<{ masked_name: string; role: string }> }>('/online-users')
+    return data
   },
   async exportFinancialCsv(params?: { from?: string; to?: string }) {
     await downloadFile('/financial-reports/export/csv', 'manager-parent-financial.csv', params)

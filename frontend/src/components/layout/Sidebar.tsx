@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, FileText, History, KeyRound, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users, Wallet } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, FileText, History, KeyRound, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users, Wallet } from 'lucide-react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -36,19 +37,19 @@ const managerParentItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.managerParent.dashboard, translationKey: 'managerParent.nav.dashboard' },
   { key: 'teamManagement', icon: Users, href: routePaths.managerParent.teamManagement, translationKey: 'managerParent.nav.teamManagement' },
   { key: 'resellerPricing', icon: Wallet, href: routePaths.managerParent.resellerPricing, translationKey: 'managerParent.nav.resellerPricing' },
+  { key: 'software', icon: Package, href: routePaths.managerParent.software, translationKey: 'managerParent.nav.software' },
   { key: 'softwareManagement', icon: Package, href: routePaths.managerParent.softwareManagement, translationKey: 'managerParent.nav.softwareManagement' },
   { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
   { key: 'biosHistory', icon: History, href: routePaths.managerParent.biosHistory, translationKey: 'managerParent.nav.biosHistory' },
   { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.managerParent.biosConflicts, translationKey: 'managerParent.nav.biosConflicts' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, translationKey: 'managerParent.nav.ipAnalytics' },
   { key: 'programLogs', icon: FileText, href: routePaths.managerParent.programLogs, translationKey: 'managerParent.nav.programLogs' },
-  { key: 'apiStatus', icon: Activity, href: routePaths.managerParent.apiStatus, translationKey: 'managerParent.nav.apiStatus' },
   { key: 'usernameManagement', icon: KeyRound, href: routePaths.managerParent.usernameManagement, translationKey: 'managerParent.nav.usernameManagement' },
   { key: 'financialReports', icon: BarChart3, href: routePaths.managerParent.financialReports, translationKey: 'managerParent.nav.financialReports' },
   { key: 'reports', icon: ScrollText, href: routePaths.managerParent.reports, translationKey: 'managerParent.nav.reports' },
-  { key: 'activity', icon: ScrollText, href: routePaths.managerParent.activity, translationKey: 'managerParent.nav.activity' },
-  { key: 'logs', icon: ScrollText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logs' },
   { key: 'customers', icon: Users, href: routePaths.managerParent.customers, translationKey: 'managerParent.nav.customers' },
+  { key: 'licenses', icon: KeyRound, href: routePaths.managerParent.licenses, translationKey: 'managerParent.nav.licenses' },
+  { key: 'logsGroup', icon: FileText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logsGroup' },
   { key: 'settings', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
   { key: 'profile', icon: User, href: routePaths.managerParent.profile, translationKey: 'managerParent.nav.profile' },
 ]
@@ -58,6 +59,7 @@ const managerItems: NavItem[] = [
   { key: 'team', icon: Users, href: routePaths.manager.team, translationKey: 'manager.nav.team' },
   { key: 'usernameManagement', icon: KeyRound, href: routePaths.manager.usernameManagement, translationKey: 'manager.nav.usernameManagement' },
   { key: 'customers', icon: UserRound, href: routePaths.manager.customers, translationKey: 'manager.nav.customers' },
+  { key: 'licenses', icon: KeyRound, href: routePaths.manager.licenses, translationKey: 'manager.nav.licenses' },
   { key: 'software', icon: Package, href: routePaths.manager.software, translationKey: 'manager.nav.software' },
   { key: 'softwareManagement', icon: PackagePlus, href: routePaths.manager.softwareManagement, translationKey: 'manager.nav.softwareManagement' },
   { key: 'reports', icon: BarChart3, href: routePaths.manager.reports, translationKey: 'manager.nav.reports' },
@@ -84,8 +86,22 @@ export function Sidebar() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { lang, isRtl } = useLanguage()
+  const location = useLocation()
   const collapsed = useSidebarStore((state) => state.collapsed)
   const setCollapsed = useSidebarStore((state) => state.setCollapsed)
+  const logsChildPaths = useMemo(() => ([
+    routePaths.managerParent.activity(lang),
+    routePaths.managerParent.logs(lang),
+    routePaths.managerParent.apiStatus(lang),
+  ]), [lang])
+  const shouldExpandLogs = user?.role === 'manager_parent' && logsChildPaths.some((path) => location.pathname.startsWith(path))
+  const [logsOpen, setLogsOpen] = useState(shouldExpandLogs)
+
+  useEffect(() => {
+    if (shouldExpandLogs) {
+      setLogsOpen(true)
+    }
+  }, [shouldExpandLogs])
 
   const items =
     user?.role === 'super_admin'
@@ -100,9 +116,63 @@ export function Sidebar() {
               ? customerItems
             : []
 
+  const managerParentLogsChildren: NavItem[] = [
+    { key: 'activity', icon: ScrollText, href: routePaths.managerParent.activity, translationKey: 'managerParent.nav.activity' },
+    { key: 'logs', icon: ScrollText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logs' },
+    { key: 'apiStatus', icon: Activity, href: routePaths.managerParent.apiStatus, translationKey: 'managerParent.nav.apiStatus' },
+  ]
+
   const navContent = (
     <nav className="space-y-2">
       {items.map((item) => {
+        if (user?.role === 'manager_parent' && item.key === 'logsGroup') {
+          const Icon = item.icon
+          const label = t(item.translationKey)
+
+          return (
+            <div key={item.key} className="space-y-1">
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition',
+                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  collapsed && 'justify-center lg:px-0',
+                )}
+                onClick={() => setLogsOpen((prev) => !prev)}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
+                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', logsOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+              </button>
+              {logsOpen ? managerParentLogsChildren.map((child) => {
+                const ChildIcon = child.icon
+                const childLabel = t(child.translationKey)
+
+                return (
+                  <NavLink
+                    key={child.key}
+                    to={child.href(lang)}
+                    className={({ isActive }) =>
+                      cn(
+                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
+                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                      )
+                    }
+                    onClick={() => {
+                      if (window.innerWidth < 1024) {
+                        setCollapsed(true)
+                      }
+                    }}
+                  >
+                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <span>{childLabel}</span>
+                  </NavLink>
+                )
+              }) : null}
+            </div>
+          )
+        }
+
         const Icon = item.icon
         const label = t(item.translationKey)
 

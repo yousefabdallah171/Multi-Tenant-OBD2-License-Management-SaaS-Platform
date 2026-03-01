@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # OBD2SW.com
 
@@ -48,8 +48,8 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 | Field | Value |
 |-------|-------|
 | **Version** | 1.0.0 |
-| **Status** | Phase 04 Manager + Reseller Complete |
-| **Last Updated** | 2026-02-28 |
+| **Status** | Phase 12 UX Editing (major items implemented, final QA pending) |
+| **Last Updated** | 2026-03-01 |
 | **Scale** | Multi-tenant SaaS, 42 Pages, 12 Tables, 101 API Endpoints |
 | **Budget** | $30 |
 | **Timeline** | 15 Days (Day 0 - Day 14) |
@@ -83,6 +83,15 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | PHASE-09-Deployment | :red_circle: Not Started | Day 12-13 |
 | PHASE-10-Documentation | :red_circle: Not Started | Day 14 |
 
+### Latest Implemented UX Updates (2026-03-01)
+
+- IP Analytics now reads tenant-matched global logs and defaults to newest-first rows.
+- GeoIP and VPN/hosting detection moved to ip-api.com batch flow.
+- Manager Parent sidebar now has a collapsible Logs group.
+- Manager and Manager Parent now have Licenses pages with bulk actions.
+- Online users floating widget is live with role-based visibility and Super Admin settings toggle.
+- Single and bulk deactivate flows now return clearer, actionable API errors.
+
 ---
 
 ## 2. Tech Stack
@@ -111,7 +120,7 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | **CI/CD** | GitHub Actions | Automated testing & deployment |
 | **Hosting** | Hostinger VPS (Ubuntu 22.04) | Production server |
 | **SSL** | Let's Encrypt (Certbot) | HTTPS encryption |
-| **IP Geolocation** | ipapi.co (free tier) | Country, city, ISP, reputation scoring |
+| **IP Geolocation** | ip-api.com batch API | Country, city, ISP, proxy/hosting enrichment |
 | **Monitoring** | UptimeRobot | Uptime & health monitoring |
 
 ---
@@ -1976,3 +1985,4 @@ This setup keeps backend routing, Sanctum, and database access stable while fron
 ---
 
 **Author:** Yousef Abdallah | Full Stack Developer | Tanta, Egypt
+

@@ -23,6 +23,7 @@ import type {
   TeamManagedUserFilters,
   UpdateManagerSoftwareData,
 } from '@/types/manager-reseller.types'
+import type { LicenseFilters, LicenseSummary } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
 export const managerService = {
@@ -74,6 +75,14 @@ export const managerService = {
     const { data } = await api.get<{ data: ManagerCustomerDetails }>(`/manager/customers/${id}`)
     return data
   },
+  async getLicenses(params?: LicenseFilters) {
+    const { data } = await api.get<PaginatedResponse<LicenseSummary>>('/manager/licenses', { params })
+    return data
+  },
+  async getLicensesExpiring() {
+    const { data } = await api.get<{ data: { day1: number; day3: number; day7: number } }>('/manager/licenses/expiring')
+    return data
+  },
   async getSoftwarePrograms(params?: ManagerSoftwareFilters) {
     const { data } = await api.get<PaginatedResponse<ManagerSoftwareProgram>>('/manager/software', { params })
     return data
@@ -114,6 +123,10 @@ export const managerService = {
   },
   async getActivity(params: RoleActivityFilters) {
     const { data } = await api.get<PaginatedResponse<RoleActivityEntry>>('/manager/activity', { params })
+    return data
+  },
+  async getOnlineUsers() {
+    const { data } = await api.get<{ data: Array<{ masked_name: string; role: string }> }>('/manager/online-users')
     return data
   },
 }

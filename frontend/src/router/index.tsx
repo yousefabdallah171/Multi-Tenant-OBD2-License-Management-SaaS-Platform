@@ -8,8 +8,10 @@ import { NotFoundPage } from '@/pages/errors/NotFound'
 import { ServerErrorPage } from '@/pages/errors/ServerError'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ActivityPage as ManagerActivityPage } from '@/pages/manager/Activity'
+import { ActivateLicensePageForManager } from '@/pages/manager/ActivateLicense'
 import { CustomersPage as ManagerCustomersPage } from '@/pages/manager/Customers'
 import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/Dashboard'
+import { LicensesPage as ManagerLicensesPage } from '@/pages/manager/Licenses'
 import { ProfilePage as ManagerProfilePage } from '@/pages/manager/Profile'
 import { ReportsPage as ManagerReportsPage } from '@/pages/manager/Reports'
 import { SoftwarePage as ManagerSoftwarePage } from '@/pages/manager/Software'
@@ -18,6 +20,7 @@ import { ProgramFormPage as ManagerProgramFormPage } from '@/pages/manager/Progr
 import { TeamPage as ManagerTeamPage } from '@/pages/manager/Team'
 import { UsernameManagementPage as ManagerUsernameManagementPage } from '@/pages/manager/UsernameManagement'
 import { ActivityPage as ManagerParentActivityPage } from '@/pages/manager-parent/Activity'
+import { ActivateLicensePageForManagerParent } from '@/pages/manager-parent/ActivateLicense'
 import { ApiStatusPage as ManagerParentApiStatusPage } from '@/pages/manager-parent/ApiStatus'
 import { BiosBlacklistPage as ManagerParentBiosBlacklistPage } from '@/pages/manager-parent/BiosBlacklist'
 import { BiosConflictsPage as ManagerParentBiosConflictsPage } from '@/pages/manager-parent/BiosConflicts'
@@ -27,12 +30,14 @@ import { CustomerDetailPage as ManagerParentCustomerDetailPage } from '@/pages/m
 import { DashboardPage as ManagerParentDashboardPage } from '@/pages/manager-parent/Dashboard'
 import { FinancialReportsPage as ManagerParentFinancialReportsPage } from '@/pages/manager-parent/FinancialReports'
 import { IpAnalyticsPage as ManagerParentIpAnalyticsPage } from '@/pages/manager-parent/IpAnalytics'
+import { LicensesPage as ManagerParentLicensesPage } from '@/pages/manager-parent/Licenses'
 import { LogsPage as ManagerParentLogsPage } from '@/pages/manager-parent/Logs'
 import { ProfilePage as ManagerParentProfilePage } from '@/pages/manager-parent/Profile'
 import { ProgramLogsPage as ManagerParentProgramLogsPage } from '@/pages/manager-parent/ProgramLogs'
 import { ReportsPage as ManagerParentReportsPage } from '@/pages/manager-parent/Reports'
 import { ResellerPricingPage } from '@/pages/manager-parent/ResellerPricing'
 import { SettingsPage as ManagerParentSettingsPage } from '@/pages/manager-parent/Settings'
+import { SoftwarePage as ManagerParentSoftwarePage } from '@/pages/manager-parent/Software'
 import { SoftwareManagementPage } from '@/pages/manager-parent/SoftwareManagement'
 import { ProgramFormPage as ManagerParentProgramFormPage } from '@/pages/manager-parent/ProgramForm'
 import { TeamManagementPage } from '@/pages/manager-parent/TeamManagement'
@@ -54,6 +59,7 @@ import { SecurityLocksPage } from '@/pages/super-admin/SecurityLocks'
 import { CustomersPage as ResellerCustomersPage } from '@/pages/reseller/Customers'
 import { DashboardPage as ResellerDashboardPage } from '@/pages/reseller/Dashboard'
 import { LicensesPage as ResellerLicensesPage } from '@/pages/reseller/Licenses'
+import { ActivateLicensePageForReseller } from '@/pages/reseller/ActivateLicense'
 import { ProfilePage as ResellerProfilePage } from '@/pages/reseller/Profile'
 import { ReportsPage as ResellerReportsPage } from '@/pages/reseller/Reports'
 import { SoftwarePage as ResellerSoftwarePage } from '@/pages/reseller/Software'
@@ -98,9 +104,11 @@ export function AppRouter() {
               <Route path="dashboard" element={<ManagerParentDashboardPage />} />
               <Route path="team-management" element={<TeamManagementPage />} />
               <Route path="reseller-pricing" element={<ResellerPricingPage />} />
+              <Route path="software" element={<ManagerParentSoftwarePage />} />
               <Route path="software-management" element={<SoftwareManagementPage />} />
               <Route path="software-management/create" element={<ManagerParentProgramFormPage />} />
               <Route path="software-management/:id/edit" element={<ManagerParentProgramFormPage />} />
+              <Route path="software-management/:id/activate" element={<ActivateLicensePageForManagerParent />} />
               <Route path="bios-blacklist" element={<ManagerParentBiosBlacklistPage />} />
               <Route path="bios-history" element={<ManagerParentBiosHistoryPage />} />
               <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
@@ -113,6 +121,7 @@ export function AppRouter() {
               <Route path="reports" element={<ManagerParentReportsPage />} />
               <Route path="activity" element={<ManagerParentActivityPage />} />
               <Route path="customers" element={<ManagerParentCustomersPage />} />
+              <Route path="licenses" element={<ManagerParentLicensesPage />} />
               <Route path="customers/:id" element={<ManagerParentCustomerDetailPage />} />
               <Route path="settings" element={<ManagerParentSettingsPage />} />
               <Route path="profile" element={<ManagerParentProfilePage />} />
@@ -125,7 +134,9 @@ export function AppRouter() {
               <Route path="team" element={<ManagerTeamPage />} />
               <Route path="username-management" element={<ManagerUsernameManagementPage />} />
               <Route path="customers" element={<ManagerCustomersPage />} />
+              <Route path="licenses" element={<ManagerLicensesPage />} />
               <Route path="software" element={<ManagerSoftwarePage />} />
+              <Route path="software/:id/activate" element={<ActivateLicensePageForManager />} />
               <Route path="software-management" element={<ManagerSoftwareManagementPage />} />
               <Route path="software-management/create" element={<ManagerProgramFormPage />} />
               <Route path="software-management/:id/edit" element={<ManagerProgramFormPage />} />
@@ -141,6 +152,7 @@ export function AppRouter() {
               <Route path="customers" element={<ResellerCustomersPage />} />
               <Route path="licenses" element={<ResellerLicensesPage />} />
               <Route path="software" element={<ResellerSoftwarePage />} />
+              <Route path="software/:id/activate" element={<ActivateLicensePageForReseller />} />
               <Route path="reports" element={<ResellerReportsPage />} />
               <Route path="profile" element={<ResellerProfilePage />} />
               <Route path="*" element={<Navigate to="dashboard" replace />} />

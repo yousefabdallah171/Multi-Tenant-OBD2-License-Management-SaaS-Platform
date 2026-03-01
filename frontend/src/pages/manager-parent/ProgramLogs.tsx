@@ -11,7 +11,7 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import type { ProgramLog, ProgramLogLicenseInfo } from '@/types/manager-parent.types'
-import { formatIpLocation, isPrivateOrLocalIp } from '@/utils/countryFlag'
+import { IpLocationCell, isPrivateOrLocalIp } from '@/utils/countryFlag'
 
 interface LocationMeta {
   country: string
@@ -102,7 +102,10 @@ export function ProgramLogsPage() {
     refetchInterval: autoRefresh ? 30000 : false,
   })
 
-  const parsedLogs = useMemo(() => parseProgramLogs(logsQuery.data?.raw ?? ''), [logsQuery.data?.raw])
+  const parsedLogs = useMemo(
+    () => (logsQuery.data?.rows && logsQuery.data.rows.length > 0 ? logsQuery.data.rows : parseProgramLogs(logsQuery.data?.raw ?? '')),
+    [logsQuery.data?.raw, logsQuery.data?.rows],
+  )
   const licenseMap = logsQuery.data?.licenses ?? {}
   const activationRows = parsedLogs.filter((entry) => entry.type === 'add' || entry.type === 'delete')
   const loginRows = parsedLogs.filter((entry) => entry.type === 'login')
@@ -226,7 +229,15 @@ export function ProgramLogsPage() {
                             <td className={`p-2 font-medium ${row.type === 'add' ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'}`}>
                               {row.type === 'add' ? t('programLogs.eventAdded') : t('programLogs.eventDeleted')}
                             </td>
-                            <td className="p-2">{row.username}</td>
+                            <td className="p-2">
+                              {row.customer_id ? (
+                                <Link className="text-blue-600 hover:underline dark:text-blue-300" to={`/${lang}/customers/${row.customer_id}`}>
+                                  @{row.username}
+                                </Link>
+                              ) : (
+                                <span>@{row.username}</span>
+                              )}
+                            </td>
                             <td className="p-2">
                               <div className="font-medium">{row.bios_id ?? '-'}</div>
                               <div className="text-xs text-slate-500 dark:text-slate-400">@{match?.external_username ?? row.username}</div>
@@ -278,11 +289,19 @@ export function ProgramLogsPage() {
 
                         return (
                           <tr key={`${row.username}-${row.timestamp}-${index}`} className="border-b border-slate-100 dark:border-slate-900">
-                            <td className="p-2">{row.username}</td>
+                            <td className="p-2">
+                              {row.customer_id ? (
+                                <Link className="text-blue-600 hover:underline dark:text-blue-300" to={`/${lang}/customers/${row.customer_id}`}>
+                                  @{row.username}
+                                </Link>
+                              ) : (
+                                <span>@{row.username}</span>
+                              )}
+                            </td>
                             <td className="p-2">{row.timestamp}</td>
                             <td className="p-2">{ip || '-'}</td>
                             <td className="p-2">
-                              {local ? 'Localhost / Local' : meta ? formatIpLocation(meta.country, meta.city, meta.country_code) : '...'}
+                              {local ? 'Localhost / Local' : meta ? <IpLocationCell country={meta.country} city={meta.city} countryCode={meta.country_code} /> : '...'}
                             </td>
                             <td className="p-2">{local ? 'Local' : (meta?.org ?? '-')}</td>
                             <td className="p-2">

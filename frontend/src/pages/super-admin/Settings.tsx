@@ -160,6 +160,14 @@ export function SettingsPage() {
                 />
                 {t('superAdmin.pages.settings.pusherNotifications')}
               </label>
+              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={form.widgets.show_online_widget_to_resellers}
+                  onChange={(event) => setDraft((current) => ({ ...(current ?? form), widgets: { ...(current ?? form).widgets, show_online_widget_to_resellers: event.target.checked } }))}
+                />
+                {t('superAdmin.pages.settings.showOnlineWidgetToResellers')}
+              </label>
             </CardContent>
           </Card>
         </TabsContent>

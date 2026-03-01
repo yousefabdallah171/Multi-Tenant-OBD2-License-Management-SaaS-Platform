@@ -5,6 +5,7 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { PageTransition } from '@/components/shared/PageTransition'
 import { RouteErrorBoundary } from '@/components/shared/ErrorBoundary'
+import { OnlineUsersWidget } from '@/components/shared/OnlineUsersWidget'
 import { SkipToContent } from '@/components/shared/SkipToContent'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -45,6 +46,7 @@ export function DashboardLayout() {
           <Footer />
         </div>
       </div>
+      <OnlineUsersWidget />
     </div>
   )
 }

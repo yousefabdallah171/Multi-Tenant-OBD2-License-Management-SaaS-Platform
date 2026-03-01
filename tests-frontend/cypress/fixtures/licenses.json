@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "bios_id": "BIOS-ACTIVE-001",
+    "external_username": "BIOS-ACTIVE-001",
+    "status": "active",
+    "duration_days": 0.021
+  },
+  {
+    "id": 2,
+    "bios_id": "BIOS-EXPIRED-001",
+    "external_username": "BIOS-EXPIRED-001",
+    "status": "expired",
+    "duration_days": 0.5
+  },
+  {
+    "id": 3,
+    "bios_id": "BIOS-SUSPENDED-001",
+    "external_username": "BIOS-SUSPENDED-001",
+    "status": "suspended",
+    "duration_days": 7
+  }
+]

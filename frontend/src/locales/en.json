@@ -289,7 +289,8 @@
         "minPasswordLength": "Minimum password length",
         "sessionTimeout": "Session timeout (minutes)",
         "saveProfile": "Save Profile",
-        "savePassword": "Save Password"
+        "savePassword": "Save Password",
+        "showOnlineWidgetToResellers": "Show online users widget to resellers"
       },
       "profile": {
         "title": "Profile",
@@ -402,10 +403,13 @@
       "usernameManagement": "Username Management",
       "financialReports": "Financial Reports",
       "reports": "Reports",
+      "logsGroup": "Logs",
       "activity": "Activity",
       "customers": "Customers",
       "settings": "Settings",
-      "profile": "Profile"
+      "profile": "Profile",
+      "software": "Software",
+      "licenses": "Licenses"
     },
     "pages": {
       "dashboard": {
@@ -749,6 +753,14 @@
         "productUpdates": "Product updates and platform changes",
         "profileSaved": "Profile updated successfully.",
         "passwordSaved": "Password updated successfully."
+      },
+      "software": {
+        "title": "Software Catalog",
+        "description": "Browse all programs available for activation in your tenant."
+      },
+      "licenses": {
+        "title": "Licenses",
+        "description": "Review and manage tenant-wide licenses, including renewals and deactivations."
       }
     }
   },
@@ -766,7 +778,8 @@
       "softwareManagement": "Software Management",
       "reports": "Reports",
       "activity": "Activity",
-      "profile": "Profile"
+      "profile": "Profile",
+      "licenses": "Licenses"
     },
     "pages": {
       "dashboard": {
@@ -944,6 +957,10 @@
         "unknownProgram": "Unknown program",
         "unknownReseller": "Unknown reseller",
         "expires": "Expires"
+      },
+      "licenses": {
+        "title": "Licenses",
+        "description": "Review and manage all team licenses, including renewals and deactivations."
       }
     }
   },
@@ -992,7 +1009,12 @@
         "activationDialog": {
           "title": "Add Customer",
           "description": "Move through each step to create the customer and activate the license.",
-          "steps": ["Customer Info", "BIOS Activation", "Pricing & Duration", "Review"],
+          "steps": [
+            "Customer Info",
+            "BIOS Activation",
+            "Pricing & Duration",
+            "Review"
+          ],
           "stepLabel": "Step",
           "customerName": "Customer Name",
           "customerEmail": "Customer Email",
@@ -1219,7 +1241,8 @@
   "ipAnalytics": {
     "columns": {
       "country": "Country",
-      "location": "Location"
+      "location": "Location",
+      "biosId": "BIOS ID"
     },
     "vpnProxy": "VPN/Proxy"
   },
@@ -1228,7 +1251,7 @@
     "customerName": "Customer Name",
     "customerEmail": "Customer Email",
     "biosId": "BIOS ID",
-    "biosIdHint": "Will be used as username (locked)",
+    "biosIdHint": "Hardware BIOS serial number for this machine.",
     "duration": "Duration",
     "durationMode": "Duration",
     "endDateMode": "End Date",
@@ -1237,12 +1260,16 @@
     "days": "Days",
     "price": "Total Price",
     "priceAuto": "Auto-calculated",
+    "priceModeAuto": "Auto",
+    "priceModeManual": "Manual",
+    "priceManualHint": "Manual price override is enabled.",
     "submit": "Create & Activate",
     "successTitle": "License Activated",
     "successMessage": "License key: {{key}}",
     "errorTitle": "Activation Failed",
     "biosAlreadyActive": "This BIOS ID already has an active license for this program.",
-    "biosBlacklisted": "This BIOS ID is blacklisted and cannot be activated."
+    "biosBlacklisted": "This BIOS ID is blacklisted and cannot be activated.",
+    "customerNameHint": "Will be used as the external username on the license server."
   },
   "customerPortal": {
     "layout": {
@@ -1317,5 +1344,13 @@
       "disabledTooltip": "This download is unavailable because the license is not active.",
       "logFailed": "The download started, but the activity log could not be updated."
     }
+  },
+  "validation": {
+    "nameNotBiosId": "Enter the customer's full name (e.g. John Smith)"
+  },
+  "onlineWidget": {
+    "title": "Online Now",
+    "collapsed": "{{count}} online",
+    "empty": "No users online"
   }
 }

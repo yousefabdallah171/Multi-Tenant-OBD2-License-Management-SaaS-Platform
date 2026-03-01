@@ -133,8 +133,9 @@ export function CustomersPage() {
         },
         validation: {
           customerName: 'يجب أن يكون اسم العميل مكوناً من حرفين على الأقل.',
-          customerEmail: 'أدخل بريداً إلكترونياً صحيحاً للعميل.',
-          biosId: 'يجب أن يكون BIOS ID مكوناً من 5 أحرف على الأقل.',
+          nameNotBiosId: t('validation.nameNotBiosId'),
+          customerEmail: 'Invalid customer email.',
+          biosId: 'BIOS ID must be at least 5 characters.',
           selectProgram: 'اختر برنامجاً قبل المتابعة.',
           duration: 'يجب أن تكون المدة 1 على الأقل.',
           price: 'أدخل سعراً صحيحاً.',
@@ -238,8 +239,9 @@ export function CustomersPage() {
         },
         validation: {
           customerName: t('reseller.pages.customers.validation.customerName'),
-          customerEmail: t('reseller.pages.customers.validation.customerEmail'),
+          nameNotBiosId: t('validation.nameNotBiosId'),
           biosId: t('reseller.pages.customers.validation.biosId'),
+          customerEmail: t('reseller.pages.customers.validation.customerEmail'),
           selectProgram: t('reseller.pages.customers.validation.selectProgram'),
           duration: t('reseller.pages.customers.validation.duration'),
           price: t('reseller.pages.customers.validation.price'),
@@ -296,7 +298,7 @@ export function CustomersPage() {
     mutationFn: () =>
       licenseService.activate({
         customer_name: activationForm.customer_name.trim(),
-        customer_email: activationForm.customer_email.trim(),
+        customer_email: activationForm.customer_email.trim() || undefined,
         customer_phone: activationForm.customer_phone.trim() || undefined,
         bios_id: activationForm.bios_id.trim(),
         program_id: Number(activationForm.program_id),
@@ -360,8 +362,8 @@ export function CustomersPage() {
         sortValue: (row) => row.name,
         render: (row) => (
           <div>
-            <p className="font-medium text-slate-950 dark:text-white">{row.name}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{row.email}</p>
+            <p className="font-medium text-slate-950 dark:text-white">{isLikelyBios(row.name) ? '—' : row.name}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{row.email ?? '-'}</p>
           </div>
         ),
       },
@@ -674,7 +676,7 @@ export function CustomersPage() {
         <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
           <DialogHeader>
             <DialogTitle>{detailCustomer?.name ?? text.detail.titleFallback}</DialogTitle>
-            <DialogDescription>{detailCustomer?.email ?? text.detail.descriptionFallback}</DialogDescription>
+            <DialogDescription>{detailCustomer?.email ?? detailCustomer?.phone ?? text.detail.descriptionFallback}</DialogDescription>
           </DialogHeader>
           {detailCustomer ? (
             <div className="space-y-6">
@@ -839,6 +841,7 @@ function durationToDays(value: number, unit: DurationUnit) {
 function validateActivationStep(step: number, form: ActivationFormState, text: {
   validation: {
     customerName: string
+    nameNotBiosId: string
     customerEmail: string
     biosId: string
     selectProgram: string
@@ -851,7 +854,11 @@ function validateActivationStep(step: number, form: ActivationFormState, text: {
       return text.validation.customerName
     }
 
-    if (!/\S+@\S+\.\S+/.test(form.customer_email)) {
+    if (isLikelyBios(form.customer_name.trim())) {
+      return text.validation.nameNotBiosId
+    }
+
+    if (form.customer_email.trim() && !/\S+@\S+\.\S+/.test(form.customer_email.trim())) {
       return text.validation.customerEmail
     }
   }
@@ -888,3 +895,10 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 
   return fallback
 }
+
+
+function isLikelyBios(value: string): boolean {
+  const trimmed = value.trim()
+  return trimmed.length > 20 && /^[0-9a-fA-F\-_]+$/.test(trimmed)
+}
+

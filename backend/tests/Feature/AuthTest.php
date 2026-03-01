@@ -151,4 +151,11 @@ class AuthTest extends TestCase
             ->assertStatus(429)
             ->assertJsonPath('reason', 'ip_blocked');
     }
+
+    public function test_forgot_password_route_does_not_exist(): void
+    {
+        $this->postJson('/api/auth/forgot-password', [
+            'email' => 'any@example.com',
+        ])->assertNotFound();
+    }
 }

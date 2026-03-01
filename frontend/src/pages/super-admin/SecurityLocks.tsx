@@ -6,15 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { securityService } from '@/services/security.service'
-import { countryCodeToFlag } from '@/utils/countryFlag'
+import { IpLocationCell } from '@/utils/countryFlag'
 import { formatDate } from '@/lib/utils'
 import { useLanguage } from '@/hooks/useLanguage'
 import type { SecurityAuditLog } from '@/types/super-admin.types'
-
-function resolveGeoLabel(countryCode: string | null, countryName: string, city: string) {
-  const flag = countryCode ? countryCodeToFlag(countryCode) : '🏳️'
-  return `${flag} ${countryName}${city ? ` / ${city}` : ''}`
-}
 
 export function SecurityLocksPage() {
   const { t } = useTranslation()
@@ -97,7 +92,7 @@ export function SecurityLocksPage() {
                         <td className="p-2">{row.email}</td>
                         <td className="p-2">{row.device}</td>
                         <td className="p-2">{row.ip}</td>
-                        <td className="p-2">{resolveGeoLabel(row.country_code, row.country_name, row.city)}</td>
+                        <td className="p-2"><IpLocationCell country={row.country_name} city={row.city} countryCode={row.country_code ?? ''} /></td>
                         <td className="p-2">{row.isp || '-'}</td>
                         <td className="p-2">{row.attempt_count}</td>
                         <td className="p-2">{row.seconds_remaining}s</td>
@@ -143,7 +138,7 @@ export function SecurityLocksPage() {
                       <tr key={row.ip} className="border-b border-slate-100 dark:border-slate-900">
                         <td className="p-2">{row.ip}</td>
                         <td className="p-2">{row.device}</td>
-                        <td className="p-2">{resolveGeoLabel(row.country_code, row.country_name, row.city)}</td>
+                        <td className="p-2"><IpLocationCell country={row.country_name} city={row.city} countryCode={row.country_code ?? ''} /></td>
                         <td className="p-2">{row.isp || '-'}</td>
                         <td className="p-2">{row.blocked_at ? formatDate(row.blocked_at, locale) : '-'}</td>
                         <td className="p-2">

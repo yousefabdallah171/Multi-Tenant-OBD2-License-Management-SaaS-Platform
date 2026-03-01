@@ -37,6 +37,7 @@ export function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [notice, setNotice] = useState<{ tone: NoticeTone; message: string } | null>(null)
   const [lockState, setLockState] = useState<LockState | null>(null)
+  const isLocked = lockState !== null
 
   function clearFeedback() {
     setNotice(null)
@@ -72,7 +73,8 @@ export function LoginPage() {
             setNotice({ tone: 'danger', message: payload?.message ?? t('auth.serverError') })
           }
         } else if (error.response.status === 401) {
-          setNotice({ tone: 'danger', message: t('auth.invalidCredentials') })
+          const payload = error.response.data as { message?: string } | undefined
+          setNotice({ tone: 'danger', message: payload?.message ?? t('auth.invalidCredentials') })
         } else {
           const payload = error.response.data as { message?: string } | undefined
           setNotice({ tone: 'danger', message: payload?.message ?? t('auth.serverError') })
@@ -128,6 +130,7 @@ export function LoginPage() {
                   reason={lockState.reason}
                   unlocksAt={lockState.unlocks_at}
                   secondsRemaining={lockState.seconds_remaining}
+                  onExpired={() => setLockState(null)}
                 />
               ) : null}
 
@@ -159,6 +162,7 @@ export function LoginPage() {
                     autoComplete="email"
                     placeholder="your@email.com"
                     value={email}
+                    disabled={isSubmitting || isLocked}
                     onChange={(event) => {
                       setEmail(event.target.value)
                       clearFeedback()
@@ -175,6 +179,7 @@ export function LoginPage() {
                       autoComplete="current-password"
                       placeholder="********"
                       value={password}
+                      disabled={isSubmitting || isLocked}
                       onChange={(event) => {
                         setPassword(event.target.value)
                         clearFeedback()
@@ -184,6 +189,7 @@ export function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword((value) => !value)}
+                      disabled={isSubmitting || isLocked}
                       className={`absolute top-1/2 -translate-y-1/2 text-slate-500 ${isRtl ? 'left-3' : 'right-3'}`}
                       aria-label={showPassword ? t('common.hide') : t('common.show')}
                     >
@@ -191,7 +197,7 @@ export function LoginPage() {
                     </button>
                   </div>
                 </div>
-                <Button className="h-11 w-full" disabled={isSubmitting} type="submit">
+                <Button className="h-11 w-full" disabled={isSubmitting || isLocked} type="submit">
                   {isSubmitting ? <LoaderCircle className="me-2 h-4 w-4 animate-spin" /> : null}
                   {isSubmitting ? t('login.signingIn') : t('login.submitBtn')}
                 </Button>

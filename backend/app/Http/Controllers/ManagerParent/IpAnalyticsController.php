@@ -2,87 +2,184 @@
 
 namespace App\Http\Controllers\ManagerParent;
 
-use App\Models\UserIpLog;
+use App\Models\License;
+use App\Services\ExternalApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class IpAnalyticsController extends BaseManagerParentController
 {
+    private const PRIVATE_IP_PATTERNS = [
+        '/^127\./',
+        '/^::1$/',
+        '/^10\./',
+        '/^192\.168\./',
+        '/^172\.(1[6-9]|2\d|3[01])\./',
+    ];
+
+    public function __construct(private readonly ExternalApiService $externalApiService)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'user_id' => ['nullable', 'integer'],
-            'country' => ['nullable', 'string'],
-            'reputation_score' => ['nullable', 'in:low,medium,high'],
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
-        ]);
+        $response = $this->externalApiService->getGlobalLogs();
 
-        $query = UserIpLog::query()->with('user:id,name,email')->latest();
-
-        if (! empty($validated['user_id'])) {
-            $query->where('user_id', $validated['user_id']);
+        if (! ($response['success'] ?? false)) {
+            return response()->json(['data' => []]);
         }
 
-        if (! empty($validated['country'])) {
-            $query->where('country', $validated['country']);
-        }
+        $raw = (string) ($response['data']['raw'] ?? '');
+        $rows = collect(preg_split('/\r\n|\r|\n/', $raw) ?: [])
+            ->map(static function (string $line): ?array {
+                $trimmed = trim($line);
+                if ($trimmed === '') {
+                    return null;
+                }
 
-        if (! empty($validated['reputation_score'])) {
-            $query->where('reputation_score', $validated['reputation_score']);
-        }
+                if (! preg_match('/^(\S+)\s+(.+?)\s+((?:\d{1,3}\.){3}\d{1,3})$/', $trimmed, $matches)) {
+                    return null;
+                }
 
-        if (! empty($validated['from'])) {
-            $query->whereDate('created_at', '>=', $validated['from']);
-        }
+                return [
+                    'username' => trim($matches[1]),
+                    'timestamp' => trim($matches[2]),
+                    'ip_address' => trim($matches[3]),
+                ];
+            })
+            ->filter()
+            ->values();
 
-        if (! empty($validated['to'])) {
-            $query->whereDate('created_at', '<=', $validated['to']);
-        }
+        $usernames = $rows
+            ->pluck('username')
+            ->filter(static fn ($username): bool => is_string($username) && $username !== '')
+            ->unique()
+            ->values()
+            ->all();
 
-        $logs = $query->paginate((int) ($validated['per_page'] ?? 15));
+        $licenseLookup = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->whereIn('external_username', $usernames)
+            ->get(['external_username', 'bios_id', 'customer_id'])
+            ->keyBy('external_username');
+
+        $rows = $rows
+            ->filter(static fn (array $row): bool => $licenseLookup->has($row['username']))
+            ->sortByDesc('timestamp')
+            ->values();
+
+        // Collect unique public IPs for GeoIP enrichment
+        $uniquePublicIps = $rows
+            ->pluck('ip_address')
+            ->unique()
+            ->filter(fn (string $ip): bool => ! $this->isPrivateIp($ip))
+            ->values()
+            ->all();
+
+        $geoData = $this->fetchGeoData($uniquePublicIps);
 
         return response()->json([
-            'data' => collect($logs->items())->map(fn (UserIpLog $log): array => [
-                'id' => $log->id,
-                'user' => $log->user ? ['id' => $log->user->id, 'name' => $log->user->name, 'email' => $log->user->email] : null,
-                'ip_address' => $log->ip_address,
-                'country' => $log->country,
-                'city' => $log->city,
-                'isp' => $log->isp,
-                'reputation_score' => $log->reputation_score,
-                'action' => $log->action,
-                'created_at' => $log->created_at?->toIso8601String(),
-            ])->values(),
-            'meta' => $this->paginationMeta($logs),
+            'data' => $rows->map(static function (array $row) use ($licenseLookup, $geoData): array {
+                $license = $licenseLookup->get($row['username']);
+                $geo = $geoData[$row['ip_address']] ?? [
+                    'country' => 'Unknown',
+                    'country_code' => '',
+                    'city' => '',
+                    'isp' => '',
+                    'proxy' => false,
+                    'hosting' => false,
+                ];
+
+                return [
+                    'username' => $row['username'],
+                    'bios_id' => $license?->bios_id,
+                    'customer_id' => $license?->customer_id,
+                    'ip_address' => $row['ip_address'],
+                    'timestamp' => $row['timestamp'],
+                    'country' => $geo['country'],
+                    'country_code' => $geo['country_code'],
+                    'city' => $geo['city'],
+                    'isp' => $geo['isp'],
+                    'proxy' => $geo['proxy'],
+                    'hosting' => $geo['hosting'],
+                ];
+            })->values(),
         ]);
     }
 
     public function stats(): JsonResponse
     {
-        $logs = UserIpLog::query()->get();
-
         return response()->json([
             'data' => [
-                'countries' => $logs
-                    ->groupBy(fn (UserIpLog $log): string => $log->country ?: 'Unknown')
-                    ->map(fn ($group, string $country): array => ['country' => $country, 'count' => $group->count()])
-                    ->sortByDesc('count')
-                    ->values(),
-                'suspicious' => $logs
-                    ->where('reputation_score', 'high')
-                    ->sortByDesc('created_at')
-                    ->take(10)
-                    ->map(fn (UserIpLog $log): array => [
-                        'id' => $log->id,
-                        'ip_address' => $log->ip_address,
-                        'country' => $log->country,
-                        'user_id' => $log->user_id,
-                        'created_at' => $log->created_at?->toIso8601String(),
-                    ])
-                    ->values(),
+                'countries' => [],
+                'suspicious' => [],
             ],
         ]);
+    }
+
+    private function isPrivateIp(string $ip): bool
+    {
+        foreach (self::PRIVATE_IP_PATTERNS as $pattern) {
+            if (preg_match($pattern, $ip)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  string[]  $ips
+     * @return array<string, array{country: string, country_code: string, city: string, isp: string, proxy: bool, hosting: bool}>
+     */
+    private function fetchGeoData(array $ips): array
+    {
+        if (empty($ips)) {
+            return [];
+        }
+
+        $fallback = ['country' => 'Unknown', 'country_code' => '', 'city' => '', 'isp' => '', 'proxy' => false, 'hosting' => false];
+        $result = [];
+
+        foreach (array_chunk($ips, 100) as $chunk) {
+            try {
+                $payload = array_map(static fn (string $ip): array => ['query' => $ip], $chunk);
+                $response = Http::timeout(8)
+                    ->post('http://ip-api.com/batch?fields=status,country,countryCode,city,isp,org,proxy,hosting,query', $payload);
+
+                if (! $response->successful()) {
+                    foreach ($chunk as $ip) {
+                        $result[$ip] = $fallback;
+                    }
+                    continue;
+                }
+
+                foreach ($response->json() as $item) {
+                    $ip = (string) ($item['query'] ?? '');
+                    if ($ip === '' || ($item['status'] ?? '') !== 'success') {
+                        if ($ip !== '') {
+                            $result[$ip] = $fallback;
+                        }
+                        continue;
+                    }
+
+                    $result[$ip] = [
+                        'country' => (string) ($item['country'] ?? 'Unknown'),
+                        'country_code' => (string) ($item['countryCode'] ?? ''),
+                        'city' => (string) ($item['city'] ?? ''),
+                        'isp' => (string) ($item['org'] !== '' ? ($item['org'] ?? '') : ($item['isp'] ?? '')),
+                        'proxy' => (bool) (($item['proxy'] ?? false) || ($item['hosting'] ?? false)),
+                        'hosting' => (bool) ($item['hosting'] ?? false),
+                    ];
+                }
+            } catch (\Throwable) {
+                foreach ($chunk as $ip) {
+                    $result[$ip] = $fallback;
+                }
+            }
+        }
+
+        return $result;
     }
 }

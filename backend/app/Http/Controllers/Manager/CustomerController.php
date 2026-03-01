@@ -96,7 +96,9 @@ class CustomerController extends BaseManagerController
         return [
             'id' => $user->id,
             'name' => $user->name,
-            'email' => $user->email,
+            'email' => $this->visibleEmail($user->email),
+            'phone' => $user->phone,
+            'license_id' => $license?->id,
             'bios_id' => $license?->bios_id,
             'reseller' => $license?->reseller?->name,
             'reseller_id' => $license?->reseller?->id,
@@ -105,5 +107,14 @@ class CustomerController extends BaseManagerController
             'expiry' => $license?->expires_at?->toIso8601String(),
             'license_count' => $user->customerLicenses->count(),
         ];
+    }
+
+    private function visibleEmail(?string $email): ?string
+    {
+        if (! $email) {
+            return null;
+        }
+
+        return str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 }

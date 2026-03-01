@@ -100,10 +100,10 @@ class PhaseOneFoundationTest extends TestCase
 
     public function test_api_logger_logs_external_status_requests(): void
     {
-        config()->set('external-api.url', 'http://72.60.69.185');
+        config()->set('external-api.url', 'http://external-api.test');
 
         Http::fake([
-            'http://72.60.69.185/showallapi/8' => Http::response('0', 200),
+            'http://external-api.test/showallapi/8' => Http::response('0', 200),
         ]);
 
         $user = User::factory()->create([

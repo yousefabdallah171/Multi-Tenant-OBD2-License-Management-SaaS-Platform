@@ -4,7 +4,6 @@ import { Eye, EyeOff, Grid2X2, List, Plus, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { ActivateLicenseModal } from '@/components/ActivateLicenseModal'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -76,7 +75,6 @@ export function SoftwareManagementPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editingProgram, setEditingProgram] = useState<ProgramSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ProgramSummary | null>(null)
-  const [activationProgram, setActivationProgram] = useState<ProgramSummary | null>(null)
   const [form, setForm] = useState<ProgramFormState>(EMPTY_FORM)
   const [showApiKey, setShowApiKey] = useState(false)
 
@@ -143,7 +141,12 @@ export function SoftwareManagementPage() {
       label: t('common.actions'),
       render: (row) => (
         <div className="flex gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={() => setActivationProgram(row)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(routePaths.managerParent.activateLicense(lang, row.id), { state: { returnTo: routePaths.managerParent.softwareManagement(lang) } })}
+          >
             {t('common.activate')}
           </Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => navigate(routePaths.managerParent.programEdit(lang, row.id))}>
@@ -323,7 +326,12 @@ export function SoftwareManagementPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={() => setActivationProgram(program)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(routePaths.managerParent.activateLicense(lang, program.id), { state: { returnTo: routePaths.managerParent.softwareManagement(lang) } })}
+                  >
                     {t('common.activate')}
                   </Button>
                   <Button type="button" size="sm" onClick={() => navigate(routePaths.managerParent.programEdit(lang, program.id))}>
@@ -491,21 +499,7 @@ export function SoftwareManagementPage() {
           }
         }}
       />
-      <ActivateLicenseModal
-        open={activationProgram !== null}
-        onClose={() => setActivationProgram(null)}
-        program={
-          activationProgram
-            ? {
-                id: activationProgram.id,
-                name: activationProgram.name,
-                price_per_day: activationProgram.base_price,
-                has_external_api: activationProgram.has_external_api,
-                external_software_id: activationProgram.external_software_id,
-              }
-            : null
-        }
-      />
+      
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
 import { customerService } from '@/services/customer.service'
-import { formatIpLocation } from '@/utils/countryFlag'
+import { IpLocationCell } from '@/utils/countryFlag'
 
 export function CustomerDetailPage() {
   const { t } = useTranslation()
@@ -77,7 +77,7 @@ export function CustomerDetailPage() {
               {(customer.ip_logs ?? []).map((log) => (
                 <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
                   <p className="font-medium">{log.ip_address}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{formatIpLocation(log.country ?? 'Unknown', log.city ?? '', '')}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
                 </div>
               ))}

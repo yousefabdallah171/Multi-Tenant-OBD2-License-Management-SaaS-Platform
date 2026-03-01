@@ -32,10 +32,15 @@ class LicenseService
         $reseller = $this->resolveReseller($actor);
         $program = Program::query()->findOrFail($data['program_id']);
         $biosId = trim((string) $data['bios_id']);
+        $customerName = trim((string) ($data['customer_name'] ?? ''));
         $apiKey = $program->getDecryptedApiKey();
 
         if ($biosId === '') {
             throw ValidationException::withMessages(['bios_id' => 'The BIOS ID field is required.']);
+        }
+
+        if ($customerName === '') {
+            throw ValidationException::withMessages(['customer_name' => 'The customer name field is required.']);
         }
 
         if ($program->status !== 'active') {
@@ -50,7 +55,7 @@ class LicenseService
 
         $this->assertBiosAvailable($reseller, $program, $biosId);
 
-        $apiResponse = $this->externalApiService->activateUser($apiKey, $biosId, $biosId);
+        $apiResponse = $this->externalApiService->activateUser($apiKey, $customerName, $biosId);
 
         $this->logBiosAccess($reseller, $biosId, 'activate', [
             'program_id' => $program->id,
@@ -63,7 +68,7 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($data, $reseller, $program, $biosId, $apiResponse): License {
+        return DB::transaction(function () use ($data, $customerName, $reseller, $program, $biosId, $apiResponse): License {
             $customer = $this->upsertCustomer($reseller, $data, $biosId);
             $durationDays = (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
@@ -74,7 +79,7 @@ class LicenseService
                 'reseller_id' => $reseller->id,
                 'program_id' => $program->id,
                 'bios_id' => $biosId,
-                'external_username' => $biosId,
+                'external_username' => $customerName,
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
@@ -150,30 +155,26 @@ class LicenseService
         $reseller = $this->resolveReseller($actor, $license->reseller);
         $program = $license->program()->first();
         $apiKey = $program?->getDecryptedApiKey();
+        $apiResponse = [
+            'success' => false,
+            'data' => ['response' => null],
+            'status_code' => 0,
+        ];
 
-        if ($apiKey === null) {
-            throw ValidationException::withMessages([
-                'license' => 'Program has no external API configured.',
-            ]);
+        if ($apiKey !== null) {
+            $externalUsername = $license->external_username ?: $license->bios_id;
+            $apiResponse = $this->externalApiService->deactivateUser($apiKey, $externalUsername);
         }
-
-        $apiResponse = $this->externalApiService->deactivateUser($apiKey, $license->bios_id);
 
         $this->logBiosAccess($reseller, $license->bios_id, 'deactivate', [
             'license_id' => $license->id,
             'external' => $apiResponse,
         ]);
 
-        if (! $apiResponse['success']) {
-            throw ValidationException::withMessages([
-                'license' => $this->extractExternalMessage($apiResponse, 'The deactivation request was rejected by the external service.'),
-            ]);
-        }
-
         $deactivatedLicense = DB::transaction(function () use ($license, $reseller, $apiResponse): License {
             $license->forceFill([
                 'status' => 'suspended',
-                'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? ''),
+                'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Local-only deactivation.'),
             ])->save();
 
             $this->logActivity(
@@ -230,15 +231,26 @@ class LicenseService
 
     private function upsertCustomer(User $reseller, array $data, string $biosId): User
     {
-        $customer = User::query()->firstOrNew([
-            'tenant_id' => $reseller->tenant_id,
-            'email' => $data['customer_email'],
-        ]);
+        $email = $this->resolveCustomerEmail($reseller, $biosId, $data['customer_email'] ?? null);
+
+        $customer = User::query()
+            ->where('tenant_id', $reseller->tenant_id)
+            ->where(function ($query) use ($email, $biosId): void {
+                $query
+                    ->where('email', $email)
+                    ->orWhere('username', $biosId);
+            })
+            ->where('role', UserRole::CUSTOMER->value)
+            ->first();
+
+        if (! $customer) {
+            $customer = new User();
+        }
 
         $payload = [
             'tenant_id' => $reseller->tenant_id,
             'name' => $data['customer_name'],
-            'email' => $data['customer_email'],
+            'email' => $email,
             'phone' => $data['customer_phone'] ?? null,
             'role' => UserRole::CUSTOMER,
             'status' => 'active',
@@ -262,6 +274,21 @@ class LicenseService
         $customer->save();
 
         return $customer->fresh();
+    }
+
+    private function resolveCustomerEmail(User $reseller, string $biosId, mixed $rawEmail): string
+    {
+        $email = is_string($rawEmail) ? trim($rawEmail) : '';
+
+        if ($email !== '') {
+            return strtolower($email);
+        }
+
+        $normalizedBios = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $biosId) ?? 'bios');
+        $normalizedBios = trim($normalizedBios, '-');
+        $normalizedBios = $normalizedBios !== '' ? $normalizedBios : 'bios';
+
+        return sprintf('no-email+tenant%s-%s@obd2sw.local', (string) ($reseller->tenant_id ?? '0'), $normalizedBios);
     }
 
     private function currentActor(): User

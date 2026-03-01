@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -87,6 +87,12 @@ export function ResellerPricingPage() {
 
   const payload = pricingQuery.data?.data
   const selectedId = selectedResellerId ?? payload?.selected_reseller_id ?? null
+
+  useEffect(() => {
+    if (selectedResellerId === null && payload?.resellers?.length) {
+      setSelectedResellerId(payload.resellers[0].id)
+    }
+  }, [payload?.resellers, selectedResellerId])
 
   const columns = useMemo<Array<DataTableColumn<PricingRow>>>(
     () => [

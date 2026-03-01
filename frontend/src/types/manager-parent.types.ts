@@ -75,6 +75,7 @@ export interface ProgramLog {
   bios_id?: string
   timestamp: string
   ip?: string
+  customer_id?: number | null
 }
 
 export interface ProgramLogLicenseInfo {
@@ -136,7 +137,9 @@ export interface ActivityEntry {
 export interface CustomerSummary {
   id: number
   name: string
-  email: string
+  email: string | null
+  phone?: string | null
+  license_id?: number | null
   bios_id: string | null
   reseller: string | null
   program: string | null
@@ -226,15 +229,17 @@ export interface BiosHistoryEntry {
 }
 
 export interface IpAnalyticsEntry {
-  id: number
-  user: { id: number; name: string; email: string } | null
+  username: string
+  bios_id: string | null
+  customer_id: number | null
   ip_address: string
-  country: string | null
-  city: string | null
-  isp: string | null
-  reputation_score: 'low' | 'medium' | 'high'
-  action: string
-  created_at: string | null
+  timestamp: string
+  country: string
+  country_code: string
+  city: string
+  isp: string
+  proxy: boolean
+  hosting: boolean
 }
 
 export interface IpAnalyticsStats {

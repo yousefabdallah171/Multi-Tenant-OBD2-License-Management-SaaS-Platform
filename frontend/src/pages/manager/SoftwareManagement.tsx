@@ -4,7 +4,6 @@ import { Eye, EyeOff, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { ActivateLicenseModal } from '@/components/ActivateLicenseModal'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonCard } from '@/components/shared/SkeletonCard'
@@ -86,7 +85,6 @@ export function SoftwareManagementPage() {
   const [editingProgram, setEditingProgram] = useState<ManagerSoftwareProgram | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ManagerSoftwareProgram | null>(null)
   const [activationTarget, setActivationTarget] = useState<ManagerSoftwareProgram | null>(null)
-  const [universalActivationProgram, setUniversalActivationProgram] = useState<ManagerSoftwareProgram | null>(null)
   const [form, setForm] = useState<ProgramFormState>(EMPTY_FORM)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION)
   const [showApiKey, setShowApiKey] = useState(false)
@@ -356,7 +354,12 @@ export function SoftwareManagementPage() {
                   />
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={() => setUniversalActivationProgram(program)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(routePaths.manager.activateLicense(lang, program.id), { state: { returnTo: routePaths.manager.softwareManagement(lang) } })}
+                  >
                     {t('common.activate')}
                   </Button>
                   <Button type="button" size="sm" onClick={() => navigate(routePaths.manager.programEdit(lang, program.id))}>
@@ -549,21 +552,6 @@ export function SoftwareManagementPage() {
             deleteMutation.mutate(deleteTarget.id)
           }
         }}
-      />
-      <ActivateLicenseModal
-        open={universalActivationProgram !== null}
-        onClose={() => setUniversalActivationProgram(null)}
-        program={
-          universalActivationProgram
-            ? {
-                id: universalActivationProgram.id,
-                name: universalActivationProgram.name,
-                price_per_day: universalActivationProgram.base_price,
-                has_external_api: universalActivationProgram.has_external_api,
-                external_software_id: universalActivationProgram.external_software_id,
-              }
-            : null
-        }
       />
     </div>
   )
