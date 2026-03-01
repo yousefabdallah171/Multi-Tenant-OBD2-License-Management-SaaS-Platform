@@ -16,7 +16,7 @@
 - Implement BIOS activation with 4-step check: blacklist → conflict → IP log → API call
 - Build license management with status tracking
 - Create personal reports for individual performance
-- Integrate with external API (`72.60.69.185`) for activation/deactivation
+- Integrate with external API (`EXTERNAL_API_HOST`) for activation/deactivation
 - **Reseller restrictions:** NO username/password editing, NO deleting managers
 
 ---
@@ -69,7 +69,7 @@ Step 4: Confirm & Activate
   - Summary review
   - "Activate" button
   - Calls: POST /api/licenses/activate
-    → Backend calls: POST 72.60.69.185/apiuseradd/{KEY}/{BIOS_ID}
+    → Backend calls: POST EXTERNAL_API_HOST/apiuseradd/{KEY}/{BIOS_ID}
     → On success: Creates License record + Customer user account
     → Pusher notification sent
 ```
@@ -81,14 +81,14 @@ Step 4: Confirm & Activate
   - New price input
   - "Renew" button
   - Calls: POST /api/licenses/{id}/renew
-    → Backend calls: POST 72.60.69.185/apirenew/{KEY}/{BIOS_ID}
+    → Backend calls: POST EXTERNAL_API_HOST/apirenew/{KEY}/{BIOS_ID}
 ```
 
 **Deactivate Flow:**
 ```
   - ConfirmDialog: "Are you sure you want to deactivate this license?"
   - Calls: POST /api/licenses/{id}/deactivate
-    → Backend calls: POST 72.60.69.185/apideluser/{KEY}/{BIOS_ID}
+    → Backend calls: POST EXTERNAL_API_HOST/apideluser/{KEY}/{BIOS_ID}
     → License status -> suspended
 ```
 
@@ -204,7 +204,7 @@ backend/app/Http/Controllers/Reseller/
 
 backend/app/Services/
 ├── LicenseService.php           # Business logic: create license, call external API
-└── ExternalApiService.php       # (from Phase 01) HTTP calls to 72.60.69.185
+└── ExternalApiService.php       # (from Phase 01) HTTP calls to EXTERNAL_API_HOST
 ```
 
 ---
@@ -298,7 +298,7 @@ class LicenseService
 
 - [ ] All 7 Manager/Reseller pages render correctly
 - [ ] **Customer activation via BIOS ID works end-to-end:**
-  - Reseller fills form → Backend calls 72.60.69.185 → License created → Customer notified
+  - Reseller fills form → Backend calls EXTERNAL_API_HOST → License created → Customer notified
 - [ ] License renewal calls external API and updates expiry
 - [ ] License deactivation calls external API and suspends license
 - [ ] All external API calls are logged in api_logs

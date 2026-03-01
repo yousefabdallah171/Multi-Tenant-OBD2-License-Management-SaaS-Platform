@@ -4,7 +4,7 @@ import type { PaginatedResponse, TeamMemberStats, TeamMemberSummary } from '@/ty
 export interface TeamListParams {
   page?: number
   per_page?: number
-  role?: 'manager' | 'reseller'
+  role?: 'manager' | 'reseller' | ''
   status?: 'active' | 'suspended' | 'inactive' | ''
   search?: string
 }

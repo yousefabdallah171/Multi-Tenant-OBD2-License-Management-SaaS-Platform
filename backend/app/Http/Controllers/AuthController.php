@@ -3,41 +3,127 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
+use App\Mail\SuspiciousLoginMail;
+use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\GeoIpService;
+use App\Services\LoginSecurityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends Controller
 {
-    public function login(LoginRequest $request): JsonResponse
+    public function __construct(
+        private readonly LoginSecurityService $loginSecurity,
+        private readonly GeoIpService $geoIpService,
+    ) {
+    }
+
+    public function login(
+        LoginRequest $request,
+    ): JsonResponse
     {
+        $email = strtolower(trim($request->string('email')->toString()));
+        $ip = trim((string) $request->ip());
+        $userAgent = (string) $request->userAgent();
+
+        $preLockStatus = $this->loginSecurity->isLocked($email, $ip);
+        if (($preLockStatus['locked'] ?? false) === true) {
+            if (($preLockStatus['reason'] ?? null) === 'account_locked') {
+                $attemptState = $this->loginSecurity->recordFailedAttempt($email, $ip, $userAgent);
+                if (($attemptState['newly_blocked'] ?? false) === true) {
+                    $this->logSecurityBlockIp($ip, $email, $userAgent);
+                }
+
+                return $this->lockoutResponse($email, $attemptState, $this->loginSecurity);
+            }
+
+            return $this->lockoutResponse($email, $preLockStatus, $this->loginSecurity);
+        }
+
         /** @var User|null $user */
-        $user = User::query()->with('tenant')->where('email', $request->string('email')->toString())->first();
+        $user = User::query()->with('tenant')->where('email', $email)->first();
 
         if (! $user || ! Hash::check($request->string('password')->toString(), $user->password)) {
-            return response()->json(['message' => 'Invalid credentials.'], Response::HTTP_UNAUTHORIZED);
+            $attemptState = $this->loginSecurity->recordFailedAttempt($email, $ip, $userAgent);
+            if (($attemptState['newly_blocked'] ?? false) === true) {
+                $this->logSecurityBlockIp($ip, $email, $userAgent);
+            }
+
+            if (($attemptState['locked'] ?? false) === true) {
+                return $this->lockoutResponse($email, $attemptState, $this->loginSecurity);
+            }
+
+            return response()
+                ->json(['message' => 'Invalid credentials.'], Response::HTTP_UNAUTHORIZED)
+                ->withHeaders($this->rateHeaders($email, $this->loginSecurity));
         }
 
         // CUSTOMER SILENT DENY
         // Returns identical 401 as wrong password - no trace of customer role.
         $userRole = $user->role?->value ?? (string) $user->role;
         if ($userRole === 'customer') {
-            return response()->json(['message' => 'Invalid credentials.'], Response::HTTP_UNAUTHORIZED);
+            $attemptState = $this->loginSecurity->recordFailedAttempt($email, $ip, $userAgent);
+            if (($attemptState['newly_blocked'] ?? false) === true) {
+                $this->logSecurityBlockIp($ip, $email, $userAgent);
+            }
+
+            if (($attemptState['locked'] ?? false) === true) {
+                return $this->lockoutResponse($email, $attemptState, $this->loginSecurity);
+            }
+
+            return response()
+                ->json(['message' => 'Invalid credentials.'], Response::HTTP_UNAUTHORIZED)
+                ->withHeaders($this->rateHeaders($email, $this->loginSecurity));
         }
 
         if ($user->status !== 'active') {
             return response()->json(['message' => 'User account is not active.'], Response::HTTP_FORBIDDEN);
         }
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+        $knownIp = $user->ipLogs()
+            ->where('ip_address', $ip)
+            ->where('action', 'login.success')
+            ->exists();
 
-        return response()->json([
-            'token' => $token,
-            'user' => $user,
+        $geo = $this->geoIpService->lookup($ip);
+        $user->ipLogs()->create([
+            'tenant_id' => $user->tenant_id,
+            'ip_address' => $ip,
+            'country' => $geo['country_name'] ?? null,
+            'city' => $geo['city'] ?? null,
+            'isp' => $geo['isp'] ?? null,
+            'reputation_score' => 'low',
+            'action' => 'login.success',
         ]);
+
+        if (! $knownIp) {
+            try {
+                Mail::to($user->email)->queue(new SuspiciousLoginMail(
+                    userEmail: $user->email,
+                    ip: $ip,
+                    country: (string) ($geo['country_name'] ?? 'Unknown'),
+                    city: (string) ($geo['city'] ?? ''),
+                    device: $this->loginSecurity->summarizeDevice($userAgent),
+                    loginTime: now()->toDateTimeString(),
+                ));
+            } catch (\Throwable) {
+                // Never block login flow on mail errors.
+            }
+        }
+
+        $token = $user->createToken('auth-token')->plainTextToken;
+        $this->loginSecurity->clearAttempts($email, $ip);
+
+        return response()
+            ->json([
+                'token' => $token,
+                'user' => $user,
+            ])
+            ->withHeaders($this->rateHeaders($email, $this->loginSecurity));
     }
 
     public function logout(Request $request): JsonResponse
@@ -51,19 +137,6 @@ class AuthController extends Controller
     {
         return response()->json([
             'user' => $request->user()?->load('tenant'),
-        ]);
-    }
-
-    public function forgotPassword(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'email' => ['required', 'email'],
-        ]);
-
-        Password::sendResetLink($validated);
-
-        return response()->json([
-            'message' => 'If the account exists, a reset email has been queued.',
         ]);
     }
 
@@ -108,6 +181,60 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Password updated successfully.',
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $lockStatus
+     */
+    private function lockoutResponse(string $email, array $lockStatus, LoginSecurityService $loginSecurity): JsonResponse
+    {
+        $isIpBlocked = ($lockStatus['reason'] ?? null) === 'ip_blocked';
+        $secondsRemaining = $isIpBlocked ? 0 : (int) ($lockStatus['seconds_remaining'] ?? 0);
+
+        return response()
+            ->json([
+                'message' => $isIpBlocked
+                    ? 'Too many failed attempts. This IP address is permanently blocked.'
+                    : 'Too many failed attempts. Account is temporarily locked.',
+                'locked' => true,
+                'reason' => $lockStatus['reason'] ?? 'account_locked',
+                'unlocks_at' => $lockStatus['unlocks_at'] ?? null,
+                'seconds_remaining' => $lockStatus['seconds_remaining'] ?? null,
+            ], Response::HTTP_TOO_MANY_REQUESTS)
+            ->withHeaders([
+                ...$this->rateHeaders($email, $loginSecurity, forceRemaining: 0),
+                'Retry-After' => $secondsRemaining,
+            ]);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function rateHeaders(string $email, LoginSecurityService $loginSecurity, ?int $forceRemaining = null): array
+    {
+        $remaining = $forceRemaining ?? $loginSecurity->getRemainingAttempts($email);
+
+        return [
+            'X-RateLimit-Limit' => 10,
+            'X-RateLimit-Remaining' => $remaining,
+            'X-RateLimit-Reset' => $loginSecurity->getResetTimestamp(),
+        ];
+    }
+
+    private function logSecurityBlockIp(string $ip, string $email, string $userAgent): void
+    {
+        ActivityLog::query()->create([
+            'tenant_id' => null,
+            'user_id' => null,
+            'action' => 'security.block_ip',
+            'description' => sprintf('Blocked IP %s after repeated failed logins.', $ip),
+            'metadata' => [
+                'blocked_ip' => $ip,
+                'email' => $email,
+                'user_agent' => $userAgent,
+            ],
+            'ip_address' => $ip,
         ]);
     }
 }

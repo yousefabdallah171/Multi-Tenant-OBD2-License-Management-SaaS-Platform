@@ -24,8 +24,4 @@ export const authService = {
     const { data } = await api.get<MeResponse>('/auth/me')
     return data
   },
-  async forgotPassword(email: string) {
-    const { data } = await api.post<ApiMessageResponse>('/auth/forgot-password', { email })
-    return data
-  },
 }

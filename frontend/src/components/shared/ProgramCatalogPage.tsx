@@ -31,6 +31,8 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
   const programsQuery = useQuery({
     queryKey: ['program-catalog', translationPrefix, search],
     queryFn: () => programService.getAll({ per_page: 100, search, status: 'active' }),
+    refetchOnMount: 'always',
+    retry: 1,
   })
 
   const programs = programsQuery.data?.data ?? []
@@ -57,9 +59,20 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
         </div>
       ) : null}
 
-      {programs.length === 0 && !programsQuery.isLoading ? (
+      {programsQuery.isError ? (
+        <Card>
+          <CardContent className="flex flex-col items-start gap-3 p-5">
+            <p className="text-sm text-rose-600 dark:text-rose-400">{t('common.connectionLost')}</p>
+            <Button type="button" variant="outline" onClick={() => void programsQuery.refetch()}>
+              {t('common.tryAgain')}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {programs.length === 0 && !programsQuery.isLoading && !programsQuery.isError ? (
         <EmptyState title={t(`${translationPrefix}.emptyTitle`)} description={t(`${translationPrefix}.emptyDescription`)} icon={PackageSearch} />
-      ) : (
+      ) : programs.length > 0 ? (
         <StaggerGroup className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {programs.map((program) => (
             <StaggerItem key={program.id}>
@@ -135,7 +148,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
             </StaggerItem>
           ))}
         </StaggerGroup>
-      )}
+      ) : null}
     </div>
   )
 }

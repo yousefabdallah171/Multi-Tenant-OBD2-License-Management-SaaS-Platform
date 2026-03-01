@@ -61,7 +61,7 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses for OBD2 automotive diagnostic tools. Each license is **hardware-locked to a BIOS ID**, ensuring one device per license. The platform supports:
 
 - **Role hierarchy** with tenant isolation (Super Admin > Manager Parent > Manager > Reseller), with Customer portal removed
-- **External API integration** for hardware-locked license activation via `72.60.69.185`
+- **External API integration** for hardware-locked license activation via `EXTERNAL_API_HOST`
 - **BIOS security**: Blacklisting, conflict detection, and full activation history
 - **IP Geolocation**: Tracks country, city, ISP, and reputation on every activation
 - **Real-time analytics**: Dashboards with Recharts, CSV/PDF export, Pusher notifications
@@ -140,7 +140,7 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 │  Middleware Stack:   │
 │  ├─ TenantScope     │    ┌──────────────────────────┐
 │  ├─ RolePermission  │    │    External API            │
-│  ├─ BiosBlacklist   │    │    72.60.69.185            │
+│  ├─ BiosBlacklist   │    │    EXTERNAL_API_HOST            │
 │  │   Check          │    │    /apiuseradd (activate)  │
 │  ├─ IpTracker       ├───>│    /apideluser (deactivate)│
 │  └─ ApiLogger       │    │    /apiusers (list)        │
@@ -521,16 +521,16 @@ CREATE TABLE financial_reports (
 
 ## 7. External API Integration
 
-All calls to `72.60.69.185` are proxied through Laravel (API key **never** exposed to frontend).
+All calls to `EXTERNAL_API_HOST` are proxied through Laravel (API key **never** exposed to frontend).
 
 | # | Method | Full Endpoint | Laravel Proxy Route | Description |
 |---|--------|--------------|-------------------|-------------|
-| 1 | `POST` | `http://72.60.69.185/apiuseradd/L9H2F7Q8XK6M4A/{bios_id}` | `POST /api/licenses/activate` | Activate license for BIOS |
-| 2 | `POST` | `http://72.60.69.185/apideluser/L9H2F7Q8XK6M4A/{user_id}` | `POST /api/licenses/{id}/deactivate` | Deactivate/remove license |
-| 3 | `GET` | `http://72.60.69.185/apiusers/{id}` | `GET /api/external/users` | List all external licenses |
-| 4 | `GET` | `http://72.60.69.185/showallapi/{id}` | `GET /api/external/all` | Get all API data |
-| 5 | `GET` | `http://72.60.69.185/apilogs/{id}` | `GET /api/external/logs` | Get API logs by ID |
-| 6 | `GET` | `http://72.60.69.185/getmylogs` | `GET /api/external/my-logs` | Get authenticated user logs |
+| 1 | `POST` | `${EXTERNAL_API_URL}/apiuseradd/L9H2F7Q8XK6M4A/{bios_id}` | `POST /api/licenses/activate` | Activate license for BIOS |
+| 2 | `POST` | `${EXTERNAL_API_URL}/apideluser/L9H2F7Q8XK6M4A/{user_id}` | `POST /api/licenses/{id}/deactivate` | Deactivate/remove license |
+| 3 | `GET` | `${EXTERNAL_API_URL}/apiusers/{id}` | `GET /api/external/users` | List all external licenses |
+| 4 | `GET` | `${EXTERNAL_API_URL}/showallapi/{id}` | `GET /api/external/all` | Get all API data |
+| 5 | `GET` | `${EXTERNAL_API_URL}/apilogs/{id}` | `GET /api/external/logs` | Get API logs by ID |
+| 6 | `GET` | `${EXTERNAL_API_URL}/getmylogs` | `GET /api/external/my-logs` | Get authenticated user logs |
 
 > **API Key:** `L9H2F7Q8XK6M4A` (stored in backend `.env` only, never exposed to frontend)
 
@@ -598,7 +598,7 @@ Step 4: IP GEOLOCATION
   └─ Flag suspicious IPs (reputation: 'high' risk)
 
 Step 5: EXTERNAL API CALL
-  └─ POST http://72.60.69.185/apiuseradd/KEY/{bios_id}
+  └─ POST ${EXTERNAL_API_URL}/apiuseradd/KEY/{bios_id}
   └─ Log request + response to api_logs
   └─ On failure → rollback, return error
   └─ On success → continue
@@ -1150,7 +1150,7 @@ backend/
 │   │   ├── UserBalance.php
 │   │   └── FinancialReport.php
 │   ├── Services/
-│   │   ├── ExternalApiService.php            # HTTP client for 72.60.69.185
+│   │   ├── ExternalApiService.php            # HTTP client for EXTERNAL_API_HOST
 │   │   ├── IpGeolocationService.php          # HTTP client for ipapi.co
 │   │   ├── BiosActivationService.php         # 6-step activation pipeline
 │   │   └── BalanceService.php                # Reseller balance updates
@@ -1681,7 +1681,7 @@ CACHE_DRIVER=redis
 SESSION_DRIVER=redis
 QUEUE_CONNECTION=redis
 
-EXTERNAL_API_URL=http://72.60.69.185
+EXTERNAL_API_URL=${EXTERNAL_API_URL}
 EXTERNAL_API_KEY=L9H2F7Q8XK6M4A
 
 IP_GEO_PROVIDER=ipapi
@@ -1849,7 +1849,7 @@ DB_PASSWORD=
 
 SANCTUM_STATEFUL_DOMAINS=license.test,localhost:3000,127.0.0.1:3000
 
-EXTERNAL_API_URL=http://72.60.69.185
+EXTERNAL_API_URL=${EXTERNAL_API_URL}
 EXTERNAL_API_KEY=L9H2F7Q8XK6M4A
 EXTERNAL_API_TIMEOUT=10
 EXTERNAL_API_RETRIES=3

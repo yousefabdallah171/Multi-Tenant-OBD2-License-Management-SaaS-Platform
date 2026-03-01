@@ -20,7 +20,7 @@ class RealSoftwareSeeder extends Seeder
             [
                 'tenant_id' => $tenant->id,
                 'name' => 'OBD2SW Live Software',
-                'description' => 'Real external API integration - software_id 8 on 72.60.69.185',
+                'description' => 'Real external API integration - software_id configured via EXTERNAL_API_URL env variable.',
                 'version' => '2.0.0',
                 'download_link' => 'https://obd2sw.com/download/live',
                 'trial_days' => 7,

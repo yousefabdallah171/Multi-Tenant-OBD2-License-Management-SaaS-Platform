@@ -7,6 +7,50 @@
 > Check each item as you complete it.
 > After every sub-phase, run `npm run dev` and test all 4 accounts (admin, parent, manager, reseller).
 
+## STATUS UPDATE (2026-03-01)
+
+This block reflects the current implementation and verification status after the latest code changes.
+
+### Completed in code
+
+- [x] SEC-LOGIN-2: forgot-password page/route/api/i18n removed
+- [x] SEC-1: `LoginSecurityService.php` created and registered in `AppServiceProvider`
+- [x] SEC-2: lockout logic integrated into `AuthController::login()` with 429 responses
+- [x] SEC-3: `SuperAdmin/SecurityController.php` created (locks/unblock/audit)
+- [x] SEC-4: super admin security routes added in `backend/routes/api.php`
+- [x] SEC-5: `LockoutBanner.tsx` + login lockout handling (countdown + permanent block)
+- [x] SEC-6: `SecurityLocks.tsx` page added + routed + in sidebar
+- [x] SEC-7: `security.service.ts` and security types added
+- [x] SEC-10: user-agent/device tracking on locked/blocked entries
+- [x] SEC-11: GeoIP enrichment (`GeoIpService.php`) + country/city display in SecurityLocks
+- [x] SEC-12: suspicious login email (`SuspiciousLoginMail.php` + blade + queued send)
+- [x] SEC-13: permanent block banner with `mailto:support@obd2sw.com`
+- [x] SEC-14: `X-RateLimit-*` and `Retry-After` headers added
+- [x] SEC-15: audit log endpoint + third tab in `SecurityLocks.tsx`
+- [x] `admin-management` 404 fixed by adding backend routes
+- [x] Manager Parent Team page supports `All / Managers / Resellers`
+- [x] Reseller activity page removed (frontend routes/sidebar + backend endpoint)
+- [x] Program catalog loading hardened (retry + explicit error state + refetch on mount)
+- [x] Manager Parent API Status linked to selected software/program
+- [x] Financial reseller balances aligned to license-derived totals
+
+### Verified by commands
+
+- [x] `php artisan test` passes
+- [x] `npx tsc --noEmit` passes
+- [x] `npm run build` passes
+- [x] `rg "forgot-password|forgotPassword|forgot_password" frontend/src` returns no matches
+
+### Pending manual/operational items
+
+- [ ] Full manual UX regression across all roles/pages and both languages
+- [ ] Real mailbox delivery validation for suspicious-login email in SMTP environment
+- [ ] Final commit tasks (SEC-9 / SEC-17) not executed yet
+
+### Legacy checklist conflicts
+
+- [ ] Some older tasks conflict with newer direction (example: removing `super-admin/admin-management` vs latest requirement to keep/fix it). Keep those legacy items unchecked until the checklist is rewritten.
+
 ---
 
 ## Sub-Phase 1: Customer Portal — Complete Removal + Silent Deny (25 minutes)
@@ -1000,7 +1044,7 @@ Run these checks after ALL sub-phases are complete:
   2. Wrap everything in `DB::transaction(function () { ... })`
   3. **Auto-create customer user**: `User::create(['name' => $validated['customer_name'], 'email' => $validated['customer_email'], 'password' => Hash::make(Str::random(32)), 'role' => 'customer', 'username' => $validated['bios_id'], 'tenant_id' => auth()->user()->tenant_id])`
   4. **Create License record**: linked to the new customer, with `bios_id`, `program_id`, `duration_days`, `price`, `expires_at = now()->addDays($duration_days)`, `activated_by = auth()->id()`
-  5. **Call External API**: POST to `http://72.60.69.185/api/activate` with BIOS ID and license data — use `Http::post(...)` (Laravel HTTP facade)
+  5. **Call External API**: POST to `http://EXTERNAL_API_HOST/api/activate` with BIOS ID and license data — use `Http::post(...)` (Laravel HTTP facade)
   6. On external API failure: throw exception inside transaction so customer + license records are rolled back
   7. Return: `{ message: 'License activated.', license_key: '...', customer_id: ..., expires_at: '...' }`
 
@@ -1077,7 +1121,7 @@ Run these checks after ALL sub-phases are complete:
 > - `LicenseService.php` and `BiosActivationService.php` already do blacklist check, BIOS conflict detection, balance crediting — this logic is CORRECT and must be kept.
 > - `config/external-api.php` uses ONE global API key — but the real system is **per-program**: each software title has its own API key and its own software_id on the external server.
 > - `programs` table has NO `external_api_key` or `external_software_id` columns yet.
-> - `LicenseController.php` (root) calls `POST http://72.60.69.185/api/activate` directly (wrong) — this needs to be removed in favor of going through `LicenseService`.
+> - `LicenseController.php` (root) calls `POST http://EXTERNAL_API_HOST/api/activate` directly (wrong) — this needs to be removed in favor of going through `LicenseService`.
 > - `Reseller/LicenseController.php` already uses `LicenseService` correctly.
 > - `Manager/SoftwareController.php` already uses `BiosActivationService` correctly.
 >
@@ -1127,33 +1171,33 @@ Run these checks after ALL sub-phases are complete:
 - [ ] **Rewrite** the following methods (keep the `logApiCall()` method — it's correct):
 
   **`activateUser(string $apiKey, string $username, string $biosId): array`**
-  - URL: `GET http://72.60.69.185/apiuseradd/{apiKey}/{username}/{biosId}`
+  - URL: `GET http://EXTERNAL_API_HOST/apiuseradd/{apiKey}/{username}/{biosId}`
   - Response body is plain text `"True"` (with quotes) or an error string
   - Success = response is `200` AND body contains "True"
   - Return: `['success' => true/false, 'data' => ['response' => $body], 'status_code' => $code]`
 
   **`deactivateUser(string $apiKey, string $username): array`**
-  - URL: `GET http://72.60.69.185/apideluser/{apiKey}/{username}`
+  - URL: `GET http://EXTERNAL_API_HOST/apideluser/{apiKey}/{username}`
   - Same plain text response pattern as above
 
   **`getActiveUsers(int $softwareId): array`**
-  - URL: `GET http://72.60.69.185/apiusers/{softwareId}`
+  - URL: `GET http://EXTERNAL_API_HOST/apiusers/{softwareId}`
   - Response is Python-style dict with single quotes e.g. `{'USER1': 'BIOS1', 'USER2': 'BIOS2'}`
   - **NOT valid JSON** — parse it manually: `str_replace(["'", "True", "False"], ['"', 'true', 'false'], $body)` then `json_decode()`
   - Return: `['success' => true, 'data' => ['users' => $parsed], 'status_code' => 200]`
 
   **`getSoftwareStats(int $softwareId): array`**
-  - URL: `GET http://72.60.69.185/showallapi/{softwareId}`
+  - URL: `GET http://EXTERNAL_API_HOST/showallapi/{softwareId}`
   - Response is an integer (user count as plain text)
   - Return: `['success' => true, 'data' => ['count' => (int)$body], 'status_code' => 200]`
 
   **`getProgramLogs(int $softwareId): array`**
-  - URL: `GET http://72.60.69.185/apilogs/{softwareId}`
+  - URL: `GET http://EXTERNAL_API_HOST/apilogs/{softwareId}`
   - Response is plain text (Content-Type: text/plain)
   - Return: `['success' => true, 'data' => ['raw' => $body], 'status_code' => 200]`
 
   **`getGlobalLogs(): array`**
-  - URL: `GET http://72.60.69.185/getmylogs`
+  - URL: `GET http://EXTERNAL_API_HOST/getmylogs`
   - Same plain text format as program logs
   - Return: `['success' => true, 'data' => ['raw' => $body], 'status_code' => 200]`
 
@@ -1196,9 +1240,9 @@ Run these checks after ALL sub-phases are complete:
 ### 3.5.6 Fix `LicenseController.php` (Root) — Remove Duplicate Direct API Call
 
 - [ ] Open `backend/app/Http/Controllers/LicenseController.php`
-- [ ] This controller duplicates the activation logic AND calls `POST http://72.60.69.185/api/activate` directly (wrong endpoint)
+- [ ] This controller duplicates the activation logic AND calls `POST http://EXTERNAL_API_HOST/api/activate` directly (wrong endpoint)
 - [ ] Refactor `activateLicense()` to use `LicenseService::activate()` instead of doing everything inline
-- [ ] Remove the direct `Http::post('http://72.60.69.185/api/activate', ...)` call completely
+- [ ] Remove the direct `Http::post('http://EXTERNAL_API_HOST/api/activate', ...)` call completely
 - [ ] Inject `LicenseService` into this controller via constructor
 - [ ] Keep validation and response format, but delegate all business logic to `LicenseService`
 
@@ -1272,7 +1316,7 @@ Run these checks after ALL sub-phases are complete:
   **Page structure:**
   - Dropdown at top: "Select Program" — loads all tenant programs that have `has_external_api === true`
   - When a program is selected → fetch `GET /api/manager-parent/programs/{id}/logs`
-  - Our backend proxies to `GET http://72.60.69.185/apilogs/{external_software_id}`
+  - Our backend proxies to `GET http://EXTERNAL_API_HOST/apilogs/{external_software_id}`
   - Parse the plain text response into two tabs:
 
   **Tab 1: "Activation Events"** — lines containing "new user added" or "user deleted":
@@ -1413,8 +1457,8 @@ Run these checks after ALL sub-phases are complete:
 
 **Activation flow (end-to-end):**
 - [ ] Log in as reseller → Software → ACTIVATE → fill form → submit
-- [ ] Check `curl http://72.60.69.185/apiusers/{software_id}` → new username appears in the response
-- [ ] Check `curl http://72.60.69.185/apilogs/{software_id}` → "new user added" line appears in logs
+- [ ] Check `curl http://EXTERNAL_API_HOST/apiusers/{software_id}` → new username appears in the response
+- [ ] Check `curl http://EXTERNAL_API_HOST/apilogs/{software_id}` → "new user added" line appears in logs
 - [ ] Licenses table → new row has `external_username` = bios_id, `external_activation_response` = "True"
 - [ ] Try to activate same BIOS again → error "An active license already exists for this BIOS ID"
 - [ ] Try to activate a blacklisted BIOS → error "This BIOS ID is blacklisted"
@@ -1422,8 +1466,8 @@ Run these checks after ALL sub-phases are complete:
 
 **Deactivation flow:**
 - [ ] Reseller → Licenses → DEACTIVATE a license → confirm
-- [ ] Check `curl http://72.60.69.185/apiusers/{software_id}` → username NO LONGER appears
-- [ ] Check `curl http://72.60.69.185/apilogs/{software_id}` → "user deleted" line appears
+- [ ] Check `curl http://EXTERNAL_API_HOST/apiusers/{software_id}` → username NO LONGER appears
+- [ ] Check `curl http://EXTERNAL_API_HOST/apilogs/{software_id}` → "user deleted" line appears
 - [ ] License row → `status = 'suspended'`, `external_deletion_response = 'True'`
 
 **Program Logs page:**
@@ -1453,8 +1497,8 @@ Run these checks after ALL sub-phases are complete:
 > **Why this exists:** After Phase 3.5 migration runs, the `programs` table has the new columns but no program has `external_api_key` or `external_software_id` set yet. We already confirmed via curl that the real external server is alive with:
 > - **API Key:** `L9H2F7Q8XK6M4A`
 > - **Software ID:** `8`
-> - Logs endpoint: `http://72.60.69.185/apilogs/8`
-> - Users endpoint: `http://72.60.69.185/apiusers/8`
+> - Logs endpoint: `http://EXTERNAL_API_HOST/apilogs/8`
+> - Users endpoint: `http://EXTERNAL_API_HOST/apiusers/8`
 >
 > This sub-phase seeds one real, testable software program into the tenant so the developer can immediately test ACTIVATE, DEACTIVATE, and Program Logs via the dashboard — no manual DB editing required.
 >
@@ -1488,7 +1532,7 @@ Run these checks after ALL sub-phases are complete:
 - [ ] Uses `updateOrCreate` to insert/update a program named **"OBD2SW Live Software"** with:
   - `tenant_id` → test tenant id
   - `name` → `'OBD2SW Live Software'`
-  - `description` → `'Real external API integration — software_id 8 on 72.60.69.185'`
+  - `description` → `'Real external API integration — software_id 8 on EXTERNAL_API_HOST'`
   - `version` → `'2.0.0'`
   - `download_link` → `'https://obd2sw.com/download/live'`
   - `trial_days` → `7`
@@ -1534,9 +1578,9 @@ Run these checks after ALL sub-phases are complete:
 
 ### 3.5-SEED.6 Verify External API is Reachable Before Testing
 
-- [ ] Run in terminal: `curl http://72.60.69.185/apiusers/8`
+- [ ] Run in terminal: `curl http://EXTERNAL_API_HOST/apiusers/8`
 - [ ] Expected: `{}` (empty — no users yet) or existing users from previous tests
-- [ ] Run: `curl http://72.60.69.185/showallapi/8`
+- [ ] Run: `curl http://EXTERNAL_API_HOST/showallapi/8`
 - [ ] Expected: `0` or the current user count integer
 - [ ] If both return 200 → external server is online → safe to test activation
 
@@ -1556,20 +1600,20 @@ Run these checks after ALL sub-phases are complete:
   - Price: auto-calculated (25.00 × 1 = 25.00)
 - [ ] Click **CREATE & ACTIVATE**
 - [ ] Expected: success toast with license key
-- [ ] Immediately run: `curl http://72.60.69.185/apiusers/8`
+- [ ] Immediately run: `curl http://EXTERNAL_API_HOST/apiusers/8`
 - [ ] Expected: `{'TESTBIOS-LIVE-001': 'TESTBIOS-LIVE-001'}` appears in response
-- [ ] Run: `curl http://72.60.69.185/apilogs/8` — last line should read: `new user added - TESTBIOS-LIVE-001 with bios - TESTBIOS-LIVE-001 at time ...`
+- [ ] Run: `curl http://EXTERNAL_API_HOST/apilogs/8` — last line should read: `new user added - TESTBIOS-LIVE-001 with bios - TESTBIOS-LIVE-001 at time ...`
 
 **Test BIOS duplicate block:**
 - [ ] Try ACTIVATE again with same BIOS `TESTBIOS-LIVE-001`
 - [ ] Expected: error toast "An active license already exists for this BIOS ID" — modal stays open
-- [ ] Run: `curl http://72.60.69.185/apiusers/8` — user count unchanged (not duplicated on external server either)
+- [ ] Run: `curl http://EXTERNAL_API_HOST/apiusers/8` — user count unchanged (not duplicated on external server either)
 
 **Test deactivation:**
 - [ ] Go to Licenses page → find the license just created → click **DEACTIVATE** → confirm
-- [ ] Run: `curl http://72.60.69.185/apiusers/8`
+- [ ] Run: `curl http://EXTERNAL_API_HOST/apiusers/8`
 - [ ] Expected: `{}` — user removed from external server
-- [ ] Run: `curl http://72.60.69.185/apilogs/8` — last line: `user deleted - TESTBIOS-LIVE-001 at time ...`
+- [ ] Run: `curl http://EXTERNAL_API_HOST/apilogs/8` — last line: `user deleted - TESTBIOS-LIVE-001 at time ...`
 
 **Test Program Logs (Manager Parent):**
 - [ ] Log in as `parent@obd2sw.com`
@@ -1702,7 +1746,7 @@ Run these checks after ALL sub-phases are complete:
 
 ### 3.6.5 Fix API Status Page — Show Real External Server Status
 
-**Problem:** `/en/api-status` shows internal platform metrics. It should show the **real status of the external activation server** (`72.60.69.185`).
+**Problem:** `/en/api-status` shows internal platform metrics. It should show the **real status of the external activation server** (`EXTERNAL_API_HOST`).
 
 **Files:** `frontend/src/pages/manager-parent/ApiStatus.tsx`, `backend/app/Http/Controllers/ManagerParent/ApiStatusController.php`
 
@@ -1710,10 +1754,10 @@ Run these checks after ALL sub-phases are complete:
 - [ ] In `index()` method: call `ExternalApiService::getSoftwareStats(8)` (use software_id 8 as the health check) — if response is 200 → status `online`, if timeout/503 → `offline`
 - [ ] Return:
   ```json
-  { "status": "online", "response_time_ms": 145, "last_checked": "2026-03-01T12:00:00Z", "external_url": "http://72.60.69.185" }
+  { "status": "online", "response_time_ms": 145, "last_checked": "2026-03-01T12:00:00Z", "external_url": "http://EXTERNAL_API_HOST" }
   ```
 - [ ] In `frontend/src/pages/manager-parent/ApiStatus.tsx`:
-  - Show the external server URL `http://72.60.69.185` as the monitored endpoint
+  - Show the external server URL `http://EXTERNAL_API_HOST` as the monitored endpoint
   - Show Online/Offline/Degraded badge based on real response
   - Show response time in ms (from the real HTTP call)
   - Show "Last checked" timestamp
@@ -1851,7 +1895,7 @@ Run these checks after ALL sub-phases are complete:
 
 - [ ] **IP Analytics**: Select a software → table shows real login IPs from `/apilogs/{id}` — no more `127.0.0.1 GET api/programs` rows
 - [ ] **Country flags**: Egypt shows 🇪🇬, Saudi Arabia shows 🇸🇦, unknown shows 🏳️
-- [ ] **API Status**: Page shows `http://72.60.69.185` as monitored endpoint — real Online/Offline badge — "Ping Now" button works
+- [ ] **API Status**: Page shows `http://EXTERNAL_API_HOST` as monitored endpoint — real Online/Offline badge — "Ping Now" button works
 - [ ] **Add Program**: Clicking "Add Program" navigates to `/software-management/create` (full page) — no modal
 - [ ] **Edit Program**: Clicking "Edit" navigates to `/software-management/{id}/edit` (full page) — no modal
 - [ ] **API Key field on Edit**: Field is empty on load, placeholder reads "Leave blank to keep current key", green "API Configured ✓" badge visible — no raw key shown
@@ -1886,11 +1930,11 @@ Run these checks after ALL sub-phases are complete:
 
 ### SEC-LOGIN-1.1 Remove Dev Artifacts and Cleanup
 
-- [ ] Open `frontend/src/pages/auth/Login.tsx`
-- [ ] Remove any test accounts panel / "Quick login" buttons / demo credentials section that may have been added during development
-- [ ] Remove console.log / debug output from the login form's submit handler
-- [ ] Remove any hardcoded test emails or passwords from placeholder attributes
-- [ ] Ensure the form does NOT autofill with any dev credentials
+- [x] Open `frontend/src/pages/auth/Login.tsx`
+- [x] Remove any test accounts panel / "Quick login" buttons / demo credentials section that may have been added during development
+- [x] Remove console.log / debug output from the login form's submit handler
+- [x] Remove any hardcoded test emails or passwords from placeholder attributes
+- [x] Ensure the form does NOT autofill with any dev credentials
 
 ---
 

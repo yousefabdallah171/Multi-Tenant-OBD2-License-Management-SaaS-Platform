@@ -3,10 +3,8 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Exports\ReportExporter;
-use App\Enums\UserRole;
 use App\Models\License;
 use App\Models\Tenant;
-use App\Models\UserBalance;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -129,28 +127,11 @@ class FinancialReportController extends BaseSuperAdminController
 
     private function resellerBalances($licenses)
     {
-        $balances = UserBalance::query()
-            ->with(['user:id,name,role', 'tenant:id,name'])
-            ->whereHas('user', fn ($query) => $query->where('role', UserRole::RESELLER->value))
-            ->get();
-
-        if ($balances->isNotEmpty()) {
-            return $balances->map(fn (UserBalance $balance): array => [
-                'id' => $balance->id,
-                'reseller' => $balance->user?->name,
-                'tenant' => $balance->tenant?->name,
-                'total_revenue' => round((float) $balance->total_revenue, 2),
-                'total_activations' => $balance->total_activations,
-                'avg_price' => $balance->total_activations > 0 ? round((float) $balance->total_revenue / $balance->total_activations, 2) : 0,
-                'balance' => round((float) $balance->pending_balance, 2),
-            ])->values();
-        }
-
         return $licenses
-            ->groupBy(fn (License $license): string => $license->reseller?->name ?? 'Unknown')
-            ->map(fn ($group, string $reseller): array => [
-                'id' => md5($reseller),
-                'reseller' => $reseller,
+            ->groupBy(fn (License $license): string => $license->reseller?->name ?? 'Unassigned')
+            ->map(fn ($group, string $seller): array => [
+                'id' => md5($seller),
+                'reseller' => $seller,
                 'tenant' => $group->first()?->tenant?->name,
                 'total_revenue' => round((float) $group->sum('price'), 2),
                 'total_activations' => $group->count(),

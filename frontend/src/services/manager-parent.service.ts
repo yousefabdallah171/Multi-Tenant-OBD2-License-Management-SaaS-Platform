@@ -94,12 +94,16 @@ export const managerParentService = {
     const { data } = await api.get<{ data: ManagerParentLogEntry }>(`/logs/${id}`)
     return data
   },
-  async getApiStatus() {
-    const { data } = await api.get<{ data: ManagerParentApiStatus }>('/api-status')
+  async getApiStatus(programId?: number) {
+    const { data } = await api.get<{ data: ManagerParentApiStatus }>('/api-status', {
+      params: { program_id: programId },
+    })
     return data
   },
-  async pingApiStatus() {
-    const { data } = await api.post<{ data: ManagerParentApiStatus }>('/api-status/ping')
+  async pingApiStatus(programId?: number) {
+    const { data } = await api.post<{ data: ManagerParentApiStatus }>('/api-status/ping', null, {
+      params: { program_id: programId },
+    })
     return data
   },
   async getApiStatusHistory() {

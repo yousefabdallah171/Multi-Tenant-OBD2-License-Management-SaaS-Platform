@@ -42,7 +42,7 @@ export function TeamManagementPage() {
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [role, setRole] = useState<'manager' | 'reseller'>('manager')
+  const [role, setRole] = useState<'manager' | 'reseller' | ''>('')
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [search, setSearch] = useState('')
@@ -54,7 +54,7 @@ export function TeamManagementPage() {
 
   const membersQuery = useQuery({
     queryKey: ['manager-parent', 'team', role, page, perPage, search, status],
-    queryFn: () => teamService.getAll({ role, page, per_page: perPage, search, status }),
+    queryFn: () => teamService.getAll({ role: role || '', page, per_page: perPage, search, status }),
   })
 
   const createMutation = useMutation({
@@ -236,7 +236,7 @@ export function TeamManagementPage() {
       email: form.email.trim(),
       password: form.password,
       phone: form.phone.trim() || null,
-      role,
+      role: role === 'reseller' ? 'reseller' : 'manager',
     })
   }
 
@@ -254,7 +254,7 @@ export function TeamManagementPage() {
               setFormOpen(true)
             }}
           >
-            {role === 'manager' ? t('managerParent.pages.teamManagement.inviteManager') : t('managerParent.pages.teamManagement.inviteReseller')}
+            {role === 'reseller' ? t('managerParent.pages.teamManagement.inviteReseller') : t('managerParent.pages.teamManagement.inviteManager')}
           </Button>
         }
       />
@@ -281,17 +281,18 @@ export function TeamManagementPage() {
       </div>
 
       <Tabs
-        value={role}
+        value={role || 'all'}
         onValueChange={(value) => {
-          setRole(value as 'manager' | 'reseller')
+          setRole(value === 'all' ? '' : (value as 'manager' | 'reseller'))
           setPage(1)
         }}
       >
         <TabsList>
+          <TabsTrigger value="all">{t('common.all')}</TabsTrigger>
           <TabsTrigger value="manager">{t('managerParent.pages.teamManagement.managers')}</TabsTrigger>
           <TabsTrigger value="reseller">{t('managerParent.pages.teamManagement.resellers')}</TabsTrigger>
         </TabsList>
-        <TabsContent value={role} className="space-y-4">
+        <TabsContent value={role || 'all'} className="space-y-4">
           <Card>
             <CardContent className="flex flex-wrap items-center gap-3 p-4">
               <Input
@@ -342,7 +343,13 @@ export function TeamManagementPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingMember ? t('managerParent.pages.teamManagement.editTitle') : role === 'manager' ? t('managerParent.pages.teamManagement.inviteManager') : t('managerParent.pages.teamManagement.inviteReseller')}</DialogTitle>
+            <DialogTitle>
+              {editingMember
+                ? t('managerParent.pages.teamManagement.editTitle')
+                : role === 'reseller'
+                  ? t('managerParent.pages.teamManagement.inviteReseller')
+                  : t('managerParent.pages.teamManagement.inviteManager')}
+            </DialogTitle>
             <DialogDescription>{editingMember ? t('managerParent.pages.teamManagement.editDescription') : t('managerParent.pages.teamManagement.formDescription')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">

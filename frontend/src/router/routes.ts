@@ -5,7 +5,6 @@ import type { UserRole } from '@/types/user.types'
 export const routePaths = {
   root: '/',
   login: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/login`,
-  forgotPassword: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/forgot-password`,
   errors: {
     notFound: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/not-found`,
     accessDenied: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/access-denied`,
@@ -56,7 +55,6 @@ export const routePaths = {
     licenses: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/licenses`,
     software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/software`,
     reports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/reports`,
-    activity: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/activity`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/profile`,
   },
   customer: {
@@ -74,6 +72,7 @@ export const routePaths = {
     biosBlacklist: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-blacklist`,
     biosHistory: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-history`,
     usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/username-management`,
+    securityLocks: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/security-locks`,
     financialReports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/financial-reports`,
     reports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/reports`,
     logs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/logs`,

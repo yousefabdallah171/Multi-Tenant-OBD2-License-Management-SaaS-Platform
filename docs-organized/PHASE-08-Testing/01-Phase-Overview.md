@@ -1,331 +1,245 @@
-# PHASE 08: Testing
+# PHASE 08: Testing — Full SaaS Coverage
 
-**Duration:** Day 11
-**Status:** Pending
-**Tests Target:** 250+ Jest tests + 35 Cypress E2E + Lighthouse 95+
-**Depends On:** Phases 01-07 (All features built and polished)
+**Duration:** Day 11–12
+**Status:** Updated for Phase 11 SaaS Refactor
+**Tests Target:** 400+ Jest tests · 55 Cypress E2E · 110+ PHPUnit · Lighthouse 95+
+**Depends On:** Phases 01–07 + Phase 11 SaaS Role Refactor (all features built)
 
 ---
 
-## Goals
+## What Changed in Phase 11 (impacts testing)
 
-- Achieve comprehensive test coverage across the entire application
-- 250+ Jest unit/component tests
-- 35 Cypress E2E scenarios
-- Lighthouse performance score 95+
-- Cross-browser compatibility testing
-- Security testing basics
+| Area | Change | Test Impact |
+|------|---------|-------------|
+| Customer Portal | **Deleted entirely** | Remove all `customer/` test files |
+| Forgot Password | **Deleted** — route returns 404 | Remove forgotPassword tests, add 404 assertion |
+| Login Page | Production layout — no debug artifacts | Rewrite Login tests |
+| Login Security | Progressive lockout (5→10 attempts), `LoginSecurityService` | 20+ new tests |
+| SecurityLocks | Super Admin 11th page — 3 tabs (Locked, Blocked IPs, Audit Log) | New page test file |
+| ExternalApiService | Rewritten — GET URL segments, plain text response | Mock external server in all tests |
+| Per-program API keys | `programs.external_api_key_encrypted` + `has_external_api` | Program model tests |
+| Duration as float | `duration_days` float — `expires_at = addMinutes(round(d * 1440))` | LicenseService tests |
+| GeoIP | `GeoIpService` — ip-api.com lookup with cache | New service tests |
+| Suspicious login email | `SuspiciousLoginMail` queued on new-IP login | Mail test + queue test |
+| Rate limit headers | `X-RateLimit-Remaining`, `Retry-After` on login responses | Response header tests |
+| Reseller Software page | 5th page — ActivateLicenseModal | New page + component test |
+| ProgramLogs page | Manager Parent 18th page — external logs enriched | New page test |
+| CustomerDetail page | Clickable username → full detail page | New page test |
+| IP Analytics | External logs (not internal Laravel) — country flags | Updated page test |
+| API Status | Real external server (`EXTERNAL_API_HOST`) — Ping Now | Updated page test |
+| Add/Edit Program | Full page (not modal) — URL placeholder hints | Updated page test |
+| BIOS ID + username | Subtext pattern on all BIOS columns | Updated component snapshots |
+| Silent Deny | Customer login returns same 401 as wrong password | Auth boundary test |
 
 ---
 
 ## Test Architecture
 
-> **All frontend tests are in `tests-frontend/`** (separate from `frontend/`). Delete `tests-frontend/` entirely before production build.
+> **All frontend tests live in `tests-frontend/`** — separate from `frontend/` production code.
 
 ```
-tests-frontend/tests/
-├── components/
-│   ├── layout/
-│   │   ├── Navbar.test.tsx
-│   │   ├── Sidebar.test.tsx
-│   │   └── DashboardLayout.test.tsx
-│   ├── shared/
-│   │   ├── StatsCard.test.tsx
-│   │   ├── DataTable.test.tsx
-│   │   ├── StatusBadge.test.tsx
-│   │   ├── EmptyState.test.tsx
-│   │   ├── ErrorBoundary.test.tsx
-│   │   └── LoadingSpinner.test.tsx
-│   ├── charts/
-│   │   ├── LineChartWidget.test.tsx
-│   │   ├── BarChartWidget.test.tsx
-│   │   └── PieChartWidget.test.tsx
-│   └── customer/
-│       ├── LicenseCard.test.tsx
-│       └── LicenseProgress.test.tsx
-├── pages/
-│   ├── auth/
-│   │   └── Login.test.tsx
-│   ├── super-admin/
-│   │   ├── Dashboard.test.tsx
-│   │   ├── Tenants.test.tsx
-│   │   ├── Users.test.tsx
-│   │   ├── AdminManagement.test.tsx
-│   │   ├── BiosBlacklist.test.tsx
-│   │   ├── BiosHistory.test.tsx
-│   │   ├── UsernameManagement.test.tsx
-│   │   ├── FinancialReports.test.tsx
-│   │   ├── Reports.test.tsx
-│   │   ├── Logs.test.tsx
-│   │   ├── ApiStatus.test.tsx
-│   │   ├── Settings.test.tsx
-│   │   └── Profile.test.tsx
-│   ├── manager-parent/
-│   │   ├── Dashboard.test.tsx
-│   │   ├── TeamManagement.test.tsx
-│   │   ├── SoftwareManagement.test.tsx
-│   │   ├── ResellerPricing.test.tsx
-│   │   ├── BiosBlacklist.test.tsx
-│   │   ├── BiosHistory.test.tsx
-│   │   ├── IpAnalytics.test.tsx
-│   │   ├── UsernameManagement.test.tsx
-│   │   ├── FinancialReports.test.tsx
-│   │   ├── Reports.test.tsx
-│   │   ├── Activity.test.tsx
-│   │   ├── Customers.test.tsx
-│   │   └── Settings.test.tsx
-│   ├── manager/
-│   │   ├── Dashboard.test.tsx
-│   │   ├── Team.test.tsx
-│   │   ├── UsernameManagement.test.tsx
-│   │   ├── Customers.test.tsx
-│   │   ├── Reports.test.tsx
-│   │   └── Software.test.tsx
-│   ├── reseller/
-│   │   ├── Dashboard.test.tsx
-│   │   ├── Customers.test.tsx
-│   │   ├── Licenses.test.tsx
-│   │   ├── Reports.test.tsx
-│   │   └── Software.test.tsx
-│   └── customer/
-│       ├── Dashboard.test.tsx
-│       ├── Software.test.tsx
-│       └── Download.test.tsx
-├── hooks/
-│   ├── useAuth.test.ts
-│   ├── useTheme.test.ts
-│   └── useRoleGuard.test.ts
-├── services/
-│   ├── auth.service.test.ts
-│   ├── license.service.test.ts
-│   └── api.test.ts
-└── utils/
-    ├── formatters.test.ts
-    └── validators.test.ts
-
-tests-frontend/cypress/
-├── e2e/
-│   ├── auth/
-│   │   ├── login.cy.ts
-│   │   └── role-redirect.cy.ts
-│   ├── super-admin/
-│   │   ├── tenants.cy.ts
-│   │   └── dashboard.cy.ts
-│   ├── manager-parent/
-│   │   ├── software.cy.ts
-│   │   └── team.cy.ts
-│   ├── reseller/
-│   │   ├── activation.cy.ts
-│   │   └── licenses.cy.ts
-│   ├── customer/
-│   │   └── portal.cy.ts
-│   ├── responsive/
-│   │   └── mobile.cy.ts
-│   └── i18n/
-│       └── rtl.cy.ts
-├── fixtures/
-│   ├── users.json
-│   ├── tenants.json
-│   ├── programs.json
-│   └── licenses.json
-└── support/
-    ├── commands.ts          # Custom commands: cy.login(), cy.apiMock()
-    └── e2e.ts
+tests-frontend/
+├── tests/
+│   ├── unit/
+│   │   ├── auth/
+│   │   │   ├── Login.test.tsx            ← lockout UI, no forgot-password
+│   │   │   └── LockoutBanner.test.tsx    ← NEW
+│   │   ├── super-admin/
+│   │   │   ├── Dashboard.test.tsx
+│   │   │   ├── SecurityLocks.test.tsx    ← NEW (11th page)
+│   │   │   ├── BiosBlacklist.test.tsx
+│   │   │   ├── BiosHistory.test.tsx
+│   │   │   ├── FinancialReports.test.tsx
+│   │   │   ├── Reports.test.tsx
+│   │   │   └── ApiStatus.test.tsx        ← updated (real external server)
+│   │   ├── manager-parent/
+│   │   │   ├── Dashboard.test.tsx
+│   │   │   ├── SoftwareManagement.test.tsx ← updated (full-page form)
+│   │   │   ├── ProgramLogs.test.tsx      ← NEW
+│   │   │   ├── CustomerDetail.test.tsx   ← NEW
+│   │   │   ├── IpAnalytics.test.tsx      ← updated (external logs)
+│   │   │   ├── BiosBlacklist.test.tsx
+│   │   │   ├── BiosHistory.test.tsx
+│   │   │   ├── FinancialReports.test.tsx
+│   │   │   └── Reports.test.tsx
+│   │   ├── manager/
+│   │   │   ├── Dashboard.test.tsx
+│   │   │   ├── Team.test.tsx
+│   │   │   ├── Software.test.tsx
+│   │   │   └── Reports.test.tsx
+│   │   ├── reseller/
+│   │   │   ├── Dashboard.test.tsx
+│   │   │   ├── Customers.test.tsx
+│   │   │   ├── Licenses.test.tsx
+│   │   │   ├── Software.test.tsx         ← NEW (5th page + ActivateLicenseModal)
+│   │   │   └── Reports.test.tsx
+│   │   ├── components/
+│   │   │   ├── layout/
+│   │   │   │   ├── Navbar.test.tsx
+│   │   │   │   ├── Sidebar.test.tsx
+│   │   │   │   └── DashboardLayout.test.tsx
+│   │   │   ├── shared/
+│   │   │   │   ├── StatsCard.test.tsx
+│   │   │   │   ├── DataTable.test.tsx
+│   │   │   │   ├── StatusBadge.test.tsx
+│   │   │   │   ├── EmptyState.test.tsx
+│   │   │   │   ├── ErrorBoundary.test.tsx
+│   │   │   │   └── ExportButtons.test.tsx
+│   │   │   ├── charts/
+│   │   │   │   ├── LineChartWidget.test.tsx
+│   │   │   │   ├── BarChartWidget.test.tsx
+│   │   │   │   └── PieChartWidget.test.tsx
+│   │   │   └── auth/
+│   │   │       ├── DurationPicker.test.tsx     ← NEW
+│   │   │       └── ActivateLicenseModal.test.tsx ← NEW
+│   │   ├── services/
+│   │   │   ├── auth.service.test.ts
+│   │   │   ├── license.service.test.ts
+│   │   │   ├── security.service.test.ts  ← NEW
+│   │   │   ├── report.service.test.ts
+│   │   │   └── api.test.ts
+│   │   └── utils/
+│   │       ├── formatters.test.ts
+│   │       ├── validators.test.ts
+│   │       └── geoip.test.ts             ← NEW (getFlag, parseUserAgent)
+│   └── backend/                          ← PHPUnit unit tests (not Laravel Feature tests)
+│       ├── LoginSecurityServiceTest.php  ← NEW
+│       ├── ExternalApiServiceTest.php    ← NEW
+│       ├── LicenseServiceTest.php        ← updated (float duration)
+│       ├── GeoIpServiceTest.php          ← NEW
+│       └── ProgramModelTest.php          ← NEW (encrypted API key)
+│
+├── cypress/
+│   ├── e2e/
+│   │   ├── auth/
+│   │   │   ├── login.cy.ts               ← updated (lockout flow)
+│   │   │   ├── login-lockout.cy.ts       ← NEW
+│   │   │   └── role-redirect.cy.ts       ← updated (no customer portal)
+│   │   ├── super-admin/
+│   │   │   ├── dashboard.cy.ts
+│   │   │   └── security-locks.cy.ts      ← NEW
+│   │   ├── manager-parent/
+│   │   │   ├── software.cy.ts            ← updated (full-page form)
+│   │   │   ├── program-logs.cy.ts        ← NEW
+│   │   │   └── team.cy.ts
+│   │   ├── manager/
+│   │   │   └── dashboard.cy.ts
+│   │   ├── reseller/
+│   │   │   ├── activation.cy.ts          ← updated (external API mock)
+│   │   │   ├── licenses.cy.ts
+│   │   │   └── software.cy.ts            ← NEW
+│   │   ├── responsive/
+│   │   │   └── mobile.cy.ts
+│   │   └── i18n/
+│   │       └── rtl.cy.ts
+│   ├── fixtures/
+│   │   ├── users.json
+│   │   ├── programs.json
+│   │   ├── licenses.json
+│   │   ├── security-locks.json           ← NEW
+│   │   └── external-api.json             ← NEW (mock external server responses)
+│   └── support/
+│       ├── commands.ts                   ← cy.login(), cy.mockExternalApi()
+│       └── e2e.ts
+│
+└── backend/
+    └── Feature/                          ← Laravel Feature tests
+        ├── Auth/
+        │   ├── LoginTest.php
+        │   └── LoginSecurityTest.php     ← NEW
+        ├── SuperAdmin/
+        │   ├── SecurityControllerTest.php ← NEW
+        │   └── DashboardControllerTest.php
+        ├── ManagerParent/
+        │   ├── ProgramControllerTest.php
+        │   └── ProgramLogsControllerTest.php ← NEW
+        ├── Manager/
+        │   └── SoftwareControllerTest.php
+        ├── Reseller/
+        │   └── LicenseControllerTest.php
+        └── External/
+            ├── ExternalApiServiceTest.php ← NEW
+            └── GeoIpServiceTest.php       ← NEW
 ```
 
 ---
 
-## Jest Test Categories (250+)
+## Test Counts Summary
 
-### Component Tests (90)
-
-| Component | Tests | Key Scenarios |
-|-----------|-------|---------------|
-| Navbar | 8 | Renders links by role, language switcher (URL-based), theme toggle, logout |
-| Sidebar | 8 | Active item, collapse/expand, RTL position, mobile overlay |
-| DashboardLayout | 5 | Renders children, sidebar + navbar, responsive |
-| StatsCard | 5 | Renders props, trend arrow, color variants |
-| DataTable | 10 | Columns, pagination, sorting, filtering, search, empty, loading |
-| StatusBadge | 5 | Each status color, renders label |
-| RoleBadge | 5 | Each role color, renders label |
-| EmptyState | 3 | Icon, message, action button |
-| ErrorBoundary | 4 | Catches error, shows fallback, retry works |
-| Charts (x4) | 12 | Renders with data, loading, empty, responsive |
-| LicenseCard | 8 | Status, progress bar, buttons, expired state |
-| ConfirmDialog | 3 | Opens, confirm action, cancel action |
-| ExportButtons | 4 | CSV click, PDF click, loading states |
-
-### Page Tests (110)
-
-| Page Group | Tests | Key Scenarios |
-|------------|-------|---------------|
-| Login | 8 | Form render, validation, submit, error, redirect |
-| Super Admin (x13) | 45 | Each page renders, data loads, actions work, empty states, BIOS blacklist, username mgmt, financial reports |
-| Manager Parent (x12) | 30 | CRUD forms, team invite, software management, BIOS blacklist, IP analytics, username mgmt, financial reports |
-| Manager (x8) | 12 | Team view, username management, customer overview, reports |
-| Reseller (x7) | 12 | Activation wizard, license actions, read-only views |
-| Customer (x3) | 8 | License cards, download buttons, empty state |
-
-### Hook Tests (15)
-
-| Hook | Tests |
-|------|-------|
-| useAuth | 5: login, logout, token persist, role check, redirect |
-| useTheme | 4: toggle, persist, system preference, dark class |
-| useRoleGuard | 3: allow, redirect, loading state |
-| useLicenses | 3: fetch, create, filter |
-
-### Service Tests (15)
-
-| Service | Tests |
-|---------|-------|
-| auth.service | 4: login, logout, me, forgot-password |
-| license.service | 5: activate, renew, deactivate, getAll, getExpiring |
-| api (Axios) | 3: attach token, handle 401, handle network error |
-| formatters | 3: date format, currency format, Arabic numbers |
-
-### Utility Tests (10)
-
-| Utility | Tests |
-|---------|-------|
-| validators | 4: email, BIOS ID, required, min length |
-| formatters | 3: dates, numbers, currency |
-| constants | 3: routes exist, roles defined, status values |
+| Category | Count | Notes |
+|----------|-------|-------|
+| Jest Component Tests | 110 | Layout, Shared, Charts, Auth components |
+| Jest Page Tests | 155 | All roles (no customer portal) |
+| Jest Hook Tests | 20 | useAuth, useTheme, useRoleGuard, useLicenses |
+| Jest Service Tests | 25 | auth, license, security, report, api |
+| Jest Utility Tests | 10 | formatters, validators, geoip |
+| **Total Jest** | **320+** | |
+| Cypress E2E | 55 | auth, lockout, roles, activation, security |
+| PHPUnit Feature | 80 | all controllers + services |
+| PHPUnit Unit | 30 | pure service unit tests |
+| **Total Backend** | **110+** | |
 
 ---
 
-## Cypress E2E Scenarios (35)
+## Security Test Requirements (New in Phase 11)
 
-### Authentication (5)
+| Scenario | Type | Expected Result |
+|----------|------|-----------------|
+| Customer logs in → | PHPUnit | `401 {"message":"Invalid credentials."}` — identical to wrong password |
+| Wrong password 1–4 times → | PHPUnit + Cypress | `401` with `X-RateLimit-Remaining: 4, 3, 2, 1` |
+| Wrong password 5th time → | PHPUnit + Cypress | `429` with `locked: true`, `seconds_remaining: 60` |
+| Wrong password 10th time → | PHPUnit | `429` with `reason: ip_blocked`, `unlocks_at: null` |
+| Correct password → | PHPUnit | `200`, `clearAttempts()` resets counter |
+| Super Admin unblocks IP → | PHPUnit + Cypress | IP removed from cache, login works again |
+| New IP login → | PHPUnit | `SuspiciousLoginMail` queued |
+| Known IP login → | PHPUnit | No email queued |
+| Rate limit headers → | PHPUnit | `X-RateLimit-Remaining` in response headers |
 
-1. Super Admin login -> redirect to /super-admin/dashboard
-2. Manager Parent login -> redirect to /dashboard
-3. Reseller login -> redirect to /dashboard
-4. Customer login -> redirect to /customer/dashboard
-5. Invalid login -> error message displayed
+---
 
-### Role Boundaries (3)
+## External API Test Requirements (New in Phase 11)
 
-6. Reseller cannot access /super-admin/* (redirect to own dashboard)
-7. Customer cannot access /dashboard (redirect to /customer/dashboard)
-8. Unauthenticated user redirected to /login
-
-### License Activation (5)
-
-9. Open Add Customer dialog on /customers
-10. Complete Step 1: Customer Info
-11. Complete Step 2: BIOS ID + Program
-12. Complete Step 3: Duration + Price
-13. Submit activation -> success toast + customer in table
-
-### License Management (4)
-
-14. Renew license -> new expiry date
-15. Deactivate license -> status changes to suspended
-16. Filter licenses by Active status
-17. Expiry warnings shown for expiring licenses
-
-### Software Management (3)
-
-18. Manager Parent adds new program with download link
-19. Manager Parent edits program details
-20. Manager Parent deletes program (confirm dialog)
-
-### Team Management (3)
-
-21. Invite new Manager (form submit)
-22. Invite new Reseller (form submit)
-23. Suspend team member -> status changes
-
-### Customer Portal (3)
-
-24. Customer dashboard shows license cards
-25. Download button works (active license)
-26. Download button disabled (expired license)
-
-### Manager Dashboard (3)
-
-27. Manager login -> separate /manager/dashboard
-28. Manager username management: unlock username
-29. Manager cannot access reseller-only routes
-
-### BIOS & Username Management (3)
-
-30. Super Admin adds BIOS to blacklist
-31. Super Admin unlocks user's username
-32. Manager Parent views BIOS history for tenant
-
-### UI/UX (6)
-
-33. RTL via URL: visiting `/ar/...` applies RTL layout, `/en/...` applies LTR
-34. Dark mode toggle: switch -> background changes
-35. Mobile: hamburger menu opens sidebar
-
-### Cross-Browser (3 - manual)
-
-36. Chrome: full workflow
-37. Firefox: full workflow
-38. Safari/Edge: full workflow
+| Scenario | Type | Expected Result |
+|----------|------|-----------------|
+| `activateUser($key, $user, $bios)` → | Unit | Calls `GET /apiuseradd/{key}/{user}/{bios}` |
+| External returns "True" → | Unit | `['success' => true]` |
+| External returns "False" → | Unit | `['success' => false]` |
+| External timeout → | Unit | `['success' => false, 'error' => 'timeout']` |
+| Duplicate BIOS activation → | Feature | `422` with "An active license already exists" |
+| Blacklisted BIOS → | Feature | `422` with "This BIOS ID is blacklisted" |
+| Program has no API key → | Feature | `422` with "Program not configured for external activation" |
+| Duration 0.021 days (30 min) → | Unit | `expires_at = now() + 30 minutes` |
 
 ---
 
 ## Performance Targets (Lighthouse)
 
-| Metric | Target | How to Achieve |
-|--------|--------|---------------|
-| Performance | 95+ | Code splitting, lazy imports, optimized images |
-| Accessibility | 90+ | ARIA labels, focus management, contrast |
-| Best Practices | 95+ | HTTPS, no console errors, secure headers |
-| SEO | 90+ | Meta tags, semantic HTML |
-| FCP | < 1.2s | Critical CSS inline, font preload |
-| LCP | < 2.5s | Lazy load below-fold, image optimization |
-| TTI | < 3.0s | Code splitting, minimal main bundle |
-| CLS | < 0.1 | Fixed dimensions, no layout shift |
-
-### Code Splitting
-
-```tsx
-// Lazy load each role's pages
-const SuperAdminDashboard = lazy(() => import('./pages/super-admin/Dashboard'));
-const ManagerDashboard = lazy(() => import('./pages/manager-parent/Dashboard'));
-const ResellerDashboard = lazy(() => import('./pages/manager-reseller/Dashboard'));
-const CustomerDashboard = lazy(() => import('./pages/customer/Dashboard'));
-```
-
----
-
-## Backend Tests (PHPUnit)
-
-### Existing from Phase 01: 15 tests
-### New tests for Phases 02-06:
-
-| Category | Count | Scenarios |
-|----------|-------|-----------|
-| Tenant CRUD | 8 | Create, read, update, delete, list, stats, unauthorized |
-| User management | 6 | Create by role, status update, role filter, tenant scoping |
-| Program CRUD | 6 | Create, update, delete, list, stats, tenant scoping |
-| License activation | 8 | Activate, renew, deactivate, API mock, error handling, duplicate |
-| Reports | 5 | Revenue query, export CSV, export PDF, date range filter |
-| Activity logs | 3 | Log creation, filter, tenant scoping |
-| API proxy | 4 | External call mock, error handling, logging |
-| BIOS blacklist | 5 | Add, remove, check middleware, import, tenant scoping |
-| BIOS history | 3 | Timeline query, conflict detection, cross-tenant (super admin) |
-| Username management | 6 | Unlock, change, reset password, scope validation, logging |
-| IP analytics | 3 | Geolocation logging, country stats, reputation scoring |
-| Financial reports | 4 | Revenue aggregation, reseller balances, CSV/PDF export |
-
-**Total backend: ~75 tests**
+| Metric | Target |
+|--------|--------|
+| Performance | 95+ |
+| Accessibility | 90+ |
+| Best Practices | 95+ |
+| SEO | 90+ |
+| FCP | < 1.2s |
+| LCP | < 2.5s |
+| TTI | < 3.0s |
+| CLS | < 0.1 |
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] 250+ Jest tests passing with 0 failures (in `tests-frontend/`)
-- [ ] Test coverage report generated (`cd tests-frontend && npm run test:unit -- --coverage`)
-- [ ] 35 Cypress E2E scenarios passing (in `tests-frontend/`)
+- [ ] 320+ Jest tests passing, 0 failures, coverage > 80%
+- [ ] 55 Cypress E2E scenarios passing, 0 failures
+- [ ] 110+ PHPUnit tests passing, 0 failures
+- [ ] No customer portal routes accessible (return 404 or redirect)
+- [ ] `/ar/forgot-password` returns 404
+- [ ] Login lockout confirmed: 5 wrong attempts → 429
 - [ ] Lighthouse Performance >= 95
 - [ ] Lighthouse Accessibility >= 90
-- [ ] No console errors or warnings in any page
-- [ ] Backend: 75+ PHPUnit tests passing
+- [ ] No console errors or warnings on any page
 - [ ] Cross-browser tested: Chrome, Firefox, Edge
-- [ ] All API error scenarios handled gracefully
+- [ ] `npx tsc --noEmit` — zero TypeScript errors
+- [ ] `npm run build` — passes
+
+**Phase 08 complete → Proceed to PHASE-09-Deployment.**

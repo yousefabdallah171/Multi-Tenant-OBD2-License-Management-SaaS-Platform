@@ -302,6 +302,9 @@ export interface ManagerParentApiStatus {
   response_time_ms: number
   last_checked: string
   external_url: string
+  program_id?: number | null
+  program_name?: string | null
+  software_id?: number | null
 }
 
 export interface ApiStatusHistoryPoint {

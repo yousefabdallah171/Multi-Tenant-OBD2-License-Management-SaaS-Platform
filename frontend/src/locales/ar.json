@@ -11,15 +11,11 @@
     "password": "كلمة المرور",
     "submit": "دخول",
     "loading": "جارٍ التنفيذ...",
-    "forgotPassword": "هل نسيت كلمة المرور؟",
     "invalidCredentials": "بيانات الدخول غير صحيحة.",
     "networkError": "الواجهة الأمامية لا تستطيع الوصول إلى الـ API. أعد تشغيل الواجهة وتأكد من رابط الـ API.",
     "serverError": "فشل طلب تسجيل الدخول من جهة الخادم.",
     "validation": "أدخل بريدًا إلكترونيًا صحيحًا وكلمة مرور.",
     "loginSuccess": "تم تسجيل الدخول بنجاح.",
-    "resetSubtitle": "أدخل بريدك الإلكتروني لطلب رابط إعادة تعيين كلمة المرور.",
-    "resetSubmit": "إرسال رابط الإعادة",
-    "resetError": "فشل طلب إعادة التعيين.",
     "logout": "تسجيل الخروج",
     "cards": {
       "secure": {
@@ -185,6 +181,7 @@
       "biosBlacklist": "قائمة BIOS السوداء",
       "biosHistory": "سجل BIOS",
       "usernameManagement": "إدارة اسم المستخدم",
+      "securityLocks": "الأمان والقفل",
       "financialReports": "المالية",
       "reports": "التقارير",
       "logs": "السجلات",
@@ -254,6 +251,10 @@
         "responseTime": "زمن الاستجابة",
         "autoRefresh": "تحديث تلقائي",
         "detailTitle": "تفاصيل السجل"
+      },
+      "securityLocks": {
+        "title": "الأمان والقفل",
+        "description": "تابع الحسابات المقفلة وعناوين IP المحظورة وألغِ القفل عند الحاجة."
       },
       "apiStatus": {
         "title": "مراقبة صحة API",
@@ -1161,6 +1162,40 @@
         "totalEntries": "إجمالي السجلات: {{count}}"
       }
     }
+  },
+  "login": {
+    "title": "تسجيل الدخول",
+    "subtitle": "منصة إدارة تراخيص OBD2SW",
+    "emailLabel": "البريد الإلكتروني",
+    "passwordLabel": "كلمة المرور",
+    "submitBtn": "تسجيل الدخول",
+    "signingIn": "جارٍ تسجيل الدخول...",
+    "networkError": "لا يمكن الوصول إلى الخادم الخلفي. تحقق من الشبكة ورابط API.",
+    "footer": "© 2026 OBD2SW. جميع الحقوق محفوظة.",
+    "lockedTitle": "تم قفل الحساب مؤقتًا",
+    "lockedMessage": "تم اكتشاف محاولات دخول فاشلة متكررة.",
+    "retryIn": "حاول مرة أخرى بعد {{time}}",
+    "ipBlockedPermanent": "تم حظر عنوان IP بشكل دائم",
+    "ipBlockedMessage": "تم حظر عنوان IP هذا دائمًا بعد محاولات دخول فاشلة متكررة.",
+    "contactSupport": "تواصل مع الدعم:",
+    "supportEmail": "support@obd2sw.com"
+  },
+  "security": {
+    "lockedAccounts": "الحسابات المقفلة",
+    "blockedIps": "عناوين IP المحظورة",
+    "auditLog": "سجل التدقيق",
+    "device": "الجهاز",
+    "lastIp": "آخر IP",
+    "country": "الدولة",
+    "city": "المدينة",
+    "isp": "موفر الخدمة",
+    "attempts": "عدد المحاولات",
+    "retryAfter": "إعادة المحاولة بعد",
+    "unblock": "إلغاء القفل",
+    "target": "الهدف",
+    "adminIp": "IP المشرف",
+    "unblockedEmail": "تم إلغاء القفل عن الحساب.",
+    "unblockedIp": "تم إزالة حظر عنوان IP."
   },
   "software": {
     "externalApiKey": "مفتاح API الخارجي",

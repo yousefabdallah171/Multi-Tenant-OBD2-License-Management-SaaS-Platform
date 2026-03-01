@@ -23,6 +23,7 @@ const superAdminItems: NavItem[] = [
   { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },
   { key: 'biosHistory', icon: History, href: routePaths.superAdmin.biosHistory, translationKey: 'superAdmin.nav.biosHistory' },
   { key: 'usernameManagement', icon: KeyRound, href: routePaths.superAdmin.usernameManagement, translationKey: 'superAdmin.nav.usernameManagement' },
+  { key: 'securityLocks', icon: ShieldBan, href: routePaths.superAdmin.securityLocks, translationKey: 'superAdmin.nav.securityLocks' },
   { key: 'financialReports', icon: BarChart3, href: routePaths.superAdmin.financialReports, translationKey: 'superAdmin.nav.financialReports' },
   { key: 'reports', icon: BarChart3, href: routePaths.superAdmin.reports, translationKey: 'superAdmin.nav.reports' },
   { key: 'logs', icon: ScrollText, href: routePaths.superAdmin.logs, translationKey: 'superAdmin.nav.logs' },
@@ -70,7 +71,6 @@ const resellerItems: NavItem[] = [
   { key: 'licenses', icon: KeyRound, href: routePaths.reseller.licenses, translationKey: 'reseller.nav.licenses' },
   { key: 'software', icon: Package, href: routePaths.reseller.software, translationKey: 'reseller.nav.software' },
   { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, translationKey: 'reseller.nav.reports' },
-  { key: 'activity', icon: Activity, href: routePaths.reseller.activity, translationKey: 'reseller.nav.activity' },
   { key: 'profile', icon: User, href: routePaths.reseller.profile, translationKey: 'reseller.nav.profile' },
 ]
 

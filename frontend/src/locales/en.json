@@ -11,15 +11,11 @@
     "password": "Password",
     "submit": "Sign in",
     "loading": "Please wait...",
-    "forgotPassword": "Forgot password?",
     "invalidCredentials": "The credentials are invalid.",
     "networkError": "The frontend cannot reach the backend API. Restart the frontend and verify the API URL.",
     "serverError": "The login request failed on the server.",
     "validation": "Enter a valid email and password.",
     "loginSuccess": "Login succeeded.",
-    "resetSubtitle": "Enter your email to request a password reset link.",
-    "resetSubmit": "Send reset link",
-    "resetError": "The reset request failed.",
     "logout": "Logout",
     "cards": {
       "secure": {
@@ -185,6 +181,7 @@
       "biosBlacklist": "BIOS Blacklist",
       "biosHistory": "BIOS History",
       "usernameManagement": "Username Mgmt",
+      "securityLocks": "Security Locks",
       "financialReports": "Financial",
       "reports": "Reports",
       "logs": "Logs",
@@ -254,6 +251,10 @@
         "responseTime": "Response time",
         "autoRefresh": "Auto refresh",
         "detailTitle": "Log details"
+      },
+      "securityLocks": {
+        "title": "Security Locks",
+        "description": "Monitor locked accounts and blocked IP addresses, then clear them when needed."
       },
       "apiStatus": {
         "title": "API Health Monitor",
@@ -1153,6 +1154,40 @@
         "totalEntries": "Total entries: {{count}}"
       }
     }
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "OBD2SW License Management Platform",
+    "emailLabel": "Email Address",
+    "passwordLabel": "Password",
+    "submitBtn": "Sign in",
+    "signingIn": "Signing in...",
+    "networkError": "The frontend cannot reach the backend API. Check your network and API URL.",
+    "footer": "© 2026 OBD2SW. All rights reserved.",
+    "lockedTitle": "Account Temporarily Locked",
+    "lockedMessage": "Too many failed login attempts were detected.",
+    "retryIn": "Try again in {{time}}",
+    "ipBlockedPermanent": "IP Address Permanently Blocked",
+    "ipBlockedMessage": "This IP was permanently blocked after repeated failed login attempts.",
+    "contactSupport": "Contact support:",
+    "supportEmail": "support@obd2sw.com"
+  },
+  "security": {
+    "lockedAccounts": "Locked Accounts",
+    "blockedIps": "Blocked IPs",
+    "auditLog": "Audit Log",
+    "device": "Device",
+    "lastIp": "Last IP",
+    "country": "Country",
+    "city": "City",
+    "isp": "ISP",
+    "attempts": "Attempts",
+    "retryAfter": "Retry After",
+    "unblock": "Unblock",
+    "target": "Target",
+    "adminIp": "Admin IP",
+    "unblockedEmail": "Account unlocked successfully.",
+    "unblockedIp": "IP unblocked successfully."
   },
   "software": {
     "externalApiKey": "External API Key",

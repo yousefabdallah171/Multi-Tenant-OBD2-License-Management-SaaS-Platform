@@ -14,16 +14,16 @@ class ExternalApiServiceTest extends TestCase
 
     public function test_activate_user_calls_the_expected_external_endpoint(): void
     {
-        config()->set('external-api.url', 'http://72.60.69.185');
+        config()->set('external-api.url', 'http://external-api.test');
 
         Http::fake([
-            'http://72.60.69.185/apiuseradd/TEST-KEY/BIOS-XYZ/BIOS-XYZ' => Http::response('"True"', 200),
+            'http://external-api.test/apiuseradd/TEST-KEY/BIOS-XYZ/BIOS-XYZ' => Http::response('"True"', 200),
         ]);
 
         $response = app(ExternalApiService::class)->activateUser('TEST-KEY', 'BIOS-XYZ', 'BIOS-XYZ');
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'http://72.60.69.185/apiuseradd/TEST-KEY/BIOS-XYZ/BIOS-XYZ';
+            return $request->url() === 'http://external-api.test/apiuseradd/TEST-KEY/BIOS-XYZ/BIOS-XYZ';
         });
 
         $this->assertTrue($response['success']);
@@ -33,7 +33,7 @@ class ExternalApiServiceTest extends TestCase
 
     public function test_external_api_service_handles_connection_failures_gracefully(): void
     {
-        config()->set('external-api.url', 'http://72.60.69.185');
+        config()->set('external-api.url', 'http://external-api.test');
 
         Http::fake(function () {
             throw new ConnectionException('Timed out');

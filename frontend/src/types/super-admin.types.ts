@@ -182,3 +182,44 @@ export interface SystemSettings {
     session_timeout: number
   }
 }
+
+export interface LockedAccount {
+  email: string
+  attempt_count: number
+  ip: string
+  user_agent: string
+  device: string
+  seconds_remaining: number
+  unlocks_at: number
+  country_code: string | null
+  country_name: string
+  city: string
+  isp: string
+}
+
+export interface BlockedIp {
+  ip: string
+  blocked_at: string
+  email: string
+  user_agent: string
+  device: string
+  country_code: string | null
+  country_name: string
+  city: string
+  isp: string
+}
+
+export interface SecurityAuditLog {
+  id: number
+  action: 'security.unblock_email' | 'security.unblock_ip' | 'security.block_ip' | string
+  description: string
+  metadata: Record<string, unknown>
+  admin: { id: number; name: string; email: string } | null
+  admin_ip: string | null
+  created_at: string | null
+}
+
+export interface SecurityLocksData {
+  locked_accounts: LockedAccount[]
+  blocked_ips: BlockedIp[]
+}

@@ -1,5 +1,4 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { ForgotPasswordPage } from '@/pages/auth/ForgotPassword'
 import { LoginPage } from '@/pages/auth/Login'
 import { DashboardPage as CustomerDashboardPage } from '@/pages/customer/Dashboard'
 import { DownloadPage as CustomerDownloadPage } from '@/pages/customer/Download'
@@ -51,7 +50,7 @@ import { UsersPage } from '@/pages/super-admin/Users'
 import { AdminManagementPage } from '@/pages/super-admin/AdminManagement'
 import { ProfilePage as SuperAdminProfilePage } from '@/pages/super-admin/Profile'
 import { UsernameManagementPage } from '@/pages/super-admin/UsernameManagement'
-import { ActivityPage as ResellerActivityPage } from '@/pages/reseller/Activity'
+import { SecurityLocksPage } from '@/pages/super-admin/SecurityLocks'
 import { CustomersPage as ResellerCustomersPage } from '@/pages/reseller/Customers'
 import { DashboardPage as ResellerDashboardPage } from '@/pages/reseller/Dashboard'
 import { LicensesPage as ResellerLicensesPage } from '@/pages/reseller/Licenses'
@@ -72,7 +71,6 @@ export function AppRouter() {
         <Route path="server-error" element={<ServerErrorPage />} />
         <Route element={<GuestRoute />}>
           <Route path="login" element={<LoginPage />} />
-          <Route path="forgot-password" element={<ForgotPasswordPage />} />
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route element={<RoleGuard allowedRoles={['super_admin']} />}>
@@ -85,6 +83,7 @@ export function AppRouter() {
               <Route path="bios-blacklist" element={<BiosBlacklistPage />} />
               <Route path="bios-history" element={<BiosHistoryPage />} />
               <Route path="username-management" element={<UsernameManagementPage />} />
+              <Route path="security-locks" element={<SecurityLocksPage />} />
               <Route path="financial-reports" element={<FinancialReportsPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="logs" element={<LogsPage />} />
@@ -143,7 +142,6 @@ export function AppRouter() {
               <Route path="licenses" element={<ResellerLicensesPage />} />
               <Route path="software" element={<ResellerSoftwarePage />} />
               <Route path="reports" element={<ResellerReportsPage />} />
-              <Route path="activity" element={<ResellerActivityPage />} />
               <Route path="profile" element={<ResellerProfilePage />} />
               <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Route>

@@ -127,7 +127,7 @@
   # DB_PASSWORD=secure_password_here
   # REDIS_HOST=127.0.0.1
   # REDIS_PASSWORD=your_redis_password
-  # EXTERNAL_API_URL=http://72.60.69.185
+  # EXTERNAL_API_URL=http://EXTERNAL_API_HOST
   # EXTERNAL_API_KEY=L9H2F7Q8XK6M4A
   php artisan key:generate
   php artisan migrate --force

@@ -33,7 +33,6 @@ use App\Http\Controllers\ManagerParent\ReportController as ManagerParentReportCo
 use App\Http\Controllers\ManagerParent\SettingsController as ManagerParentSettingsController;
 use App\Http\Controllers\ManagerParent\TeamController as ManagerParentTeamController;
 use App\Http\Controllers\ManagerParent\UsernameManagementController as ManagerParentUsernameManagementController;
-use App\Http\Controllers\Reseller\ActivityController as ResellerActivityController;
 use App\Http\Controllers\Reseller\CustomerController as ResellerCustomerController;
 use App\Http\Controllers\Reseller\DashboardController as ResellerDashboardController;
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
@@ -46,6 +45,7 @@ use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardCo
 use App\Http\Controllers\SuperAdmin\FinancialReportController;
 use App\Http\Controllers\SuperAdmin\LogController;
 use App\Http\Controllers\SuperAdmin\ReportController;
+use App\Http\Controllers\SuperAdmin\SecurityController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
@@ -62,7 +62,6 @@ Route::get('/health', function (): JsonResponse {
 
 Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 });
 
 Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(function (): void {
@@ -219,8 +218,6 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
             Route::get('/export/csv', [ResellerReportController::class, 'exportCsv']);
             Route::get('/export/pdf', [ResellerReportController::class, 'exportPdf']);
         });
-
-        Route::get('/activity', [ResellerActivityController::class, 'index']);
     });
 
     Route::middleware('role:reseller')->group(function (): void {
@@ -253,6 +250,15 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::get('/users', [SuperAdminUserController::class, 'index']);
         Route::put('/users/{user}/status', [SuperAdminUserController::class, 'updateStatus']);
         Route::delete('/users/{user}', [SuperAdminUserController::class, 'destroy']);
+        Route::get('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'index']);
+        Route::post('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'store']);
+        Route::put('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'update']);
+        Route::delete('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'destroy']);
+        Route::post('/admin-management/{user}/reset-password', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'resetPassword']);
+        Route::get('/security/locks', [SecurityController::class, 'index']);
+        Route::post('/security/unblock-email', [SecurityController::class, 'unblockEmail']);
+        Route::post('/security/unblock-ip', [SecurityController::class, 'unblockIp']);
+        Route::get('/security/audit-log', [SecurityController::class, 'auditLog']);
 
         Route::get('/bios-blacklist', [SuperAdminBiosBlacklistController::class, 'index']);
         Route::get('/bios-blacklist/stats', [SuperAdminBiosBlacklistController::class, 'stats']);
