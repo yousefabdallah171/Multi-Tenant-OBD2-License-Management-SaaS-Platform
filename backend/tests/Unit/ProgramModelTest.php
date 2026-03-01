@@ -28,12 +28,12 @@ class ProgramModelTest extends TestCase
             'status' => 'active',
         ]);
 
-        $program->setExternalApiKeyAttribute('L9H2F7Q8XK6M4A');
+        $program->setExternalApiKeyAttribute('TESTAPIKEY1234');
         $program->save();
         $program->refresh();
 
-        $this->assertNotSame('L9H2F7Q8XK6M4A', $program->getRawOriginal('external_api_key_encrypted'));
-        $this->assertSame('L9H2F7Q8XK6M4A', $program->getDecryptedApiKey());
+        $this->assertNotSame('TESTAPIKEY1234', $program->getRawOriginal('external_api_key_encrypted'));
+        $this->assertSame('TESTAPIKEY1234', $program->getDecryptedApiKey());
     }
 
     public function test_get_decrypted_api_key_returns_null_when_no_key_is_set(): void
@@ -109,7 +109,7 @@ class ProgramModelTest extends TestCase
     public static function apiKeyProvider(): array
     {
         return [
-            'alphanumeric' => ['L9H2F7Q8XK6M4A'],
+            'alphanumeric' => ['TESTAPIKEY1234'],
             'contains dash' => ['KEY-2026-ALPHA'],
             'contains underscore' => ['KEY_2026_ALPHA'],
             'mixed case' => ['aBcD1234EfGh'],

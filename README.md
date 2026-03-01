@@ -534,14 +534,14 @@ All calls to `EXTERNAL_API_HOST` are proxied through Laravel (API key **never** 
 
 | # | Method | Full Endpoint | Laravel Proxy Route | Description |
 |---|--------|--------------|-------------------|-------------|
-| 1 | `POST` | `${EXTERNAL_API_URL}/apiuseradd/L9H2F7Q8XK6M4A/{bios_id}` | `POST /api/licenses/activate` | Activate license for BIOS |
-| 2 | `POST` | `${EXTERNAL_API_URL}/apideluser/L9H2F7Q8XK6M4A/{user_id}` | `POST /api/licenses/{id}/deactivate` | Deactivate/remove license |
+| 1 | `POST` | `${EXTERNAL_API_URL}/apiuseradd/{EXTERNAL_API_KEY}/{bios_id}` | `POST /api/licenses/activate` | Activate license for BIOS |
+| 2 | `POST` | `${EXTERNAL_API_URL}/apideluser/{EXTERNAL_API_KEY}/{user_id}` | `POST /api/licenses/{id}/deactivate` | Deactivate/remove license |
 | 3 | `GET` | `${EXTERNAL_API_URL}/apiusers/{id}` | `GET /api/external/users` | List all external licenses |
 | 4 | `GET` | `${EXTERNAL_API_URL}/showallapi/{id}` | `GET /api/external/all` | Get all API data |
 | 5 | `GET` | `${EXTERNAL_API_URL}/apilogs/{id}` | `GET /api/external/logs` | Get API logs by ID |
 | 6 | `GET` | `${EXTERNAL_API_URL}/getmylogs` | `GET /api/external/my-logs` | Get authenticated user logs |
 
-> **API Key:** `L9H2F7Q8XK6M4A` (stored in backend `.env` only, never exposed to frontend)
+> **API Key:** from backend `.env` (`EXTERNAL_API_KEY`), never exposed to frontend
 
 ### IP Geolocation API
 
@@ -1641,7 +1641,7 @@ sudo systemctl reload nginx
 
 ### CI/CD Pipeline
 
-Push to `main` → GitHub Actions:
+Push to `master` → GitHub Actions:
 1. Run PHPUnit tests
 2. Run Jest tests (from `tests-frontend/`)
 3. Build frontend (`npm run build`)
@@ -1703,7 +1703,7 @@ SESSION_DRIVER=redis
 QUEUE_CONNECTION=redis
 
 EXTERNAL_API_URL=${EXTERNAL_API_URL}
-EXTERNAL_API_KEY=L9H2F7Q8XK6M4A
+EXTERNAL_API_KEY=YOUR_EXTERNAL_API_KEY
 
 IP_GEO_PROVIDER=ipapi
 IP_GEO_URL=https://ipapi.co
@@ -1871,7 +1871,7 @@ DB_PASSWORD=
 SANCTUM_STATEFUL_DOMAINS=license.test,localhost:3000,127.0.0.1:3000
 
 EXTERNAL_API_URL=${EXTERNAL_API_URL}
-EXTERNAL_API_KEY=L9H2F7Q8XK6M4A
+EXTERNAL_API_KEY=YOUR_EXTERNAL_API_KEY
 EXTERNAL_API_TIMEOUT=10
 EXTERNAL_API_RETRIES=3
 ```

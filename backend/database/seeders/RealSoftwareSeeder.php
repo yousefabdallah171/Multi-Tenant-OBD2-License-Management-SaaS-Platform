@@ -27,12 +27,14 @@ class RealSoftwareSeeder extends Seeder
                 'base_price' => 25.00,
                 'status' => 'active',
                 'external_software_id' => 8,
-                'has_external_api' => true,
+                'has_external_api' => (bool) env('EXTERNAL_API_KEY'),
             ]
         );
 
-        $program->setExternalApiKeyAttribute('L9H2F7Q8XK6M4A');
-        $program->save();
+        if (env('EXTERNAL_API_KEY')) {
+            $program->setExternalApiKeyAttribute(env('EXTERNAL_API_KEY'));
+            $program->save();
+        }
 
         $this->command?->info('Real software seeded: OBD2SW Live Software (external_id=8, api=configured)');
     }

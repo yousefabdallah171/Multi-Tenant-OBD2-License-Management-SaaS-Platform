@@ -10,17 +10,18 @@ class SeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_database_seeder_creates_phase_one_users_and_sample_data(): void
+    public function test_database_seeder_creates_production_seed_baseline_data(): void
     {
         $this->seed(DatabaseSeeder::class);
 
         $this->assertDatabaseCount('tenants', 1);
-        $this->assertDatabaseCount('programs', 3);
-        $this->assertDatabaseCount('licenses', 3);
+        $this->assertDatabaseCount('programs', 1);
+        $this->assertDatabaseCount('licenses', 5);
         $this->assertDatabaseHas('users', ['email' => 'admin@obd2sw.com']);
-        $this->assertDatabaseHas('users', ['email' => 'parent@obd2sw.com']);
         $this->assertDatabaseHas('users', ['email' => 'manager@obd2sw.com']);
-        $this->assertDatabaseHas('users', ['email' => 'reseller@obd2sw.com']);
-        $this->assertDatabaseHas('users', ['email' => 'customer@obd2sw.com']);
+        $this->assertDatabaseHas('users', ['email' => 'reseller1@obd2sw.com']);
+        $this->assertDatabaseHas('users', ['email' => 'reseller2@obd2sw.com']);
+        $this->assertDatabaseHas('users', ['email' => 'customer1@demo.com']);
+        $this->assertDatabaseHas('users', ['email' => 'customer5@demo.com']);
     }
 }

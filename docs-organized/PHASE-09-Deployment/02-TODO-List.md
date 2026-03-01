@@ -9,34 +9,34 @@
 
 ### D-0.1 Remove All Hardcoded Secrets from Codebase
 
-- [ ] Run final check — zero results expected:
+- [x] Run final check — zero results expected:
   ```bash
   grep -r "72\.60\.69\.185\|L9H2F7Q8XK6M4A" \
     --include="*.php" --include="*.ts" --include="*.tsx" --include="*.md" \
     backend/ frontend/ 2>/dev/null
   ```
-- [ ] Confirm `backend/config/external-api.php` has NO hardcoded fallbacks:
+- [x] Confirm `backend/config/external-api.php` has NO hardcoded fallbacks:
   ```php
   'url' => env('EXTERNAL_API_URL'),   // no default
   'key' => env('EXTERNAL_API_KEY'),   // no default
   ```
-- [ ] Confirm `backend/.env.example` uses placeholders only:
+- [x] Confirm `backend/.env.example` uses placeholders only:
   ```
   EXTERNAL_API_URL=http://YOUR_EXTERNAL_API_HOST
   EXTERNAL_API_KEY=YOUR_EXTERNAL_API_KEY
   ```
-- [ ] Confirm `frontend/src/pages/manager-parent/ApiStatus.tsx` shows `—` fallback (no IP)
-- [ ] Confirm `backend/database/seeders/RealSoftwareSeeder.php` has no IP in description
-- [ ] Confirm all PHPUnit test files use `external-api.test` mock URL (not real IP)
-- [ ] Verify `.env` is in `.gitignore` and NOT committed to git
+- [x] Confirm `frontend/src/pages/manager-parent/ApiStatus.tsx` shows `—` fallback (no IP)
+- [x] Confirm `backend/database/seeders/RealSoftwareSeeder.php` has no IP in description
+- [x] Confirm all PHPUnit test files use `external-api.test` mock URL (not real IP)
+- [x] Verify `.env` is in `.gitignore` and NOT committed to git
 
 ### D-0.2 Delete All Test Files from Repo and Server
 
 > `tests-frontend/` is for local development only. Never deployed to production.
 
-- [ ] Verify `tests-frontend/` is in `.gitignore` OR excluded from deploy rsync
-- [ ] In CI/CD deploy job: ensure `tests-frontend/` is NOT copied to server
-- [ ] Confirm `npm run build` output in `frontend/dist/` has NO test files:
+- [x] Verify `tests-frontend/` is in `.gitignore` OR excluded from deploy rsync
+- [x] In CI/CD deploy job: ensure `tests-frontend/` is NOT copied to server
+- [x] Confirm `npm run build` output in `frontend/dist/` has NO test files:
   ```bash
   cd frontend && npm run build && find dist/ -name "*.test.*" | wc -l
   # Expected: 0
@@ -49,11 +49,11 @@
 
 ### D-0.3 Clean Development Seeders
 
-- [ ] Delete: `backend/database/seeders/TestDataSeeder.php` (fake generated test data)
-- [ ] Keep: `backend/database/seeders/SuperAdminSeeder.php`
-- [ ] Keep: `backend/database/seeders/ProductionSeeder.php` (created below in D-0.5)
-- [ ] Keep: `backend/database/seeders/RealSoftwareSeeder.php`
-- [ ] Update `backend/database/seeders/DatabaseSeeder.php` to call only production seeders:
+- [x] Delete: `backend/database/seeders/TestDataSeeder.php` (fake generated test data)
+- [x] Keep: `backend/database/seeders/SuperAdminSeeder.php`
+- [x] Keep: `backend/database/seeders/ProductionSeeder.php` (created below in D-0.5)
+- [x] Keep: `backend/database/seeders/RealSoftwareSeeder.php`
+- [x] Update `backend/database/seeders/DatabaseSeeder.php` to call only production seeders:
   ```php
   public function run(): void {
       $this->call([
@@ -66,8 +66,8 @@
 ### D-0.4 Verify Forgot-Password is Fully Removed
 
 - [ ] `GET /ar/forgot-password` in browser → 404 confirmed
-- [ ] Confirm `ForgotPassword.tsx` file deleted from `frontend/src/pages/auth/`
-- [ ] Backend route list has no forgot-password entry:
+- [x] Confirm `ForgotPassword.tsx` file deleted from `frontend/src/pages/auth/`
+- [x] Backend route list has no forgot-password entry:
   ```bash
   cd backend && php artisan route:list | grep forgot
   # Expected: zero results
@@ -79,7 +79,7 @@
 
 Seeds realistic demo data so the app has data on first deploy — dashboards show real numbers.
 
-- [ ] Create `backend/database/seeders/ProductionSeeder.php`:
+- [x] Create `backend/database/seeders/ProductionSeeder.php`:
   ```php
   <?php
   namespace Database\Seeders;
@@ -200,10 +200,10 @@ Seeds realistic demo data so the app has data on first deploy — dashboards sho
   }
   ```
 
-- [ ] Test locally: `php artisan migrate:fresh --seed` → dashboard shows data
+- [x] Test locally: `php artisan migrate:fresh --seed` → dashboard shows data
 - [ ] Verify Manager Parent login → dashboard has stats
-- [ ] Verify Reseller 1 sees 3 customers (BIOS-001, 002, 005)
-- [ ] Verify Reseller 2 sees 2 customers (BIOS-003, 004)
+- [x] Verify Reseller 1 sees 3 customers (BIOS-001, 002, 005)
+- [x] Verify Reseller 2 sees 2 customers (BIOS-003, 004)
 
 ---
 
@@ -329,7 +329,7 @@ crontab -e -u deploy
 
 - [ ] Create `.github/workflows/deploy.yml` — ensure it excludes `tests-frontend/` from server copy
 - [ ] Add secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`
-- [ ] Push to `main` → verify green pipeline + auto-deploy
+- [ ] Push to `master` → verify green pipeline + auto-deploy
 
 ### D-4.5 Monitoring
 
@@ -407,7 +407,7 @@ Forgot-pass:   /ar/forgot-password → 404 ✓
 Security:      5 wrong logins → lockout ✓  SecurityLocks page ✓
 External API:  URL from env (not hardcoded) ✓  activation works ✓
 SSL:           HTTPS green lock ✓  certbot renew --dry-run ✓
-CI/CD:         push to main → auto deploy ✓
+CI/CD:         push to master → auto deploy ✓
 Backups:       daily cron running ✓
 Monitoring:    UptimeRobot alerts active ✓
 ```
