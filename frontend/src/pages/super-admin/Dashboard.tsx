@@ -61,7 +61,7 @@ export function DashboardPage() {
         <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.dashboard.description')}</p>
       </div>
 
-      <StaggerGroup className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <StaggerGroup className="grid grid-cols-2 gap-4 xl:grid-cols-5">
         {statsLoading ? (
           Array.from({ length: 5 }).map((_, index) => <SkeletonCard key={index} className="h-full" lines={2} />)
         ) : (

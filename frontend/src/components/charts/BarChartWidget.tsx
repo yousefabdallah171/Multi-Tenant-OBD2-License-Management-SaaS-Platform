@@ -54,13 +54,13 @@ export function BarChartWidget<TData extends ChartRow>({
           <CartesianGrid stroke={palette.grid} strokeDasharray="4 4" vertical={!horizontal} horizontal />
           {horizontal ? (
             <>
-              <XAxis type="number" stroke={palette.axis} tickLine={false} axisLine={false} tickFormatter={(value) => formatChartNumber(value, locale)} />
-              <YAxis type="category" dataKey={xKey} stroke={palette.axis} tickLine={false} axisLine={false} width={110} tickFormatter={xAxisFormatter} />
+              <XAxis type="number" stroke={palette.axis} tickLine={false} axisLine={false} minTickGap={24} tick={{ fontSize: 12 }} tickFormatter={(value) => formatChartNumber(value, locale)} />
+              <YAxis type="category" dataKey={xKey} stroke={palette.axis} tickLine={false} axisLine={false} width={96} tick={{ fontSize: 12 }} tickFormatter={xAxisFormatter} />
             </>
           ) : (
             <>
-              <XAxis dataKey={xKey} stroke={palette.axis} tickLine={false} axisLine={false} tickMargin={10} tickFormatter={xAxisFormatter} />
-              <YAxis stroke={palette.axis} tickLine={false} axisLine={false} width={52} tickFormatter={(value) => formatChartNumber(value, locale)} />
+              <XAxis dataKey={xKey} stroke={palette.axis} tickLine={false} axisLine={false} tickMargin={10} minTickGap={24} tick={{ fontSize: 12 }} tickFormatter={xAxisFormatter} />
+              <YAxis stroke={palette.axis} tickLine={false} axisLine={false} width={52} tick={{ fontSize: 12 }} tickFormatter={(value) => formatChartNumber(value, locale)} />
             </>
           )}
           <Tooltip

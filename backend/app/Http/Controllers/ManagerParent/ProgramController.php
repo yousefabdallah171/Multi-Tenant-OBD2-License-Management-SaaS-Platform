@@ -52,6 +52,8 @@ class ProgramController extends BaseManagerParentController
             'base_price' => ['required', 'numeric', 'min:0'],
             'icon' => ['nullable', 'image', 'max:2048'],
             'status' => ['nullable', 'in:active,inactive'],
+            'external_api_key' => ['nullable', 'string', 'max:100'],
+            'external_software_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $iconPath = $request->hasFile('icon')
@@ -70,7 +72,14 @@ class ProgramController extends BaseManagerParentController
             'installation_guide_url' => $validated['installation_guide_url'] ?? null,
             'base_price' => $validated['base_price'],
             'icon' => $iconPath,
+            'external_software_id' => $validated['external_software_id'] ?? null,
+            'has_external_api' => ! empty($validated['external_api_key']),
         ]);
+
+        if (! empty($validated['external_api_key'])) {
+            $program->setExternalApiKeyAttribute($validated['external_api_key']);
+            $program->save();
+        }
 
         $this->logActivity($request, 'program.create', sprintf('Created program %s.', $program->name), [
             'program_id' => $program->id,
@@ -98,6 +107,8 @@ class ProgramController extends BaseManagerParentController
             'base_price' => ['sometimes', 'numeric', 'min:0'],
             'icon' => ['nullable', 'image', 'max:2048'],
             'status' => ['sometimes', 'in:active,inactive'],
+            'external_api_key' => ['nullable', 'string', 'max:100'],
+            'external_software_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
         if ($request->hasFile('icon')) {
@@ -110,7 +121,19 @@ class ProgramController extends BaseManagerParentController
             unset($validated['icon']);
         }
 
+        if (array_key_exists('external_software_id', $validated)) {
+            $program->external_software_id = $validated['external_software_id'];
+        }
+
+        if (! empty($validated['external_api_key'])) {
+            $program->setExternalApiKeyAttribute($validated['external_api_key']);
+            $program->has_external_api = true;
+        }
+
+        unset($validated['external_api_key'], $validated['external_software_id']);
+
         $program->update($validated);
+        $program->save();
 
         $this->logActivity($request, 'program.update', sprintf('Updated program %s.', $program->name), [
             'program_id' => $program->id,
@@ -163,6 +186,8 @@ class ProgramController extends BaseManagerParentController
             'trial_days' => $program->trial_days,
             'base_price' => (float) $program->base_price,
             'icon' => $program->icon ? Storage::disk('public')->url($program->icon) : null,
+            'has_external_api' => (bool) $program->has_external_api,
+            'external_software_id' => $program->external_software_id,
             'status' => $program->status,
             'licenses_sold' => (int) ($program->total_licenses_count ?? 0),
             'active_licenses_count' => (int) ($program->active_licenses_count ?? 0),

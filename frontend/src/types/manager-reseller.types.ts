@@ -136,6 +136,7 @@ export interface LicenseSummary {
   customer_name: string | null
   customer_email: string | null
   bios_id: string
+  external_username?: string | null
   program: string | null
   program_id: number
   duration_days: number
@@ -264,4 +265,67 @@ export interface TopProgramRow {
   revenue: number
 }
 
+export interface ResellerSoftwareProgram {
+  id: number
+  name: string
+  version: string
+  price_per_day: number
+  is_active: boolean
+  has_external_api?: boolean
+  external_software_id?: number | null
+}
+
 export type PaginatedRoleActivity = PaginatedResponse<RoleActivityEntry>
+
+export interface ManagerSoftwareProgram {
+  id: number
+  name: string
+  description: string | null
+  version: string
+  download_link: string
+  file_size: string | null
+  system_requirements: string | null
+  installation_guide_url: string | null
+  trial_days: number
+  base_price: number
+  icon: string | null
+  has_external_api: boolean
+  external_software_id: number | null
+  status: 'active' | 'inactive'
+  licenses_sold: number
+  active_licenses_count: number
+  revenue: number
+  created_at: string | null
+}
+
+export interface ManagerSoftwareFilters {
+  page?: number
+  per_page?: number
+  status?: '' | 'active' | 'inactive'
+  search?: string
+}
+
+export interface CreateManagerSoftwareData {
+  name: string
+  download_link: string
+  trial_days?: number
+  base_price: number
+  icon?: string | null
+  description?: string | null
+  version?: string
+  file_size?: string | null
+  system_requirements?: string | null
+  installation_guide_url?: string | null
+  external_api_key?: string | null
+  external_software_id?: number | null
+  active?: boolean
+}
+
+export interface UpdateManagerSoftwareData extends Partial<CreateManagerSoftwareData> {
+  status?: 'active' | 'inactive'
+}
+
+export interface ActivateManagerSoftwareData {
+  username: string
+  bios_id: string
+}

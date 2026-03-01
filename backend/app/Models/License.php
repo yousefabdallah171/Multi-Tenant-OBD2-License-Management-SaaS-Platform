@@ -17,6 +17,9 @@ class License extends Model
         'reseller_id',
         'program_id',
         'bios_id',
+        'external_username',
+        'external_activation_response',
+        'external_deletion_response',
         'duration_days',
         'price',
         'activated_at',
@@ -27,7 +30,7 @@ class License extends Model
     protected function casts(): array
     {
         return [
-            'duration_days' => 'integer',
+            'duration_days' => 'decimal:3',
             'price' => 'decimal:2',
             'activated_at' => 'datetime',
             'expires_at' => 'datetime',

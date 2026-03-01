@@ -196,6 +196,7 @@ class LicenseController extends BaseResellerController
             'customer_name' => $license->customer?->name,
             'customer_email' => $license->customer?->email,
             'bios_id' => $license->bios_id,
+            'external_username' => $license->external_username ?: $license->customer?->username,
             'program' => $license->program?->name,
             'program_id' => $license->program_id,
             'duration_days' => $license->duration_days,

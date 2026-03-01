@@ -3,72 +3,167 @@
 namespace App\Services;
 
 use App\Models\ApiLog;
-use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Throwable;
 
 class ExternalApiService
 {
-    public function activateUser(string $biosId): array
+    public function activateUser(string $apiKey, string $username, string $biosId): array
     {
-        return $this->send('post', '/activate', ['bios_id' => $biosId]);
+        return $this->sendPlainText(
+            'GET',
+            $this->buildPath('apiuseradd', [$apiKey, $username, $biosId]),
+            [
+                'api_key' => $apiKey,
+                'username' => $username,
+                'bios_id' => $biosId,
+            ],
+            fn (string $body, int $statusCode): array => [
+                'success' => $statusCode === 200 && Str::contains(Str::lower($body), 'true'),
+                'data' => ['response' => $body],
+                'status_code' => $statusCode,
+            ],
+        );
     }
 
-    public function deleteUser(string $biosId): array
+    public function deactivateUser(string $apiKey, string $username): array
     {
-        return $this->send('delete', '/users/'.$biosId);
+        return $this->sendPlainText(
+            'GET',
+            $this->buildPath('apideluser', [$apiKey, $username]),
+            [
+                'api_key' => $apiKey,
+                'username' => $username,
+            ],
+            fn (string $body, int $statusCode): array => [
+                'success' => $statusCode === 200 && Str::contains(Str::lower($body), 'true'),
+                'data' => ['response' => $body],
+                'status_code' => $statusCode,
+            ],
+        );
+    }
+
+    public function getActiveUsers(int $softwareId): array
+    {
+        return $this->sendPlainText(
+            'GET',
+            $this->buildPath('apiusers', [$softwareId]),
+            ['software_id' => $softwareId],
+            function (string $body, int $statusCode): array {
+                $normalized = str_replace(["'", 'True', 'False'], ['"', 'true', 'false'], $body);
+                $decoded = json_decode($normalized, true);
+
+                return [
+                    'success' => $statusCode === 200 && is_array($decoded),
+                    'data' => ['users' => is_array($decoded) ? $decoded : []],
+                    'status_code' => $statusCode,
+                ];
+            },
+        );
+    }
+
+    public function getSoftwareStats(int $softwareId): array
+    {
+        return $this->sendPlainText(
+            'GET',
+            $this->buildPath('showallapi', [$softwareId]),
+            ['software_id' => $softwareId],
+            fn (string $body, int $statusCode): array => [
+                'success' => $statusCode === 200,
+                'data' => ['count' => (int) trim($body)],
+                'status_code' => $statusCode,
+            ],
+        );
+    }
+
+    public function getProgramLogs(int $softwareId): array
+    {
+        return $this->sendPlainText(
+            'GET',
+            $this->buildPath('apilogs', [$softwareId]),
+            ['software_id' => $softwareId],
+            fn (string $body, int $statusCode): array => [
+                'success' => $statusCode === 200,
+                'data' => ['raw' => $body],
+                'status_code' => $statusCode,
+            ],
+        );
+    }
+
+    public function getGlobalLogs(): array
+    {
+        return $this->sendPlainText(
+            'GET',
+            $this->buildPath('getmylogs'),
+            [],
+            fn (string $body, int $statusCode): array => [
+                'success' => $statusCode === 200,
+                'data' => ['raw' => $body],
+                'status_code' => $statusCode,
+            ],
+        );
+    }
+
+    // Backward compatibility for existing API status pages/controllers.
+    public function getStatus(): array
+    {
+        return $this->sendPlainText(
+            'GET',
+            $this->buildPath('showallapi', [8]),
+            ['software_id' => 8],
+            fn (string $body, int $statusCode): array => [
+                'success' => $statusCode === 200,
+                'data' => [
+                    'status' => $statusCode === 200 ? 'online' : 'offline',
+                    'count' => (int) trim($body),
+                ],
+                'status_code' => $statusCode,
+            ],
+        );
     }
 
     public function listUsers(): array
     {
-        return $this->send('get', '/users');
+        return $this->getActiveUsers(8);
     }
 
     public function checkUser(string $biosId): array
     {
-        return $this->send('get', '/users/'.$biosId);
-    }
+        $response = $this->getActiveUsers(8);
+        $users = is_array($response['data']['users'] ?? null) ? $response['data']['users'] : [];
 
-    public function renewUser(string $biosId): array
-    {
-        return $this->send('post', '/renew', ['bios_id' => $biosId]);
-    }
-
-    public function getStatus(): array
-    {
-        return $this->send('get', '/status');
+        return [
+            'success' => $response['success'],
+            'data' => ['exists' => array_key_exists($biosId, $users)],
+            'status_code' => $response['status_code'] ?? 503,
+        ];
     }
 
     /**
      * @param array<string, mixed> $payload
+     * @param \Closure(string, int): array{success: bool, data: array<string, mixed>, status_code: int} $formatter
      * @return array{success: bool, data: array<string, mixed>, status_code: int}
      */
-    private function send(string $method, string $uri, array $payload = []): array
+    private function sendPlainText(string $method, string $path, array $payload, \Closure $formatter): array
     {
         $startedAt = microtime(true);
-        $endpoint = ltrim($uri, '/');
+        $url = rtrim((string) config('external-api.url'), '/').'/'.ltrim($path, '/');
 
         try {
-            $request = $this->client();
+            $response = Http::timeout((int) config('external-api.timeout', 10))
+                ->retry((int) config('external-api.retries', 3), 200)
+                ->accept('*/*')
+                ->send($method, $url);
 
-            $response = match (strtolower($method)) {
-                'get' => $request->get($endpoint, $payload),
-                'post' => $request->post($endpoint, $payload),
-                'delete' => $request->delete($endpoint, $payload),
-                default => $request->send($method, $endpoint, ['json' => $payload]),
-            };
+            $body = trim((string) $response->body());
+            $result = $formatter($body, $response->status());
+            $this->logApiCall($path, strtoupper($method), $payload, $result['data'], $response->status(), $startedAt);
 
-            $body = $response->json() ?? [];
-            $this->logApiCall($endpoint, strtoupper($method), $payload, $body, $response->status(), $startedAt);
-
-            return [
-                'success' => $response->successful(),
-                'data' => $body,
-                'status_code' => $response->status(),
-            ];
+            return $result;
         } catch (Throwable $exception) {
             $body = ['message' => $exception->getMessage()];
-            $this->logApiCall($endpoint, strtoupper($method), $payload, $body, 503, $startedAt);
+            $this->logApiCall($path, strtoupper($method), $payload, $body, 503, $startedAt);
 
             return [
                 'success' => false,
@@ -78,15 +173,14 @@ class ExternalApiService
         }
     }
 
-    private function client(): PendingRequest
+    /**
+     * @param array<int, string|int> $segments
+     */
+    private function buildPath(string $root, array $segments = []): string
     {
-        return Http::baseUrl(rtrim((string) config('external-api.url'), '/'))
-            ->timeout((int) config('external-api.timeout', 10))
-            ->retry((int) config('external-api.retries', 3), 200)
-            ->acceptJson()
-            ->withHeaders([
-                'X-API-Key' => (string) config('external-api.key'),
-            ]);
+        $parts = array_map(static fn ($segment) => rawurlencode((string) $segment), $segments);
+
+        return $root.(empty($parts) ? '' : '/'.implode('/', $parts));
     }
 
     private function logApiCall(string $endpoint, string $method, array $payload, array $responseBody, int $statusCode, float $startedAt): void

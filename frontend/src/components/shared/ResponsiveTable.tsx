@@ -36,7 +36,7 @@ export function ResponsiveTable({ children, className, contentClassName }: Respo
   }, [])
 
   return (
-    <div className={cn('relative overflow-hidden', className)}>
+    <div data-testid="responsive-table" className={cn('relative overflow-hidden', className)}>
       <div
         aria-hidden="true"
         className={cn(

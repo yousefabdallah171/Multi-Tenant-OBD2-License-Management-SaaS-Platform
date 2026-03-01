@@ -24,7 +24,14 @@ class Program extends Model
         'trial_days',
         'base_price',
         'icon',
+        'external_api_key_encrypted',
+        'external_software_id',
+        'has_external_api',
         'status',
+    ];
+
+    protected $hidden = [
+        'external_api_key_encrypted',
     ];
 
     protected function casts(): array
@@ -32,7 +39,31 @@ class Program extends Model
         return [
             'trial_days' => 'integer',
             'base_price' => 'decimal:2',
+            'external_software_id' => 'integer',
+            'has_external_api' => 'boolean',
         ];
+    }
+
+    public function setExternalApiKeyAttribute(?string $value): void
+    {
+        if ($value === null || trim($value) === '') {
+            return;
+        }
+
+        $this->attributes['external_api_key_encrypted'] = encrypt(trim($value));
+    }
+
+    public function getDecryptedApiKey(): ?string
+    {
+        if (! $this->external_api_key_encrypted) {
+            return null;
+        }
+
+        try {
+            return decrypt($this->external_api_key_encrypted);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function tenant(): BelongsTo

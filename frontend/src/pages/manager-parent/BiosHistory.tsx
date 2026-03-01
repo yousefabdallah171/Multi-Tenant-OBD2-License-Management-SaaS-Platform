@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -12,6 +12,7 @@ import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import { teamService } from '@/services/team.service'
 import type { BiosHistoryEntry } from '@/types/manager-parent.types'
@@ -57,8 +58,25 @@ export function BiosHistoryPage() {
 
   const columns = useMemo<Array<DataTableColumn<BiosHistoryEntry>>>(
     () => [
-      { key: 'bios', label: t('managerParent.pages.biosHistory.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
-      { key: 'customer', label: t('common.customer'), sortable: true, sortValue: (row) => row.customer ?? '', render: (row) => row.customer ?? '-' },
+      {
+        key: 'bios',
+        label: t('managerParent.pages.biosHistory.biosId'),
+        sortable: true,
+        sortValue: (row) => row.bios_id,
+        render: (row) => (
+          <div>
+            <code>{row.bios_id}</code>
+            <p className="text-xs text-slate-500 dark:text-slate-400">@{row.external_username ?? '-'}</p>
+          </div>
+        ),
+      },
+      {
+        key: 'customer',
+        label: t('common.customer'),
+        sortable: true,
+        sortValue: (row) => row.customer ?? '',
+        render: (row) => (row.customer_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>{row.customer ?? '-'}</Link> : (row.customer ?? '-')),
+      },
       { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
       { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => row.action },
       { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} /> },

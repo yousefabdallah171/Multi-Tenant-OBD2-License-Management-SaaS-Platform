@@ -7,6 +7,7 @@ interface SkeletonChartProps {
 export function SkeletonChart({ className }: SkeletonChartProps) {
   return (
     <div
+      data-testid="skeleton-chart"
       className={cn(
         'relative h-80 overflow-hidden rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/40',
         className,

@@ -15,25 +15,20 @@ class ExternalApiServiceTest extends TestCase
     public function test_activate_user_calls_the_expected_external_endpoint(): void
     {
         config()->set('external-api.url', 'http://72.60.69.185');
-        config()->set('external-api.key', 'TEST-KEY');
 
         Http::fake([
-            'http://72.60.69.185/activate' => Http::response([
-                'activated' => true,
-            ], 200),
+            'http://72.60.69.185/apiuseradd/TEST-KEY/BIOS-XYZ/BIOS-XYZ' => Http::response('"True"', 200),
         ]);
 
-        $response = app(ExternalApiService::class)->activateUser('BIOS-XYZ');
+        $response = app(ExternalApiService::class)->activateUser('TEST-KEY', 'BIOS-XYZ', 'BIOS-XYZ');
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'http://72.60.69.185/activate'
-                && $request['bios_id'] === 'BIOS-XYZ'
-                && $request->hasHeader('X-API-Key', 'TEST-KEY');
+            return $request->url() === 'http://72.60.69.185/apiuseradd/TEST-KEY/BIOS-XYZ/BIOS-XYZ';
         });
 
         $this->assertTrue($response['success']);
         $this->assertSame(200, $response['status_code']);
-        $this->assertSame(['activated' => true], $response['data']);
+        $this->assertSame('"True"', $response['data']['response']);
     }
 
     public function test_external_api_service_handles_connection_failures_gracefully(): void

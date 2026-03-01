@@ -32,6 +32,7 @@ class LicenseService
         $reseller = $this->resolveReseller($actor);
         $program = Program::query()->findOrFail($data['program_id']);
         $biosId = trim((string) $data['bios_id']);
+        $apiKey = $program->getDecryptedApiKey();
 
         if ($biosId === '') {
             throw ValidationException::withMessages(['bios_id' => 'The BIOS ID field is required.']);
@@ -41,9 +42,15 @@ class LicenseService
             throw ValidationException::withMessages(['program_id' => 'The selected program is not active.']);
         }
 
+        if ($apiKey === null) {
+            throw ValidationException::withMessages([
+                'program_id' => 'This program is not configured for external activation. Contact your manager.',
+            ]);
+        }
+
         $this->assertBiosAvailable($reseller, $program, $biosId);
 
-        $apiResponse = $this->externalApiService->activateUser($biosId);
+        $apiResponse = $this->externalApiService->activateUser($apiKey, $biosId, $biosId);
 
         $this->logBiosAccess($reseller, $biosId, 'activate', [
             'program_id' => $program->id,
@@ -56,8 +63,10 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($data, $reseller, $program, $biosId): License {
+        return DB::transaction(function () use ($data, $reseller, $program, $biosId, $apiResponse): License {
             $customer = $this->upsertCustomer($reseller, $data, $biosId);
+            $durationDays = (float) $data['duration_days'];
+            $durationMinutes = (int) max(1, round($durationDays * 1440));
 
             $license = License::query()->create([
                 'tenant_id' => $reseller->tenant_id,
@@ -65,10 +74,12 @@ class LicenseService
                 'reseller_id' => $reseller->id,
                 'program_id' => $program->id,
                 'bios_id' => $biosId,
-                'duration_days' => (int) $data['duration_days'],
+                'external_username' => $biosId,
+                'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
+                'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
                 'activated_at' => now(),
-                'expires_at' => now()->addDays((int) $data['duration_days']),
+                'expires_at' => now()->addMinutes($durationMinutes),
                 'status' => 'active',
             ]);
 
@@ -97,27 +108,17 @@ class LicenseService
     {
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
-
-        $apiResponse = $this->externalApiService->renewUser($license->bios_id);
-
-        $this->logBiosAccess($reseller, $license->bios_id, 'renew', [
-            'license_id' => $license->id,
-            'external' => $apiResponse,
-        ]);
-
-        if (! $apiResponse['success']) {
-            throw ValidationException::withMessages([
-                'license' => $this->extractExternalMessage($apiResponse, 'The renewal request was rejected by the external service.'),
-            ]);
-        }
+        $this->logBiosAccess($reseller, $license->bios_id, 'renew', ['license_id' => $license->id]);
 
         $renewedLicense = DB::transaction(function () use ($license, $data, $reseller): License {
             $anchor = $license->expires_at && $license->expires_at->isFuture() ? $license->expires_at->copy() : now();
+            $durationDays = (float) $data['duration_days'];
+            $durationMinutes = (int) max(1, round($durationDays * 1440));
 
             $license->forceFill([
-                'duration_days' => (int) $data['duration_days'],
+                'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
-                'expires_at' => $anchor->addDays((int) $data['duration_days']),
+                'expires_at' => $anchor->addMinutes($durationMinutes),
                 'status' => 'active',
             ])->save();
 
@@ -128,7 +129,7 @@ class LicenseService
                 sprintf('Renewed license %d for BIOS %s.', $license->id, $license->bios_id),
                 [
                     'license_id' => $license->id,
-                    'duration_days' => (int) $data['duration_days'],
+                    'duration_days' => $durationDays,
                     'price' => (float) $license->price,
                 ],
             );
@@ -147,8 +148,16 @@ class LicenseService
     {
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
+        $program = $license->program()->first();
+        $apiKey = $program?->getDecryptedApiKey();
 
-        $apiResponse = $this->externalApiService->deleteUser($license->bios_id);
+        if ($apiKey === null) {
+            throw ValidationException::withMessages([
+                'license' => 'Program has no external API configured.',
+            ]);
+        }
+
+        $apiResponse = $this->externalApiService->deactivateUser($apiKey, $license->bios_id);
 
         $this->logBiosAccess($reseller, $license->bios_id, 'deactivate', [
             'license_id' => $license->id,
@@ -161,9 +170,10 @@ class LicenseService
             ]);
         }
 
-        $deactivatedLicense = DB::transaction(function () use ($license, $reseller): License {
+        $deactivatedLicense = DB::transaction(function () use ($license, $reseller, $apiResponse): License {
             $license->forceFill([
                 'status' => 'suspended',
+                'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? ''),
             ])->save();
 
             $this->logActivity(
@@ -276,13 +286,28 @@ class LicenseService
 
         $role = $actor->role?->value ?? (string) $actor->role;
 
-        if ($role !== UserRole::RESELLER->value) {
+        if ($role === UserRole::RESELLER->value) {
+            return $actor;
+        }
+
+        $query = User::query()
+            ->where('tenant_id', $actor->tenant_id)
+            ->where('role', UserRole::RESELLER->value)
+            ->where('status', 'active');
+
+        if ($role === UserRole::MANAGER->value) {
+            $query->where('created_by', $actor->id);
+        }
+
+        $reseller = $query->orderBy('id')->first();
+
+        if (! $reseller) {
             throw ValidationException::withMessages([
-                'auth' => 'Only reseller accounts can perform this action.',
+                'auth' => 'No active reseller account is available for activation.',
             ]);
         }
 
-        return $actor;
+        return $reseller;
     }
 
     private function extractExternalMessage(array $response, string $fallback): string

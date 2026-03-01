@@ -52,17 +52,17 @@ export function Navbar() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={switchLanguage}>
+          <Button type="button" variant="ghost" size="sm" onClick={switchLanguage} aria-label={t('common.switchLanguage')}>
             <Globe className="me-2 h-4 w-4" />
             {lang === 'ar' ? 'EN' : 'AR'}
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={toggleTheme}>
+          <Button type="button" variant="ghost" size="sm" onClick={toggleTheme} aria-label={t('common.toggleTheme')}>
             {isDark ? <SunMedium className="me-2 h-4 w-4" /> : <MoonStar className="me-2 h-4 w-4" />}
             {isDark ? t('common.lightMode') : t('common.darkMode')}
           </Button>
           {user ? (
             <details className="relative">
-              <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800">
+              <summary aria-label={t('common.userMenu')} className="flex cursor-pointer list-none items-center gap-3 rounded-2xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800">
                 <div className="hidden text-start sm:block">
                   <div className="font-medium text-slate-950 dark:text-white">{user.name}</div>
                   <div className="text-xs text-slate-500 dark:text-slate-400">{user.email}</div>

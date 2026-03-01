@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, BarChart3, Building2, History, KeyRound, LayoutDashboard, Package, ScrollText, Settings, ShieldBan, User, UserCog, UserRound, Users, Wallet } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, FileText, History, KeyRound, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users, Wallet } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
@@ -19,7 +19,7 @@ const superAdminItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.superAdmin.dashboard, translationKey: 'superAdmin.nav.dashboard' },
   { key: 'tenants', icon: Building2, href: routePaths.superAdmin.tenants, translationKey: 'superAdmin.nav.tenants' },
   { key: 'users', icon: Users, href: routePaths.superAdmin.users, translationKey: 'superAdmin.nav.users' },
-  { key: 'adminManagement', icon: UserCog, href: routePaths.superAdmin.adminManagement, translationKey: 'superAdmin.nav.adminManagement' },
+  { key: 'adminManagement', icon: Users, href: routePaths.superAdmin.adminManagement, translationKey: 'superAdmin.nav.adminManagement' },
   { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },
   { key: 'biosHistory', icon: History, href: routePaths.superAdmin.biosHistory, translationKey: 'superAdmin.nav.biosHistory' },
   { key: 'usernameManagement', icon: KeyRound, href: routePaths.superAdmin.usernameManagement, translationKey: 'superAdmin.nav.usernameManagement' },
@@ -38,11 +38,15 @@ const managerParentItems: NavItem[] = [
   { key: 'softwareManagement', icon: Package, href: routePaths.managerParent.softwareManagement, translationKey: 'managerParent.nav.softwareManagement' },
   { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
   { key: 'biosHistory', icon: History, href: routePaths.managerParent.biosHistory, translationKey: 'managerParent.nav.biosHistory' },
+  { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.managerParent.biosConflicts, translationKey: 'managerParent.nav.biosConflicts' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, translationKey: 'managerParent.nav.ipAnalytics' },
+  { key: 'programLogs', icon: FileText, href: routePaths.managerParent.programLogs, translationKey: 'managerParent.nav.programLogs' },
+  { key: 'apiStatus', icon: Activity, href: routePaths.managerParent.apiStatus, translationKey: 'managerParent.nav.apiStatus' },
   { key: 'usernameManagement', icon: KeyRound, href: routePaths.managerParent.usernameManagement, translationKey: 'managerParent.nav.usernameManagement' },
   { key: 'financialReports', icon: BarChart3, href: routePaths.managerParent.financialReports, translationKey: 'managerParent.nav.financialReports' },
   { key: 'reports', icon: ScrollText, href: routePaths.managerParent.reports, translationKey: 'managerParent.nav.reports' },
   { key: 'activity', icon: ScrollText, href: routePaths.managerParent.activity, translationKey: 'managerParent.nav.activity' },
+  { key: 'logs', icon: ScrollText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logs' },
   { key: 'customers', icon: Users, href: routePaths.managerParent.customers, translationKey: 'managerParent.nav.customers' },
   { key: 'settings', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
   { key: 'profile', icon: User, href: routePaths.managerParent.profile, translationKey: 'managerParent.nav.profile' },
@@ -54,6 +58,7 @@ const managerItems: NavItem[] = [
   { key: 'usernameManagement', icon: KeyRound, href: routePaths.manager.usernameManagement, translationKey: 'manager.nav.usernameManagement' },
   { key: 'customers', icon: UserRound, href: routePaths.manager.customers, translationKey: 'manager.nav.customers' },
   { key: 'software', icon: Package, href: routePaths.manager.software, translationKey: 'manager.nav.software' },
+  { key: 'softwareManagement', icon: PackagePlus, href: routePaths.manager.softwareManagement, translationKey: 'manager.nav.softwareManagement' },
   { key: 'reports', icon: BarChart3, href: routePaths.manager.reports, translationKey: 'manager.nav.reports' },
   { key: 'activity', icon: ScrollText, href: routePaths.manager.activity, translationKey: 'manager.nav.activity' },
   { key: 'profile', icon: User, href: routePaths.manager.profile, translationKey: 'manager.nav.profile' },
@@ -62,11 +67,17 @@ const managerItems: NavItem[] = [
 const resellerItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.reseller.dashboard, translationKey: 'reseller.nav.dashboard' },
   { key: 'customers', icon: Users, href: routePaths.reseller.customers, translationKey: 'reseller.nav.customers' },
-  { key: 'software', icon: Package, href: routePaths.reseller.software, translationKey: 'reseller.nav.software' },
   { key: 'licenses', icon: KeyRound, href: routePaths.reseller.licenses, translationKey: 'reseller.nav.licenses' },
+  { key: 'software', icon: Package, href: routePaths.reseller.software, translationKey: 'reseller.nav.software' },
   { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, translationKey: 'reseller.nav.reports' },
   { key: 'activity', icon: Activity, href: routePaths.reseller.activity, translationKey: 'reseller.nav.activity' },
   { key: 'profile', icon: User, href: routePaths.reseller.profile, translationKey: 'reseller.nav.profile' },
+]
+
+const customerItems: NavItem[] = [
+  { key: 'dashboard', icon: LayoutDashboard, href: routePaths.customer.dashboard, translationKey: 'customerPortal.nav.dashboard' },
+  { key: 'software', icon: Package, href: routePaths.customer.software, translationKey: 'customerPortal.nav.software' },
+  { key: 'download', icon: ScrollText, href: routePaths.customer.download, translationKey: 'customerPortal.nav.download' },
 ]
 
 export function Sidebar() {
@@ -85,6 +96,8 @@ export function Sidebar() {
           ? managerItems
           : user?.role === 'reseller'
             ? resellerItems
+            : user?.role === 'customer'
+              ? customerItems
             : []
 
   const navContent = (

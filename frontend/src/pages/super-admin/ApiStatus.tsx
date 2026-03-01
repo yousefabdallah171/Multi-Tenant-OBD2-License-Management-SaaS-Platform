@@ -56,7 +56,7 @@ export function ApiStatusPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatsCard
           title={t('common.status')}
           value={t(`common.${summary?.status ?? 'unknown'}`)}

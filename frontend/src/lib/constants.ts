@@ -8,10 +8,11 @@ export const LANGUAGE_STORAGE_KEY = 'license-language'
 
 export const USER_ROLES: UserRole[] = ['super_admin', 'manager_parent', 'manager', 'reseller', 'customer']
 
-export const ROLE_DASHBOARD_SEGMENTS: Record<UserRole, string> = {
+type ActiveDashboardRole = Exclude<UserRole, 'customer'>
+
+export const ROLE_DASHBOARD_SEGMENTS: Record<ActiveDashboardRole, string> = {
   super_admin: 'super-admin/dashboard',
   manager_parent: 'dashboard',
   manager: 'manager/dashboard',
   reseller: 'reseller/dashboard',
-  customer: 'customer/dashboard',
 }

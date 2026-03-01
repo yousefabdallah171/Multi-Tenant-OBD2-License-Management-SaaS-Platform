@@ -141,6 +141,10 @@
     "connectionLost": "انقطع الاتصال. يرجى التحقق من الشبكة والمحاولة مرة أخرى.",
     "openNavigation": "فتح قائمة التنقل",
     "closeNavigation": "إغلاق قائمة التنقل",
+    "closeDialog": "إغلاق النافذة",
+    "switchLanguage": "تبديل اللغة",
+    "toggleTheme": "تبديل السمة",
+    "userMenu": "فتح قائمة المستخدم",
     "skipToContent": "تخطي إلى المحتوى",
     "tryAgain": "إعادة المحاولة",
     "goToDashboard": "العودة إلى اللوحة",
@@ -281,7 +285,10 @@
         "emailNotifications": "إشعارات البريد الإلكتروني",
         "pusherNotifications": "إشعارات Pusher",
         "minPasswordLength": "أدنى طول لكلمة المرور",
-        "sessionTimeout": "مهلة الجلسة بالدقائق"
+        "sessionTimeout": "مهلة الجلسة بالدقائق",
+        "profileTab": "الملف الشخصي",
+        "saveProfile": "حفظ الملف الشخصي",
+        "savePassword": "حفظ كلمة المرور"
       },
       "profile": {
         "title": "الملف الشخصي",
@@ -386,7 +393,11 @@
       "softwareManagement": "إدارة البرامج",
       "biosBlacklist": "القائمة السوداء لـ BIOS",
       "biosHistory": "سجل BIOS",
+      "biosConflicts": "تعارضات BIOS",
       "ipAnalytics": "تحليلات IP",
+      "logs": "سجلات المنصة",
+      "programLogs": "سجلات البرامج",
+      "apiStatus": "حالة API",
       "usernameManagement": "إدارة اسم المستخدم",
       "financialReports": "التقارير المالية",
       "reports": "التقارير",
@@ -457,6 +468,9 @@
         }
       },
       "settings": {
+        "profileTab": "الملف الشخصي",
+        "saveProfile": "حفظ الملف الشخصي",
+        "savePassword": "حفظ كلمة المرور",
         "title": "الإعدادات",
         "description": "حدّث بيانات النشاط التجاري الخاصة بالشريك والإعدادات الافتراضية وتفضيلات الإشعارات.",
         "loadingTitle": "جارٍ تحميل الإعدادات...",
@@ -684,6 +698,59 @@
         "productUpdates": "تحديثات المنتج وتغييرات المنصة",
         "profileSaved": "تم تحديث الملف الشخصي بنجاح.",
         "passwordSaved": "تم تحديث كلمة المرور بنجاح."
+      },
+      "logs": {
+        "title": "سجلات المنصة",
+        "description": "راجع سجلات طلبات API الداخلية الخاصة بمنصتك، بشكل منفصل عن سجلات البرامج الخارجية.",
+        "endpoint": "المسار",
+        "method": "الطريقة",
+        "statusCode": "رمز الحالة",
+        "responseTime": "زمن الاستجابة",
+        "autoRefresh": "تحديث تلقائي",
+        "detailTitle": "تفاصيل السجل"
+      },
+      "apiStatus": {
+        "title": "حالة API للمنصة",
+        "description": "راقب حالة API الخارجية بشكل للقراءة فقط.",
+        "endpoint": "المسار",
+        "statusCode": "رمز الحالة",
+        "responseTime": "زمن الاستجابة",
+        "pingNow": "فحص الآن",
+        "uptime24": "الاستقرار 24 ساعة",
+        "uptime30": "الاستقرار 30 يومًا",
+        "historyTitle": "سجل زمن الاستجابة",
+        "summaryTitle": "الحالة الحالية"
+      },
+      "biosConflicts": {
+        "title": "تعارضات BIOS",
+        "description": "راجع أحداث تعارض BIOS داخل نطاق الشريك وقم بحل الحالات المفتوحة.",
+        "allTypes": "كل أنواع التعارض",
+        "emptyTitle": "لا توجد تعارضات BIOS",
+        "noCustomers": "لا يوجد عملاء متأثرون",
+        "resolve": "حل التعارض",
+        "resolveTitle": "حل تعارض BIOS",
+        "resolveDescription": "سيتم وضع علامة محلول على تعارض BIOS {{biosId}}.",
+        "resolveSuccess": "تم حل تعارض BIOS بنجاح.",
+        "notesLabel": "ملاحظات الحل",
+        "notesRequired": "ملاحظات الحل مطلوبة.",
+        "detailsTitle": "تفاصيل التعارض",
+        "detailsDescription": "راجع بيانات التعارض المحدد.",
+        "columns": {
+          "biosId": "معرّف BIOS",
+          "conflictType": "نوع التعارض",
+          "affectedCustomers": "العملاء المتأثرون",
+          "dateDetected": "تاريخ الاكتشاف",
+          "status": "الحالة"
+        },
+        "status": {
+          "open": "مفتوح",
+          "resolved": "محلول"
+        },
+        "types": {
+          "duplicate_activation": "تفعيل مكرر",
+          "bios_mismatch": "عدم تطابق BIOS",
+          "multi_tenant_conflict": "تعارض متعدد بين الشركاء"
+        }
       }
     }
   },
@@ -700,7 +767,8 @@
       "software": "البرامج",
       "reports": "التقارير",
       "activity": "النشاط",
-      "profile": "الملف الشخصي"
+      "profile": "الملف الشخصي",
+      "softwareManagement": "إدارة البرامج"
     },
     "pages": {
       "dashboard": {
@@ -838,6 +906,46 @@
         "unknownProgram": "برنامج غير معروف",
         "unknownReseller": "موزع غير معروف",
         "expires": "ينتهي"
+      },
+      "softwareManagement": {
+        "title": "إدارة البرامج",
+        "description": "أنشئ وعدّل واحذف وفعّل برامج الشريك من مساحة عمل المدير.",
+        "addProgram": "إضافة برنامج",
+        "editProgram": "تعديل البرنامج",
+        "editDescription": "حدّث تفاصيل البرنامج المحدد.",
+        "formDescription": "أنشئ برنامجًا جديدًا مع التسعير والتجربة وروابط التحميل.",
+        "createProgram": "إنشاء البرنامج",
+        "saveChanges": "حفظ التغييرات",
+        "createSuccess": "تم إنشاء البرنامج بنجاح.",
+        "updateSuccess": "تم تحديث البرنامج بنجاح.",
+        "deleteSuccess": "تم حذف البرنامج بنجاح.",
+        "activateSuccess": "تم تسجيل البرنامج بنجاح.",
+        "activateError": "فشل تسجيل البرنامج.",
+        "searchPlaceholder": "ابحث باسم البرنامج",
+        "emptyTitle": "لا توجد برامج بعد",
+        "emptyDescription": "أضف أول برنامج للبدء في إدارة التفعيلات.",
+        "programName": "اسم البرنامج",
+        "programDescription": "وصف البرنامج",
+        "downloadLink": "رابط التحميل",
+        "trialDays": "أيام التجربة",
+        "price": "السعر",
+        "iconUrl": "رابط الأيقونة",
+        "version": "الإصدار",
+        "noDescription": "لا يوجد وصف متاح.",
+        "activeToggle": "نشط",
+        "activationTitle": "تسجيل برنامج",
+        "activationDescription": "سجّل {{name}} لحساب عميل.",
+        "customerUsername": "اسم مستخدم العميل",
+        "customerBiosId": "معرّف BIOS للعميل",
+        "registerNow": "سجّل الآن",
+        "activationValidation": "اسم المستخدم ومعرّف BIOS مطلوبان.",
+        "nameValidation": "يجب أن يكون اسم البرنامج حرفين على الأقل.",
+        "downloadValidation": "أدخل رابط تحميل صحيحًا.",
+        "guideValidation": "أدخل رابط دليل تثبيت صحيحًا.",
+        "iconValidation": "أدخل رابط أيقونة صحيحًا.",
+        "numberValidation": "أيام التجربة والسعر يجب أن يكونا أرقامًا صحيحة.",
+        "deleteProgramTitle": "حذف البرنامج؟",
+        "deleteProgramDescription": "سيؤدي هذا إلى إزالة {{name}} نهائيًا من الكتالوج."
       }
     }
   },
@@ -886,7 +994,12 @@
         "activationDialog": {
           "title": "إضافة عميل",
           "description": "انتقل بين الخطوات لإنشاء العميل وتفعيل الترخيص.",
-          "steps": ["بيانات العميل", "تفعيل BIOS", "السعر والمدة", "المراجعة"],
+          "steps": [
+            "بيانات العميل",
+            "تفعيل BIOS",
+            "السعر والمدة",
+            "المراجعة"
+          ],
           "stepLabel": "الخطوة",
           "customerName": "اسم العميل",
           "customerEmail": "بريد العميل الإلكتروني",
@@ -1048,6 +1161,61 @@
         "totalEntries": "إجمالي السجلات: {{count}}"
       }
     }
+  },
+  "software": {
+    "externalApiKey": "مفتاح API الخارجي",
+    "externalSoftwareId": "معرف البرنامج الخارجي",
+    "externalApiKeyRequired": "مفتاح API الخارجي مطلوب للبرامج الجديدة.",
+    "externalSoftwareIdRequired": "معرف البرنامج الخارجي مطلوب للبرامج الجديدة.",
+    "apiKeyHint": "مشفر ومحفوظ بأمان. لن يظهر مرة أخرى بعد الحفظ.",
+    "apiKeyReplacePlaceholder": "اتركه فارغًا للاحتفاظ بالمفتاح الحالي",
+    "apiConfigured": "تم إعداد API",
+    "apiNotConfigured": "لا يوجد مفتاح API",
+    "noApiWarning": "هذا البرنامج لا يحتوي على API خارجي. التفعيل سيفشل.",
+    "apiKeyUrlHint": "يُستخدم كالتالي: /apiuseradd/[KEY]/username/bios",
+    "softwareIdUrlHint": "يُستخدم كالتالي: /apilogs/[ID] و /apiusers/[ID]"
+  },
+  "programLogs": {
+    "title": "سجلات البرامج",
+    "selectProgram": "اختر برنامجًا لعرض السجلات",
+    "activationEvents": "أحداث التفعيل",
+    "loginEvents": "أحداث تسجيل الدخول",
+    "eventAdded": "مضاف",
+    "eventDeleted": "محذوف",
+    "noLogs": "لا توجد سجلات لهذا البرنامج.",
+    "autoRefresh": "تحديث تلقائي (30 ثانية)",
+    "exportCsv": "تصدير CSV",
+    "activatedBy": "تم التفعيل بواسطة",
+    "viaDashboard": "عبر لوحة التحكم",
+    "externalUnknown": "خارجي (غير معروف)"
+  },
+  "ipAnalytics": {
+    "columns": {
+      "country": "الدولة",
+      "location": "الموقع"
+    },
+    "vpnProxy": "VPN/Proxy"
+  },
+  "activate": {
+    "title": "تفعيل الترخيص",
+    "customerName": "اسم العميل",
+    "customerEmail": "البريد الإلكتروني للعميل",
+    "biosId": "معرّف BIOS",
+    "biosIdHint": "سيُستخدم كاسم مستخدم (مقفل)",
+    "duration": "المدة",
+    "durationMode": "المدة",
+    "endDateMode": "تاريخ الانتهاء",
+    "minutes": "دقائق",
+    "hours": "ساعات",
+    "days": "أيام",
+    "price": "السعر الإجمالي",
+    "priceAuto": "يُحسب تلقائيًا",
+    "submit": "إنشاء وتفعيل",
+    "successTitle": "تم تفعيل الترخيص",
+    "successMessage": "مفتاح الترخيص: {{key}}",
+    "errorTitle": "فشل التفعيل",
+    "biosAlreadyActive": "معرف BIOS هذا لديه ترخيص نشط بالفعل لهذا البرنامج.",
+    "biosBlacklisted": "معرف BIOS هذا محظور ولا يمكن تفعيله."
   },
   "customerPortal": {
     "layout": {

@@ -9,6 +9,7 @@ import type {
   ResellerDashboardStats,
   ResellerReportFilters,
   ResellerReportPoint,
+  ResellerSoftwareProgram,
   RoleActivityEntry,
   RoleActivityFilters,
   TopProgramRow,
@@ -42,6 +43,10 @@ export const resellerService = {
   },
   async getCustomer(id: number) {
     const { data } = await api.get<{ data: ResellerCustomerDetails }>(`/reseller/customers/${id}`)
+    return data
+  },
+  async getSoftware() {
+    const { data } = await api.get<{ data: ResellerSoftwareProgram[] }>('/reseller/software')
     return data
   },
   async getRevenueReport(params: ResellerReportFilters) {

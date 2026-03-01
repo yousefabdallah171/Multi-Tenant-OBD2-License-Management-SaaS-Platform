@@ -7,14 +7,27 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/hooks/useAuth'
+import { profileService } from '@/services/profile.service'
 import { settingsService } from '@/services/settings.service'
 import type { SystemSettings } from '@/types/super-admin.types'
 
 export function SettingsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
+  const { user, setAuthenticatedUser } = useAuth()
   const [showApiKey, setShowApiKey] = useState(false)
   const [draft, setDraft] = useState<SystemSettings | null>(null)
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name ?? '',
+    email: user?.email ?? '',
+    phone: user?.phone ?? '',
+  })
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+  })
 
   const settingsQuery = useQuery({
     queryKey: ['super-admin', 'settings'],
@@ -28,6 +41,22 @@ export function SettingsPage() {
     onSuccess: () => {
       toast.success(t('superAdmin.pages.settings.saveSuccess'))
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'settings'] })
+    },
+  })
+
+  const profileMutation = useMutation({
+    mutationFn: () => profileService.updateProfile(profileForm),
+    onSuccess: (data) => {
+      setAuthenticatedUser(data.user)
+      toast.success(t('superAdmin.pages.profile.profileSaved'))
+    },
+  })
+
+  const passwordMutation = useMutation({
+    mutationFn: () => profileService.updatePassword(passwordForm),
+    onSuccess: () => {
+      toast.success(t('superAdmin.pages.profile.passwordSaved'))
+      setPasswordForm({ current_password: '', password: '', password_confirmation: '' })
     },
   })
 
@@ -48,6 +77,7 @@ export function SettingsPage() {
           <TabsTrigger value="api">{t('superAdmin.pages.settings.api')}</TabsTrigger>
           <TabsTrigger value="notifications">{t('superAdmin.pages.settings.notifications')}</TabsTrigger>
           <TabsTrigger value="security">{t('superAdmin.pages.settings.security')}</TabsTrigger>
+          <TabsTrigger value="profile">{t('superAdmin.pages.settings.profileTab')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -157,6 +187,65 @@ export function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="profile">
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Card>
+              <CardContent className="grid gap-4 p-6">
+                <div className="space-y-2">
+                  <Label htmlFor="profile-name">{t('common.name')}</Label>
+                  <Input id="profile-name" value={profileForm.name} onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-email">{t('common.email')}</Label>
+                  <Input id="profile-email" type="email" value={profileForm.email} onChange={(event) => setProfileForm((current) => ({ ...current, email: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-phone">{t('common.phone')}</Label>
+                  <Input id="profile-phone" type="tel" value={profileForm.phone ?? ''} onChange={(event) => setProfileForm((current) => ({ ...current, phone: event.target.value }))} />
+                </div>
+                <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending}>
+                  {profileMutation.isPending ? t('common.saving') : t('superAdmin.pages.settings.saveProfile')}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="grid gap-4 p-6">
+                <div className="space-y-2">
+                  <Label htmlFor="profile-current-password">{t('superAdmin.pages.profile.currentPassword')}</Label>
+                  <Input
+                    id="profile-current-password"
+                    type="password"
+                    value={passwordForm.current_password}
+                    onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-new-password">{t('superAdmin.pages.profile.newPassword')}</Label>
+                  <Input
+                    id="profile-new-password"
+                    type="password"
+                    value={passwordForm.password}
+                    onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-confirm-password">{t('superAdmin.pages.profile.confirmPassword')}</Label>
+                  <Input
+                    id="profile-confirm-password"
+                    type="password"
+                    value={passwordForm.password_confirmation}
+                    onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
+                  />
+                </div>
+                <Button type="button" onClick={() => passwordMutation.mutate()} disabled={passwordMutation.isPending}>
+                  {passwordMutation.isPending ? t('common.saving') : t('superAdmin.pages.settings.savePassword')}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 

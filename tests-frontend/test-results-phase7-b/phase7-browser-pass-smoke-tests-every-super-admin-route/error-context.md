@@ -1,0 +1,74 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e8]:
+          - paragraph [ref=e9]: OBD2SW
+          - heading "Super Admin Control Center" [level=1] [ref=e10]
+        - generic [ref=e11]:
+          - button "Switch language" [ref=e12] [cursor=pointer]:
+            - img [ref=e13]
+            - text: AR
+          - button "Toggle theme" [ref=e16] [cursor=pointer]:
+            - img [ref=e17]
+            - text: Dark mode
+          - group [ref=e19]:
+            - generic "Open user menu" [ref=e20] [cursor=pointer]:
+              - generic [ref=e21]:
+                - generic [ref=e22]: Super Admin
+                - generic [ref=e23]: super_admin@obd2sw.com
+              - generic [ref=e24]: Super Admin
+    - generic [ref=e25]:
+      - complementary [ref=e27]:
+        - navigation [ref=e28]:
+          - link "Dashboard" [ref=e29] [cursor=pointer]:
+            - /url: /en/super-admin/dashboard
+            - img [ref=e30]
+            - generic [ref=e35]: Dashboard
+          - link "Tenants" [ref=e36] [cursor=pointer]:
+            - /url: /en/super-admin/tenants
+            - img [ref=e37]
+            - generic [ref=e41]: Tenants
+          - link "Users" [ref=e42] [cursor=pointer]:
+            - /url: /en/super-admin/users
+            - img [ref=e43]
+            - generic [ref=e48]: Users
+          - link "BIOS Blacklist" [ref=e49] [cursor=pointer]:
+            - /url: /en/super-admin/bios-blacklist
+            - img [ref=e50]
+            - generic [ref=e53]: BIOS Blacklist
+          - link "BIOS History" [ref=e54] [cursor=pointer]:
+            - /url: /en/super-admin/bios-history
+            - img [ref=e55]
+            - generic [ref=e59]: BIOS History
+          - link "Financial" [ref=e60] [cursor=pointer]:
+            - /url: /en/super-admin/financial-reports
+            - img [ref=e61]
+            - generic [ref=e63]: Financial
+          - link "Reports" [ref=e64] [cursor=pointer]:
+            - /url: /en/super-admin/reports
+            - img [ref=e65]
+            - generic [ref=e67]: Reports
+          - link "Logs" [ref=e68] [cursor=pointer]:
+            - /url: /en/super-admin/logs
+            - img [ref=e69]
+            - generic [ref=e72]: Logs
+          - link "API Status" [ref=e73] [cursor=pointer]:
+            - /url: /en/super-admin/api-status
+            - img [ref=e74]
+            - generic [ref=e76]: API Status
+          - link "Settings" [ref=e77] [cursor=pointer]:
+            - /url: /en/super-admin/settings
+            - img [ref=e78]
+            - generic [ref=e81]: Settings
+      - generic [ref=e82]:
+        - main [ref=e83]
+        - contentinfo [ref=e84]: 2026 OBD2SW License Platform
+  - generic:
+    - region "Notifications alt+T"
+```

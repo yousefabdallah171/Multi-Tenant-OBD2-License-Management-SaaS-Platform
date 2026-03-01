@@ -19,9 +19,10 @@ interface ProgramCatalogPageProps {
   title: string
   description: string
   translationPrefix: string
+  onActivate?: (program: { id: number; name: string; base_price: number; has_external_api: boolean; external_software_id: number | null }) => void
 }
 
-export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix }: ProgramCatalogPageProps) {
+export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix, onActivate }: ProgramCatalogPageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -96,10 +97,39 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                     </div>
                   </div>
 
-                  <Button type="button" variant="outline" className="w-full justify-between" onClick={() => window.open(program.download_link, '_blank', 'noopener,noreferrer')}>
-                    {t(`${translationPrefix}.openDownload`)}
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" className="flex-1 justify-between" onClick={() => window.open(program.download_link, '_blank', 'noopener,noreferrer')}>
+                      {t(`${translationPrefix}.openDownload`)}
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                    {onActivate ? (
+                      <Button
+                        type="button"
+                        className="shrink-0"
+                        onClick={() =>
+                          onActivate({
+                            id: program.id,
+                            name: program.name,
+                            base_price: program.base_price,
+                            has_external_api: program.has_external_api,
+                            external_software_id: program.external_software_id,
+                          })
+                        }
+                      >
+                        {t('common.activate')}
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className={`rounded-full px-2 py-1 ${program.has_external_api ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'}`}>
+                      {program.has_external_api ? t('software.apiConfigured') : t('software.apiNotConfigured')}
+                    </span>
+                    {program.external_software_id ? (
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                        {t('software.externalSoftwareId')}: {program.external_software_id}
+                      </span>
+                    ) : null}
+                  </div>
                 </CardContent>
               </Card>
             </StaggerItem>

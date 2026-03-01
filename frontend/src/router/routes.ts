@@ -17,14 +17,21 @@ export const routePaths = {
     teamManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/team-management`,
     resellerPricing: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller-pricing`,
     softwareManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/software-management`,
+    programCreate: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/software-management/create`,
+    programEdit: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/software-management/${id}/edit`,
     biosBlacklist: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/bios-blacklist`,
     biosHistory: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/bios-history`,
+    biosConflicts: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/bios-conflicts`,
     ipAnalytics: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/ip-analytics`,
+    logs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/logs`,
+    programLogs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/program-logs`,
+    apiStatus: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/api-status`,
     usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/username-management`,
     financialReports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/financial-reports`,
     reports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reports`,
     activity: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/activity`,
     customers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/customers`,
+    customerDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/customers/${id}`,
     settings: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/settings`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/profile`,
   },
@@ -35,6 +42,9 @@ export const routePaths = {
     usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/username-management`,
     customers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/customers`,
     software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/software`,
+    softwareManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/software-management`,
+    programCreate: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/software-management/create`,
+    programEdit: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/manager/software-management/${id}/edit`,
     reports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/reports`,
     activity: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/activity`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/profile`,
@@ -43,8 +53,8 @@ export const routePaths = {
     root: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller`,
     dashboard: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/dashboard`,
     customers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/customers`,
-    software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/software`,
     licenses: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/licenses`,
+    software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/software`,
     reports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/reports`,
     activity: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/activity`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/profile`,
@@ -74,5 +84,6 @@ export const routePaths = {
 }
 
 export function getDashboardPath(role: UserRole, lang: SupportedLanguage = DEFAULT_LANGUAGE) {
-  return `/${lang}/${ROLE_DASHBOARD_SEGMENTS[role]}`
+  const segment = ROLE_DASHBOARD_SEGMENTS[role as keyof typeof ROLE_DASHBOARD_SEGMENTS]
+  return segment ? `/${lang}/${segment}` : `/${lang}/login`
 }

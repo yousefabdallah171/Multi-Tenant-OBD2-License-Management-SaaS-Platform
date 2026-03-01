@@ -1,4 +1,4 @@
-import type { PaginationMeta } from '@/types/super-admin.types'
+import type { LogEntry, PaginationMeta } from '@/types/super-admin.types'
 
 export interface ManagerParentDashboardStats {
   users: number
@@ -60,11 +60,33 @@ export interface ProgramSummary {
   trial_days: number
   base_price: number
   icon: string | null
+  has_external_api: boolean
+  external_software_id: number | null
   status: 'active' | 'inactive'
   licenses_sold: number
   active_licenses_count: number
   revenue: number
   created_at: string | null
+}
+
+export interface ProgramLog {
+  type: 'add' | 'delete' | 'login'
+  username: string
+  bios_id?: string
+  timestamp: string
+  ip?: string
+}
+
+export interface ProgramLogLicenseInfo {
+  license_id: number
+  bios_id: string
+  external_username: string
+  customer_id: number | null
+  customer_name: string | null
+  customer_username: string | null
+  reseller_id: number | null
+  reseller_name: string | null
+  reseller_email: string | null
 }
 
 export interface ProgramStats {
@@ -124,15 +146,48 @@ export interface CustomerSummary {
 }
 
 export interface CustomerDetails extends CustomerSummary {
+  username?: string | null
+  phone?: string | null
+  created_by?: { id: number; name: string; email: string } | null
+  created_at?: string | null
   licenses: Array<{
     id: number
     bios_id: string
+    external_username?: string | null
     program: string | null
     reseller: string | null
+    reseller_id?: number | null
+    reseller_email?: string | null
     status: string
+    duration_days?: number
     price: number
     activated_at: string | null
     expires_at: string | null
+  }>
+  resellers_summary?: Array<{
+    reseller_id: number | null
+    reseller_name: string | null
+    reseller_email: string | null
+    activations_count: number
+    last_activation_at: string | null
+  }>
+  ip_logs?: Array<{
+    id: number
+    ip_address: string
+    country: string | null
+    city: string | null
+    isp: string | null
+    reputation_score: string
+    action: string
+    created_at: string | null
+  }>
+  activity?: Array<{
+    id: number
+    action: string
+    description: string | null
+    metadata: Record<string, unknown>
+    ip_address: string | null
+    created_at: string | null
   }>
 }
 
@@ -160,6 +215,8 @@ export interface BiosHistoryEntry {
   id: string
   bios_id: string
   customer: string | null
+  customer_id?: number | null
+  external_username?: string | null
   reseller: string | null
   reseller_id: number | null
   action: string
@@ -224,4 +281,53 @@ export interface FinancialReportData {
 export interface PaginatedResponse<T> {
   data: T[]
   meta: PaginationMeta
+}
+
+export interface LogFilters {
+  page?: number
+  per_page?: number
+  endpoint?: string
+  method?: string
+  status_group?: string
+  status_from?: number | ''
+  status_to?: number | ''
+  from?: string
+  to?: string
+}
+
+export type ManagerParentLogEntry = LogEntry
+
+export interface ManagerParentApiStatus {
+  status: 'online' | 'offline' | 'degraded'
+  response_time_ms: number
+  last_checked: string
+  external_url: string
+}
+
+export interface ApiStatusHistoryPoint {
+  time: string
+  response_time_ms: number
+  success_rate: number
+}
+
+export interface BiosConflictItem {
+  id: number
+  bios_id: string
+  conflict_type: string
+  attempted_by_name: string | null
+  program_name: string | null
+  affected_customers: Array<{ id: number | null; name: string; username?: string | null }>
+  status: 'open' | 'resolved'
+  resolved: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface BiosConflictFilters {
+  page?: number
+  per_page?: number
+  status?: '' | 'open' | 'resolved'
+  conflict_type?: string
+  from?: string
+  to?: string
 }

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Grid2X2, List, Plus, Upload } from 'lucide-react'
+import { Eye, EyeOff, Grid2X2, List, Plus, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { ActivateLicenseModal } from '@/components/ActivateLicenseModal'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -15,6 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { programService, type ProgramPayload } from '@/services/program.service'
 import type { ProgramSummary } from '@/types/manager-parent.types'
 
@@ -28,6 +31,8 @@ interface ProgramFormState {
   installation_guide_url: string
   trial_days: string
   base_price: string
+  external_api_key: string
+  external_software_id: string
   status: 'active' | 'inactive'
   icon: File | null
 }
@@ -42,6 +47,8 @@ const EMPTY_FORM: ProgramFormState = {
   installation_guide_url: '',
   trial_days: '0',
   base_price: '0',
+  external_api_key: '',
+  external_software_id: '',
   status: 'active',
   icon: null,
 }
@@ -59,6 +66,7 @@ export function SoftwareManagementPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [view, setView] = useState<'grid' | 'table'>('grid')
   const [page, setPage] = useState(1)
@@ -68,7 +76,9 @@ export function SoftwareManagementPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editingProgram, setEditingProgram] = useState<ProgramSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ProgramSummary | null>(null)
+  const [activationProgram, setActivationProgram] = useState<ProgramSummary | null>(null)
   const [form, setForm] = useState<ProgramFormState>(EMPTY_FORM)
+  const [showApiKey, setShowApiKey] = useState(false)
 
   const programsQuery = useQuery({
     queryKey: ['manager-parent', 'programs', page, perPage, search, status],
@@ -133,7 +143,10 @@ export function SoftwareManagementPage() {
       label: t('common.actions'),
       render: (row) => (
         <div className="flex gap-2">
-          <Button type="button" size="sm" variant="ghost" onClick={() => openEdit(row)}>
+          <Button type="button" size="sm" variant="outline" onClick={() => setActivationProgram(row)}>
+            {t('common.activate')}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => navigate(routePaths.managerParent.programEdit(lang, row.id))}>
             {t('common.edit')}
           </Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(row)}>
@@ -143,24 +156,6 @@ export function SoftwareManagementPage() {
       ),
     },
   ]
-
-  function openEdit(program: ProgramSummary) {
-    setEditingProgram(program)
-    setForm({
-      name: program.name,
-      description: program.description ?? '',
-      version: program.version,
-      download_link: program.download_link,
-      file_size: program.file_size ?? '',
-      system_requirements: program.system_requirements ?? '',
-      installation_guide_url: program.installation_guide_url ?? '',
-      trial_days: String(program.trial_days),
-      base_price: String(program.base_price),
-      status: program.status,
-      icon: null,
-    })
-    setFormOpen(true)
-  }
 
   function closeForm() {
     setFormOpen(false)
@@ -192,6 +187,16 @@ export function SoftwareManagementPage() {
       return
     }
 
+    if (!editingProgram && !form.external_api_key.trim()) {
+      toast.error(t('software.externalApiKeyRequired'))
+      return
+    }
+
+    if (!editingProgram && !form.external_software_id.trim()) {
+      toast.error(t('software.externalSoftwareIdRequired'))
+      return
+    }
+
     const payload: ProgramPayload = {
       name: form.name.trim(),
       description: form.description.trim() || null,
@@ -202,8 +207,13 @@ export function SoftwareManagementPage() {
       installation_guide_url: form.installation_guide_url.trim() || null,
       trial_days: trialDays,
       base_price: basePrice,
+      external_software_id: form.external_software_id.trim() ? Number(form.external_software_id) : null,
       status: form.status,
       icon: form.icon,
+    }
+
+    if (form.external_api_key.trim()) {
+      payload.external_api_key = form.external_api_key.trim()
     }
 
     if (editingProgram) {
@@ -211,8 +221,8 @@ export function SoftwareManagementPage() {
         id: editingProgram.id,
         payload,
       })
-      return
-    }
+          return
+        }
 
     createMutation.mutate(payload)
   }
@@ -234,14 +244,7 @@ export function SoftwareManagementPage() {
               <List className="me-2 h-4 w-4" />
               {t('managerParent.pages.softwareManagement.table')}
             </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                setEditingProgram(null)
-                setForm(EMPTY_FORM)
-                setFormOpen(true)
-              }}
-            >
+            <Button type="button" onClick={() => navigate(routePaths.managerParent.programCreate(lang))}>
               <Plus className="me-2 h-4 w-4" />
               {t('managerParent.pages.softwareManagement.addProgram')}
             </Button>
@@ -308,9 +311,22 @@ export function SoftwareManagementPage() {
                     <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.trialDays')}</p>
                     <p className="mt-1 font-semibold">{program.trial_days}</p>
                   </div>
+                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalSoftwareId')}</p>
+                    <p className="mt-1 font-semibold">{program.external_software_id ?? '-'}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalApiKey')}</p>
+                    <p className={`mt-1 font-semibold ${program.has_external_api ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}`}>
+                      {program.has_external_api ? t('software.apiConfigured') : t('software.apiNotConfigured')}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" onClick={() => openEdit(program)}>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setActivationProgram(program)}>
+                    {t('common.activate')}
+                  </Button>
+                  <Button type="button" size="sm" onClick={() => navigate(routePaths.managerParent.programEdit(lang, program.id))}>
                     {t('common.edit')}
                   </Button>
                   <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(program)}>
@@ -385,6 +401,39 @@ export function SoftwareManagementPage() {
               <Input id="program-price" type="number" step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="program-external-id">{t('software.externalSoftwareId')}</Label>
+              <Input
+                id="program-external-id"
+                type="number"
+                min={1}
+                value={form.external_software_id}
+                placeholder="e.g. 8"
+                onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="program-api-key">{t('software.externalApiKey')}</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="program-api-key"
+                  type={showApiKey ? 'text' : 'password'}
+                  value={form.external_api_key}
+                  maxLength={50}
+                  placeholder={editingProgram?.has_external_api ? 'Leave blank to keep current key (••••••••••••••)' : 'e.g. L9H2F7Q8XK6M4A'}
+                  onChange={(event) => setForm((current) => ({ ...current, external_api_key: event.target.value }))}
+                />
+                <Button type="button" variant="outline" size="icon" onClick={() => setShowApiKey((value) => !value)}>
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyHint')}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyUrlHint')}</p>
+              {editingProgram?.has_external_api ? (
+                <p className="text-xs text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="program-icon">{t('managerParent.pages.softwareManagement.iconUpload')}</Label>
               <label className="flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
                 <Upload className="h-4 w-4" />
@@ -441,6 +490,21 @@ export function SoftwareManagementPage() {
             deleteMutation.mutate(deleteTarget.id)
           }
         }}
+      />
+      <ActivateLicenseModal
+        open={activationProgram !== null}
+        onClose={() => setActivationProgram(null)}
+        program={
+          activationProgram
+            ? {
+                id: activationProgram.id,
+                name: activationProgram.name,
+                price_per_day: activationProgram.base_price,
+                has_external_api: activationProgram.has_external_api,
+                external_software_id: activationProgram.external_software_id,
+              }
+            : null
+        }
       />
     </div>
   )

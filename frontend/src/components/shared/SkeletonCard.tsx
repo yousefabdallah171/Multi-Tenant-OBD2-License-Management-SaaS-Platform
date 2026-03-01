@@ -9,7 +9,7 @@ interface SkeletonCardProps {
 
 export function SkeletonCard({ className, lines = 3, showAccent = true }: SkeletonCardProps) {
   return (
-    <Card className={cn('overflow-hidden border-dashed shadow-none', className)} aria-hidden="true">
+    <Card data-testid="skeleton-card" className={cn('overflow-hidden border-dashed shadow-none', className)} aria-hidden="true">
       <CardContent className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-3">

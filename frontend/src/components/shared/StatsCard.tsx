@@ -22,11 +22,11 @@ export function StatsCard({ title, value, icon: Icon, trend, color = 'sky' }: St
   const hasTrend = typeof trend === 'number'
 
   return (
-    <Card className="hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-950/10">
-      <CardContent className="flex items-start justify-between gap-4 p-6">
+    <Card data-testid="stats-card" className="h-full hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-950/10">
+      <CardContent className="flex items-start justify-between gap-3 p-4 sm:gap-4 sm:p-6">
         <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-          <p className="text-3xl font-semibold text-slate-950 dark:text-white">{value}</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 sm:text-sm">{title}</p>
+          <p className="text-2xl font-semibold text-slate-950 dark:text-white sm:text-3xl">{value}</p>
           {hasTrend ? (
             <div className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium', trend >= 0 ? accentStyles.emerald : accentStyles.rose)}>
               {trend >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
@@ -34,8 +34,8 @@ export function StatsCard({ title, value, icon: Icon, trend, color = 'sky' }: St
             </div>
           ) : null}
         </div>
-        <div className={cn('rounded-2xl p-3', accentStyles[color])}>
-          <Icon className="h-6 w-6" />
+        <div className={cn('rounded-2xl p-2.5 sm:p-3', accentStyles[color])}>
+          <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
       </CardContent>
     </Card>

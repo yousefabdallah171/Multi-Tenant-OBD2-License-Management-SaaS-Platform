@@ -341,7 +341,18 @@ export function LicensesPage() {
           </div>
         ),
       },
-      { key: 'bios', label: text.table.bios, sortable: true, sortValue: (row) => row.bios_id, render: (row) => row.bios_id },
+      {
+        key: 'bios',
+        label: text.table.bios,
+        sortable: true,
+        sortValue: (row) => row.bios_id,
+        render: (row) => (
+          <div>
+            <p className="font-medium">{row.bios_id}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">@{row.external_username ?? '-'}</p>
+          </div>
+        ),
+      },
       { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'duration', label: text.table.duration, sortable: true, sortValue: (row) => row.duration_days, render: (row) => `${row.duration_days} ${text.units.days}` },
       { key: 'price', label: text.table.price, sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },

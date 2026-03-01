@@ -19,6 +19,8 @@ export interface ProgramPayload {
   trial_days?: number
   base_price: number
   icon?: File | string | null
+  external_api_key?: string | null
+  external_software_id?: number | null
   status?: 'active' | 'inactive'
 }
 
@@ -72,6 +74,10 @@ export const programService = {
   },
   async getStats(id: number) {
     const { data } = await api.get<{ data: ProgramStats }>(`/programs/${id}/stats`)
+    return data
+  },
+  async getById(id: number) {
+    const { data } = await api.get<{ data: ProgramSummary }>(`/programs/${id}`)
     return data
   },
 }

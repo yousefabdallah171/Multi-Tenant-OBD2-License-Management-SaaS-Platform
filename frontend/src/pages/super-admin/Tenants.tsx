@@ -47,6 +47,7 @@ export function TenantsPage() {
   const [editingTenant, setEditingTenant] = useState<TenantSummary | null>(null)
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<TenantSummary | null>(null)
+  const [showManagerPassword, setShowManagerPassword] = useState(false)
   const [form, setForm] = useState(emptyTenantForm)
 
   const tenantsQuery = useQuery({
@@ -75,6 +76,7 @@ export function TenantsPage() {
       toast.success(t('superAdmin.pages.tenants.saveSuccess'))
       setFormOpen(false)
       setEditingTenant(null)
+      setShowManagerPassword(false)
       setForm(emptyTenantForm)
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] })
     },
@@ -148,6 +150,7 @@ export function TenantsPage() {
                     manager_password: '',
                     status: row.status,
                   })
+                  setShowManagerPassword(false)
                   setFormOpen(true)
                 }}
               >
@@ -178,6 +181,7 @@ export function TenantsPage() {
           type="button"
           onClick={() => {
             setEditingTenant(null)
+            setShowManagerPassword(false)
             setForm(emptyTenantForm)
             setFormOpen(true)
           }}
@@ -264,7 +268,22 @@ export function TenantsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="manager-password">{t('common.password')}</Label>
-                  <Input id="manager-password" type="password" value={form.manager_password} onChange={(event) => setForm((current) => ({ ...current, manager_password: event.target.value }))} />
+                  <div className="flex gap-2">
+                    <Input
+                      id="manager-password"
+                      type={showManagerPassword ? 'text' : 'password'}
+                      value={form.manager_password}
+                      onChange={(event) => setForm((current) => ({ ...current, manager_password: event.target.value }))}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowManagerPassword((current) => !current)}
+                      aria-label={showManagerPassword ? t('common.hide') : t('common.show')}
+                    >
+                      {showManagerPassword ? t('common.hide') : t('common.show')}
+                    </Button>
+                  </div>
                 </div>
               </>
             ) : null}

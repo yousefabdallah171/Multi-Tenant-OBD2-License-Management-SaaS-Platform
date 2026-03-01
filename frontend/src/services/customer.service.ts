@@ -25,15 +25,15 @@ export const customerService = {
 export const customerPortalService = {
   async getDashboard() {
     const { data } = await api.get<{ data: CustomerDashboardData }>('/customer/dashboard')
-    return data.data
+    return data
   },
   async getSoftware() {
     const { data } = await api.get<{ data: CustomerSoftwareItem[] }>('/customer/software')
-    return data.data
+    return data
   },
   async getDownloads() {
     const { data } = await api.get<{ data: CustomerDownloadItem[] }>('/customer/downloads')
-    return data.data
+    return data
   },
   async logDownload(id: number) {
     const { data } = await api.post<{ message: string; logged_at: string }>(`/customer/downloads/${id}/log`)

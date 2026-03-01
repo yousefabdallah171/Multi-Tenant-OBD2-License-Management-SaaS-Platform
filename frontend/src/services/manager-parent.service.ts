@@ -1,11 +1,19 @@
 import { api } from '@/services/api'
 import type {
+  ApiStatusHistoryPoint,
+  BiosConflictFilters,
+  BiosConflictItem,
   BiosHistoryEntry,
   FinancialReportData,
   IpAnalyticsEntry,
   IpAnalyticsStats,
+  LogFilters,
+  ManagerParentApiStatus,
   ManagerParentDashboardStats,
+  ManagerParentLogEntry,
   PaginatedResponse,
+  ProgramLogLicenseInfo,
+  ProgramSummary,
   TenantSettings,
   UsernameManagedUser,
 } from '@/types/manager-parent.types'
@@ -78,6 +86,34 @@ export const managerParentService = {
     const { data } = await api.get<{ data: IpAnalyticsStats }>('/ip-analytics/stats')
     return data
   },
+  async getLogs(params?: LogFilters) {
+    const { data } = await api.get<PaginatedResponse<ManagerParentLogEntry>>('/logs', { params })
+    return data
+  },
+  async getLogById(id: number) {
+    const { data } = await api.get<{ data: ManagerParentLogEntry }>(`/logs/${id}`)
+    return data
+  },
+  async getApiStatus() {
+    const { data } = await api.get<{ data: ManagerParentApiStatus }>('/api-status')
+    return data
+  },
+  async pingApiStatus() {
+    const { data } = await api.post<{ data: ManagerParentApiStatus }>('/api-status/ping')
+    return data
+  },
+  async getApiStatusHistory() {
+    const { data } = await api.get<{ data: ApiStatusHistoryPoint[] }>('/api-status/history')
+    return data
+  },
+  async getBiosConflicts(params?: BiosConflictFilters) {
+    const { data } = await api.get<PaginatedResponse<BiosConflictItem>>('/bios-conflicts', { params })
+    return data
+  },
+  async resolveBiosConflict(id: number, payload: { resolution_notes: string }) {
+    const { data } = await api.put<{ data: BiosConflictItem }>(`/bios-conflicts/${id}/resolve`, payload)
+    return data
+  },
   async getUsernameManagement(params?: { page?: number; per_page?: number; role?: string; locked?: boolean | ''; search?: string }) {
     const { data } = await api.get<PaginatedResponse<UsernameManagedUser>>('/username-management', { params })
     return data
@@ -97,6 +133,22 @@ export const managerParentService = {
   async getFinancialReports(params?: { from?: string; to?: string }) {
     const { data } = await api.get<{ data: FinancialReportData }>('/financial-reports', { params })
     return data
+  },
+  async getProgramsWithExternalApi() {
+    const { data } = await api.get<PaginatedResponse<ProgramSummary>>('/programs', { params: { per_page: 100, status: 'active' } })
+    return data.data.filter((program) => program.has_external_api)
+  },
+  async getProgramLogs(programId: number): Promise<{ raw: string; licenses?: Record<string, ProgramLogLicenseInfo[]> }> {
+    const { data } = await api.get<{ data: { raw: string; licenses?: Record<string, ProgramLogLicenseInfo[]> } }>(`/manager-parent/programs/${programId}/logs`)
+    return data.data
+  },
+  async getProgramActiveUsers(programId: number): Promise<{ users: Record<string, string> }> {
+    const { data } = await api.get<{ data: { users: Record<string, string> } }>(`/manager-parent/programs/${programId}/active-users`)
+    return data.data
+  },
+  async getProgramStats(programId: number): Promise<{ count: number }> {
+    const { data } = await api.get<{ data: { count: number } }>(`/manager-parent/programs/${programId}/stats`)
+    return data.data
   },
   async exportFinancialCsv(params?: { from?: string; to?: string }) {
     await downloadFile('/financial-reports/export/csv', 'manager-parent-financial.csv', params)

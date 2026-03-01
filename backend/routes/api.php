@@ -5,24 +5,30 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BalanceController;
 use App\Http\Controllers\BiosBlacklistController;
 use App\Http\Controllers\BiosConflictController;
-use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
-use App\Http\Controllers\Customer\DownloadController as CustomerDownloadController;
-use App\Http\Controllers\Customer\SoftwareController as CustomerSoftwareController;
+// use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
+// use App\Http\Controllers\Customer\DownloadController as CustomerDownloadController;
+// use App\Http\Controllers\Customer\SoftwareController as CustomerSoftwareController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\Manager\ActivityController as ManagerActivityController;
 use App\Http\Controllers\Manager\CustomerController as ManagerCustomerController;
 use App\Http\Controllers\Manager\DashboardController as ManagerDashboardController;
 use App\Http\Controllers\Manager\ReportController as ManagerReportController;
+use App\Http\Controllers\Manager\SoftwareController as ManagerSoftwareController;
 use App\Http\Controllers\Manager\TeamController as ManagerTeamController;
 use App\Http\Controllers\Manager\UsernameManagementController as ManagerUsernameManagementController;
 use App\Http\Controllers\ManagerParent\ActivityController as ManagerParentActivityController;
+use App\Http\Controllers\ManagerParent\ApiStatusController as ManagerParentApiStatusController;
 use App\Http\Controllers\ManagerParent\BiosHistoryController as ManagerParentBiosHistoryController;
+use App\Http\Controllers\ManagerParent\BiosConflictController as ManagerParentBiosConflictController;
 use App\Http\Controllers\ManagerParent\CustomerController as ManagerParentCustomerController;
 use App\Http\Controllers\ManagerParent\DashboardController as ManagerParentDashboardController;
 use App\Http\Controllers\ManagerParent\FinancialReportController as ManagerParentFinancialReportController;
 use App\Http\Controllers\ManagerParent\IpAnalyticsController as ManagerParentIpAnalyticsController;
+use App\Http\Controllers\ManagerParent\LogController as ManagerParentLogController;
 use App\Http\Controllers\ManagerParent\PricingController as ManagerParentPricingController;
 use App\Http\Controllers\ManagerParent\ProgramController as ManagerParentProgramController;
+use App\Http\Controllers\ManagerParent\ProgramLogsController as ManagerParentProgramLogsController;
 use App\Http\Controllers\ManagerParent\ReportController as ManagerParentReportController;
 use App\Http\Controllers\ManagerParent\SettingsController as ManagerParentSettingsController;
 use App\Http\Controllers\ManagerParent\TeamController as ManagerParentTeamController;
@@ -32,7 +38,7 @@ use App\Http\Controllers\Reseller\CustomerController as ResellerCustomerControll
 use App\Http\Controllers\Reseller\DashboardController as ResellerDashboardController;
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
 use App\Http\Controllers\Reseller\ReportController as ResellerReportController;
-use App\Http\Controllers\SuperAdmin\AdminManagementController;
+use App\Http\Controllers\Reseller\SoftwareController as ResellerSoftwareController;
 use App\Http\Controllers\SuperAdmin\ApiStatusController;
 use App\Http\Controllers\SuperAdmin\BiosBlacklistController as SuperAdminBiosBlacklistController;
 use App\Http\Controllers\SuperAdmin\BiosHistoryController;
@@ -43,7 +49,6 @@ use App\Http\Controllers\SuperAdmin\ReportController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
-use App\Http\Controllers\SuperAdmin\UsernameManagementController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -82,6 +87,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
     Route::get('/bios-conflicts', [BiosConflictController::class, 'index'])->middleware('role:super_admin,manager_parent,manager');
     Route::get('/balances/me', [BalanceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::post('/balances/{user}/adjust', [BalanceController::class, 'adjust'])->middleware('role:super_admin,manager_parent');
+    Route::post('/licenses/activate', [LicenseController::class, 'activateLicense'])->middleware('role:reseller,manager,manager_parent');
 
     Route::get('/programs', [ManagerParentProgramController::class, 'index'])->middleware('role:manager_parent,manager,reseller');
     Route::get('/programs/{program}/stats', [ManagerParentProgramController::class, 'stats'])->middleware('role:manager_parent,manager,reseller');
@@ -103,6 +109,9 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::post('/programs', [ManagerParentProgramController::class, 'store']);
         Route::put('/programs/{program}', [ManagerParentProgramController::class, 'update']);
         Route::delete('/programs/{program}', [ManagerParentProgramController::class, 'destroy']);
+        Route::get('/manager-parent/programs/{program}/logs', [ManagerParentProgramLogsController::class, 'show']);
+        Route::get('/manager-parent/programs/{program}/active-users', [ManagerParentProgramLogsController::class, 'activeUsers']);
+        Route::get('/manager-parent/programs/{program}/stats', [ManagerParentProgramLogsController::class, 'stats']);
 
         Route::get('/pricing/history', [ManagerParentPricingController::class, 'history']);
         Route::get('/pricing', [ManagerParentPricingController::class, 'index']);
@@ -129,9 +138,18 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
 
         Route::get('/bios-history', [ManagerParentBiosHistoryController::class, 'index']);
         Route::get('/bios-history/{biosId}', [ManagerParentBiosHistoryController::class, 'show']);
+        Route::get('/bios-conflicts', [ManagerParentBiosConflictController::class, 'index']);
+        Route::put('/bios-conflicts/{id}/resolve', [ManagerParentBiosConflictController::class, 'resolve']);
 
         Route::get('/ip-analytics/stats', [ManagerParentIpAnalyticsController::class, 'stats']);
         Route::get('/ip-analytics', [ManagerParentIpAnalyticsController::class, 'index']);
+
+        Route::get('/logs', [ManagerParentLogController::class, 'index']);
+        Route::get('/logs/{log}', [ManagerParentLogController::class, 'show']);
+
+        Route::get('/api-status', [ManagerParentApiStatusController::class, 'index']);
+        Route::get('/api-status/history', [ManagerParentApiStatusController::class, 'history']);
+        Route::post('/api-status/ping', [ManagerParentApiStatusController::class, 'ping']);
 
         Route::get('/username-management', [ManagerParentUsernameManagementController::class, 'index']);
         Route::post('/username-management/{user}/unlock', [ManagerParentUsernameManagementController::class, 'unlock']);
@@ -160,6 +178,12 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::get('/customers', [ManagerCustomerController::class, 'index']);
         Route::get('/customers/{user}', [ManagerCustomerController::class, 'show']);
 
+        Route::get('/software', [ManagerSoftwareController::class, 'index']);
+        Route::post('/software', [ManagerSoftwareController::class, 'store']);
+        Route::put('/software/{program}', [ManagerSoftwareController::class, 'update']);
+        Route::delete('/software/{program}', [ManagerSoftwareController::class, 'destroy']);
+        Route::post('/software/{program}/activate', [ManagerSoftwareController::class, 'activate']);
+
         Route::prefix('reports')->group(function (): void {
             Route::get('/revenue', [ManagerReportController::class, 'revenue']);
             Route::get('/activations', [ManagerReportController::class, 'activations']);
@@ -186,6 +210,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::get('/licenses/{license}', [ResellerLicenseController::class, 'show']);
         Route::post('/licenses/bulk-renew', [ResellerLicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-deactivate', [ResellerLicenseController::class, 'bulkDeactivate']);
+        Route::get('/software', [ResellerSoftwareController::class, 'index']);
 
         Route::prefix('reports')->group(function (): void {
             Route::get('/revenue', [ResellerReportController::class, 'revenue']);
@@ -199,17 +224,21 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
     });
 
     Route::middleware('role:reseller')->group(function (): void {
-        Route::post('/licenses/activate', [ResellerLicenseController::class, 'activate']);
         Route::post('/licenses/{license}/renew', [ResellerLicenseController::class, 'renew']);
         Route::post('/licenses/{license}/deactivate', [ResellerLicenseController::class, 'deactivate']);
     });
 
-    Route::prefix('customer')->middleware('role:customer')->group(function (): void {
-        Route::get('/dashboard', [CustomerDashboardController::class, 'index']);
-        Route::get('/software', [CustomerSoftwareController::class, 'index']);
-        Route::get('/downloads', [CustomerDownloadController::class, 'index']);
-        Route::post('/downloads/{license}/log', [CustomerDownloadController::class, 'logDownload']);
-    });
+    // ============================================================
+    // CUSTOMER PORTAL REMOVED - Phase 11 Role Refactor (2026-03-01)
+    // Silent deny is enforced in AuthController + ActiveRoleMiddleware.
+    // Controllers remain on disk under backend/app/Http/Controllers/Customer/
+    // ============================================================
+    // Route::prefix('customer')->middleware('role:customer')->group(function (): void {
+    //     Route::get('/dashboard', [CustomerDashboardController::class, 'index']);
+    //     Route::get('/software', [CustomerSoftwareController::class, 'index']);
+    //     Route::get('/downloads', [CustomerDownloadController::class, 'index']);
+    //     Route::post('/downloads/{license}/log', [CustomerDownloadController::class, 'logDownload']);
+    // });
 
     Route::prefix('super-admin')->middleware('role:super_admin')->group(function (): void {
         Route::get('/dashboard/stats', [SuperAdminDashboardController::class, 'stats']);
@@ -225,12 +254,6 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
         Route::put('/users/{user}/status', [SuperAdminUserController::class, 'updateStatus']);
         Route::delete('/users/{user}', [SuperAdminUserController::class, 'destroy']);
 
-        Route::get('/admin-management', [AdminManagementController::class, 'index']);
-        Route::post('/admin-management', [AdminManagementController::class, 'store']);
-        Route::put('/admin-management/{user}', [AdminManagementController::class, 'update']);
-        Route::delete('/admin-management/{user}', [AdminManagementController::class, 'destroy']);
-        Route::post('/admin-management/{user}/reset-password', [AdminManagementController::class, 'resetPassword']);
-
         Route::get('/bios-blacklist', [SuperAdminBiosBlacklistController::class, 'index']);
         Route::get('/bios-blacklist/stats', [SuperAdminBiosBlacklistController::class, 'stats']);
         Route::post('/bios-blacklist', [SuperAdminBiosBlacklistController::class, 'store']);
@@ -240,11 +263,6 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker'])->group(functio
 
         Route::get('/bios-history', [BiosHistoryController::class, 'index']);
         Route::get('/bios-history/{biosId}', [BiosHistoryController::class, 'show']);
-
-        Route::get('/username-management', [UsernameManagementController::class, 'index']);
-        Route::post('/username-management/{user}/unlock', [UsernameManagementController::class, 'unlock']);
-        Route::put('/username-management/{user}/username', [UsernameManagementController::class, 'changeUsername']);
-        Route::post('/username-management/{user}/reset-password', [UsernameManagementController::class, 'resetPassword']);
 
         Route::prefix('reports')->group(function (): void {
             Route::get('/revenue', [ReportController::class, 'revenue']);

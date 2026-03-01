@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SuperAdminSeeder::class,
             TestDataSeeder::class,
+            RealSoftwareSeeder::class,
         ]);
     }
 }

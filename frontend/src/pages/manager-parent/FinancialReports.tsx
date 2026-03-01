@@ -58,7 +58,7 @@ export function FinancialReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
         <StatsCard title={t('managerParent.pages.financialReports.totalTenantRevenue')} value={formatCurrency(report?.summary.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
         <StatsCard title={t('managerParent.pages.financialReports.totalActivations')} value={report?.summary.total_activations ?? 0} icon={Activity} color="sky" />
         <StatsCard title={t('managerParent.pages.financialReports.activeLicenses')} value={report?.summary.active_licenses ?? 0} icon={ShieldCheck} color="amber" />

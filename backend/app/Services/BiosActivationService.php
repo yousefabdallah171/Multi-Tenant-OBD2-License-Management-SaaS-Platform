@@ -23,6 +23,12 @@ class BiosActivationService
      */
     public function activate(User $customer, User $reseller, Program $program, string $biosId, int $durationDays): array
     {
+        $apiKey = $program->getDecryptedApiKey();
+
+        if ($apiKey === null) {
+            throw ValidationException::withMessages(['program_id' => 'Program has no external API configured.']);
+        }
+
         if (BiosBlacklist::query()->where('bios_id', $biosId)->where('status', 'active')->exists()) {
             throw ValidationException::withMessages(['bios_id' => 'The BIOS ID is blacklisted.']);
         }
@@ -40,7 +46,7 @@ class BiosActivationService
             throw ValidationException::withMessages(['bios_id' => 'An active license already exists for this BIOS ID.']);
         }
 
-        $response = $this->externalApiService->activateUser($biosId);
+        $response = $this->externalApiService->activateUser($apiKey, $biosId, $biosId);
 
         BiosAccessLog::query()->create([
             'bios_id' => $biosId,
@@ -61,6 +67,8 @@ class BiosActivationService
             'reseller_id' => $reseller->id,
             'program_id' => $program->id,
             'bios_id' => $biosId,
+            'external_username' => $biosId,
+            'external_activation_response' => (string) ($response['data']['response'] ?? ''),
             'duration_days' => $durationDays,
             'price' => $program->base_price,
             'activated_at' => now(),

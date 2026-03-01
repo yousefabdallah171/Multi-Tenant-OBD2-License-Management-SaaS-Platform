@@ -70,7 +70,7 @@ export function DashboardPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatsCard title={t('manager.pages.dashboard.teamResellers')} value={stats?.team_resellers ?? 0} icon={Users} color="sky" />
         <StatsCard title={t('manager.pages.dashboard.teamCustomers')} value={stats?.team_customers ?? 0} icon={UserRound} color="emerald" />
         <StatsCard title={t('manager.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />

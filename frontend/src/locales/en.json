@@ -141,6 +141,10 @@
     "connectionLost": "Connection lost. Please check your network and try again.",
     "openNavigation": "Open navigation menu",
     "closeNavigation": "Close navigation menu",
+    "closeDialog": "Close dialog",
+    "switchLanguage": "Switch language",
+    "toggleTheme": "Toggle theme",
+    "userMenu": "Open user menu",
     "skipToContent": "Skip to content",
     "tryAgain": "Try Again",
     "goToDashboard": "Go to Dashboard",
@@ -271,6 +275,7 @@
         "api": "API",
         "notifications": "Notifications",
         "security": "Security",
+        "profileTab": "Profile",
         "platformName": "Platform name",
         "defaultTrialDays": "Default trial days",
         "maintenanceMode": "Maintenance mode",
@@ -281,7 +286,9 @@
         "emailNotifications": "Email notifications",
         "pusherNotifications": "Pusher notifications",
         "minPasswordLength": "Minimum password length",
-        "sessionTimeout": "Session timeout (minutes)"
+        "sessionTimeout": "Session timeout (minutes)",
+        "saveProfile": "Save Profile",
+        "savePassword": "Save Password"
       },
       "profile": {
         "title": "Profile",
@@ -386,7 +393,11 @@
       "softwareManagement": "Software Management",
       "biosBlacklist": "BIOS Blacklist",
       "biosHistory": "BIOS History",
+      "biosConflicts": "BIOS Conflicts",
       "ipAnalytics": "IP Analytics",
+      "logs": "Platform Logs",
+      "programLogs": "Program Logs",
+      "apiStatus": "API Status",
       "usernameManagement": "Username Management",
       "financialReports": "Financial Reports",
       "reports": "Reports",
@@ -668,6 +679,59 @@
         "medium": "Medium",
         "high": "High"
       },
+      "logs": {
+        "title": "Platform Logs",
+        "description": "Inspect internal platform API request logs for your tenant, separate from external software logs.",
+        "endpoint": "Endpoint",
+        "method": "Method",
+        "statusCode": "Status code",
+        "responseTime": "Response time",
+        "autoRefresh": "Auto refresh",
+        "detailTitle": "Log details"
+      },
+      "apiStatus": {
+        "title": "Tenant API Status",
+        "description": "Monitor the external API health status in read-only mode.",
+        "endpoint": "Endpoint",
+        "statusCode": "Status code",
+        "responseTime": "Response time",
+        "pingNow": "Ping now",
+        "uptime24": "24h uptime",
+        "uptime30": "30d uptime",
+        "historyTitle": "Response time history",
+        "summaryTitle": "Current status"
+      },
+      "biosConflicts": {
+        "title": "BIOS Conflicts",
+        "description": "Review BIOS conflict events inside your tenant and resolve open incidents.",
+        "allTypes": "All conflict types",
+        "emptyTitle": "No BIOS conflicts found",
+        "noCustomers": "No linked customers",
+        "resolve": "Mark as resolved",
+        "resolveTitle": "Resolve BIOS conflict",
+        "resolveDescription": "Add a resolution note for BIOS {{biosId}}.",
+        "resolveSuccess": "BIOS conflict resolved successfully.",
+        "notesLabel": "Resolution notes",
+        "notesRequired": "Resolution notes are required.",
+        "detailsTitle": "Conflict details",
+        "detailsDescription": "Review the full conflict information.",
+        "columns": {
+          "biosId": "BIOS ID",
+          "conflictType": "Conflict Type",
+          "affectedCustomers": "Affected Customers",
+          "dateDetected": "Date Detected",
+          "status": "Status"
+        },
+        "status": {
+          "open": "Open",
+          "resolved": "Resolved"
+        },
+        "types": {
+          "duplicate_activation": "Duplicate Activation",
+          "bios_mismatch": "BIOS Mismatch",
+          "multi_tenant_conflict": "Multi-Tenant Conflict"
+        }
+      },
       "profile": {
         "title": "Profile",
         "description": "Update your account details, password, and notification preferences.",
@@ -698,6 +762,7 @@
       "usernameManagement": "Username Mgmt",
       "customers": "Customers",
       "software": "Software",
+      "softwareManagement": "Software Management",
       "reports": "Reports",
       "activity": "Activity",
       "profile": "Profile"
@@ -782,6 +847,46 @@
         "licensesSold": "Licenses Sold",
         "activeLicenses": "Active Licenses",
         "openDownload": "Open Download"
+      },
+      "softwareManagement": {
+        "title": "Software Management",
+        "description": "Create, edit, delete, and activate tenant programs from your manager workspace.",
+        "addProgram": "Add Program",
+        "editProgram": "Edit Program",
+        "editDescription": "Update the selected program details.",
+        "formDescription": "Create a program with pricing, trial, and download settings.",
+        "createProgram": "Create Program",
+        "saveChanges": "Save Changes",
+        "createSuccess": "Program created successfully.",
+        "updateSuccess": "Program updated successfully.",
+        "deleteSuccess": "Program deleted successfully.",
+        "activateSuccess": "Program registered successfully.",
+        "activateError": "Program registration failed.",
+        "searchPlaceholder": "Search by program name",
+        "emptyTitle": "No programs yet",
+        "emptyDescription": "Add your first program to start managing activations.",
+        "programName": "Program Name",
+        "programDescription": "Program Description",
+        "downloadLink": "Download Link",
+        "trialDays": "Trial Days",
+        "price": "Price",
+        "iconUrl": "Icon URL",
+        "version": "Version",
+        "noDescription": "No description provided.",
+        "activeToggle": "Active",
+        "activationTitle": "Register Program",
+        "activationDescription": "Register {{name}} for a customer account.",
+        "customerUsername": "Customer Username",
+        "customerBiosId": "Customer BIOS ID",
+        "registerNow": "Register Now",
+        "activationValidation": "Customer username and BIOS ID are required.",
+        "nameValidation": "Program name must be at least 2 characters.",
+        "downloadValidation": "Enter a valid download link.",
+        "guideValidation": "Enter a valid installation guide link.",
+        "iconValidation": "Enter a valid icon URL.",
+        "numberValidation": "Trial days and price must be valid numbers.",
+        "deleteProgramTitle": "Delete program?",
+        "deleteProgramDescription": "This will permanently remove {{name}} from your catalog."
       },
       "profile": {
         "title": "Profile",
@@ -1048,6 +1153,61 @@
         "totalEntries": "Total entries: {{count}}"
       }
     }
+  },
+  "software": {
+    "externalApiKey": "External API Key",
+    "externalSoftwareId": "External Software ID",
+    "externalApiKeyRequired": "External API key is required for new programs.",
+    "externalSoftwareIdRequired": "External software ID is required for new programs.",
+    "apiKeyHint": "Encrypted and stored securely. Not visible after saving.",
+    "apiKeyReplacePlaceholder": "Leave blank to keep existing key",
+    "apiConfigured": "API Configured",
+    "apiNotConfigured": "No API Key Set",
+    "noApiWarning": "This program has no external API configured. Activation will fail.",
+    "apiKeyUrlHint": "Used as: /apiuseradd/[KEY]/username/bios",
+    "softwareIdUrlHint": "Used as: /apilogs/[ID] and /apiusers/[ID]"
+  },
+  "programLogs": {
+    "title": "Program Logs",
+    "selectProgram": "Select a program to view logs",
+    "activationEvents": "Activation Events",
+    "loginEvents": "Login Events",
+    "eventAdded": "Added",
+    "eventDeleted": "Deleted",
+    "noLogs": "No logs available for this program.",
+    "autoRefresh": "Auto-refresh (30s)",
+    "exportCsv": "Export CSV",
+    "activatedBy": "Activated By",
+    "viaDashboard": "via Dashboard",
+    "externalUnknown": "External (unknown)"
+  },
+  "ipAnalytics": {
+    "columns": {
+      "country": "Country",
+      "location": "Location"
+    },
+    "vpnProxy": "VPN/Proxy"
+  },
+  "activate": {
+    "title": "Activate License",
+    "customerName": "Customer Name",
+    "customerEmail": "Customer Email",
+    "biosId": "BIOS ID",
+    "biosIdHint": "Will be used as username (locked)",
+    "duration": "Duration",
+    "durationMode": "Duration",
+    "endDateMode": "End Date",
+    "minutes": "Minutes",
+    "hours": "Hours",
+    "days": "Days",
+    "price": "Total Price",
+    "priceAuto": "Auto-calculated",
+    "submit": "Create & Activate",
+    "successTitle": "License Activated",
+    "successMessage": "License key: {{key}}",
+    "errorTitle": "Activation Failed",
+    "biosAlreadyActive": "This BIOS ID already has an active license for this program.",
+    "biosBlacklisted": "This BIOS ID is blacklisted and cannot be activated."
   },
   "customerPortal": {
     "layout": {

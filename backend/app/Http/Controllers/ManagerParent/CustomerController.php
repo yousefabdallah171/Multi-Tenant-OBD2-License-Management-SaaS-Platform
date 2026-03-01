@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Enums\UserRole;
+use App\Models\ActivityLog;
+use App\Models\UserIpLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,21 +61,87 @@ class CustomerController extends BaseManagerParentController
         $user = $this->resolveTenantUser($request, $user);
         abort_unless(($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value, 404);
 
-        $user->load(['customerLicenses.program:id,name', 'customerLicenses.reseller:id,name']);
+        $user->load(['customerLicenses.program:id,name', 'customerLicenses.reseller:id,name,email', 'createdBy:id,name,email']);
+
+        $resellersSummary = $user->customerLicenses
+            ->groupBy('reseller_id')
+            ->map(function ($licenses) {
+                $latest = $licenses->sortByDesc('activated_at')->first();
+
+                return [
+                    'reseller_id' => $latest?->reseller_id,
+                    'reseller_name' => $latest?->reseller?->name,
+                    'reseller_email' => $latest?->reseller?->email,
+                    'activations_count' => $licenses->count(),
+                    'last_activation_at' => $latest?->activated_at?->toIso8601String(),
+                ];
+            })
+            ->values();
+
+        $ipLogs = UserIpLog::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('user_id', $user->id)
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->map(fn (UserIpLog $log): array => [
+                'id' => $log->id,
+                'ip_address' => $log->ip_address,
+                'country' => $log->country,
+                'city' => $log->city,
+                'isp' => $log->isp,
+                'reputation_score' => $log->reputation_score,
+                'action' => $log->action,
+                'created_at' => $log->created_at?->toIso8601String(),
+            ])
+            ->values();
+
+        $activity = ActivityLog::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where(function ($query) use ($user): void {
+                $query->where('user_id', $user->id)->orWhere('metadata->customer_id', $user->id);
+            })
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->map(fn (ActivityLog $log): array => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'description' => $log->description,
+                'metadata' => $log->metadata ?? [],
+                'ip_address' => $log->ip_address,
+                'created_at' => $log->created_at?->toIso8601String(),
+            ])
+            ->values();
 
         return response()->json([
             'data' => [
                 ...$this->serializeCustomer($user),
+                'username' => $user->username,
+                'phone' => $user->phone,
+                'created_by' => $user->createdBy ? [
+                    'id' => $user->createdBy->id,
+                    'name' => $user->createdBy->name,
+                    'email' => $user->createdBy->email,
+                ] : null,
+                'created_at' => $user->created_at?->toIso8601String(),
                 'licenses' => $user->customerLicenses->map(fn ($license): array => [
                     'id' => $license->id,
                     'bios_id' => $license->bios_id,
+                    'external_username' => $license->external_username,
                     'program' => $license->program?->name,
                     'reseller' => $license->reseller?->name,
+                    'reseller_id' => $license->reseller_id,
+                    'reseller_email' => $license->reseller?->email,
                     'status' => $license->status,
+                    'duration_days' => (float) $license->duration_days,
                     'price' => (float) $license->price,
                     'activated_at' => $license->activated_at?->toIso8601String(),
                     'expires_at' => $license->expires_at?->toIso8601String(),
                 ])->values(),
+                'resellers_summary' => $resellersSummary,
+                'ip_logs' => $ipLogs,
+                'activity' => $activity,
             ],
         ]);
     }

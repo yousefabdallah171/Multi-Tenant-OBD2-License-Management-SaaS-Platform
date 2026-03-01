@@ -1,100 +1,123 @@
-import type { ComponentType } from 'react'
-import { DownloadCloud, FileArchive, LaptopMinimalCheck } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { ArrowUpRight, Download, FileText, PackageOpen } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { DownloadButton } from '@/components/customer/DownloadButton'
+import { toast } from 'sonner'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StaggerGroup, StaggerItem } from '@/components/shared/PageTransition'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useLanguage } from '@/hooks/useLanguage'
+import { formatDate } from '@/lib/utils'
 import { customerPortalService } from '@/services/customer.service'
 
-function formatDateTime(value: string | null | undefined, locale: string) {
-  if (!value) {
-    return '-'
-  }
-
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
-}
-
 export function DownloadPage() {
-  const { t, i18n } = useTranslation()
-  const locale = i18n.language === 'ar' ? 'ar-EG' : 'en-US'
+  const { t } = useTranslation()
+  const { lang } = useLanguage()
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+
   const downloadsQuery = useQuery({
     queryKey: ['customer', 'downloads'],
     queryFn: () => customerPortalService.getDownloads(),
   })
 
-  const downloads = downloadsQuery.data ?? []
+  const logDownloadMutation = useMutation({
+    mutationFn: (id: number) => customerPortalService.logDownload(id),
+  })
+
+  const startDownload = async (item: { id: number; download_link: string | null; can_download: boolean }) => {
+    if (!item.can_download || !item.download_link) {
+      toast.error(t('customerPortal.download.disabledTooltip'))
+      return
+    }
+
+    window.open(item.download_link, '_blank', 'noopener,noreferrer')
+
+    try {
+      await logDownloadMutation.mutateAsync(item.id)
+    } catch {
+      toast.error(t('customerPortal.download.logFailed'))
+    }
+  }
+
+  const items = downloadsQuery.data?.data ?? []
 
   return (
     <div className="space-y-6">
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400">{t('customerPortal.layout.eyebrow')}</p>
-        <h1 className="text-3xl font-semibold text-slate-950 dark:text-white">{t('customerPortal.download.title')}</h1>
+      <div className="space-y-2">
+        <h2 className="text-3xl font-semibold">{t('customerPortal.download.title')}</h2>
         <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('customerPortal.download.description')}</p>
-      </section>
+      </div>
 
       {downloadsQuery.isLoading ? (
         <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, index) => <SkeletonCard key={index} lines={4} />)}
+          {Array.from({ length: 3 }).map((_, index) => (
+            <SkeletonCard key={index} lines={4} />
+          ))}
         </div>
       ) : null}
 
-      {!downloadsQuery.isLoading && downloads.length === 0 ? (
-        <EmptyState
-          icon={DownloadCloud}
-          title={t('customerPortal.download.emptyTitle')}
-          description={t('customerPortal.download.emptyDescription')}
-        />
+      {items.length === 0 && !downloadsQuery.isLoading ? (
+        <EmptyState title={t('customerPortal.download.emptyTitle')} description={t('customerPortal.download.emptyDescription')} icon={PackageOpen} />
       ) : null}
 
-      {downloads.length > 0 ? (
+      {!downloadsQuery.isLoading ? (
         <StaggerGroup className="space-y-4">
-          {downloads.map((item) => (
+          {items.map((item) => (
             <StaggerItem key={item.id}>
               <Card>
-                <CardHeader className="border-b border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/40">
+                <CardHeader>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <CardTitle className="text-xl text-slate-950 dark:text-white">
-                        {item.program_name ?? t('customerPortal.dashboard.unknownProgram')}
-                        {item.version ? <span className="ms-2 text-base font-medium text-slate-500 dark:text-slate-400">v{item.version}</span> : null}
-                      </CardTitle>
+                      <CardTitle className="text-lg">{item.program_name ?? t('customerPortal.dashboard.unknownProgram')}</CardTitle>
                       <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {t('customerPortal.download.lastDownloaded')}: {formatDateTime(item.last_downloaded_at, locale)}
+                        {t('customerPortal.software.version')} {item.version ?? '-'}
                       </p>
                     </div>
                     <StatusBadge status={item.status} />
                   </div>
                 </CardHeader>
-                <CardContent className="grid gap-5 p-5 lg:grid-cols-[1fr_auto]">
+                <CardContent className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <InfoTile icon={FileArchive} label={t('customerPortal.download.fileSize')} value={item.file_size ?? t('customerPortal.download.notAvailable')} />
-                    <InfoTile icon={LaptopMinimalCheck} label={t('customerPortal.download.systemRequirements')} value={item.system_requirements ?? t('customerPortal.download.notProvided')} />
-                    <InfoTile icon={DownloadCloud} label={t('customerPortal.download.daysRemaining')} value={item.days_remaining > 0 ? t('customerPortal.dashboard.daysRemaining', { count: item.days_remaining }) : t('customerPortal.common.expired')} />
-                    <InfoTile icon={FileArchive} label={t('customerPortal.download.installationGuide')} value={item.installation_guide_url ? t('customerPortal.download.availableGuide') : t('customerPortal.download.notProvided')} />
+                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.lastDownloaded')}</p>
+                      <p className="mt-1 text-sm font-medium">{item.last_downloaded_at ? formatDate(item.last_downloaded_at, locale) : t('customerPortal.download.notAvailable')}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.fileSize')}</p>
+                      <p className="mt-1 text-sm font-medium">{item.file_size ?? t('customerPortal.download.notProvided')}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.systemRequirements')}</p>
+                      <p className="mt-1 text-sm font-medium">{item.system_requirements ?? t('customerPortal.download.notProvided')}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.daysRemaining')}</p>
+                      <p className="mt-1 text-sm font-medium">{item.days_remaining}</p>
+                    </div>
                   </div>
-
-                  <div className="flex min-w-[14rem] flex-col gap-3">
-                    <DownloadButton
-                      downloadId={item.license_id}
-                      downloadLink={item.download_link}
-                      disabled={!item.can_download}
-                      className="w-full"
-                      label={t('customerPortal.download.downloadNow')}
-                    />
-                    {item.installation_guide_url ? (
-                      <a
-                        href={item.installation_guide_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm font-medium text-sky-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:text-sky-400"
-                      >
-                        {t('customerPortal.download.openGuide')}
-                      </a>
-                    ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" className="flex-1 justify-between" disabled={!item.can_download} onClick={() => void startDownload(item)}>
+                      <span className="inline-flex items-center gap-2">
+                        <Download className="h-4 w-4" />
+                        {t('customerPortal.download.downloadNow')}
+                      </span>
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={!item.installation_guide_url}
+                      onClick={() => {
+                        if (item.installation_guide_url) {
+                          window.open(item.installation_guide_url, '_blank', 'noopener,noreferrer')
+                        }
+                      }}
+                    >
+                      <FileText className="me-2 h-4 w-4" />
+                      {t('customerPortal.download.openGuide')}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -102,26 +125,6 @@ export function DownloadPage() {
           ))}
         </StaggerGroup>
       ) : null}
-    </div>
-  )
-}
-
-function InfoTile({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: ComponentType<{ className?: string }>
-  label: string
-  value: string
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-        <Icon className="h-3.5 w-3.5" />
-        <span>{label}</span>
-      </div>
-      <p className="mt-2 text-sm font-medium text-slate-950 dark:text-white">{value}</p>
     </div>
   )
 }

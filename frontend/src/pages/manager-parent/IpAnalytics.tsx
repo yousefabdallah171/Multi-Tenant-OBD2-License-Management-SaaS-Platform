@@ -1,31 +1,48 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PieChartWidget } from '@/components/charts/PieChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
-import { cn, formatDate } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import { managerParentService } from '@/services/manager-parent.service'
-import type { IpAnalyticsEntry } from '@/types/manager-parent.types'
+import { formatIpLocation, isPrivateOrLocalIp } from '@/utils/countryFlag'
 
-function ReputationBadge({ value, label }: { value: 'low' | 'medium' | 'high'; label: string }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex rounded-full px-3 py-1 text-xs font-semibold capitalize',
-        value === 'low' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
-        value === 'medium' && 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
-        value === 'high' && 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
-      )}
-    >
-      {label}
-    </span>
-  )
+interface SoftwareIpRow {
+  id: string
+  username: string
+  ip_address: string
+  timestamp: string
+  country: string
+  city: string
+  country_code: string
+  isp: string
+  proxy: boolean
+  hosting: boolean
+}
+
+function parseLoginRows(raw: string): Array<{ username: string; ip_address: string; timestamp: string }> {
+  return raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const match = line.match(/^(\S+)\s+(.+?)\s+((?:\d{1,3}\.){3}\d{1,3})$/)
+      if (!match) {
+        return null
+      }
+
+      return {
+        username: match[1].trim(),
+        timestamp: match[2].trim(),
+        ip_address: match[3].trim(),
+      }
+    })
+    .filter((row): row is { username: string; ip_address: string; timestamp: string } => row !== null)
 }
 
 export function IpAnalyticsPage() {
@@ -33,162 +50,202 @@ export function IpAnalyticsPage() {
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
-  const [userId, setUserId] = useState<number | ''>('')
-  const [country, setCountry] = useState('')
-  const [reputation, setReputation] = useState<'low' | 'medium' | 'high' | ''>('')
-  const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
+  const [perPage, setPerPage] = useState(15)
   const [searchIp, setSearchIp] = useState('')
+  const [softwareId, setSoftwareId] = useState<number | ''>('')
+  const [reputation, setReputation] = useState<'all' | 'safe' | 'proxy'>('all')
+  const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
+  const [geoCache, setGeoCache] = useState<Record<string, Omit<SoftwareIpRow, 'id' | 'username' | 'ip_address' | 'timestamp'>>>({})
 
-  const statsQuery = useQuery({
-    queryKey: ['manager-parent', 'ip-analytics', 'stats'],
-    queryFn: () => managerParentService.getIpStats(),
+  const programsQuery = useQuery({
+    queryKey: ['manager-parent', 'programs-with-external-api'],
+    queryFn: () => managerParentService.getProgramsWithExternalApi(),
   })
 
-  const usersQuery = useQuery({
-    queryKey: ['manager-parent', 'ip-analytics', 'users'],
-    queryFn: () => managerParentService.getUsernameManagement({ per_page: 100 }),
+  const logsQuery = useQuery({
+    queryKey: ['manager-parent', 'ip-analytics', 'program-logs', softwareId],
+    queryFn: async () => {
+      if (!softwareId) {
+        return { raw: '' }
+      }
+      return managerParentService.getProgramLogs(softwareId)
+    },
+    enabled: softwareId !== '',
   })
 
-  const ipQuery = useQuery({
-    queryKey: ['manager-parent', 'ip-analytics', page, perPage, userId, country, reputation, range.from, range.to],
-    queryFn: () =>
-      managerParentService.getIpAnalytics({
-        page,
-        per_page: perPage,
-        user_id: userId,
-        country,
-        reputation_score: reputation,
-        from: range.from,
-        to: range.to,
-      }),
-  })
+  const baseRows = useMemo(() => parseLoginRows(logsQuery.data?.raw ?? ''), [logsQuery.data?.raw])
 
-  const countries = useMemo(() => (statsQuery.data?.data.countries ?? []).map((item) => item.country), [statsQuery.data?.data.countries])
+  useEffect(() => {
+    if (programsQuery.data?.length && softwareId === '') {
+      setSoftwareId(programsQuery.data[0].id)
+    }
+  }, [programsQuery.data, softwareId])
 
-  const filteredRows = useMemo(() => {
-    const normalized = searchIp.trim().toLowerCase()
-    if (!normalized) {
-      return ipQuery.data?.data ?? []
+  useEffect(() => {
+    const ips = Array.from(new Set(baseRows.map((row) => row.ip_address))).filter((ip) => !isPrivateOrLocalIp(ip) && !geoCache[ip])
+    if (ips.length === 0) {
+      return
     }
 
-    return (ipQuery.data?.data ?? []).filter((row) => row.ip_address.toLowerCase().includes(normalized))
-  }, [ipQuery.data?.data, searchIp])
+    void (async () => {
+      const entries = await Promise.all(
+        ips.map(async (ip) => {
+          try {
+            const response = await fetch(`https://ipapi.co/${ip}/json/`)
+            if (!response.ok) {
+              return [ip, { country: 'Unknown', city: '', country_code: '', isp: '', proxy: false, hosting: false }] as const
+            }
 
-  const columns = useMemo<Array<DataTableColumn<IpAnalyticsEntry>>>(
-    () => [
-      {
-        key: 'user',
-        label: t('common.user'),
-        sortable: true,
-        sortValue: (row) => row.user?.name ?? '',
-        render: (row) => (
-          <div className="space-y-1">
-            <p className="font-medium text-slate-950 dark:text-white">{row.user?.name ?? t('managerParent.pages.ipAnalytics.unknownUser')}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{row.user?.email ?? '-'}</p>
-          </div>
-        ),
-      },
-      { key: 'ip', label: t('managerParent.pages.ipAnalytics.ipAddress'), sortable: true, sortValue: (row) => row.ip_address, render: (row) => <code>{row.ip_address}</code> },
-      { key: 'location', label: t('managerParent.pages.ipAnalytics.location'), sortable: true, sortValue: (row) => `${row.country ?? ''} ${row.city ?? ''}`, render: (row) => `${row.country ?? '-'} / ${row.city ?? '-'}` },
-      { key: 'isp', label: t('managerParent.pages.ipAnalytics.isp'), sortable: true, sortValue: (row) => row.isp ?? '', render: (row) => row.isp ?? '-' },
-      { key: 'reputation', label: t('managerParent.pages.ipAnalytics.reputation'), sortable: true, sortValue: (row) => row.reputation_score, render: (row) => <ReputationBadge value={row.reputation_score} label={t(`managerParent.pages.ipAnalytics.${row.reputation_score}`)} /> },
-      { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => row.action },
-      { key: 'date', label: t('common.date'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
-    ],
-    [locale, t],
-  )
+            const payload = await response.json() as Record<string, unknown>
+            return [ip, {
+              country: String(payload.country_name ?? 'Unknown'),
+              city: String(payload.city ?? ''),
+              country_code: String(payload.country_code ?? ''),
+              isp: String(payload.org ?? ''),
+              proxy: Boolean(payload.proxy),
+              hosting: Boolean(payload.hosting),
+            }] as const
+          } catch {
+            return [ip, { country: 'Unknown', city: '', country_code: '', isp: '', proxy: false, hosting: false }] as const
+          }
+        }),
+      )
+
+      setGeoCache((current) => Object.fromEntries([...Object.entries(current), ...entries]))
+    })()
+  }, [baseRows, geoCache])
+
+  const rows = useMemo<SoftwareIpRow[]>(() => baseRows.map((row, index) => {
+    if (isPrivateOrLocalIp(row.ip_address)) {
+      return {
+        id: `${row.ip_address}-${index}`,
+        username: row.username,
+        ip_address: row.ip_address,
+        timestamp: row.timestamp,
+        country: 'Localhost',
+        city: 'Local',
+        country_code: '',
+        isp: 'Local',
+        proxy: false,
+        hosting: false,
+      }
+    }
+
+    const geo = geoCache[row.ip_address] ?? { country: 'Unknown', city: '', country_code: '', isp: '', proxy: false, hosting: false }
+
+    return {
+      id: `${row.ip_address}-${index}`,
+      username: row.username,
+      ip_address: row.ip_address,
+      timestamp: row.timestamp,
+      ...geo,
+    }
+  }), [baseRows, geoCache])
+
+  const filtered = useMemo(() => rows.filter((row) => {
+    if (searchIp && !row.ip_address.toLowerCase().includes(searchIp.toLowerCase()) && !row.username.toLowerCase().includes(searchIp.toLowerCase())) {
+      return false
+    }
+
+    if (reputation === 'proxy' && !(row.proxy || row.hosting)) {
+      return false
+    }
+
+    if (reputation === 'safe' && (row.proxy || row.hosting)) {
+      return false
+    }
+
+    if (range.from || range.to) {
+      const time = Date.parse(row.timestamp)
+      if (!Number.isNaN(time)) {
+        if (range.from && time < Date.parse(range.from)) {
+          return false
+        }
+        if (range.to && time > Date.parse(`${range.to}T23:59:59`)) {
+          return false
+        }
+      }
+    }
+
+    return true
+  }), [reputation, rows, searchIp, range.from, range.to])
+
+  const paged = useMemo(() => {
+    const start = (page - 1) * perPage
+    return filtered.slice(start, start + perPage)
+  }, [filtered, page, perPage])
+
+  const countryStats = useMemo(() => {
+    const grouped = filtered.reduce<Record<string, number>>((acc, row) => {
+      const key = row.country || 'Unknown'
+      acc[key] = (acc[key] ?? 0) + 1
+      return acc
+    }, {})
+
+    return Object.entries(grouped).map(([country, count]) => ({ country, count }))
+  }, [filtered])
+
+  const columns = useMemo<Array<DataTableColumn<SoftwareIpRow>>>(() => [
+    { key: 'username', label: t('common.username'), sortable: true, sortValue: (row) => row.username, render: (row) => row.username },
+    { key: 'ip', label: t('managerParent.pages.ipAnalytics.ipAddress'), sortable: true, sortValue: (row) => row.ip_address, render: (row) => <code>{row.ip_address}</code> },
+    { key: 'location', label: t('ipAnalytics.columns.location'), sortable: true, sortValue: (row) => `${row.country} ${row.city}`, render: (row) => formatIpLocation(row.country, row.city, row.country_code) },
+    { key: 'isp', label: t('managerParent.pages.ipAnalytics.isp'), sortable: true, sortValue: (row) => row.isp, render: (row) => row.isp || '-' },
+    {
+      key: 'vpn',
+      label: t('ipAnalytics.vpnProxy'),
+      sortable: true,
+      sortValue: (row) => (row.proxy || row.hosting ? 'proxy' : 'safe'),
+      render: (row) => (row.proxy || row.hosting ? (
+        <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+          {t('ipAnalytics.vpnProxy')}
+        </span>
+      ) : '-'),
+    },
+    { key: 'time', label: t('common.timestamp'), sortable: true, sortValue: (row) => row.timestamp, render: (row) => (Date.parse(row.timestamp) ? formatDate(row.timestamp, locale) : row.timestamp) },
+  ], [locale, t])
 
   return (
     <div className="space-y-6">
       <PageHeader title={t('managerParent.pages.ipAnalytics.title')} description={t('managerParent.pages.ipAnalytics.description')} />
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <PieChartWidget title={t('managerParent.pages.ipAnalytics.countryDistribution')} data={statsQuery.data?.data.countries ?? []} nameKey="country" valueKey="count" isLoading={statsQuery.isLoading} totalLabel={t('managerParent.pages.ipAnalytics.ips')} />
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t('managerParent.pages.ipAnalytics.suspiciousIpAlerts')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {(statsQuery.data?.data.suspicious ?? []).slice(0, 8).map((item) => (
-              <div key={item.id} className="rounded-3xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-950/60 dark:bg-rose-950/20">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600 dark:text-rose-300" />
-                  <div className="space-y-1 text-sm">
-                    <p className="font-medium text-slate-950 dark:text-white">{item.ip_address}</p>
-                    <p className="text-slate-500 dark:text-slate-400">{item.country ?? t('managerParent.pages.ipAnalytics.unknownCountry')}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {!statsQuery.isLoading && (statsQuery.data?.data.suspicious.length ?? 0) === 0 ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.ipAnalytics.noSuspiciousIps')}</p> : null}
-          </CardContent>
-        </Card>
-      </div>
+      <PieChartWidget
+        title={t('managerParent.pages.ipAnalytics.countryDistribution')}
+        data={countryStats}
+        nameKey="country"
+        valueKey="count"
+        totalLabel={t('managerParent.pages.ipAnalytics.ips')}
+      />
 
       <Card>
-        <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px_220px_minmax(0,0.9fr)]">
+        <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px_180px_minmax(0,0.9fr)]">
           <Input value={searchIp} onChange={(event) => setSearchIp(event.target.value)} placeholder={t('managerParent.pages.ipAnalytics.searchPlaceholder')} />
-          <select
-            value={userId}
-            onChange={(event) => {
-              setUserId(event.target.value ? Number(event.target.value) : '')
-              setPage(1)
-            }}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-          >
-            <option value="">{t('managerParent.pages.ipAnalytics.allUsers')}</option>
-            {(usersQuery.data?.data ?? []).map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name}
+          <select value={softwareId} onChange={(event) => setSoftwareId(event.target.value ? Number(event.target.value) : '')} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+            <option value="">{t('programLogs.selectProgram')}</option>
+            {(programsQuery.data ?? []).map((program) => (
+              <option key={program.id} value={program.id}>
+                {program.name}
               </option>
             ))}
           </select>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <select
-              value={country}
-              onChange={(event) => {
-                setCountry(event.target.value)
-                setPage(1)
-              }}
-              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-            >
-              <option value="">{t('managerParent.pages.ipAnalytics.allCountries')}</option>
-              {countries.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-            <select
-              value={reputation}
-              onChange={(event) => {
-                setReputation(event.target.value as 'low' | 'medium' | 'high' | '')
-                setPage(1)
-              }}
-              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-            >
-              <option value="">{t('managerParent.pages.ipAnalytics.allReputationScores')}</option>
-              <option value="low">{t('managerParent.pages.ipAnalytics.low')}</option>
-              <option value="medium">{t('managerParent.pages.ipAnalytics.medium')}</option>
-              <option value="high">{t('managerParent.pages.ipAnalytics.high')}</option>
-            </select>
-          </div>
+          <select value={reputation} onChange={(event) => setReputation(event.target.value as 'all' | 'safe' | 'proxy')} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+            <option value="all">{t('managerParent.pages.ipAnalytics.allReputationScores')}</option>
+            <option value="safe">{t('managerParent.pages.ipAnalytics.low')}</option>
+            <option value="proxy">{t('ipAnalytics.vpnProxy')}</option>
+          </select>
           <DateRangePicker value={range} onChange={setRange} />
         </CardContent>
       </Card>
 
       <DataTable
         columns={columns}
-        data={filteredRows}
+        data={paged}
         rowKey={(row) => row.id}
-        isLoading={ipQuery.isLoading}
+        isLoading={logsQuery.isLoading}
         pagination={{
-          page: ipQuery.data?.meta.current_page ?? 1,
-          lastPage: ipQuery.data?.meta.last_page ?? 1,
-          total: ipQuery.data?.meta.total ?? 0,
-          perPage: ipQuery.data?.meta.per_page ?? perPage,
+          page,
+          lastPage: Math.max(1, Math.ceil(filtered.length / perPage)),
+          total: filtered.length,
+          perPage,
         }}
         onPageChange={setPage}
         onPageSizeChange={(size) => {

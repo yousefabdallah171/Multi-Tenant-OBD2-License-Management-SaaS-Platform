@@ -45,12 +45,13 @@ export function LineChartWidget<TData extends ChartRow>({
       <BaseChart data={data} isLoading={isLoading} heightClassName={heightClassName} emptyDescription={emptyDescription}>
         <LineChart data={data} margin={{ top: 8, right: isRtl ? 12 : 20, left: isRtl ? 20 : 12, bottom: 0 }}>
           <CartesianGrid stroke={palette.grid} strokeDasharray="4 4" vertical={false} />
-          <XAxis dataKey={xKey} stroke={palette.axis} tickLine={false} axisLine={false} tickMargin={10} tickFormatter={xAxisFormatter} />
+          <XAxis dataKey={xKey} stroke={palette.axis} tickLine={false} axisLine={false} tickMargin={10} minTickGap={24} tick={{ fontSize: 12 }} tickFormatter={xAxisFormatter} />
           <YAxis
             stroke={palette.axis}
             tickLine={false}
             axisLine={false}
             width={52}
+            tick={{ fontSize: 12 }}
             tickFormatter={(value) => formatChartNumber(value, locale)}
           />
           <Tooltip

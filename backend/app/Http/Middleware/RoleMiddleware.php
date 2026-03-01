@@ -21,6 +21,10 @@ class RoleMiddleware
 
         $role = $user->role?->value ?? (string) $user->role;
 
+        if ($role === 'customer') {
+            return response()->json(['message' => 'Customer portal is not available'], Response::HTTP_FORBIDDEN);
+        }
+
         if (! in_array($role, $roles, true)) {
             return response()->json(['message' => 'Forbidden.'], Response::HTTP_FORBIDDEN);
         }

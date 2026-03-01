@@ -59,7 +59,7 @@ export function FinancialReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatsCard title={t('superAdmin.pages.financialReports.totalPlatformRevenue')} value={formatCurrency(data?.summary.total_platform_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
         <StatsCard title={t('superAdmin.pages.financialReports.totalActivations')} value={data?.summary.total_activations ?? 0} icon={Globe2} color="sky" />
         <StatsCard title={t('superAdmin.pages.financialReports.activeLicenses')} value={data?.summary.active_licenses ?? 0} icon={Users} color="amber" />

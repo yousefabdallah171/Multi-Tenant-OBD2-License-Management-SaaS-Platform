@@ -43,7 +43,7 @@ class PhaseOneFoundationTest extends TestCase
             ->assertOk();
     }
 
-    public function test_role_middleware_blocks_customer_from_manager_routes(): void
+    public function test_customer_tokens_are_silently_denied_by_active_role_middleware(): void
     {
         $user = User::factory()->create([
             'role' => UserRole::CUSTOMER,
@@ -52,7 +52,10 @@ class PhaseOneFoundationTest extends TestCase
 
         $this->withToken($user->createToken('test-token')->plainTextToken)
             ->getJson('/api/bios-blacklist')
-            ->assertForbidden();
+            ->assertUnauthorized()
+            ->assertExactJson([
+                'message' => 'Invalid credentials.',
+            ]);
     }
 
     public function test_tenant_scope_filters_licenses_for_manager_parent(): void
@@ -100,9 +103,7 @@ class PhaseOneFoundationTest extends TestCase
         config()->set('external-api.url', 'http://72.60.69.185');
 
         Http::fake([
-            'http://72.60.69.185/status' => Http::response([
-                'status' => 'online',
-            ], 200),
+            'http://72.60.69.185/showallapi/8' => Http::response('0', 200),
         ]);
 
         $user = User::factory()->create([

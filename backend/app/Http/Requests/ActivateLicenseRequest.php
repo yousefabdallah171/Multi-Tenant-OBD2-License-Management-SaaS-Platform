@@ -22,7 +22,7 @@ class ActivateLicenseRequest extends FormRequest
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'bios_id' => ['required', 'string', 'min:5', 'max:255'],
             'program_id' => ['required', 'integer', 'exists:programs,id'],
-            'duration_days' => ['required', 'integer', 'min:1'],
+            'duration_days' => ['required', 'numeric', 'min:0.014'],
             'price' => ['required', 'numeric', 'min:0'],
         ];
     }

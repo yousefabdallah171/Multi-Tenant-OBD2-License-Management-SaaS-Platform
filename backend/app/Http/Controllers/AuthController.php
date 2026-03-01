@@ -21,6 +21,13 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials.'], Response::HTTP_UNAUTHORIZED);
         }
 
+        // CUSTOMER SILENT DENY
+        // Returns identical 401 as wrong password - no trace of customer role.
+        $userRole = $user->role?->value ?? (string) $user->role;
+        if ($userRole === 'customer') {
+            return response()->json(['message' => 'Invalid credentials.'], Response::HTTP_UNAUTHORIZED);
+        }
+
         if ($user->status !== 'active') {
             return response()->json(['message' => 'User account is not active.'], Response::HTTP_FORBIDDEN);
         }

@@ -79,7 +79,7 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
         <StatsCard title={t('managerParent.pages.reports.totalRevenue')} value={formatCurrency(totalRevenue, 'USD', locale)} icon={Banknote} color="emerald" />
         <StatsCard title={t('managerParent.pages.reports.totalActivations')} value={totalActivations} icon={Activity} color="sky" />
         <StatsCard title={t('managerParent.pages.reports.successRate')} value={`${successRate.toFixed(1)}%`} icon={CheckCircle2} color="amber" />

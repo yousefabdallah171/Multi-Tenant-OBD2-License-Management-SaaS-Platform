@@ -1,0 +1,54 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e8]:
+          - paragraph [ref=e9]: Reseller
+          - heading "Reseller" [level=1] [ref=e10]
+        - generic [ref=e11]:
+          - button "Switch language" [ref=e12] [cursor=pointer]:
+            - img [ref=e13]
+            - text: AR
+          - button "Toggle theme" [ref=e16] [cursor=pointer]:
+            - img [ref=e17]
+            - text: Dark mode
+          - group [ref=e19]:
+            - generic "Open user menu" [ref=e20] [cursor=pointer]:
+              - generic [ref=e21]:
+                - generic [ref=e22]: Reseller
+                - generic [ref=e23]: reseller@obd2sw.com
+              - generic [ref=e24]: Reseller
+    - generic [ref=e25]:
+      - complementary [ref=e27]:
+        - navigation [ref=e28]:
+          - link "Dashboard" [ref=e29] [cursor=pointer]:
+            - /url: /en/reseller/dashboard
+            - img [ref=e30]
+            - generic [ref=e35]: Dashboard
+          - link "Customers" [ref=e36] [cursor=pointer]:
+            - /url: /en/reseller/customers
+            - img [ref=e37]
+            - generic [ref=e42]: Customers
+          - link "Licenses" [ref=e43] [cursor=pointer]:
+            - /url: /en/reseller/licenses
+            - img [ref=e44]
+            - generic [ref=e47]: Licenses
+          - link "Software" [ref=e48] [cursor=pointer]:
+            - /url: /en/reseller/software
+            - img [ref=e49]
+            - generic [ref=e53]: Software
+          - link "Reports" [ref=e54] [cursor=pointer]:
+            - /url: /en/reseller/reports
+            - img [ref=e55]
+            - generic [ref=e57]: Reports
+      - generic [ref=e58]:
+        - main [ref=e59]
+        - contentinfo [ref=e60]: 2026 OBD2SW License Platform
+  - generic:
+    - region "Notifications alt+T"
+```

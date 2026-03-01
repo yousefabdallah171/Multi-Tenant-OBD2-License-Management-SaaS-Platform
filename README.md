@@ -6,7 +6,7 @@
 
 A production-ready, multi-tenant license management system for OBD2 automotive diagnostic software.
 Built with **React 19 + Vite 6 + TypeScript** and **Laravel 12 + MySQL 8.0**,
-featuring 5-role RBAC, hardware-locked licensing via BIOS ID, RTL Arabic support, and real-time analytics.
+featuring RBAC with 4 active dashboard roles (customer portal removed), hardware-locked licensing via BIOS ID, RTL Arabic support, and real-time analytics.
 
 [![Version](https://img.shields.io/badge/Version-1.0.0-blue)]()
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
@@ -27,7 +27,7 @@ featuring 5-role RBAC, hardware-locked licensing via BIOS ID, RTL Arabic support
 2. [Tech Stack](#2-tech-stack)
 3. [Architecture](#3-architecture)
 4. [User Roles & RBAC](#4-user-roles--rbac)
-5. [All Pages (43 Total)](#5-all-pages-43-total)
+5. [All Pages (42 Total)](#5-all-pages-42-total)
 6. [Database Schema (12 Tables)](#6-database-schema-12-tables)
 7. [External API Integration](#7-external-api-integration)
 8. [BIOS Activation Flow](#8-bios-activation-flow)
@@ -50,7 +50,7 @@ featuring 5-role RBAC, hardware-locked licensing via BIOS ID, RTL Arabic support
 | **Version** | 1.0.0 |
 | **Status** | Phase 04 Manager + Reseller Complete |
 | **Last Updated** | 2026-02-28 |
-| **Scale** | Multi-tenant SaaS, 43 Pages, 12 Tables, 101 API Endpoints |
+| **Scale** | Multi-tenant SaaS, 42 Pages, 12 Tables, 101 API Endpoints |
 | **Budget** | $30 |
 | **Timeline** | 15 Days (Day 0 - Day 14) |
 | **Domain** | obd2sw.com |
@@ -60,7 +60,7 @@ featuring 5-role RBAC, hardware-locked licensing via BIOS ID, RTL Arabic support
 
 OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses for OBD2 automotive diagnostic tools. Each license is **hardware-locked to a BIOS ID**, ensuring one device per license. The platform supports:
 
-- **5-role hierarchy** with tenant isolation (Super Admin > Manager Parent > Manager > Reseller > Customer)
+- **Role hierarchy** with tenant isolation (Super Admin > Manager Parent > Manager > Reseller), with Customer portal removed
 - **External API integration** for hardware-locked license activation via `72.60.69.185`
 - **BIOS security**: Blacklisting, conflict detection, and full activation history
 - **IP Geolocation**: Tracks country, city, ISP, and reputation on every activation
@@ -188,27 +188,24 @@ Super Admin (GLOBAL scope)
 └── Customer (SELF scope - End User)
 ```
 
+> Customer portal is removed in Phase 11. Customers cannot access dashboard pages.
+
 ### Permissions Matrix
 
-| Permission | Super Admin | Manager Parent | Manager | Reseller | Customer |
+| Permission / Area | Super Admin | Manager Parent | Manager | Reseller | Customer |
 |-----------|:-----------:|:--------------:|:-------:|:--------:|:--------:|
-| **Scope** | **GLOBAL** | **TENANT** | **TEAM** | **PERSONAL** | **SELF** |
-| View all tenants | x | - | - | - | - |
-| Manage all admins | x | - | - | - | - |
-| System logs & API health | x | - | - | - | - |
-| Add programs + download links | x | x | - | - | - |
-| Set reseller pricing | - | x | - | - | - |
-| Team management | x | x | x (resellers only) | - | - |
-| BIOS Blacklist | x (global) | x (tenant) | - | - | - |
-| IP Analytics | x (global) | x (tenant) | - | - | - |
-| Financial Reports | x (all) | x (tenant) | x (team) | x (personal) | - |
-| Reseller Balances | x (all) | x (tenant) | x (team) | x (own) | - |
-| BIOS History | x (all) | x (tenant) | - | - | - |
-| BIOS Activation | x | x | x | x | - |
-| Username/Password Edit | x (all users) | x (tenant users) | x (team users) | - | - |
-| Personal reports | - | - | x | x | - |
-| View license status | - | - | - | - | x |
-| Software download | x | x | x | x | x |
+| Scope | Global | Tenant | Team | Personal | Removed |
+| Login to dashboard | Yes | Yes | Yes | Yes | No (silent 401) |
+| Dashboard page count | 10 | 18 | 9 | 5 | 0 |
+| Tenant management | Yes | No | No | No | No |
+| Team management | No | Yes | Read-only team scope | No | No |
+| Username management | No | Yes | Yes (team scope) | No | No |
+| BIOS blacklist/history | Yes | Yes | Partial | No | No |
+| BIOS conflicts page | No | Yes | No | No | No |
+| Logs + API status pages | Yes | Yes | No | No | No |
+| Software management CRUD | No | Yes | Yes | No | No |
+| Software catalog + activate modal | No | No | Yes | Yes | No |
+| Customers + licenses workflow | No | Tenant visibility | Team visibility | Yes | No |
 
 ### Username & Password Rules
 
@@ -232,30 +229,26 @@ const canManageUsers = useHasPermission('manage_users');
 
 ---
 
-## 5. All Pages (43 Total)
+## 5. All Pages (42 Total)
 
 > **i18n URL Routing:** All routes use `/:lang/` prefix (`/ar/...` or `/en/...`). Default language is Arabic. Root `/` redirects to `/ar/`.
 
-### Super Admin (13 pages) - SYSTEM OWNER
+### Super Admin (10 pages) - SYSTEM OWNER
 
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/super-admin/dashboard` | Dashboard | 5 stats cards + 3 charts + activity feed |
 | `/:lang/super-admin/tenants` | Tenant Management | CRUD + stats per tenant |
 | `/:lang/super-admin/users` | All Users | Cross-tenant user table + IP info |
-| `/:lang/super-admin/admin-management` | Admin Management | Add/edit/delete any admin |
 | `/:lang/super-admin/reports` | Reports | Cross-tenant analytics + export |
 | `/:lang/super-admin/financial-reports` | Financial Reports | Revenue breakdown all tenants |
-| `/:lang/super-admin/reseller-balances` | Reseller Balances | Balance of every reseller |
 | `/:lang/super-admin/bios-blacklist` | BIOS Blacklist | Global BIOS blacklist CRUD |
 | `/:lang/super-admin/bios-history` | BIOS History | Full history all tenants |
-| `/:lang/super-admin/username-management` | Username Management | Change any user's credentials |
 | `/:lang/super-admin/logs` | System Logs | All activity + API logs |
 | `/:lang/super-admin/api-status` | API Health | External API monitor |
-| `/:lang/super-admin/settings` | Settings | System configuration |
-| `/:lang/super-admin/profile` | Profile | Profile management |
+| `/:lang/super-admin/settings` | Settings | System configuration + profile tab |
 
-### Manager Parent (12 pages) - TENANT OWNER
+### Manager Parent (18 pages) - TENANT OWNER
 
 | Route | Page | Key Features |
 |-------|------|-------------|
@@ -264,11 +257,13 @@ const canManageUsers = useHasPermission('manage_users');
 | `/:lang/reseller-pricing` | Reseller Pricing | Pricing tiers & commissions |
 | `/:lang/software-management` | Software Management | Programs + Download Links CRUD |
 | `/:lang/financial-reports` | Financial Reports | Tenant-level revenue |
-| `/:lang/reseller-balances` | Reseller Balances | Tenant resellers only |
 | `/:lang/bios-blacklist` | BIOS Blacklist | Tenant-level blacklist |
 | `/:lang/bios-history` | BIOS History | Tenant activation history |
 | `/:lang/bios-conflicts` | BIOS Conflicts | Conflict history + resolution |
 | `/:lang/ip-analytics` | IP Analytics | Geolocation analytics |
+| `/:lang/logs` | Logs | Tenant API/operation logs |
+| `/:lang/program-logs` | Program Logs | External activation/login events per program |
+| `/:lang/api-status` | API Status | Tenant view for API health |
 | `/:lang/username-management` | Username Management | Tenant user credentials |
 | `/:lang/reports` | Reports | Tenant revenue & analytics |
 | `/:lang/activity` | Activity Log | Tenant-wide audit log |
@@ -276,7 +271,7 @@ const canManageUsers = useHasPermission('manage_users');
 | `/:lang/settings` | Settings | Tenant configuration |
 | `/:lang/profile` | Profile | Profile management |
 
-### Manager (8 pages) - TEAM LEADER
+### Manager (9 pages) - TEAM LEADER
 
 | Route | Page | Key Features |
 |-------|------|-------------|
@@ -285,33 +280,30 @@ const canManageUsers = useHasPermission('manage_users');
 | `/:lang/manager/username-management` | Username Management | Team credentials only |
 | `/:lang/manager/customers` | Customers | Team customer overview |
 | `/:lang/manager/software` | Software | Available programs (read-only) |
+| `/:lang/manager/software-management` | Software Management | Team-scoped CRUD + activation popup |
 | `/:lang/manager/reports` | Reports | Personal/team reports |
 | `/:lang/manager/activity` | Activity | Team activity logs |
 | `/:lang/manager/profile` | Profile | Profile management |
 
-### Reseller (7 pages) - ACTIVATOR
+### Reseller (5 pages) - ACTIVATOR
 
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/reseller/dashboard` | Dashboard | Personal stats + balance |
 | `/:lang/reseller/customers` | Customers | BIOS activation wizard |
-| `/:lang/reseller/software` | Software | Available programs (read-only) |
 | `/:lang/reseller/licenses` | Licenses | License management |
+| `/:lang/reseller/software` | Software Catalog | Read-only list + Activate modal |
 | `/:lang/reseller/reports` | Reports | Personal sales reports |
-| `/:lang/reseller/activity` | Activity | Personal action history |
-| `/:lang/reseller/profile` | Profile | Profile (view only) |
+ 
+> Removed reseller routes: `/:lang/reseller/activity` and `/:lang/reseller/profile` now redirect to dashboard.
 
 > **Reseller restrictions:** NO username/password editing. NO deleting managers.
 
-### Customer (3 pages) - END USER
+### Customer (0 pages) - REMOVED
 
-| Route | Page | Key Features |
-|-------|------|-------------|
-| `/:lang/customer/dashboard` | Dashboard | License status + expiry countdown |
-| `/:lang/customer/software` | Software | Licensed programs list |
-| `/:lang/customer/download` | Download | EXE download center |
-
-> **Customer restrictions:** NO editing permissions. View and download only. Username locked to BIOS ID.
+- Customer portal routes/pages are removed from frontend and backend routing.
+- Login for `customer` role returns `401 Invalid credentials.` (same response as wrong password).
+- Any customer token is revoked by API middleware and returns `401 Invalid credentials.`.
 
 ---
 
@@ -1543,11 +1535,11 @@ const { isRtl } = useLanguage();
 | 00 Setup | 0 | Monorepo scaffold + Docker + packages | Smoke checks |
 | 01 Foundation | 1-2 | Laravel + Docker + MySQL (12 tables) + Auth + IP Geo + BIOS | 15 unit |
 | 02 Super Admin | 3 | 13 pages + Admin Mgmt + BIOS + Username + RTL | 35 component |
-| 03 Manager Parent | 4-5 | 12 pages + Software + Team + BIOS + IP + Financial | 43 integration |
-| 04 Manager+Reseller | 6 | 8+7 pages + BIOS activation + Username | 25 E2E |
-| 05 Customer Portal | 7 | 3 pages + Status + Download + Responsive | 15 component |
+| 03 Manager Parent | 4-5 | 17 pages + Software + Team + BIOS + IP + Financial | 43 integration |
+| 04 Manager+Reseller | 6 | Manager 9p + Reseller 5p + BIOS activation + Username | 25 E2E |
+| 05 Customer Portal | 7 | Portal removed (silent deny + route cleanup) | 15 component |
 | 06 Reports | 8 | 18 Charts (Recharts) + Export CSV/PDF | 20 unit |
-| 07 UI/UX Polish | 9-10 | Animations + Dark/Light + Mobile (43 pages) | 25 responsive |
+| 07 UI/UX Polish | 9-10 | Animations + Dark/Light + Mobile (41 pages) | 25 responsive |
 | 08 Testing | 11 | 250+ Jest + 35 Cypress + Lighthouse 95+ | Full coverage |
 | 09 Deployment | 12-13 | VPS + Nginx + SSL + CI/CD + Backups | Smoke tests |
 | 10 Documentation | 14 | Swagger (101 endpoints) + Admin Manual | Final QA |
@@ -1571,9 +1563,9 @@ Week 2:  Reports → UI Polish → Testing → Deployment → Documentation
 | [`PHASE-00-Setup/`](docs-organized/PHASE-00-Setup/) | Monorepo + Docker + packages | [Overview](docs-organized/PHASE-00-Setup/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-00-Setup/02-TODO-List.md) |
 | [`PHASE-01-Foundation/`](docs-organized/PHASE-01-Foundation/) | Laravel + Auth + DB (12 tables) | [Overview](docs-organized/PHASE-01-Foundation/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-01-Foundation/02-TODO-List.md) |
 | [`PHASE-02-SuperAdmin/`](docs-organized/PHASE-02-SuperAdmin/) | 13 pages + RBAC + RTL | [Overview](docs-organized/PHASE-02-SuperAdmin/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-02-SuperAdmin/02-TODO-List.md) |
-| [`PHASE-03-ManagerParent/`](docs-organized/PHASE-03-ManagerParent/) | 12 pages + Software + Financial | [Overview](docs-organized/PHASE-03-ManagerParent/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-03-ManagerParent/02-TODO-List.md) |
-| [`PHASE-04-ManagerReseller/`](docs-organized/PHASE-04-ManagerReseller/) | Manager (8p) + Reseller (7p) | [Overview](docs-organized/PHASE-04-ManagerReseller/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-04-ManagerReseller/02-TODO-List.md) / [Checklist](docs-organized/PHASE-04-ManagerReseller/03-Completion-Checklist.md) |
-| [`PHASE-05-CustomerPortal/`](docs-organized/PHASE-05-CustomerPortal/) | 3 pages + Download | [Overview](docs-organized/PHASE-05-CustomerPortal/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-05-CustomerPortal/02-TODO-List.md) |
+| [`PHASE-03-ManagerParent/`](docs-organized/PHASE-03-ManagerParent/) | 17 pages + Software + Financial | [Overview](docs-organized/PHASE-03-ManagerParent/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-03-ManagerParent/02-TODO-List.md) |
+| [`PHASE-04-ManagerReseller/`](docs-organized/PHASE-04-ManagerReseller/) | Manager (9p) + Reseller (4p) | [Overview](docs-organized/PHASE-04-ManagerReseller/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-04-ManagerReseller/02-TODO-List.md) / [Checklist](docs-organized/PHASE-04-ManagerReseller/03-Completion-Checklist.md) |
+| [`PHASE-05-CustomerPortal/`](docs-organized/PHASE-05-CustomerPortal/) | Portal removed in Phase 11 | [Overview](docs-organized/PHASE-05-CustomerPortal/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-05-CustomerPortal/02-TODO-List.md) |
 | [`PHASE-06-ReportsAnalytics/`](docs-organized/PHASE-06-ReportsAnalytics/) | 18 Charts + Export | [Overview](docs-organized/PHASE-06-ReportsAnalytics/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-06-ReportsAnalytics/02-TODO-List.md) |
 | [`PHASE-07-UIUXPolish/`](docs-organized/PHASE-07-UIUXPolish/) | Animations + Mobile | [Overview](docs-organized/PHASE-07-UIUXPolish/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-07-UIUXPolish/02-TODO-List.md) |
 | [`PHASE-08-Testing/`](docs-organized/PHASE-08-Testing/) | 250+ Jest + 35 Cypress | [Overview](docs-organized/PHASE-08-Testing/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-08-Testing/02-TODO-List.md) |

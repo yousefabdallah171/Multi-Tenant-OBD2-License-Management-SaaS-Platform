@@ -1,6 +1,8 @@
 import { api } from '@/services/api'
 import type { PaginatedResponse } from '@/types/manager-parent.types'
 import type {
+  ActivateManagerSoftwareData,
+  CreateManagerSoftwareData,
   DashboardSeriesPoint,
   ManagerActivationPoint,
   ManagerCustomerDetails,
@@ -8,6 +10,8 @@ import type {
   ManagerCustomerSummary,
   ManagerDashboardStats,
   ManagerRevenueRow,
+  ManagerSoftwareFilters,
+  ManagerSoftwareProgram,
   ManagerTeamFilters,
   ManagerTeamReseller,
   ManagerTeamResellerDetail,
@@ -17,6 +21,7 @@ import type {
   RoleActivityFilters,
   TeamManagedUser,
   TeamManagedUserFilters,
+  UpdateManagerSoftwareData,
 } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
@@ -67,6 +72,26 @@ export const managerService = {
   },
   async getCustomer(id: number) {
     const { data } = await api.get<{ data: ManagerCustomerDetails }>(`/manager/customers/${id}`)
+    return data
+  },
+  async getSoftwarePrograms(params?: ManagerSoftwareFilters) {
+    const { data } = await api.get<PaginatedResponse<ManagerSoftwareProgram>>('/manager/software', { params })
+    return data
+  },
+  async createProgram(payload: CreateManagerSoftwareData) {
+    const { data } = await api.post<{ data: ManagerSoftwareProgram }>('/manager/software', payload)
+    return data
+  },
+  async updateProgram(id: number, payload: UpdateManagerSoftwareData) {
+    const { data } = await api.put<{ data: ManagerSoftwareProgram }>(`/manager/software/${id}`, payload)
+    return data
+  },
+  async deleteProgram(id: number) {
+    const { data } = await api.delete<{ message: string }>(`/manager/software/${id}`)
+    return data
+  },
+  async activateProgram(id: number, payload: ActivateManagerSoftwareData) {
+    const { data } = await api.post<{ data: ManagerSoftwareProgram }>(`/manager/software/${id}/activate`, payload)
     return data
   },
   async getRevenueReport(params: ReportRangeFilters) {

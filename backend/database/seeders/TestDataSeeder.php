@@ -62,6 +62,15 @@ class TestDataSeeder extends Seeder
             ['tenant_id' => $tenant->id, ...$attributes]
         ));
 
+        // Attach real external API credentials to first program for dashboard testing.
+        $realProgram = $programs->first();
+        if ($realProgram) {
+            $realProgram->external_software_id = 8;
+            $realProgram->has_external_api = true;
+            $realProgram->setExternalApiKeyAttribute('L9H2F7Q8XK6M4A');
+            $realProgram->save();
+        }
+
         $licenses = [
             ['bios_id' => 'BIOS-1001', 'status' => 'active', 'duration_days' => 30, 'program_id' => $programs[0]->id],
             ['bios_id' => 'BIOS-1002', 'status' => 'pending', 'duration_days' => 60, 'program_id' => $programs[1]->id],

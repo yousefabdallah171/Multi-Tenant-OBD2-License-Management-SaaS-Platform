@@ -18,7 +18,7 @@ interface BaseChartProps {
 export function BaseChart({
   data,
   isLoading = false,
-  heightClassName = 'h-80',
+  heightClassName = 'h-[200px] sm:h-72 xl:h-80',
   emptyTitle,
   emptyDescription,
   className,
