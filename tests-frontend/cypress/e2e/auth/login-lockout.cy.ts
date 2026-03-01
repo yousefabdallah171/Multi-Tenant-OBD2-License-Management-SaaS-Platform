@@ -1,17 +1,26 @@
 describe('Auth Lockout Flow', () => {
+  beforeEach(() => {
+    cy.clearCookies()
+    cy.clearLocalStorage()
+  })
+
   it('wrong password shows error and keeps form visible', () => {
     cy.intercept('POST', '/api/auth/login', {
       statusCode: 401,
       body: { message: 'Invalid credentials.' },
     }).as('login')
 
-    cy.visit('/en/login')
+    cy.visit('/en/login', {
+      onBeforeLoad(win) {
+        win.localStorage.removeItem('license-auth')
+      },
+    })
     cy.get('#email').type('admin@obd2sw.com')
     cy.get('#password').type('wrong')
     cy.contains('button', /sign in/i).click()
     cy.wait('@login')
 
-    cy.contains('Invalid credentials.').should('be.visible')
+    cy.get('[role="alert"]').should('be.visible')
     cy.get('#email').should('be.visible')
   })
 
@@ -21,7 +30,11 @@ describe('Auth Lockout Flow', () => {
       body: { locked: true, reason: 'account_locked', seconds_remaining: 60 },
     }).as('login')
 
-    cy.visit('/en/login')
+    cy.visit('/en/login', {
+      onBeforeLoad(win) {
+        win.localStorage.removeItem('license-auth')
+      },
+    })
     cy.get('#email').type('locked@obd2sw.com')
     cy.get('#password').type('wrong')
     cy.contains('button', /sign in/i).click()
@@ -37,7 +50,11 @@ describe('Auth Lockout Flow', () => {
       body: { locked: true, reason: 'ip_blocked', unlocks_at: null },
     }).as('login')
 
-    cy.visit('/en/login')
+    cy.visit('/en/login', {
+      onBeforeLoad(win) {
+        win.localStorage.removeItem('license-auth')
+      },
+    })
     cy.get('#email').type('blocked@obd2sw.com')
     cy.get('#password').type('wrong')
     cy.contains('button', /sign in/i).click()

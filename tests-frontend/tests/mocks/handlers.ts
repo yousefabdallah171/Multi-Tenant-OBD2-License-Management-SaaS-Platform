@@ -59,6 +59,16 @@ export const handlers = [
       }),
     )
   }),
+  rest.get('*/api/super-admin/online-users', (_, res, ctx) => {
+    return res(
+      ctx.json({
+        data: [
+          { masked_name: 'Reseller #1', role: 'reseller' },
+          { masked_name: 'Customer #7', role: 'customer' },
+        ],
+      }),
+    )
+  }),
   rest.get('https://ipapi.co/:ip/json/', (req, res, ctx) => {
     return res(
       ctx.json({

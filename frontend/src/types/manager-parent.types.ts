@@ -178,6 +178,7 @@ export interface CustomerDetails extends CustomerSummary {
     id: number
     ip_address: string
     country: string | null
+    country_code?: string | null
     city: string | null
     isp: string | null
     reputation_score: string

@@ -71,11 +71,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status
+    const requestUrl = String(error?.config?.url ?? '')
+    const isAuthLoginRequest = /\/auth\/login(?:\?.*)?$/.test(requestUrl)
 
     if (status === 401) {
       useAuthStore.getState().clearSession()
 
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && !isAuthLoginRequest && !window.location.pathname.includes('/login')) {
         window.location.assign(routePaths.login(resolveCurrentLanguage()))
       }
     }
@@ -84,7 +86,7 @@ api.interceptors.response.use(
       window.location.assign(routePaths.errors.accessDenied(resolveCurrentLanguage()))
     }
 
-    if (status >= 500 && typeof window !== 'undefined' && !window.location.pathname.includes('/server-error')) {
+    if (status >= 500 && typeof window !== 'undefined' && !isAuthLoginRequest && !window.location.pathname.includes('/server-error')) {
       window.location.assign(routePaths.errors.serverError(resolveCurrentLanguage()))
     }
 

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import i18n from '@/i18n'
+import i18n, { ensureLocaleLoaded } from '@/i18n'
 import { LANGUAGE_STORAGE_KEY } from '@/lib/constants'
 
 export const supportedLanguages = ['ar', 'en'] as const
@@ -19,7 +19,10 @@ export function useLanguage() {
   const currentLanguage: SupportedLanguage = isSupportedLanguage(lang) ? lang : 'ar'
 
   useEffect(() => {
-    void i18n.changeLanguage(currentLanguage)
+    void (async () => {
+      await ensureLocaleLoaded(currentLanguage)
+      await i18n.changeLanguage(currentLanguage)
+    })()
     document.documentElement.dir = currentLanguage === 'ar' ? 'rtl' : 'ltr'
     document.documentElement.lang = currentLanguage
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage)

@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom'
 import 'whatwg-fetch'
 import { TextDecoder, TextEncoder } from 'node:util'
-import '../frontend/src/i18n'
+import { initI18n } from '../frontend/src/i18n'
 import { useAuthStore } from '../frontend/src/stores/authStore'
 import { useSidebarStore } from '../frontend/src/stores/sidebarStore'
 import { useThemeStore } from '../frontend/src/stores/themeStore'
@@ -46,7 +46,8 @@ beforeEach(() => {
   document.documentElement.classList.remove('dark')
 })
 
-beforeAll(() => {
+beforeAll(async () => {
+  await initI18n('ar')
   server.listen({ onUnhandledRequest: 'warn' })
 })
 

@@ -48,7 +48,7 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 | Field | Value |
 |-------|-------|
 | **Version** | 1.0.0 |
-| **Status** | Phase 12 UX Editing (major items implemented, final QA pending) |
+| **Status** | Phase 12 UX Editing + Phase 08 Testing complete (deployment hardening pending) |
 | **Last Updated** | 2026-03-01 |
 | **Scale** | Multi-tenant SaaS, 42 Pages, 12 Tables, 101 API Endpoints |
 | **Budget** | $30 |
@@ -79,7 +79,7 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | PHASE-05-CustomerPortal | :red_circle: Not Started | Day 7 |
 | PHASE-06-ReportsAnalytics | :red_circle: Not Started | Day 8 |
 | PHASE-07-UIUXPolish | :red_circle: Not Started | Day 9-10 |
-| PHASE-08-Testing | :red_circle: Not Started | Day 11 |
+| PHASE-08-Testing | :green_circle: Complete | Day 11 |
 | PHASE-09-Deployment | :red_circle: Not Started | Day 12-13 |
 | PHASE-10-Documentation | :red_circle: Not Started | Day 14 |
 
@@ -112,9 +112,9 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | **ORM** | Laravel Eloquent | Query builder with tenant scoping |
 | **Auth** | Laravel Sanctum + JWT | Token-based auth with role middleware |
 | **PDF** | barryvdh/laravel-dompdf | PDF export for reports |
-| **Testing FE** | Jest + React Testing Library | Frontend unit suites active in separate `tests-frontend/` workspace (`101` passing on 2026-02-28) |
-| **Testing E2E** | Cypress | 35 end-to-end scenarios (separate `tests-frontend/`) |
-| **Testing BE** | PHPUnit | Backend auth/foundation suites active (`17` passing on 2026-02-28) |
+| **Testing FE** | Jest + React Testing Library | Frontend unit suites active in separate `tests-frontend/` workspace (`341` passing on 2026-03-01) |
+| **Testing E2E** | Cypress | 55 end-to-end scenarios (separate `tests-frontend/`) |
+| **Testing BE** | PHPUnit | Backend suites active (`112` passing on 2026-03-01: Feature 39 + Unit 73) |
 | **Container** | Docker + Docker Compose | Dev & production environments |
 | **Server** | Nginx + PHP-FPM + Redis | Production reverse proxy + caching |
 | **CI/CD** | GitHub Actions | Automated testing & deployment |
@@ -1175,7 +1175,7 @@ backend/
 ├── config/
 │   ├── external-api.php
 │   └── ip-geolocation.php
-├── tests/                                     # PHPUnit (75+ tests)
+├── tests/                                     # PHPUnit (112 tests)
 ├── Dockerfile
 ├── .env.example
 └── composer.json
@@ -1210,6 +1210,18 @@ backend/
 
 ## 11. Testing Architecture (tests-frontend/)
 
+### Latest Test Matrix (2026-03-01)
+
+| Suite | Result |
+|-------|--------|
+| Jest Unit/Component | 341 passed, 0 failed |
+| Cypress E2E | 55 passed, 0 failed |
+| PHPUnit (Feature + Unit) | 112 passed, 0 failed |
+| TypeScript | `npx tsc --noEmit` passed |
+| Build | `npm run build` passed |
+| Lighthouse | Desktop >=95 achieved; mobile baseline ~93 |
+
+
 > **Tests are in a SEPARATE `tests-frontend/` folder**, not inside `frontend/`. Delete `tests-frontend/` completely before production build.
 
 ### Structure
@@ -1223,7 +1235,7 @@ obd2sw/
 │   ├── package.json             # Test dependencies only
 │   ├── jest.config.ts           # Jest configuration
 │   ├── cypress.config.ts        # Cypress configuration
-│   ├── tests/                   # 250+ Jest tests
+│   ├── tests/                   # 341 Jest tests
 │   │   ├── utils/
 │   │   │   └── test-utils.tsx   # Custom render with providers
 │   │   ├── mocks/
@@ -1269,7 +1281,7 @@ obd2sw/
 │   │   └── utils/
 │   │       ├── formatters.test.ts
 │   │       └── validators.test.ts
-│   ├── cypress/                 # 35 E2E scenarios
+│   ├── cypress/                 # 55 E2E scenarios
 │   │   ├── e2e/
 │   │   │   ├── auth/
 │   │   │   ├── super-admin/
@@ -1296,14 +1308,14 @@ obd2sw/
 ### Test Commands
 
 ```bash
-# Run Jest tests (250+ tests)
+# Run Jest tests (341 tests)
 cd tests-frontend
 npm run test:unit
 
 # Run Jest with coverage
 npm run test:unit -- --coverage
 
-# Run Cypress E2E (35 scenarios)
+# Run Cypress E2E (55 scenarios)
 npm run test:e2e
 
 # Run ALL frontend tests
@@ -1339,10 +1351,10 @@ cd frontend && npm run build
 | Jest (Hooks) | 15 | 90%+ |
 | Jest (Services) | 15 | 90%+ |
 | Jest (Utilities) | 10 | 95%+ |
-| **Jest Total** | **250+** | **80%+** |
-| Cypress E2E | 35 | N/A |
-| PHPUnit | 75+ | N/A |
-| **Grand Total** | **360+** | - |
+| **Jest Total** | **341** | **80%+** |
+| Cypress E2E | 55 | N/A |
+| PHPUnit | 112 | N/A |
+| **Grand Total** | **508** | - |
 
 ---
 
@@ -1549,7 +1561,7 @@ const { isRtl } = useLanguage();
 | 05 Customer Portal | 7 | Portal removed (silent deny + route cleanup) | 15 component |
 | 06 Reports | 8 | 18 Charts (Recharts) + Export CSV/PDF | 20 unit |
 | 07 UI/UX Polish | 9-10 | Animations + Dark/Light + Mobile (41 pages) | 25 responsive |
-| 08 Testing | 11 | 250+ Jest + 35 Cypress + Lighthouse 95+ | Full coverage |
+| 08 Testing | 11 | 341 Jest + 55 Cypress + 112 PHPUnit + build/ts gates | Complete (mobile Lighthouse follow-up) |
 | 09 Deployment | 12-13 | VPS + Nginx + SSL + CI/CD + Backups | Smoke tests |
 | 10 Documentation | 14 | Swagger (101 endpoints) + Admin Manual | Final QA |
 
@@ -1577,7 +1589,7 @@ Week 2:  Reports → UI Polish → Testing → Deployment → Documentation
 | [`PHASE-05-CustomerPortal/`](docs-organized/PHASE-05-CustomerPortal/) | Portal removed in Phase 11 | [Overview](docs-organized/PHASE-05-CustomerPortal/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-05-CustomerPortal/02-TODO-List.md) |
 | [`PHASE-06-ReportsAnalytics/`](docs-organized/PHASE-06-ReportsAnalytics/) | 18 Charts + Export | [Overview](docs-organized/PHASE-06-ReportsAnalytics/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-06-ReportsAnalytics/02-TODO-List.md) |
 | [`PHASE-07-UIUXPolish/`](docs-organized/PHASE-07-UIUXPolish/) | Animations + Mobile | [Overview](docs-organized/PHASE-07-UIUXPolish/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-07-UIUXPolish/02-TODO-List.md) |
-| [`PHASE-08-Testing/`](docs-organized/PHASE-08-Testing/) | 250+ Jest + 35 Cypress | [Overview](docs-organized/PHASE-08-Testing/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-08-Testing/02-TODO-List.md) |
+| [`PHASE-08-Testing/`](docs-organized/PHASE-08-Testing/) | 341 Jest + 55 Cypress + 112 PHPUnit | [Overview](docs-organized/PHASE-08-Testing/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-08-Testing/02-TODO-List.md) |
 | [`PHASE-09-Deployment/`](docs-organized/PHASE-09-Deployment/) | VPS + SSL + CI/CD | [Overview](docs-organized/PHASE-09-Deployment/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-09-Deployment/02-TODO-List.md) |
 | [`PHASE-10-Documentation/`](docs-organized/PHASE-10-Documentation/) | Swagger + Admin Manual | [Overview](docs-organized/PHASE-10-Documentation/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-10-Documentation/02-TODO-List.md) |
 
@@ -1982,7 +1994,52 @@ For this project, the current recommended local development split is:
 
 This setup keeps backend routing, Sanctum, and database access stable while frontend development stays fast with Vite hot reload.
 
+### 11. Extra Troubleshooting (Other Devices + Cypress)
+
+**Issue: Login redirects to `/en/server-error` (or `/ar/server-error`) on other devices but works on this machine**
+
+Why this happens:
+- The frontend globally redirects to the server error page when any API call returns `>= 500`.
+- On other devices, one of the first dashboard API calls can fail because of host/env mismatch (API URL, vhost routing, or backend runtime error).
+- If frontend points to the wrong API host, requests may hit the wrong server and fail.
+
+How to fix:
+1. Open browser DevTools on the failing device and inspect the first failing request in Network.
+2. Verify frontend API target:
+   - `frontend/.env` must include `VITE_API_URL=http://license.test/api` (or your real LAN/API host).
+   - Restart Vite after any `.env` change.
+3. Verify backend health from that device:
+   - Open `http://license.test/api/health` (or your API host) and confirm it returns JSON.
+4. Check backend logs for the exact 500 cause:
+   - `backend/storage/logs/laravel.log`
+5. If using LAN/IP access, make sure your host/vhost and firewall allow that device to reach the backend host.
+
+Note:
+- Login 401 handling was hardened so failed `/auth/login` credentials no longer trigger a forced redirect loop.
+
+**Issue: Cypress fails with `Cypress.exe: bad option: --smoke-test`**
+
+Why this happens:
+- `ELECTRON_RUN_AS_NODE=1` is set in the shell/user environment.
+- This forces Cypress Electron to run as plain Node, so Cypress startup flags fail.
+
+How to fix (PowerShell, current session):
+```powershell
+Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+npx cypress verify
+```
+
+How to fix permanently (Windows):
+1. Open System Properties -> Environment Variables.
+2. Remove `ELECTRON_RUN_AS_NODE` from User/System variables.
+3. Open a new terminal and run:
+```powershell
+npx cypress verify
+npx cypress run --spec "cypress/e2e/auth/*.cy.ts"
+```
+
 ---
 
 **Author:** Yousef Abdallah | Full Stack Developer | Tanta, Egypt
+
 

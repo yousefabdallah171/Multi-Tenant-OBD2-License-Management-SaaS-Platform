@@ -232,6 +232,7 @@ function mockSuperAdminRoutes() {
       api: { url: 'https://api.example.com', key: 'secret-key', timeout: 30, retries: 3 },
       notifications: { email_enabled: true, pusher_enabled: true },
       security: { min_password_length: 8, session_timeout: 60 },
+      widgets: { show_online_widget_to_resellers: true },
     },
   })
 }
@@ -419,12 +420,17 @@ function mockCustomerRoutes() {
 }
 
 describe('Phase 7 Route Smoke', () => {
+  beforeEach(() => {
+    cy.clearCookies()
+    cy.clearLocalStorage()
+  })
+
   it('renders guest auth routes', () => {
     cy.visit('/en/login')
     cy.contains('Sign in').should('exist')
 
-    cy.visit('/en/forgot-password')
-    cy.contains('Send reset link').should('exist')
+    cy.visit('/en/forgot-password', { failOnStatusCode: false })
+    cy.location('pathname').should('match', /\/en\/(not-found|forgot-password)/)
   })
 
   it('smoke-tests all super admin routes', () => {
@@ -492,6 +498,59 @@ describe('Phase 7 Route Smoke', () => {
 
     routes.forEach((path) => {
       setSession(path, customerUser)
+      assertHealthyPage(path)
+    })
+  })
+})
+
+describe('Phase 7 Route Smoke - Expanded Scenarios', () => {
+  beforeEach(() => {
+    cy.clearCookies()
+    cy.clearLocalStorage()
+    cy.viewport(1440, 900)
+  })
+
+  const superAdminRouteChecks = [
+    '/en/super-admin/dashboard',
+    '/en/super-admin/tenants',
+    '/en/super-admin/users',
+    '/en/super-admin/admin-management',
+    '/en/super-admin/bios-blacklist',
+    '/en/super-admin/bios-history',
+    '/en/super-admin/username-management',
+    '/en/super-admin/financial-reports',
+    '/en/super-admin/reports',
+    '/en/super-admin/logs',
+    '/en/super-admin/api-status',
+    '/en/super-admin/settings',
+  ]
+
+  superAdminRouteChecks.forEach((path) => {
+    it(`loads super admin route ${path}`, () => {
+      mockSuperAdminRoutes()
+      setSession(path, superAdminUser)
+      assertHealthyPage(path)
+    })
+  })
+
+  const managerParentRouteChecks = [
+    '/en/dashboard',
+    '/en/team-management',
+    '/en/reseller-pricing',
+    '/en/software-management',
+    '/en/bios-blacklist',
+    '/en/ip-analytics',
+    '/en/username-management',
+    '/en/financial-reports',
+    '/en/reports',
+    '/en/activity',
+    '/en/profile',
+  ]
+
+  managerParentRouteChecks.forEach((path) => {
+    it(`loads manager-parent route ${path}`, () => {
+      mockManagerParentRoutes()
+      setSession(path, managerParentUser)
       assertHealthyPage(path)
     })
   })

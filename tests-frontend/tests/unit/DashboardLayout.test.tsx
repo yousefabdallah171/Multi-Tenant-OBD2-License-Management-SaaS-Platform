@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -32,16 +33,24 @@ function setViewport(width: number) {
 
 function renderDashboard(path: string) {
   useAuthStore.getState().setSession('test-token', fakeSuperAdmin())
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
 
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/:lang/super-admin" element={<DashboardLayout />}>
-          <Route path="dashboard" element={<RouteContent label="dashboard content" />} />
-          <Route path="settings" element={<RouteContent label="settings content" />} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/:lang/super-admin" element={<DashboardLayout />}>
+            <Route path="dashboard" element={<RouteContent label="dashboard content" />} />
+            <Route path="settings" element={<RouteContent label="settings content" />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 

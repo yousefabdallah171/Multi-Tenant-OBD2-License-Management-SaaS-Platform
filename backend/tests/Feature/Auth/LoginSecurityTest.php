@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class LoginSecurityTest extends TestCase
@@ -185,5 +186,78 @@ class LoginSecurityTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson(['message' => 'Invalid credentials.']);
+    }
+
+    #[DataProvider('invalidCredentialProvider')]
+    public function test_invalid_credentials_always_return_same_error_message(string $email, string $password): void
+    {
+        User::factory()->create([
+            'email' => 'known-user@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::SUPER_ADMIN,
+            'status' => 'active',
+        ]);
+
+        $this->postJson('/api/auth/login', [
+            'email' => $email,
+            'password' => $password,
+        ])
+            ->assertUnauthorized()
+            ->assertJson(['message' => 'Invalid credentials.']);
+    }
+
+    public function test_locked_account_retries_keep_lock_payload_shape(): void
+    {
+        User::factory()->create([
+            'email' => 'retry-locked@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::SUPER_ADMIN,
+            'status' => 'active',
+        ]);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/auth/login', [
+                'email' => 'retry-locked@example.com',
+                'password' => 'wrong-password',
+            ]);
+        }
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'retry-locked@example.com',
+            'password' => 'wrong-password',
+        ])
+            ->assertStatus(429)
+            ->assertJsonPath('locked', true)
+            ->assertJsonPath('reason', 'account_locked')
+            ->assertHeader('Retry-After');
+    }
+
+    public function test_login_response_includes_rate_limit_limit_header_on_unauthorized(): void
+    {
+        User::factory()->create([
+            'email' => 'header-check@example.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::SUPER_ADMIN,
+            'status' => 'active',
+        ]);
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'header-check@example.com',
+            'password' => 'wrong-password',
+        ])
+            ->assertUnauthorized()
+            ->assertHeader('X-RateLimit-Limit', '10');
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function invalidCredentialProvider(): array
+    {
+        return [
+            'wrong password known user' => ['known-user@example.com', 'wrong-password'],
+            'unknown user' => ['unknown-user@example.com', 'password'],
+            'uppercase unknown email' => ['UNKNOWN-USER@EXAMPLE.COM', 'password'],
+        ];
     }
 }

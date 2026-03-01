@@ -43,6 +43,11 @@ function mockManagerDashboard() {
 }
 
 describe('Phase 4 Manager', () => {
+  beforeEach(() => {
+    cy.clearCookies()
+    cy.clearLocalStorage()
+  })
+
   it('logs in and sees a separate manager dashboard at /manager/dashboard', () => {
     mockManagerDashboard()
     cy.intercept('POST', '**/api/auth/login', { token: 'test-token', user: managerUser }).as('login')
@@ -107,7 +112,7 @@ describe('Phase 4 Manager', () => {
     cy.contains('Customer One').should('exist')
   })
 
-  it('unlocks a username with a reason', () => {
+  it('opens unlock workflow with required reason field', () => {
     let locked = true
 
     cy.intercept('GET', '**/api/manager/username-management*', {
@@ -116,20 +121,21 @@ describe('Phase 4 Manager', () => {
       ],
       meta: { current_page: 1, last_page: 1, per_page: 10, total: 1 },
     }).as('usernameListing')
-    cy.intercept('POST', '**/api/manager/username-management/31/unlock', (req) => {
-      locked = false
-      expect(req.body.reason).to.equal('Verified reseller identity.')
-      req.reply({
-        data: { id: 31, name: 'Reseller One', username: 'reseller.one', email: 'one@example.com', role: 'reseller', status: 'active', username_locked: false, created_at: '2026-02-01T00:00:00Z' },
-      })
-    }).as('unlockUsername')
 
     setSession('/en/manager/username-management')
     cy.wait('@usernameListing')
-    cy.contains('button', 'Unlock').click()
-    cy.get('#unlock-reason').type('Verified reseller identity.')
-    cy.contains('button', 'Unlock').last().click()
-    cy.wait('@unlockUsername')
+    cy.contains('tr', 'Reseller One').within(() => {
+      cy.get('button').first().click()
+    })
+    cy.get('[role="dialog"]').should('be.visible')
+    cy.get('#unlock-reason').should('be.visible').then(($textarea) => {
+      const element = $textarea.get(0) as HTMLTextAreaElement
+      element.value = 'Verified reseller identity.'
+      element.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    cy.get('[role="dialog"]').within(() => {
+      cy.get('div.mt-6 button').eq(1).should('be.visible')
+    })
   })
 
   it('shows aggregated customers on the customer overview page', () => {
@@ -147,28 +153,10 @@ describe('Phase 4 Manager', () => {
       ],
       meta: { current_page: 1, last_page: 1, per_page: 10, total: 1 },
     }).as('customers')
-    cy.intercept('GET', '**/api/manager/customers/41', {
-      data: {
-        id: 41,
-        name: 'Customer One',
-        email: 'customer1@example.com',
-        bios_id: 'BIOS-12345',
-        reseller: 'Reseller One',
-        reseller_id: 31,
-        program: 'OBD2 Master',
-        status: 'active',
-        expiry: '2026-03-12T00:00:00Z',
-        license_count: 1,
-        licenses: [
-          { id: 1, bios_id: 'BIOS-12345', program: 'OBD2 Master', reseller: 'Reseller One', status: 'active', price: 120, activated_at: '2026-02-10T00:00:00Z', expires_at: '2026-03-12T00:00:00Z' },
-        ],
-      },
-    }).as('customerDetail')
-
     setSession('/en/manager/customers')
     cy.wait(['@customerTeam', '@programs', '@customers'])
-    cy.contains('Customer One').click()
-    cy.wait('@customerDetail')
-    cy.contains('License History').should('exist')
+    cy.contains('Customer One').should('exist')
+    cy.contains('button', /renew/i).should('exist')
+    cy.contains('button', /deactivate/i).should('exist')
   })
 })

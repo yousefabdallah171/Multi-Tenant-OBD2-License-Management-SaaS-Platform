@@ -1,4 +1,9 @@
 describe('Auth Login Role Redirects', () => {
+  beforeEach(() => {
+    cy.clearCookies()
+    cy.clearLocalStorage()
+  })
+
   function mockLogin(role: 'super_admin' | 'manager_parent' | 'manager' | 'reseller') {
     cy.intercept('POST', '/api/auth/login', {
       statusCode: 200,
@@ -22,7 +27,11 @@ describe('Auth Login Role Redirects', () => {
   }
 
   function submitLogin(email: string) {
-    cy.visit('/en/login')
+    cy.visit('/en/login', {
+      onBeforeLoad(win) {
+        win.localStorage.removeItem('license-auth')
+      },
+    })
     cy.get('#email').type(email)
     cy.get('#password').type('password')
     cy.contains('button', /sign in/i).click()

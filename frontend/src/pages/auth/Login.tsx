@@ -4,7 +4,6 @@ import axios from 'axios'
 import { Eye, EyeOff, LoaderCircle, Moon, Sun, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { PageTransition } from '@/components/shared/PageTransition'
 import { SkipToContent } from '@/components/shared/SkipToContent'
 import { LockoutBanner } from '@/components/auth/LockoutBanner'
 import { useAuth } from '@/hooks/useAuth'
@@ -115,7 +114,7 @@ export function LoginPage() {
           {lang === 'ar' ? 'EN' : 'AR'}
         </Button>
 
-        <PageTransition transitionKey={`login-${lang}`} className={`w-full max-w-[440px] ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className={`w-full max-w-[440px] ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
           <Card className={`rounded-none border-white/20 bg-white/95 shadow-2xl sm:rounded-3xl dark:border-slate-800/80 dark:bg-slate-950/90`}>
             <CardHeader className="space-y-4 px-8 pt-8 text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600 dark:text-sky-300">{t('brand.badge')}</p>
@@ -206,7 +205,7 @@ export function LoginPage() {
           </Card>
 
           <p className="mt-4 text-center text-xs text-slate-500 dark:text-slate-400">{t('login.footer')}</p>
-        </PageTransition>
+        </div>
       </main>
     </>
   )

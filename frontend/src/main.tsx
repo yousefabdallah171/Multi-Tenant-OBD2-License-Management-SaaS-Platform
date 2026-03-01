@@ -1,19 +1,22 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
-import App from './App.tsx'
-import './i18n'
+import { initI18n, resolveInitialLanguage } from './i18n'
 
 ;(globalThis as { __VITE_API_URL__?: string }).__VITE_API_URL__ = import.meta.env.VITE_API_URL
 ;(globalThis as { __VITE_DEFAULT_LOCALE__?: string }).__VITE_DEFAULT_LOCALE__ = import.meta.env.VITE_DEFAULT_LOCALE
 
-const queryClient = new QueryClient()
+async function bootstrap() {
+  const lang = resolveInitialLanguage()
+  await initI18n(lang)
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
+  const { default: App } = await import('./App.tsx')
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
       <App />
-    </QueryClientProvider>
-  </StrictMode>,
-)
+    </StrictMode>,
+  )
+}
+
+void bootstrap()

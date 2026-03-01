@@ -7,6 +7,7 @@ import { PageTransition } from '@/components/shared/PageTransition'
 import { RouteErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { OnlineUsersWidget } from '@/components/shared/OnlineUsersWidget'
 import { SkipToContent } from '@/components/shared/SkipToContent'
+import { AppToaster } from '@/components/ui/toast'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { getDashboardPath } from '@/router/routes'
@@ -47,6 +48,7 @@ export function DashboardLayout() {
         </div>
       </div>
       <OnlineUsersWidget />
+      <AppToaster />
     </div>
   )
 }

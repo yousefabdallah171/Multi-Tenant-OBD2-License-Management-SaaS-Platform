@@ -1,5 +1,19 @@
-export function getFlag(_code: string | null | undefined): string {
-  return ''
+export function getFlag(code: string | null | undefined): string {
+  if (!code || code.length !== 2) {
+    return '🏳️'
+  }
+
+  const normalized = code.toUpperCase()
+  const A_CODE_POINT = 0x1f1e6
+
+  if (!/^[A-Z]{2}$/.test(normalized)) {
+    return '🏳️'
+  }
+
+  return String.fromCodePoint(
+    A_CODE_POINT + (normalized.charCodeAt(0) - 65),
+    A_CODE_POINT + (normalized.charCodeAt(1) - 65),
+  )
 }
 
 export function parseUserAgent(userAgent: string): string {

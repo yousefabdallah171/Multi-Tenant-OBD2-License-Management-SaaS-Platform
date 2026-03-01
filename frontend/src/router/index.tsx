@@ -1,176 +1,205 @@
+import { type ComponentType, Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { LoginPage } from '@/pages/auth/Login'
-import { DashboardPage as CustomerDashboardPage } from '@/pages/customer/Dashboard'
-import { DownloadPage as CustomerDownloadPage } from '@/pages/customer/Download'
-import { SoftwarePage as CustomerSoftwarePage } from '@/pages/customer/Software'
 import { AccessDeniedPage } from '@/pages/errors/AccessDenied'
 import { NotFoundPage } from '@/pages/errors/NotFound'
 import { ServerErrorPage } from '@/pages/errors/ServerError'
-import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { ActivityPage as ManagerActivityPage } from '@/pages/manager/Activity'
-import { ActivateLicensePageForManager } from '@/pages/manager/ActivateLicense'
-import { CustomersPage as ManagerCustomersPage } from '@/pages/manager/Customers'
-import { DashboardPage as ManagerDashboardPage } from '@/pages/manager/Dashboard'
-import { LicensesPage as ManagerLicensesPage } from '@/pages/manager/Licenses'
-import { ProfilePage as ManagerProfilePage } from '@/pages/manager/Profile'
-import { ReportsPage as ManagerReportsPage } from '@/pages/manager/Reports'
-import { SoftwarePage as ManagerSoftwarePage } from '@/pages/manager/Software'
-import { SoftwareManagementPage as ManagerSoftwareManagementPage } from '@/pages/manager/SoftwareManagement'
-import { ProgramFormPage as ManagerProgramFormPage } from '@/pages/manager/ProgramForm'
-import { TeamPage as ManagerTeamPage } from '@/pages/manager/Team'
-import { UsernameManagementPage as ManagerUsernameManagementPage } from '@/pages/manager/UsernameManagement'
-import { ActivityPage as ManagerParentActivityPage } from '@/pages/manager-parent/Activity'
-import { ActivateLicensePageForManagerParent } from '@/pages/manager-parent/ActivateLicense'
-import { ApiStatusPage as ManagerParentApiStatusPage } from '@/pages/manager-parent/ApiStatus'
-import { BiosBlacklistPage as ManagerParentBiosBlacklistPage } from '@/pages/manager-parent/BiosBlacklist'
-import { BiosConflictsPage as ManagerParentBiosConflictsPage } from '@/pages/manager-parent/BiosConflicts'
-import { BiosHistoryPage as ManagerParentBiosHistoryPage } from '@/pages/manager-parent/BiosHistory'
-import { CustomersPage as ManagerParentCustomersPage } from '@/pages/manager-parent/Customers'
-import { CustomerDetailPage as ManagerParentCustomerDetailPage } from '@/pages/manager-parent/CustomerDetail'
-import { DashboardPage as ManagerParentDashboardPage } from '@/pages/manager-parent/Dashboard'
-import { FinancialReportsPage as ManagerParentFinancialReportsPage } from '@/pages/manager-parent/FinancialReports'
-import { IpAnalyticsPage as ManagerParentIpAnalyticsPage } from '@/pages/manager-parent/IpAnalytics'
-import { LicensesPage as ManagerParentLicensesPage } from '@/pages/manager-parent/Licenses'
-import { LogsPage as ManagerParentLogsPage } from '@/pages/manager-parent/Logs'
-import { ProfilePage as ManagerParentProfilePage } from '@/pages/manager-parent/Profile'
-import { ProgramLogsPage as ManagerParentProgramLogsPage } from '@/pages/manager-parent/ProgramLogs'
-import { ReportsPage as ManagerParentReportsPage } from '@/pages/manager-parent/Reports'
-import { ResellerPricingPage } from '@/pages/manager-parent/ResellerPricing'
-import { SettingsPage as ManagerParentSettingsPage } from '@/pages/manager-parent/Settings'
-import { SoftwarePage as ManagerParentSoftwarePage } from '@/pages/manager-parent/Software'
-import { SoftwareManagementPage } from '@/pages/manager-parent/SoftwareManagement'
-import { ProgramFormPage as ManagerParentProgramFormPage } from '@/pages/manager-parent/ProgramForm'
-import { TeamManagementPage } from '@/pages/manager-parent/TeamManagement'
-import { UsernameManagementPage as ManagerParentUsernameManagementPage } from '@/pages/manager-parent/UsernameManagement'
-import { ApiStatusPage } from '@/pages/super-admin/ApiStatus'
-import { BiosBlacklistPage } from '@/pages/super-admin/BiosBlacklist'
-import { BiosHistoryPage } from '@/pages/super-admin/BiosHistory'
-import { DashboardPage } from '@/pages/super-admin/Dashboard'
-import { FinancialReportsPage } from '@/pages/super-admin/FinancialReports'
-import { LogsPage } from '@/pages/super-admin/Logs'
-import { ReportsPage } from '@/pages/super-admin/Reports'
-import { SettingsPage } from '@/pages/super-admin/Settings'
-import { TenantsPage } from '@/pages/super-admin/Tenants'
-import { UsersPage } from '@/pages/super-admin/Users'
-import { AdminManagementPage } from '@/pages/super-admin/AdminManagement'
-import { ProfilePage as SuperAdminProfilePage } from '@/pages/super-admin/Profile'
-import { UsernameManagementPage } from '@/pages/super-admin/UsernameManagement'
-import { SecurityLocksPage } from '@/pages/super-admin/SecurityLocks'
-import { CustomersPage as ResellerCustomersPage } from '@/pages/reseller/Customers'
-import { DashboardPage as ResellerDashboardPage } from '@/pages/reseller/Dashboard'
-import { LicensesPage as ResellerLicensesPage } from '@/pages/reseller/Licenses'
-import { ActivateLicensePageForReseller } from '@/pages/reseller/ActivateLicense'
-import { ProfilePage as ResellerProfilePage } from '@/pages/reseller/Profile'
-import { ReportsPage as ResellerReportsPage } from '@/pages/reseller/Reports'
-import { SoftwarePage as ResellerSoftwarePage } from '@/pages/reseller/Software'
 import { GuestRoute, ProtectedRoute, RoleGuard } from '@/router/guards'
 import { LanguageLayout } from '@/router/LanguageLayout'
 
+function lazyNamed<TModule extends Record<string, unknown>>(
+  loader: () => Promise<TModule>,
+  exportName: keyof TModule,
+) {
+  return lazy(async () => {
+    const module = await loader()
+    return { default: module[exportName] as ComponentType }
+  })
+}
+
+const LoginPage = lazyNamed(() => import('@/pages/auth/Login'), 'LoginPage')
+const DashboardLayout = lazyNamed(() => import('@/components/layout/DashboardLayout'), 'DashboardLayout')
+const ProtectedProviders = lazyNamed(() => import('@/router/ProtectedProviders'), 'ProtectedProviders')
+const CustomerDashboardPage = lazyNamed(() => import('@/pages/customer/Dashboard'), 'DashboardPage')
+const CustomerDownloadPage = lazyNamed(() => import('@/pages/customer/Download'), 'DownloadPage')
+const CustomerSoftwarePage = lazyNamed(() => import('@/pages/customer/Software'), 'SoftwarePage')
+
+const ManagerActivityPage = lazyNamed(() => import('@/pages/manager/Activity'), 'ActivityPage')
+const ActivateLicensePageForManager = lazyNamed(() => import('@/pages/manager/ActivateLicense'), 'ActivateLicensePageForManager')
+const ManagerCustomersPage = lazyNamed(() => import('@/pages/manager/Customers'), 'CustomersPage')
+const ManagerDashboardPage = lazyNamed(() => import('@/pages/manager/Dashboard'), 'DashboardPage')
+const ManagerLicensesPage = lazyNamed(() => import('@/pages/manager/Licenses'), 'LicensesPage')
+const ManagerProfilePage = lazyNamed(() => import('@/pages/manager/Profile'), 'ProfilePage')
+const ManagerReportsPage = lazyNamed(() => import('@/pages/manager/Reports'), 'ReportsPage')
+const ManagerSoftwarePage = lazyNamed(() => import('@/pages/manager/Software'), 'SoftwarePage')
+const ManagerSoftwareManagementPage = lazyNamed(() => import('@/pages/manager/SoftwareManagement'), 'SoftwareManagementPage')
+const ManagerProgramFormPage = lazyNamed(() => import('@/pages/manager/ProgramForm'), 'ProgramFormPage')
+const ManagerTeamPage = lazyNamed(() => import('@/pages/manager/Team'), 'TeamPage')
+const ManagerUsernameManagementPage = lazyNamed(() => import('@/pages/manager/UsernameManagement'), 'UsernameManagementPage')
+
+const ManagerParentActivityPage = lazyNamed(() => import('@/pages/manager-parent/Activity'), 'ActivityPage')
+const ActivateLicensePageForManagerParent = lazyNamed(() => import('@/pages/manager-parent/ActivateLicense'), 'ActivateLicensePageForManagerParent')
+const ManagerParentApiStatusPage = lazyNamed(() => import('@/pages/manager-parent/ApiStatus'), 'ApiStatusPage')
+const ManagerParentBiosBlacklistPage = lazyNamed(() => import('@/pages/manager-parent/BiosBlacklist'), 'BiosBlacklistPage')
+const ManagerParentBiosConflictsPage = lazyNamed(() => import('@/pages/manager-parent/BiosConflicts'), 'BiosConflictsPage')
+const ManagerParentBiosHistoryPage = lazyNamed(() => import('@/pages/manager-parent/BiosHistory'), 'BiosHistoryPage')
+const ManagerParentCustomersPage = lazyNamed(() => import('@/pages/manager-parent/Customers'), 'CustomersPage')
+const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-parent/CustomerDetail'), 'CustomerDetailPage')
+const ManagerParentDashboardPage = lazyNamed(() => import('@/pages/manager-parent/Dashboard'), 'DashboardPage')
+const ManagerParentFinancialReportsPage = lazyNamed(() => import('@/pages/manager-parent/FinancialReports'), 'FinancialReportsPage')
+const ManagerParentIpAnalyticsPage = lazyNamed(() => import('@/pages/manager-parent/IpAnalytics'), 'IpAnalyticsPage')
+const ManagerParentLicensesPage = lazyNamed(() => import('@/pages/manager-parent/Licenses'), 'LicensesPage')
+const ManagerParentLogsPage = lazyNamed(() => import('@/pages/manager-parent/Logs'), 'LogsPage')
+const ManagerParentProfilePage = lazyNamed(() => import('@/pages/manager-parent/Profile'), 'ProfilePage')
+const ManagerParentProgramLogsPage = lazyNamed(() => import('@/pages/manager-parent/ProgramLogs'), 'ProgramLogsPage')
+const ManagerParentReportsPage = lazyNamed(() => import('@/pages/manager-parent/Reports'), 'ReportsPage')
+const ResellerPricingPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPricing'), 'ResellerPricingPage')
+const ManagerParentSettingsPage = lazyNamed(() => import('@/pages/manager-parent/Settings'), 'SettingsPage')
+const ManagerParentSoftwarePage = lazyNamed(() => import('@/pages/manager-parent/Software'), 'SoftwarePage')
+const SoftwareManagementPage = lazyNamed(() => import('@/pages/manager-parent/SoftwareManagement'), 'SoftwareManagementPage')
+const ManagerParentProgramFormPage = lazyNamed(() => import('@/pages/manager-parent/ProgramForm'), 'ProgramFormPage')
+const TeamManagementPage = lazyNamed(() => import('@/pages/manager-parent/TeamManagement'), 'TeamManagementPage')
+const ManagerParentUsernameManagementPage = lazyNamed(() => import('@/pages/manager-parent/UsernameManagement'), 'UsernameManagementPage')
+
+const ApiStatusPage = lazyNamed(() => import('@/pages/super-admin/ApiStatus'), 'ApiStatusPage')
+const BiosBlacklistPage = lazyNamed(() => import('@/pages/super-admin/BiosBlacklist'), 'BiosBlacklistPage')
+const BiosHistoryPage = lazyNamed(() => import('@/pages/super-admin/BiosHistory'), 'BiosHistoryPage')
+const DashboardPage = lazyNamed(() => import('@/pages/super-admin/Dashboard'), 'DashboardPage')
+const FinancialReportsPage = lazyNamed(() => import('@/pages/super-admin/FinancialReports'), 'FinancialReportsPage')
+const LogsPage = lazyNamed(() => import('@/pages/super-admin/Logs'), 'LogsPage')
+const ReportsPage = lazyNamed(() => import('@/pages/super-admin/Reports'), 'ReportsPage')
+const SettingsPage = lazyNamed(() => import('@/pages/super-admin/Settings'), 'SettingsPage')
+const TenantsPage = lazyNamed(() => import('@/pages/super-admin/Tenants'), 'TenantsPage')
+const UsersPage = lazyNamed(() => import('@/pages/super-admin/Users'), 'UsersPage')
+const AdminManagementPage = lazyNamed(() => import('@/pages/super-admin/AdminManagement'), 'AdminManagementPage')
+const SuperAdminProfilePage = lazyNamed(() => import('@/pages/super-admin/Profile'), 'ProfilePage')
+const UsernameManagementPage = lazyNamed(() => import('@/pages/super-admin/UsernameManagement'), 'UsernameManagementPage')
+const SecurityLocksPage = lazyNamed(() => import('@/pages/super-admin/SecurityLocks'), 'SecurityLocksPage')
+
+const ResellerCustomersPage = lazyNamed(() => import('@/pages/reseller/Customers'), 'CustomersPage')
+const ResellerDashboardPage = lazyNamed(() => import('@/pages/reseller/Dashboard'), 'DashboardPage')
+const ResellerLicensesPage = lazyNamed(() => import('@/pages/reseller/Licenses'), 'LicensesPage')
+const ActivateLicensePageForReseller = lazyNamed(() => import('@/pages/reseller/ActivateLicense'), 'ActivateLicensePageForReseller')
+const ResellerProfilePage = lazyNamed(() => import('@/pages/reseller/Profile'), 'ProfilePage')
+const ResellerReportsPage = lazyNamed(() => import('@/pages/reseller/Reports'), 'ReportsPage')
+const ResellerSoftwarePage = lazyNamed(() => import('@/pages/reseller/Software'), 'SoftwarePage')
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
+      Loading...
+    </div>
+  )
+}
+
 export function AppRouter() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/ar/login" replace />} />
-      <Route path="/:lang" element={<LanguageLayout />}>
-        <Route index element={<Navigate to="login" replace />} />
-        <Route path="not-found" element={<NotFoundPage />} />
-        <Route path="access-denied" element={<AccessDeniedPage />} />
-        <Route path="server-error" element={<ServerErrorPage />} />
-        <Route element={<GuestRoute />}>
-          <Route path="login" element={<LoginPage />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/ar/login" replace />} />
+        <Route path="/:lang" element={<LanguageLayout />}>
+          <Route index element={<Navigate to="login" replace />} />
+          <Route path="not-found" element={<NotFoundPage />} />
+          <Route path="access-denied" element={<AccessDeniedPage />} />
+          <Route path="server-error" element={<ServerErrorPage />} />
+          <Route element={<GuestRoute />}>
+            <Route path="login" element={<LoginPage />} />
+          </Route>
+          <Route element={<ProtectedRoute />}>
+            <Route element={<ProtectedProviders />}>
+              <Route element={<RoleGuard allowedRoles={['super_admin']} />}>
+                <Route path="super-admin" element={<DashboardLayout />}>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<DashboardPage />} />
+                  <Route path="tenants" element={<TenantsPage />} />
+                  <Route path="users" element={<UsersPage />} />
+                  <Route path="admin-management" element={<AdminManagementPage />} />
+                  <Route path="bios-blacklist" element={<BiosBlacklistPage />} />
+                  <Route path="bios-history" element={<BiosHistoryPage />} />
+                  <Route path="username-management" element={<UsernameManagementPage />} />
+                  <Route path="security-locks" element={<SecurityLocksPage />} />
+                  <Route path="financial-reports" element={<FinancialReportsPage />} />
+                  <Route path="reports" element={<ReportsPage />} />
+                  <Route path="logs" element={<LogsPage />} />
+                  <Route path="api-status" element={<ApiStatusPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="profile" element={<SuperAdminProfilePage />} />
+                  <Route path="*" element={<Navigate to="dashboard" replace />} />
+                </Route>
+              </Route>
+              <Route element={<RoleGuard allowedRoles={['manager_parent']} />}>
+                <Route element={<DashboardLayout />}>
+                  <Route path="dashboard" element={<ManagerParentDashboardPage />} />
+                  <Route path="team-management" element={<TeamManagementPage />} />
+                  <Route path="reseller-pricing" element={<ResellerPricingPage />} />
+                  <Route path="software" element={<ManagerParentSoftwarePage />} />
+                  <Route path="software-management" element={<SoftwareManagementPage />} />
+                  <Route path="software-management/create" element={<ManagerParentProgramFormPage />} />
+                  <Route path="software-management/:id/edit" element={<ManagerParentProgramFormPage />} />
+                  <Route path="software-management/:id/activate" element={<ActivateLicensePageForManagerParent />} />
+                  <Route path="bios-blacklist" element={<ManagerParentBiosBlacklistPage />} />
+                  <Route path="bios-history" element={<ManagerParentBiosHistoryPage />} />
+                  <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
+                  <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />
+                  <Route path="logs" element={<ManagerParentLogsPage />} />
+                  <Route path="program-logs" element={<ManagerParentProgramLogsPage />} />
+                  <Route path="api-status" element={<ManagerParentApiStatusPage />} />
+                  <Route path="username-management" element={<ManagerParentUsernameManagementPage />} />
+                  <Route path="financial-reports" element={<ManagerParentFinancialReportsPage />} />
+                  <Route path="reports" element={<ManagerParentReportsPage />} />
+                  <Route path="activity" element={<ManagerParentActivityPage />} />
+                  <Route path="customers" element={<ManagerParentCustomersPage />} />
+                  <Route path="licenses" element={<ManagerParentLicensesPage />} />
+                  <Route path="customers/:id" element={<ManagerParentCustomerDetailPage />} />
+                  <Route path="settings" element={<ManagerParentSettingsPage />} />
+                  <Route path="profile" element={<ManagerParentProfilePage />} />
+                </Route>
+              </Route>
+              <Route element={<RoleGuard allowedRoles={['manager']} />}>
+                <Route path="manager" element={<DashboardLayout />}>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<ManagerDashboardPage />} />
+                  <Route path="team" element={<ManagerTeamPage />} />
+                  <Route path="username-management" element={<ManagerUsernameManagementPage />} />
+                  <Route path="customers" element={<ManagerCustomersPage />} />
+                  <Route path="licenses" element={<ManagerLicensesPage />} />
+                  <Route path="software" element={<ManagerSoftwarePage />} />
+                  <Route path="software/:id/activate" element={<ActivateLicensePageForManager />} />
+                  <Route path="software-management" element={<ManagerSoftwareManagementPage />} />
+                  <Route path="software-management/create" element={<ManagerProgramFormPage />} />
+                  <Route path="software-management/:id/edit" element={<ManagerProgramFormPage />} />
+                  <Route path="reports" element={<ManagerReportsPage />} />
+                  <Route path="activity" element={<ManagerActivityPage />} />
+                  <Route path="profile" element={<ManagerProfilePage />} />
+                </Route>
+              </Route>
+              <Route element={<RoleGuard allowedRoles={['reseller']} />}>
+                <Route path="reseller" element={<DashboardLayout />}>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<ResellerDashboardPage />} />
+                  <Route path="customers" element={<ResellerCustomersPage />} />
+                  <Route path="licenses" element={<ResellerLicensesPage />} />
+                  <Route path="software" element={<ResellerSoftwarePage />} />
+                  <Route path="software/:id/activate" element={<ActivateLicensePageForReseller />} />
+                  <Route path="reports" element={<ResellerReportsPage />} />
+                  <Route path="profile" element={<ResellerProfilePage />} />
+                  <Route path="*" element={<Navigate to="dashboard" replace />} />
+                </Route>
+              </Route>
+              <Route element={<RoleGuard allowedRoles={['customer']} />}>
+                <Route path="customer" element={<DashboardLayout />}>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<CustomerDashboardPage />} />
+                  <Route path="software" element={<CustomerSoftwarePage />} />
+                  <Route path="download" element={<CustomerDownloadPage />} />
+                  <Route path="*" element={<Navigate to="dashboard" replace />} />
+                </Route>
+              </Route>
+            </Route>
+          </Route>
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
-        <Route element={<ProtectedRoute />}>
-          <Route element={<RoleGuard allowedRoles={['super_admin']} />}>
-            <Route path="super-admin" element={<DashboardLayout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="tenants" element={<TenantsPage />} />
-              <Route path="users" element={<UsersPage />} />
-              <Route path="admin-management" element={<AdminManagementPage />} />
-              <Route path="bios-blacklist" element={<BiosBlacklistPage />} />
-              <Route path="bios-history" element={<BiosHistoryPage />} />
-              <Route path="username-management" element={<UsernameManagementPage />} />
-              <Route path="security-locks" element={<SecurityLocksPage />} />
-              <Route path="financial-reports" element={<FinancialReportsPage />} />
-              <Route path="reports" element={<ReportsPage />} />
-              <Route path="logs" element={<LogsPage />} />
-              <Route path="api-status" element={<ApiStatusPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="profile" element={<SuperAdminProfilePage />} />
-              <Route path="*" element={<Navigate to="dashboard" replace />} />
-            </Route>
-          </Route>
-          <Route element={<RoleGuard allowedRoles={['manager_parent']} />}>
-            <Route element={<DashboardLayout />}>
-              <Route path="dashboard" element={<ManagerParentDashboardPage />} />
-              <Route path="team-management" element={<TeamManagementPage />} />
-              <Route path="reseller-pricing" element={<ResellerPricingPage />} />
-              <Route path="software" element={<ManagerParentSoftwarePage />} />
-              <Route path="software-management" element={<SoftwareManagementPage />} />
-              <Route path="software-management/create" element={<ManagerParentProgramFormPage />} />
-              <Route path="software-management/:id/edit" element={<ManagerParentProgramFormPage />} />
-              <Route path="software-management/:id/activate" element={<ActivateLicensePageForManagerParent />} />
-              <Route path="bios-blacklist" element={<ManagerParentBiosBlacklistPage />} />
-              <Route path="bios-history" element={<ManagerParentBiosHistoryPage />} />
-              <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
-              <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />
-              <Route path="logs" element={<ManagerParentLogsPage />} />
-              <Route path="program-logs" element={<ManagerParentProgramLogsPage />} />
-              <Route path="api-status" element={<ManagerParentApiStatusPage />} />
-              <Route path="username-management" element={<ManagerParentUsernameManagementPage />} />
-              <Route path="financial-reports" element={<ManagerParentFinancialReportsPage />} />
-              <Route path="reports" element={<ManagerParentReportsPage />} />
-              <Route path="activity" element={<ManagerParentActivityPage />} />
-              <Route path="customers" element={<ManagerParentCustomersPage />} />
-              <Route path="licenses" element={<ManagerParentLicensesPage />} />
-              <Route path="customers/:id" element={<ManagerParentCustomerDetailPage />} />
-              <Route path="settings" element={<ManagerParentSettingsPage />} />
-              <Route path="profile" element={<ManagerParentProfilePage />} />
-            </Route>
-          </Route>
-          <Route element={<RoleGuard allowedRoles={['manager']} />}>
-            <Route path="manager" element={<DashboardLayout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<ManagerDashboardPage />} />
-              <Route path="team" element={<ManagerTeamPage />} />
-              <Route path="username-management" element={<ManagerUsernameManagementPage />} />
-              <Route path="customers" element={<ManagerCustomersPage />} />
-              <Route path="licenses" element={<ManagerLicensesPage />} />
-              <Route path="software" element={<ManagerSoftwarePage />} />
-              <Route path="software/:id/activate" element={<ActivateLicensePageForManager />} />
-              <Route path="software-management" element={<ManagerSoftwareManagementPage />} />
-              <Route path="software-management/create" element={<ManagerProgramFormPage />} />
-              <Route path="software-management/:id/edit" element={<ManagerProgramFormPage />} />
-              <Route path="reports" element={<ManagerReportsPage />} />
-              <Route path="activity" element={<ManagerActivityPage />} />
-              <Route path="profile" element={<ManagerProfilePage />} />
-            </Route>
-          </Route>
-          <Route element={<RoleGuard allowedRoles={['reseller']} />}>
-            <Route path="reseller" element={<DashboardLayout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<ResellerDashboardPage />} />
-              <Route path="customers" element={<ResellerCustomersPage />} />
-              <Route path="licenses" element={<ResellerLicensesPage />} />
-              <Route path="software" element={<ResellerSoftwarePage />} />
-              <Route path="software/:id/activate" element={<ActivateLicensePageForReseller />} />
-              <Route path="reports" element={<ResellerReportsPage />} />
-              <Route path="profile" element={<ResellerProfilePage />} />
-              <Route path="*" element={<Navigate to="dashboard" replace />} />
-            </Route>
-          </Route>
-          <Route element={<RoleGuard allowedRoles={['customer']} />}>
-            <Route path="customer" element={<DashboardLayout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<CustomerDashboardPage />} />
-              <Route path="software" element={<CustomerSoftwarePage />} />
-              <Route path="download" element={<CustomerDownloadPage />} />
-              <Route path="*" element={<Navigate to="dashboard" replace />} />
-            </Route>
-          </Route>
-        </Route>
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/ar/not-found" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/ar/not-found" replace />} />
+      </Routes>
+    </Suspense>
   )
 }

@@ -133,6 +133,7 @@ beforeEach(() => {
       api: { url: 'https://api.example.test', key: 'secret-key', timeout: 30, retries: 2 },
       notifications: { email_enabled: true, pusher_enabled: false },
       security: { min_password_length: 8, session_timeout: 120 },
+      widgets: { show_online_widget_to_resellers: true },
     },
   })
   mockSettingsService.update.mockResolvedValue({
@@ -142,6 +143,7 @@ beforeEach(() => {
       api: { url: 'https://api.example.test', key: 'secret-key', timeout: 30, retries: 2 },
       notifications: { email_enabled: true, pusher_enabled: false },
       security: { min_password_length: 8, session_timeout: 120 },
+      widgets: { show_online_widget_to_resellers: true },
     },
   })
 
