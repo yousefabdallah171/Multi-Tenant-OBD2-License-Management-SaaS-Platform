@@ -26,10 +26,12 @@ const CustomerSoftwarePage = lazyNamed(() => import('@/pages/customer/Software')
 const ManagerActivityPage = lazyNamed(() => import('@/pages/manager/Activity'), 'ActivityPage')
 const ActivateLicensePageForManager = lazyNamed(() => import('@/pages/manager/ActivateLicense'), 'ActivateLicensePageForManager')
 const ManagerCustomersPage = lazyNamed(() => import('@/pages/manager/Customers'), 'CustomersPage')
+const ManagerCustomerDetailPage = lazyNamed(() => import('@/pages/manager/CustomerDetail'), 'CustomerDetailPage')
 const ManagerDashboardPage = lazyNamed(() => import('@/pages/manager/Dashboard'), 'DashboardPage')
 const ManagerLicensesPage = lazyNamed(() => import('@/pages/manager/Licenses'), 'LicensesPage')
 const ManagerProfilePage = lazyNamed(() => import('@/pages/manager/Profile'), 'ProfilePage')
 const ManagerReportsPage = lazyNamed(() => import('@/pages/manager/Reports'), 'ReportsPage')
+const ManagerResellerLogsPage = lazyNamed(() => import('@/pages/manager/ResellerLogs'), 'ResellerLogsPage')
 const ManagerSoftwarePage = lazyNamed(() => import('@/pages/manager/Software'), 'SoftwarePage')
 const ManagerSoftwareManagementPage = lazyNamed(() => import('@/pages/manager/SoftwareManagement'), 'SoftwareManagementPage')
 const ManagerProgramFormPage = lazyNamed(() => import('@/pages/manager/ProgramForm'), 'ProgramFormPage')
@@ -51,6 +53,7 @@ const ManagerParentLicensesPage = lazyNamed(() => import('@/pages/manager-parent
 const ManagerParentLogsPage = lazyNamed(() => import('@/pages/manager-parent/Logs'), 'LogsPage')
 const ManagerParentProfilePage = lazyNamed(() => import('@/pages/manager-parent/Profile'), 'ProfilePage')
 const ManagerParentProgramLogsPage = lazyNamed(() => import('@/pages/manager-parent/ProgramLogs'), 'ProgramLogsPage')
+const ManagerParentResellerLogsPage = lazyNamed(() => import('@/pages/manager-parent/ResellerLogs'), 'ResellerLogsPage')
 const ManagerParentReportsPage = lazyNamed(() => import('@/pages/manager-parent/Reports'), 'ReportsPage')
 const ResellerPricingPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPricing'), 'ResellerPricingPage')
 const ManagerParentSettingsPage = lazyNamed(() => import('@/pages/manager-parent/Settings'), 'SettingsPage')
@@ -142,6 +145,7 @@ export function AppRouter() {
                   <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />
                   <Route path="logs" element={<ManagerParentLogsPage />} />
                   <Route path="program-logs" element={<ManagerParentProgramLogsPage />} />
+                  <Route path="reseller-logs" element={<ManagerParentResellerLogsPage />} />
                   <Route path="api-status" element={<ManagerParentApiStatusPage />} />
                   <Route path="username-management" element={<ManagerParentUsernameManagementPage />} />
                   <Route path="financial-reports" element={<ManagerParentFinancialReportsPage />} />
@@ -161,6 +165,7 @@ export function AppRouter() {
                   <Route path="team" element={<ManagerTeamPage />} />
                   <Route path="username-management" element={<ManagerUsernameManagementPage />} />
                   <Route path="customers" element={<ManagerCustomersPage />} />
+                  <Route path="customers/:id" element={<ManagerCustomerDetailPage />} />
                   <Route path="licenses" element={<ManagerLicensesPage />} />
                   <Route path="software" element={<ManagerSoftwarePage />} />
                   <Route path="software/:id/activate" element={<ActivateLicensePageForManager />} />
@@ -169,6 +174,7 @@ export function AppRouter() {
                   <Route path="software-management/:id/edit" element={<ManagerProgramFormPage />} />
                   <Route path="reports" element={<ManagerReportsPage />} />
                   <Route path="activity" element={<ManagerActivityPage />} />
+                  <Route path="reseller-logs" element={<ManagerResellerLogsPage />} />
                   <Route path="profile" element={<ManagerProfilePage />} />
                 </Route>
               </Route>

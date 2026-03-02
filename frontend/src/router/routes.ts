@@ -26,6 +26,7 @@ export const routePaths = {
     ipAnalytics: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/ip-analytics`,
     logs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/logs`,
     programLogs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/program-logs`,
+    resellerLogs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller-logs`,
     apiStatus: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/api-status`,
     usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/username-management`,
     financialReports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/financial-reports`,
@@ -43,6 +44,7 @@ export const routePaths = {
     team: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/team`,
     usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/username-management`,
     customers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/customers`,
+    customerDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/manager/customers/${id}`,
     licenses: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/licenses`,
     software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/software`,
     activateLicense: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/manager/software/${id}/activate`,
@@ -51,6 +53,7 @@ export const routePaths = {
     programEdit: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/manager/software-management/${id}/edit`,
     reports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/reports`,
     activity: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/activity`,
+    resellerLogs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/reseller-logs`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/profile`,
   },
   reseller: {

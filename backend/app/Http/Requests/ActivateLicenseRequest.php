@@ -17,7 +17,7 @@ class ActivateLicenseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'customer_name' => ['required', 'string', 'min:2', 'max:255'],
+            'customer_name' => ['required', 'string', 'min:2', 'max:5000'],
             'customer_email' => ['required', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'bios_id' => ['required', 'string', 'min:5', 'max:255'],

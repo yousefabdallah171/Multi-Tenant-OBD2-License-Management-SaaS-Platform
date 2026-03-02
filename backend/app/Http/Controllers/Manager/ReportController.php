@@ -112,7 +112,7 @@ class ReportController extends BaseManagerController
 
         return License::query()
             ->with(['reseller:id,name', 'program:id,name'])
-            ->whereIn('reseller_id', $this->teamResellerIds($request))
+            ->whereIn('reseller_id', $this->teamSellerIds($request))
             ->when(! empty($validated['from']), fn ($query) => $query->whereDate('activated_at', '>=', $validated['from']))
             ->when(! empty($validated['to']), fn ($query) => $query->whereDate('activated_at', '<=', $validated['to']))
             ->get();

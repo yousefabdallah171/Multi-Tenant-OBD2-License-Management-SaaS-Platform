@@ -13,6 +13,8 @@ import type {
   ManagerRevenueRow,
   ManagerSoftwareFilters,
   ManagerSoftwareProgram,
+  ManagerSellerLogEntry,
+  ManagerSellerLogSummary,
   ManagerTeamFilters,
   ManagerTeamReseller,
   ManagerTeamResellerDetail,
@@ -128,6 +130,10 @@ export const managerService = {
   },
   async getActivity(params: RoleActivityFilters) {
     const { data } = await api.get<PaginatedResponse<RoleActivityEntry>>('/manager/activity', { params })
+    return data
+  },
+  async getSellerLogs(params?: { page?: number; per_page?: number; seller_id?: number | ''; action?: string; from?: string; to?: string }) {
+    const { data } = await api.get<{ data: ManagerSellerLogEntry[]; summary: ManagerSellerLogSummary; meta: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }>('/manager/reseller-logs', { params })
     return data
   },
   async getOnlineUsers() {

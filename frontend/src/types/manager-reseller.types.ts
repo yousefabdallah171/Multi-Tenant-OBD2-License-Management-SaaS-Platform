@@ -72,6 +72,13 @@ export interface ManagerTeamResellerDetail extends ManagerTeamReseller {
     price: number
     expires_at: string | null
   }>
+  recent_activity: Array<{
+    id: number
+    action: string
+    description: string | null
+    metadata: Record<string, unknown>
+    created_at: string | null
+  }>
 }
 
 export interface TeamManagedUser {
@@ -101,15 +108,49 @@ export interface ManagerCustomerSummary {
 }
 
 export interface ManagerCustomerDetails extends ManagerCustomerSummary {
+  username?: string | null
+  phone?: string | null
+  created_by?: { id: number; name: string; email: string } | null
+  created_at?: string | null
   licenses: Array<{
     id: number
     bios_id: string
+    external_username?: string | null
     program: string | null
     reseller: string | null
+    reseller_id?: number | null
+    reseller_email?: string | null
     status: string
+    duration_days?: number
     price: number
     activated_at: string | null
     expires_at: string | null
+  }>
+  resellers_summary?: Array<{
+    reseller_id: number | null
+    reseller_name: string | null
+    reseller_email: string | null
+    activations_count: number
+    last_activation_at: string | null
+  }>
+  ip_logs?: Array<{
+    id: number
+    ip_address: string
+    country: string | null
+    country_code?: string | null
+    city: string | null
+    isp: string | null
+    reputation_score: string
+    action: string
+    created_at: string | null
+  }>
+  activity?: Array<{
+    id: number
+    action: string
+    description: string | null
+    metadata: Record<string, unknown>
+    ip_address: string | null
+    created_at: string | null
   }>
 }
 
@@ -148,6 +189,8 @@ export interface LicenseSummary {
   external_username?: string | null
   program: string | null
   program_id: number
+  reseller_id?: number | null
+  reseller_name?: string | null
   duration_days: number
   price: number
   activated_at: string | null
@@ -260,6 +303,33 @@ export interface ManagerTopResellerRow {
   revenue: number
   activations: number
   customers: number
+}
+
+export interface ManagerSellerLogEntry {
+  id: number
+  action: string
+  description: string | null
+  ip_address: string | null
+  seller: { id: number | null; name: string | null; role: string | null } | null
+  customer_id: number | null
+  customer_name: string | null
+  program_id: number | null
+  program_name: string | null
+  bios_id: string | null
+  license_id: number | null
+  license_status: string | null
+  price: number | null
+  metadata: Record<string, unknown>
+  created_at: string | null
+}
+
+export interface ManagerSellerLogSummary {
+  total_entries: number
+  activations: number
+  renewals: number
+  deactivations: number
+  deletions: number
+  revenue: number
 }
 
 export interface ResellerReportPoint {

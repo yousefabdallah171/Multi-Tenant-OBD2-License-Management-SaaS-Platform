@@ -403,6 +403,7 @@
       "ipAnalytics": "IP Analytics",
       "logs": "Platform Logs",
       "programLogs": "Program Logs",
+      "resellerLogs": "Reseller Logs",
       "apiStatus": "API Status",
       "usernameManagement": "Username Management",
       "financialReports": "Financial Reports",
@@ -792,6 +793,7 @@
       "softwareManagement": "Software Management",
       "reports": "Reports",
       "activity": "Activity",
+      "resellerLogs": "Reseller Logs",
       "profile": "Profile",
       "licenses": "Licenses"
     },

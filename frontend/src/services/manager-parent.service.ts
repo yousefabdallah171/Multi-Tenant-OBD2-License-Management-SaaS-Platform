@@ -16,7 +16,10 @@ import type {
   ProgramLogLicenseInfo,
   ProgramLog,
   ProgramSummary,
+  SellerLogEntry,
+  SellerLogSummary,
   TenantSettings,
+  TeamMemberDetail,
   UsernameManagedUser,
 } from '@/types/manager-parent.types'
 import type { LicenseFilters, LicenseSummary } from '@/types/manager-reseller.types'
@@ -149,9 +152,17 @@ export const managerParentService = {
     const { data } = await api.get<PaginatedResponse<ProgramSummary>>('/programs', { params: { per_page: 100, status: 'active' } })
     return data.data.filter((program) => program.has_external_api)
   },
+  async getTeamMember(id: number) {
+    const { data } = await api.get<{ data: TeamMemberDetail }>(`/team/${id}`)
+    return data
+  },
   async getProgramLogs(programId: number, params?: { page?: number; per_page?: number }): Promise<{ raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]>; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }> {
     const { data } = await api.get<{ data: { raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]>; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } } }>(`/manager-parent/programs/${programId}/logs`, { params })
     return data.data
+  },
+  async getSellerLogs(params?: { page?: number; per_page?: number; seller_id?: number | ''; action?: string; from?: string; to?: string }) {
+    const { data } = await api.get<{ data: SellerLogEntry[]; summary: SellerLogSummary; meta: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }>('/reseller-logs', { params })
+    return data
   },
   async getLicenses(params?: LicenseFilters & { reseller_id?: number | '' }) {
     const { data } = await api.get<PaginatedResponse<LicenseSummary>>('/licenses', { params })

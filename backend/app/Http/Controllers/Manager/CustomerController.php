@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Manager;
 
+use App\Models\ActivityLog;
+use App\Models\UserIpLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,42 +20,42 @@ class CustomerController extends BaseManagerController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
 
         $query = $this->teamCustomersQuery($request)
             ->select(['id', 'tenant_id', 'name', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
-                ->whereIn('reseller_id', $resellerIds)
+                ->whereIn('reseller_id', $sellerIds)
                 ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'price', 'activated_at', 'expires_at'])
                 ->with(['program:id,name', 'reseller:id,name'])])
             ->latest();
 
         if (! empty($validated['search'])) {
-            $query->where(function ($builder) use ($validated, $resellerIds): void {
+            $query->where(function ($builder) use ($validated, $sellerIds): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                        ->whereIn('reseller_id', $resellerIds)
+                        ->whereIn('reseller_id', $sellerIds)
                         ->where('bios_id', 'like', '%'.$validated['search'].'%'));
             });
         }
 
         if (! empty($validated['reseller_id'])) {
             $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                ->whereIn('reseller_id', $resellerIds)
+                ->whereIn('reseller_id', $sellerIds)
                 ->where('reseller_id', $validated['reseller_id']));
         }
 
         if (! empty($validated['program_id'])) {
             $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                ->whereIn('reseller_id', $resellerIds)
+                ->whereIn('reseller_id', $sellerIds)
                 ->where('program_id', $validated['program_id']));
         }
 
         if (! empty($validated['status'])) {
             $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                ->whereIn('reseller_id', $resellerIds)
+                ->whereIn('reseller_id', $sellerIds)
                 ->where('status', $validated['status']));
         }
 
@@ -68,26 +70,103 @@ class CustomerController extends BaseManagerController
     public function show(Request $request, User $user): JsonResponse
     {
         $customer = $this->resolveTeamUser($request, $user);
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
 
-        $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
-            ->whereIn('reseller_id', $resellerIds)
-            ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'price', 'activated_at', 'expires_at'])
-            ->with(['program:id,name', 'reseller:id,name'])]);
+        $customer->load([
+            'customerLicenses' => fn ($licenseQuery) => $licenseQuery
+                ->whereIn('reseller_id', $sellerIds)
+                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'external_username', 'status', 'duration_days', 'price', 'activated_at', 'expires_at'])
+                ->with(['program:id,name', 'reseller:id,name,email']),
+            'createdBy:id,name,email',
+        ]);
+
+        $sellersSummary = $customer->customerLicenses
+            ->groupBy('reseller_id')
+            ->map(function ($licenses) {
+                $latest = $licenses->sortByDesc('activated_at')->first();
+
+                return [
+                    'reseller_id' => $latest?->reseller_id,
+                    'reseller_name' => $latest?->reseller?->name,
+                    'reseller_email' => $latest?->reseller?->email,
+                    'activations_count' => $licenses->count(),
+                    'last_activation_at' => $latest?->activated_at?->toIso8601String(),
+                ];
+            })
+            ->values();
+
+        $ipLogs = UserIpLog::query()
+            ->select(['id', 'tenant_id', 'user_id', 'ip_address', 'country', 'city', 'isp', 'reputation_score', 'action', 'created_at'])
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('user_id', $customer->id)
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->map(fn (UserIpLog $log): array => [
+                'id' => $log->id,
+                'ip_address' => $log->ip_address,
+                'country' => $log->country,
+                'city' => $log->city,
+                'isp' => $log->isp,
+                'reputation_score' => $log->reputation_score,
+                'action' => $log->action,
+                'created_at' => $log->created_at?->toIso8601String(),
+            ])
+            ->values();
+
+        $activity = ActivityLog::query()
+            ->select(['id', 'tenant_id', 'user_id', 'action', 'description', 'metadata', 'ip_address', 'created_at'])
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where(function ($query) use ($customer, $sellerIds): void {
+                $query
+                    ->where('user_id', $customer->id)
+                    ->orWhere(function ($sellerQuery) use ($customer, $sellerIds): void {
+                        $sellerQuery
+                            ->whereIn('user_id', $sellerIds)
+                            ->where('metadata->customer_id', $customer->id);
+                    });
+            })
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->map(fn (ActivityLog $log): array => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'description' => $log->description,
+                'metadata' => $log->metadata ?? [],
+                'ip_address' => $log->ip_address,
+                'created_at' => $log->created_at?->toIso8601String(),
+            ])
+            ->values();
 
         return response()->json([
             'data' => [
                 ...$this->serializeCustomer($customer),
+                'username' => $customer->username,
+                'phone' => $customer->phone,
+                'created_by' => $customer->createdBy ? [
+                    'id' => $customer->createdBy->id,
+                    'name' => $customer->createdBy->name,
+                    'email' => $customer->createdBy->email,
+                ] : null,
+                'created_at' => $customer->created_at?->toIso8601String(),
                 'licenses' => $customer->customerLicenses->map(fn ($license): array => [
                     'id' => $license->id,
                     'bios_id' => $license->bios_id,
+                    'external_username' => $license->external_username,
                     'program' => $license->program?->name,
                     'reseller' => $license->reseller?->name,
+                    'reseller_id' => $license->reseller_id,
+                    'reseller_email' => $license->reseller?->email,
                     'status' => $license->status,
+                    'duration_days' => (float) $license->duration_days,
                     'price' => (float) $license->price,
                     'activated_at' => $license->activated_at?->toIso8601String(),
                     'expires_at' => $license->expires_at?->toIso8601String(),
                 ])->values(),
+                'resellers_summary' => $sellersSummary,
+                'ip_logs' => $ipLogs,
+                'activity' => $activity,
             ],
         ]);
     }

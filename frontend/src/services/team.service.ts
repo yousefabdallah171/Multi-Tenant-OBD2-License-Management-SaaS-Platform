@@ -1,5 +1,5 @@
 import { api } from '@/services/api'
-import type { PaginatedResponse, TeamMemberStats, TeamMemberSummary } from '@/types/manager-parent.types'
+import type { PaginatedResponse, TeamMemberDetail, TeamMemberStats, TeamMemberSummary } from '@/types/manager-parent.types'
 
 export interface TeamListParams {
   page?: number
@@ -40,6 +40,10 @@ export const teamService = {
   },
   async getStats(id: number) {
     const { data } = await api.get<{ data: TeamMemberStats }>(`/team/${id}/stats`)
+    return data
+  },
+  async getOne(id: number) {
+    const { data } = await api.get<{ data: TeamMemberDetail }>(`/team/${id}`)
     return data
   },
 }

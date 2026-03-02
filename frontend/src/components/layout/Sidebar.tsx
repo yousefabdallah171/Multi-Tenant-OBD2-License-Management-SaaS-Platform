@@ -68,6 +68,7 @@ const managerItems: NavItem[] = [
   { key: 'softwareManagement', icon: PackagePlus, href: routePaths.manager.softwareManagement, translationKey: 'manager.nav.softwareManagement' },
   { key: 'reports', icon: BarChart3, href: routePaths.manager.reports, translationKey: 'manager.nav.reports' },
   { key: 'activity', icon: ScrollText, href: routePaths.manager.activity, translationKey: 'manager.nav.activity' },
+  { key: 'resellerLogs', icon: ScrollText, href: routePaths.manager.resellerLogs, translationKey: 'manager.nav.resellerLogs' },
   { key: 'profile', icon: User, href: routePaths.manager.profile, translationKey: 'manager.nav.profile' },
 ]
 
@@ -98,6 +99,7 @@ export function Sidebar() {
   const logsChildPaths = useMemo(() => ([
     routePaths.managerParent.activity(lang),
     routePaths.managerParent.logs(lang),
+    routePaths.managerParent.resellerLogs(lang),
     routePaths.managerParent.apiStatus(lang),
   ]), [lang])
   const isIos = useMemo(() => {
@@ -132,6 +134,7 @@ export function Sidebar() {
   const managerParentLogsChildren: NavItem[] = [
     { key: 'activity', icon: ScrollText, href: routePaths.managerParent.activity, translationKey: 'managerParent.nav.activity' },
     { key: 'logs', icon: ScrollText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logs' },
+    { key: 'resellerLogs', icon: ScrollText, href: routePaths.managerParent.resellerLogs, translationKey: 'managerParent.nav.resellerLogs' },
     { key: 'apiStatus', icon: Activity, href: routePaths.managerParent.apiStatus, translationKey: 'managerParent.nav.apiStatus' },
   ]
 

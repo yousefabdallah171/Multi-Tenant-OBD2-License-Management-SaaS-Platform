@@ -403,6 +403,7 @@
       "ipAnalytics": "تحليلات IP",
       "logs": "سجلات المنصة",
       "programLogs": "سجلات البرامج",
+      "resellerLogs": "سجلات الموزعين",
       "apiStatus": "حالة API",
       "usernameManagement": "إدارة اسم المستخدم",
       "financialReports": "التقارير المالية",
@@ -794,6 +795,7 @@
       "software": "البرامج",
       "reports": "التقارير",
       "activity": "النشاط",
+      "resellerLogs": "سجلات الموزعين",
       "profile": "الملف الشخصي",
       "softwareManagement": "إدارة البرامج",
       "licenses": "التراخيص"

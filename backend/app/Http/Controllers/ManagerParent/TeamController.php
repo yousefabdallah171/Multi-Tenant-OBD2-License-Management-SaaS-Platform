@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Enums\UserRole;
+use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -147,6 +148,56 @@ class TeamController extends BaseManagerParentController
 
         return response()->json([
             'data' => $this->memberStats($user),
+        ]);
+    }
+
+    public function show(Request $request, User $user): JsonResponse
+    {
+        $member = $this->resolveTeamUser($request, $user);
+
+        $recentLicenses = License::query()
+            ->with(['customer:id,name,email', 'program:id,name'])
+            ->where('reseller_id', $member->id)
+            ->latest('activated_at')
+            ->limit(10)
+            ->get()
+            ->map(fn (License $license): array => [
+                'id' => $license->id,
+                'customer' => $license->customer ? [
+                    'id' => $license->customer->id,
+                    'name' => $license->customer->name,
+                    'email' => $license->customer->email,
+                ] : null,
+                'program' => $license->program?->name,
+                'bios_id' => $license->bios_id,
+                'status' => $license->status,
+                'price' => (float) $license->price,
+                'expires_at' => $license->expires_at?->toIso8601String(),
+            ])
+            ->values();
+
+        $recentActivity = ActivityLog::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('user_id', $member->id)
+            ->whereIn('action', ['license.activated', 'license.renewed', 'license.deactivated', 'license.delete'])
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn (ActivityLog $activity): array => [
+                'id' => $activity->id,
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'metadata' => $activity->metadata ?? [],
+                'created_at' => $activity->created_at?->toIso8601String(),
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => [
+                ...$this->serializeUser($member),
+                'recent_licenses' => $recentLicenses,
+                'recent_activity' => $recentActivity,
+            ],
         ]);
     }
 

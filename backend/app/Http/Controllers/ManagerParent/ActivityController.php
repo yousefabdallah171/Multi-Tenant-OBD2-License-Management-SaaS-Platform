@@ -19,7 +19,10 @@ class ActivityController extends BaseManagerParentController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $query = ActivityLog::query()->with('user:id,name')->latest();
+        $query = ActivityLog::query()
+            ->with('user:id,name')
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->latest();
 
         if (! empty($validated['user_id'])) {
             $query->where('user_id', $validated['user_id']);

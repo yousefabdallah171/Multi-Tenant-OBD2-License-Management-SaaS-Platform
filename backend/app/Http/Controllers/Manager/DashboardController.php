@@ -77,10 +77,11 @@ class DashboardController extends BaseManagerController
     private function statsData(Request $request): array
     {
         $managerId = $this->currentManager($request)->id;
+        $sellerIds = $this->teamSellerIds($request);
         $resellerIds = $this->teamResellerIds($request);
 
-        return Cache::remember($this->cacheKey($managerId, 'stats'), now()->addMinutes(5), function () use ($request, $resellerIds): array {
-            if ($resellerIds === []) {
+        return Cache::remember($this->cacheKey($managerId, 'stats'), now()->addMinutes(5), function () use ($request, $sellerIds, $resellerIds): array {
+            if ($sellerIds === []) {
                 return [
                     'team_resellers' => 0,
                     'team_customers' => 0,
@@ -91,7 +92,7 @@ class DashboardController extends BaseManagerController
             }
 
             $stats = License::query()
-                ->whereIn('reseller_id', $resellerIds)
+                ->whereIn('reseller_id', $sellerIds)
                 ->selectRaw(
                     "SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_licenses,
                     COALESCE(SUM(price), 0) as team_revenue,
@@ -116,14 +117,14 @@ class DashboardController extends BaseManagerController
     private function activationsChartData(Request $request): array
     {
         $managerId = $this->currentManager($request)->id;
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
         $firstMonth = CarbonImmutable::now()->startOfMonth()->subMonths(11);
 
-        return Cache::remember($this->cacheKey($managerId, 'activations-chart'), now()->addSeconds(60), function () use ($resellerIds, $firstMonth): array {
+        return Cache::remember($this->cacheKey($managerId, 'activations-chart'), now()->addSeconds(60), function () use ($sellerIds, $firstMonth): array {
             $months = collect(range(11, 0))
                 ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
 
-            if ($resellerIds === []) {
+            if ($sellerIds === []) {
                 return $months->map(fn (CarbonImmutable $month): array => [
                     'month' => $month->format('M Y'),
                     'count' => 0,
@@ -132,7 +133,7 @@ class DashboardController extends BaseManagerController
             }
 
             $counts = License::query()
-                ->whereIn('reseller_id', $resellerIds)
+                ->whereIn('reseller_id', $sellerIds)
                 ->whereNotNull('activated_at')
                 ->where('activated_at', '>=', $firstMonth)
                 ->selectRaw("DATE_FORMAT(activated_at, '%Y-%m') as month_key, COUNT(*) as total")
@@ -153,16 +154,16 @@ class DashboardController extends BaseManagerController
     private function revenueChartData(Request $request): array
     {
         $managerId = $this->currentManager($request)->id;
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
 
-        return Cache::remember($this->cacheKey($managerId, 'revenue-chart'), now()->addSeconds(60), function () use ($resellerIds): array {
-            if ($resellerIds === []) {
+        return Cache::remember($this->cacheKey($managerId, 'revenue-chart'), now()->addSeconds(60), function () use ($sellerIds): array {
+            if ($sellerIds === []) {
                 return [];
             }
 
             return License::query()
                 ->join('users as resellers', 'resellers.id', '=', 'licenses.reseller_id')
-                ->whereIn('licenses.reseller_id', $resellerIds)
+                ->whereIn('licenses.reseller_id', $sellerIds)
                 ->where('licenses.activated_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(11))
                 ->selectRaw('licenses.reseller_id, resellers.name as reseller, COUNT(*) as activations, COALESCE(SUM(licenses.price), 0) as revenue')
                 ->groupBy('licenses.reseller_id', 'resellers.name')

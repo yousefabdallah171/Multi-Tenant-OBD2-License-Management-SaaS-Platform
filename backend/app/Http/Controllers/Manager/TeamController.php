@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Manager;
 
+use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -75,6 +76,21 @@ class TeamController extends BaseManagerController
             'data' => [
                 ...$this->serializeReseller($reseller, collect([$reseller->id => $stats])),
                 'recent_licenses' => $recentLicenses,
+                'recent_activity' => ActivityLog::query()
+                    ->where('tenant_id', $this->currentTenantId($request))
+                    ->where('user_id', $reseller->id)
+                    ->whereIn('action', ['license.activated', 'license.renewed', 'license.deactivated', 'license.delete'])
+                    ->latest()
+                    ->limit(20)
+                    ->get()
+                    ->map(fn (ActivityLog $activity): array => [
+                        'id' => $activity->id,
+                        'action' => $activity->action,
+                        'description' => $activity->description,
+                        'metadata' => $activity->metadata ?? [],
+                        'created_at' => $activity->created_at?->toIso8601String(),
+                    ])
+                    ->values(),
             ],
         ]);
     }

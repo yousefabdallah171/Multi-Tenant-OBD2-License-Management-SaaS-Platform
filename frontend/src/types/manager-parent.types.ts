@@ -56,6 +56,29 @@ export interface TeamMemberStats {
   revenue: number
 }
 
+export interface TeamMemberDetail extends TeamMemberSummary {
+  recent_licenses: Array<{
+    id: number
+    customer: {
+      id: number
+      name: string
+      email: string | null
+    } | null
+    program: string | null
+    bios_id: string
+    status: string
+    price: number
+    expires_at: string | null
+  }>
+  recent_activity: Array<{
+    id: number
+    action: string
+    description: string | null
+    metadata: Record<string, unknown>
+    created_at: string | null
+  }>
+}
+
 export interface ProgramSummary {
   id: number
   name: string
@@ -142,6 +165,33 @@ export interface ActivityEntry {
   ip_address: string | null
   user: { id: number; name: string } | null
   created_at: string | null
+}
+
+export interface SellerLogEntry {
+  id: number
+  action: string
+  description: string | null
+  ip_address: string | null
+  seller: { id: number | null; name: string | null; role: string | null } | null
+  customer_id: number | null
+  customer_name: string | null
+  program_id: number | null
+  program_name: string | null
+  bios_id: string | null
+  license_id: number | null
+  license_status: string | null
+  price: number | null
+  metadata: Record<string, unknown>
+  created_at: string | null
+}
+
+export interface SellerLogSummary {
+  total_entries: number
+  activations: number
+  renewals: number
+  deactivations: number
+  deletions: number
+  revenue: number
 }
 
 export interface CustomerSummary {

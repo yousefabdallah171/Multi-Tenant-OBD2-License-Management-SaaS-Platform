@@ -16,10 +16,10 @@ class LicenseController extends BaseManagerController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
         $query = License::query()
-            ->whereIn('reseller_id', $resellerIds)
-            ->with(['customer:id,name,email', 'program:id,name'])
+            ->whereIn('reseller_id', $sellerIds)
+            ->with(['customer:id,name,email', 'program:id,name', 'reseller:id,name'])
             ->latest('activated_at');
 
         if (! empty($validated['status'])) {
@@ -69,9 +69,9 @@ class LicenseController extends BaseManagerController
 
     public function expiring(Request $request): JsonResponse
     {
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
         $baseQuery = License::query()
-            ->whereIn('reseller_id', $resellerIds)
+            ->whereIn('reseller_id', $sellerIds)
             ->where('status', 'active')
             ->where('expires_at', '>=', now());
 
@@ -90,7 +90,7 @@ class LicenseController extends BaseManagerController
 
     private function serializeLicense(License $license): array
     {
-        $license->loadMissing(['customer:id,name,email', 'program:id,name']);
+        $license->loadMissing(['customer:id,name,email', 'program:id,name', 'reseller:id,name']);
 
         return [
             'id' => $license->id,
@@ -101,6 +101,8 @@ class LicenseController extends BaseManagerController
             'external_username' => $license->external_username ?: $license->customer?->username,
             'program' => $license->program?->name,
             'program_id' => $license->program_id,
+            'reseller_id' => $license->reseller_id,
+            'reseller_name' => $license->reseller?->name,
             'duration_days' => $license->duration_days,
             'price' => (float) $license->price,
             'activated_at' => $license->activated_at?->toIso8601String(),
@@ -109,4 +111,3 @@ class LicenseController extends BaseManagerController
         ];
     }
 }
-

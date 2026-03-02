@@ -118,6 +118,7 @@ class ReportController extends BaseManagerParentController
         ]);
 
         return License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
             ->with(['program:id,name', 'reseller:id,name'])
             ->when(! empty($validated['from']), fn ($query) => $query->whereDate('activated_at', '>=', $validated['from']))
             ->when(! empty($validated['to']), fn ($query) => $query->whereDate('activated_at', '<=', $validated['to']))

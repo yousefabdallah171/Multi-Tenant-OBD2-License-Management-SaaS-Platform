@@ -898,7 +898,7 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 
 
 function isLikelyBios(value: string): boolean {
-  const trimmed = value.trim()
-  return trimmed.length > 20 && /^[0-9a-fA-F\-_]+$/.test(trimmed)
+  void value
+  return false
 }
 

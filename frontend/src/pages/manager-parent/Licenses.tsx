@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -15,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerParentService } from '@/services/manager-parent.service'
 import { teamService } from '@/services/team.service'
@@ -148,7 +150,17 @@ export function LicensesPage() {
         />
       ),
     },
-    { key: 'customer', label: t('common.customer'), sortable: true, sortValue: (row) => row.customer_name ?? '', render: (row) => `${row.customer_name ?? '-'} (${row.customer_email ?? '-'})` },
+    {
+      key: 'customer',
+      label: t('common.customer'),
+      sortable: true,
+      sortValue: (row) => row.customer_name ?? '',
+      render: (row) => row.customer_id ? (
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
+          {row.customer_name ?? '-'} ({row.customer_email ?? '-'})
+        </Link>
+      ) : `${row.customer_name ?? '-'} (${row.customer_email ?? '-'})`,
+    },
     { key: 'bios', label: t('activate.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => row.bios_id },
     { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
     { key: 'duration', label: t('common.duration'), sortable: true, sortValue: (row) => row.duration_days, render: (row) => `${row.duration_days} ${t('common.days')}` },
@@ -179,7 +191,7 @@ export function LicensesPage() {
         </div>
       ),
     },
-  ], [locale, selectedIds, t])
+  ], [lang, locale, selectedIds, t])
 
   return (
     <div className="space-y-6">

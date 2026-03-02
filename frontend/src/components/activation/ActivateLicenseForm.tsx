@@ -56,7 +56,6 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
   const invalidPhoneMessage = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
   const invalidNumberMessage = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
   const maxPriceMessage = t('validation.maxPrice', { defaultValue: 'Price is too high' })
-  const nameNotBiosIdMessage = t('validation.nameNotBiosId', { defaultValue: "Enter the customer's full name (e.g. John Smith)" })
 
   const durationDays = useMemo(() => {
     if (form.mode === 'end_date') {
@@ -118,10 +117,6 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       nextErrors.customer_name = requiredMessage
     }
 
-    if (form.customer_name.trim().length > 20 && /^[0-9a-fA-F\-_]+$/.test(form.customer_name.trim())) {
-      nextErrors.customer_name = nameNotBiosIdMessage
-    }
-
     const trimmedEmail = form.customer_email.trim()
     if (trimmedEmail !== '' && !/\S+@\S+\.\S+/.test(trimmedEmail)) {
       nextErrors.customer_email = invalidEmailMessage
@@ -157,7 +152,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     }
 
     return nextErrors
-  }, [durationDays, form.bios_id, form.customer_email, form.customer_name, form.customer_phone, form.end_date, form.mode, invalidEmailMessage, invalidNumberMessage, invalidPhoneMessage, maxPriceMessage, nameNotBiosIdMessage, priceInput, priceMode, requiredMessage, totalPrice])
+  }, [durationDays, form.bios_id, form.customer_email, form.customer_name, form.customer_phone, form.end_date, form.mode, invalidEmailMessage, invalidNumberMessage, invalidPhoneMessage, maxPriceMessage, priceInput, priceMode, requiredMessage, totalPrice])
 
   const isFormValid = useMemo(() => Object.keys(errors).length === 0, [errors])
 

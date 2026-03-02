@@ -323,28 +323,17 @@ class LicenseService
             return $actor;
         }
 
+        if ($role === UserRole::MANAGER->value) {
+            return $actor;
+        }
+
         if ($role === UserRole::MANAGER_PARENT->value) {
             return $actor;
         }
 
-        $query = User::query()
-            ->where('tenant_id', $actor->tenant_id)
-            ->where('role', UserRole::RESELLER->value)
-            ->where('status', 'active');
-
-        if ($role === UserRole::MANAGER->value) {
-            $query->where('created_by', $actor->id);
-        }
-
-        $reseller = $query->orderBy('id')->first();
-
-        if (! $reseller) {
-            throw ValidationException::withMessages([
-                'auth' => 'No active reseller account is available for activation.',
-            ]);
-        }
-
-        return $reseller;
+        throw ValidationException::withMessages([
+            'auth' => 'No active seller account is available for activation.',
+        ]);
     }
 
     private function extractExternalMessage(array $response, string $fallback): string
@@ -415,7 +404,11 @@ class LicenseService
 
     private function forgetDashboardCaches(int $tenantId, int $resellerId): void
     {
-        $managerId = (int) (User::query()->whereKey($resellerId)->value('created_by') ?? 0);
+        $seller = User::query()->select(['id', 'role', 'created_by'])->find($resellerId);
+        $sellerRole = $seller?->role?->value ?? (string) $seller?->role;
+        $managerId = $sellerRole === UserRole::MANAGER->value
+            ? (int) $seller?->id
+            : (int) ($seller?->created_by ?? 0);
 
         foreach ([
             "dashboard:manager-parent:tenant:{$tenantId}:stats",

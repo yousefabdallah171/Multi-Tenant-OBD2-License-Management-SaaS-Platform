@@ -82,6 +82,7 @@ class FinancialReportController extends BaseManagerParentController
         ]);
 
         return License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
             ->with(['program:id,name', 'reseller:id,name'])
             ->when(! empty($validated['from']), fn ($query) => $query->whereDate('activated_at', '>=', $validated['from']))
             ->when(! empty($validated['to']), fn ($query) => $query->whereDate('activated_at', '<=', $validated['to']))
@@ -105,7 +106,9 @@ class FinancialReportController extends BaseManagerParentController
     {
         $balances = UserBalance::query()
             ->with('user:id,name')
-            ->whereHas('user', fn ($query) => $query->where('role', UserRole::RESELLER->value)->where('tenant_id', $this->currentTenantId($request)))
+            ->whereHas('user', fn ($query) => $query
+                ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+                ->where('tenant_id', $this->currentTenantId($request)))
             ->get();
 
         if ($balances->isNotEmpty()) {
@@ -121,7 +124,7 @@ class FinancialReportController extends BaseManagerParentController
 
         $resellers = User::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('role', UserRole::RESELLER->value)
+            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->get();
 
         return $resellers->map(function (User $reseller) use ($licenses): array {

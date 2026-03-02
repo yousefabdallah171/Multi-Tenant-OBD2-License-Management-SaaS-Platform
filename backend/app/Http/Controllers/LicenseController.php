@@ -21,7 +21,7 @@ class LicenseController extends Controller
     {
         $validated = $request->validate([
             'program_id' => ['required', 'integer'],
-            'customer_name' => ['required', 'string', 'max:255'],
+            'customer_name' => ['required', 'string', 'max:5000'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9]+$/'],
             'bios_id' => ['required', 'string', 'max:255'],
@@ -222,7 +222,7 @@ class LicenseController extends Controller
                 ->pluck('id')
                 ->all();
 
-            return License::query()->whereIn('reseller_id', $resellerIds);
+            return License::query()->whereIn('reseller_id', [$actor->id, ...$resellerIds]);
         }
 
         if ($role === UserRole::MANAGER_PARENT->value) {

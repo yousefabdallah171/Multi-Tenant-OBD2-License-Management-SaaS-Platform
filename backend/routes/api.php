@@ -15,6 +15,7 @@ use App\Http\Controllers\Manager\CustomerController as ManagerCustomerController
 use App\Http\Controllers\Manager\DashboardController as ManagerDashboardController;
 use App\Http\Controllers\Manager\LicenseController as ManagerLicenseController;
 use App\Http\Controllers\Manager\ReportController as ManagerReportController;
+use App\Http\Controllers\Manager\ResellerLogController as ManagerResellerLogController;
 use App\Http\Controllers\Manager\SoftwareController as ManagerSoftwareController;
 use App\Http\Controllers\Manager\TeamController as ManagerTeamController;
 use App\Http\Controllers\Manager\UsernameManagementController as ManagerUsernameManagementController;
@@ -32,6 +33,7 @@ use App\Http\Controllers\ManagerParent\PricingController as ManagerParentPricing
 use App\Http\Controllers\ManagerParent\ProgramController as ManagerParentProgramController;
 use App\Http\Controllers\ManagerParent\ProgramLogsController as ManagerParentProgramLogsController;
 use App\Http\Controllers\ManagerParent\ReportController as ManagerParentReportController;
+use App\Http\Controllers\ManagerParent\ResellerLogController as ManagerParentResellerLogController;
 use App\Http\Controllers\ManagerParent\SettingsController as ManagerParentSettingsController;
 use App\Http\Controllers\ManagerParent\TeamController as ManagerParentTeamController;
 use App\Http\Controllers\ManagerParent\UsernameManagementController as ManagerParentUsernameManagementController;
@@ -113,6 +115,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::delete('/team/{user}', [ManagerParentTeamController::class, 'destroy']);
         Route::put('/team/{user}/status', [ManagerParentTeamController::class, 'updateStatus']);
         Route::get('/team/{user}/stats', [ManagerParentTeamController::class, 'stats']);
+        Route::get('/team/{user}', [ManagerParentTeamController::class, 'show']);
 
         Route::post('/programs', [ManagerParentProgramController::class, 'store']);
         Route::put('/programs/{program}', [ManagerParentProgramController::class, 'update']);
@@ -137,6 +140,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
 
         Route::get('/activity/export', [ManagerParentActivityController::class, 'export']);
         Route::get('/activity', [ManagerParentActivityController::class, 'index']);
+        Route::get('/reseller-logs', [ManagerParentResellerLogController::class, 'index']);
 
         Route::get('/customers', [ManagerParentCustomerController::class, 'index']);
         Route::get('/customers/{user}', [ManagerParentCustomerController::class, 'show']);
@@ -211,6 +215,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         });
 
         Route::get('/activity', [ManagerActivityController::class, 'index']);
+        Route::get('/reseller-logs', [ManagerResellerLogController::class, 'index']);
         Route::get('/online-users', [OnlineUsersController::class, 'index']);
     });
 

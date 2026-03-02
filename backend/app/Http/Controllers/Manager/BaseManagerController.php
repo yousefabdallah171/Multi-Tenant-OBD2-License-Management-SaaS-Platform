@@ -34,6 +34,17 @@ abstract class BaseManagerController extends Controller
         return $this->teamResellersQuery($request)->pluck('id')->all();
     }
 
+    /**
+     * @return list<int>
+     */
+    protected function teamSellerIds(Request $request): array
+    {
+        return [
+            $this->currentManager($request)->id,
+            ...$this->teamResellerIds($request),
+        ];
+    }
+
     protected function teamResellersQuery(Request $request)
     {
         return User::query()
@@ -44,45 +55,37 @@ abstract class BaseManagerController extends Controller
 
     protected function teamCustomersQuery(Request $request)
     {
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
 
         $query = User::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('role', UserRole::CUSTOMER->value);
 
-        if ($resellerIds === []) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        return $query->where(function ($builder) use ($resellerIds): void {
+        return $query->where(function ($builder) use ($sellerIds): void {
             $builder
-                ->whereIn('created_by', $resellerIds)
-                ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->whereIn('reseller_id', $resellerIds));
+                ->whereIn('created_by', $sellerIds)
+                ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->whereIn('reseller_id', $sellerIds));
         });
     }
 
     protected function teamUsersQuery(Request $request)
     {
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
 
         return User::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where(function ($builder) use ($resellerIds): void {
-                if ($resellerIds !== []) {
-                    $builder
-                        ->whereIn('id', $resellerIds)
-                        ->orWhere(function ($customerBuilder) use ($resellerIds): void {
-                            $customerBuilder
-                                ->where('role', UserRole::CUSTOMER->value)
-                                ->where(function ($teamCustomerBuilder) use ($resellerIds): void {
-                                    $teamCustomerBuilder
-                                        ->whereIn('created_by', $resellerIds)
-                                        ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->whereIn('reseller_id', $resellerIds));
-                                });
-                        });
-                } else {
-                    $builder->whereRaw('1 = 0');
-                }
+            ->where(function ($builder) use ($sellerIds): void {
+                $builder
+                    ->whereIn('id', $sellerIds)
+                    ->orWhere(function ($customerBuilder) use ($sellerIds): void {
+                        $customerBuilder
+                            ->where('role', UserRole::CUSTOMER->value)
+                            ->where(function ($teamCustomerBuilder) use ($sellerIds): void {
+                                $teamCustomerBuilder
+                                    ->whereIn('created_by', $sellerIds)
+                                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->whereIn('reseller_id', $sellerIds));
+                            });
+                    });
             });
     }
 
@@ -117,7 +120,7 @@ abstract class BaseManagerController extends Controller
 
     protected function resolveTeamLicense(Request $request, License $license): License
     {
-        abort_unless(in_array($license->reseller_id, $this->teamResellerIds($request), true), 404);
+        abort_unless(in_array($license->reseller_id, $this->teamSellerIds($request), true), 404);
 
         return $license;
     }

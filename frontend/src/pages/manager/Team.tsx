@@ -160,6 +160,25 @@ export function TeamPage() {
                 </CardContent>
               </Card>
 
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">{t('manager.nav.activity')}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {selectedReseller.recent_activity.length === 0 ? (
+                    <EmptyState title={t('common.noData')} description={t('manager.pages.activity.noMatches')} />
+                  ) : (
+                    selectedReseller.recent_activity.map((entry) => (
+                      <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+                        <p className="font-medium text-slate-950 dark:text-white">{entry.action}</p>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {t('manager.pages.team.joined')} {selectedReseller.created_at ? formatDate(selectedReseller.created_at, locale) : '-'}
               </p>

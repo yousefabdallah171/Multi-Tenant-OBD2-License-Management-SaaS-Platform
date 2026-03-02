@@ -358,9 +358,6 @@ function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
 }
 
 function isLikelyBios(value: string | null | undefined): boolean {
-  if (!value) {
-    return false
-  }
-  const trimmed = value.trim()
-  return trimmed.length > 20 && /^[0-9a-fA-F\-_]+$/.test(trimmed)
+  void value
+  return false
 }

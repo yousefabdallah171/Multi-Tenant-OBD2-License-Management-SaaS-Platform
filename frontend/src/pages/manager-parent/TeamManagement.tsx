@@ -51,6 +51,7 @@ export function TeamManagementPage() {
   const [inviteRole, setInviteRole] = useState<'manager' | 'reseller'>('manager')
   const [deleteTarget, setDeleteTarget] = useState<TeamMemberSummary | null>(null)
   const [editingMember, setEditingMember] = useState<TeamMemberSummary | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [form, setForm] = useState<TeamFormState>(EMPTY_FORM)
 
   const membersQuery = useQuery({
@@ -91,6 +92,12 @@ export function TeamManagementPage() {
       setDeleteTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
     },
+  })
+
+  const detailQuery = useQuery({
+    queryKey: ['manager-parent', 'team', 'detail', selectedId],
+    queryFn: () => teamService.getOne(selectedId ?? 0),
+    enabled: selectedId !== null,
   })
 
   const columns = useMemo<Array<DataTableColumn<TeamMemberSummary>>>(
@@ -328,6 +335,7 @@ export function TeamManagementPage() {
             columns={columns}
             data={list}
             rowKey={(row) => row.id}
+            onRowClick={(row) => setSelectedId(row.id)}
             isLoading={membersQuery.isLoading}
             pagination={{
               page: membersQuery.data?.meta.current_page ?? 1,
@@ -399,6 +407,59 @@ export function TeamManagementPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={selectedId !== null} onOpenChange={(open) => !open && setSelectedId(null)}>
+        <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
+          <DialogHeader>
+            <DialogTitle>{detailQuery.data?.data.name ?? t('managerParent.pages.teamManagement.title')}</DialogTitle>
+            <DialogDescription>{detailQuery.data?.data.email ?? t('managerParent.pages.teamManagement.description')}</DialogDescription>
+          </DialogHeader>
+
+          {detailQuery.data?.data ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-4">
+                <MetricCard label={t('managerParent.pages.teamManagement.customers')} value={detailQuery.data.data.customers_count} />
+                <MetricCard label={t('managerParent.pages.teamManagement.activeLicenses')} value={detailQuery.data.data.active_licenses_count} />
+                <MetricCard label={t('common.revenue')} value={formatCurrency(detailQuery.data.data.revenue, 'USD', locale)} />
+                <MetricCard label={t('common.status')} value={<StatusBadge status={detailQuery.data.data.status} />} />
+              </div>
+
+              <Card>
+                <CardContent className="space-y-3 p-4">
+                  <h3 className="text-lg font-semibold">{t('manager.pages.team.recentLicenses')}</h3>
+                  {detailQuery.data.data.recent_licenses.length === 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.noData')}</p>
+                  ) : (
+                    detailQuery.data.data.recent_licenses.map((license) => (
+                      <div key={license.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+                        <p className="font-medium text-slate-950 dark:text-white">{license.customer?.name ?? '-'}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{license.program ?? '-'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.biosId')} {license.bios_id}</p>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="space-y-3 p-4">
+                  <h3 className="text-lg font-semibold">{t('managerParent.nav.activity')}</h3>
+                  {detailQuery.data.data.recent_activity.length === 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.activity.noMatches')}</p>
+                  ) : (
+                    detailQuery.data.data.recent_activity.map((entry) => (
+                      <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+                        <p className="font-medium text-slate-950 dark:text-white">{entry.action}</p>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
@@ -417,5 +478,16 @@ export function TeamManagementPage() {
         }}
       />
     </div>
+  )
+}
+
+function MetricCard({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        <div className="mt-2 font-semibold text-slate-950 dark:text-white">{value}</div>
+      </CardContent>
+    </Card>
   )
 }
