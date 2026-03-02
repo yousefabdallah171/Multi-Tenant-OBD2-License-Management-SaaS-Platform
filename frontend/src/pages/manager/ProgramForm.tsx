@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
+import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -136,7 +137,7 @@ export function ProgramFormPage() {
       return managerService.createProgram(payload)
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : t('common.tryAgain'))
+      toast.error(getApiErrorMessage(error, t('common.tryAgain')))
     },
     onSuccess: () => {
       toast.success(editingId ? t('manager.pages.softwareManagement.updateSuccess') : t('manager.pages.softwareManagement.createSuccess'))
@@ -229,6 +230,18 @@ export function ProgramFormPage() {
       </div>
     </div>
   )
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message && error.message !== 'Request failed with status code 422') {
+    return error.message
+  }
+
+  const response = (error as AxiosError<{ message?: string; errors?: Record<string, string[]> }>).response
+
+  return response?.data?.message
+    ?? Object.values(response?.data?.errors ?? {})[0]?.[0]
+    ?? fallback
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

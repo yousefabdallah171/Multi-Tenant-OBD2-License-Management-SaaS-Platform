@@ -179,7 +179,7 @@ export function ProgramLogsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('programLogs.title')} description={t('managerParent.pages.logs.description')} />
+      <PageHeader title={t('programLogs.title')} description={t('programLogs.description')} />
 
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 p-4">
@@ -195,6 +195,9 @@ export function ProgramLogsPage() {
               </option>
             ))}
           </select>
+          <p className="basis-full text-xs text-slate-500 dark:text-slate-400">
+            {t('programLogs.dynamicHint')}
+          </p>
           <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <input type="checkbox" className="h-4 w-4" checked={autoRefresh} onChange={(event) => setAutoRefresh(event.target.checked)} />
             {t('programLogs.autoRefresh')}

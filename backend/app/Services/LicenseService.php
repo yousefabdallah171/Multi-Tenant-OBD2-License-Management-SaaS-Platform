@@ -323,6 +323,10 @@ class LicenseService
             return $actor;
         }
 
+        if ($role === UserRole::MANAGER_PARENT->value) {
+            return $actor;
+        }
+
         $query = User::query()
             ->where('tenant_id', $actor->tenant_id)
             ->where('role', UserRole::RESELLER->value)

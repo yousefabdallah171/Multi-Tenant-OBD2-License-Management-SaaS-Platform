@@ -241,10 +241,17 @@ export interface BiosHistoryEntry {
 
 export interface IpAnalyticsEntry {
   username: string
+  external_username: string | null
   bios_id: string | null
   customer_id: number | null
+  customer_name?: string | null
+  customer_username?: string | null
+  license_id?: number | null
+  program_id?: number | null
+  program_name?: string | null
   ip_address: string
   timestamp: string
+  parsed_at?: string | null
   country: string
   country_code: string
   city: string

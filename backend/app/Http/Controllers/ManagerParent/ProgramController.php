@@ -88,7 +88,7 @@ class ProgramController extends BaseManagerParentController
             'base_price' => $validated['base_price'],
             'icon' => $iconPath,
             'external_software_id' => $validated['external_software_id'] ?? null,
-            'external_api_base_url' => $validated['external_api_base_url'] ?? null,
+            'external_api_base_url' => ExternalApiSecurity::normalizeBaseUrl($validated['external_api_base_url'] ?? null),
             'external_logs_endpoint' => $this->normalizeExternalLogsEndpoint($validated['external_logs_endpoint'] ?? null),
             'has_external_api' => ! empty($validated['external_api_key']),
         ]);
@@ -156,7 +156,7 @@ class ProgramController extends BaseManagerParentController
         }
 
         if (array_key_exists('external_api_base_url', $validated)) {
-            $program->external_api_base_url = $validated['external_api_base_url'];
+            $program->external_api_base_url = ExternalApiSecurity::normalizeBaseUrl($validated['external_api_base_url']);
         }
 
         if (array_key_exists('external_logs_endpoint', $validated)) {

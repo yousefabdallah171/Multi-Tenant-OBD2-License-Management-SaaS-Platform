@@ -20,7 +20,10 @@ class LicenseExpiryService
             ->limit($limit);
 
         if ($deactivateExternal) {
-            $query->with(['program:id,external_api_key_encrypted,external_api_base_url']);
+            $query->with([
+                'program:id,external_api_key_encrypted,external_api_base_url',
+                'customer:id,username',
+            ]);
         }
 
         if ($tenantId !== null) {
@@ -33,20 +36,25 @@ class LicenseExpiryService
         foreach ($expiredLicenses as $license) {
             $apiResponseText = 'Auto-expired locally.';
 
-            if ($deactivateExternal) {
-                $program = $license->program;
-                if ($program) {
-                    $apiKey = $program->getDecryptedApiKey();
-                    if ($apiKey !== null) {
-                        $username = $license->external_username ?: $license->bios_id;
-                        $response = $this->externalApiService->deactivateUser(
-                            $apiKey,
-                            $username,
-                            $program->external_api_base_url
-                        );
-                        $apiResponseText = (string) ($response['data']['response'] ?? $response['data']['message'] ?? $apiResponseText);
+            try {
+                if ($deactivateExternal) {
+                    $program = $license->program;
+                    if ($program) {
+                        $apiKey = $program->getDecryptedApiKey();
+                        if ($apiKey !== null) {
+                            $username = $license->external_username ?: $license->customer?->username ?: $license->bios_id;
+                            $response = $this->externalApiService->deactivateUser(
+                                $apiKey,
+                                $username,
+                                $program->external_api_base_url
+                            );
+                            $apiResponseText = (string) ($response['data']['response'] ?? $response['data']['message'] ?? $apiResponseText);
+                        }
                     }
                 }
+            } catch (\Throwable $exception) {
+                report($exception);
+                $apiResponseText = $exception->getMessage();
             }
 
             $license->forceFill([

@@ -1251,7 +1251,9 @@
   },
   "programLogs": {
     "title": "Program Logs",
+    "description": "Inspect external software logs for the selected program. Each program uses its own configured software ID, base URL, and logs endpoint.",
     "selectProgram": "Select a program to view logs",
+    "dynamicHint": "This page reads the selected program's external logs dynamically using its configured Software ID and logs endpoint.",
     "activationEvents": "Activation Events",
     "loginEvents": "Login Events",
     "eventAdded": "Added",

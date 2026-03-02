@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { PieChartWidget } from '@/components/charts/PieChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -15,10 +15,17 @@ import { IpLocationCell } from '@/utils/countryFlag'
 interface SoftwareIpRow {
   id: string
   username: string
+  external_username: string | null
   bios_id: string | null
   customer_id: number | null
+  customer_name: string | null
+  customer_username: string | null
+  license_id: number | null
+  program_id: number | null
+  program_name: string | null
   ip_address: string
   timestamp: string
+  parsed_at: string | null
   country: string
   city: string
   country_code: string
@@ -33,47 +40,68 @@ export function IpAnalyticsPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(15)
+  const [selectedProgramId, setSelectedProgramId] = useState<number | null>(null)
   const [searchIp, setSearchIp] = useState('')
   const [reputation, setReputation] = useState<'all' | 'safe' | 'proxy'>('all')
   const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
 
   useEffect(() => {
     setPage(1)
-  }, [searchIp, reputation, range.from, range.to, perPage])
+  }, [selectedProgramId, searchIp, reputation, range.from, range.to, perPage])
 
-  const logsQuery = useInfiniteQuery({
-    queryKey: ['manager-parent', 'ip-analytics', searchIp, reputation, range.from, range.to, perPage],
-    queryFn: ({ pageParam }) => managerParentService.getIpAnalytics({
-      page: Number(pageParam),
+  const programsQuery = useQuery({
+    queryKey: ['manager-parent', 'programs-with-external-api'],
+    queryFn: () => managerParentService.getProgramsWithExternalApi(),
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 24 * 60 * 60 * 1000,
+  })
+
+  useEffect(() => {
+    if (!programsQuery.data || programsQuery.data.length === 0) {
+      setSelectedProgramId(null)
+      return
+    }
+
+    if (selectedProgramId === null || !programsQuery.data.some((program) => program.id === selectedProgramId)) {
+      setSelectedProgramId(programsQuery.data[0].id)
+    }
+  }, [programsQuery.data, selectedProgramId])
+
+  const logsQuery = useQuery({
+    queryKey: ['manager-parent', 'ip-analytics', selectedProgramId, page, perPage, searchIp, reputation, range.from, range.to],
+    queryFn: () => managerParentService.getIpAnalytics({
+      program_id: selectedProgramId as number,
+      page,
       per_page: perPage,
       search: searchIp || undefined,
       reputation,
       from: range.from || undefined,
       to: range.to || undefined,
     }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => (lastPage.meta.has_next_page ? lastPage.meta.next_page ?? undefined : undefined),
+    enabled: selectedProgramId !== null,
   })
 
-  const rows = useMemo<SoftwareIpRow[]>(() => (logsQuery.data?.pages ?? []).flatMap((page) => page.data).map((row, index) => ({
-    id: `${row.ip_address}-${index}`,
+  const rows = useMemo<SoftwareIpRow[]>(() => (logsQuery.data?.data ?? []).map((row, index) => ({
+    id: `${row.ip_address}-${row.parsed_at ?? row.timestamp}-${index}`,
     username: row.username,
+    external_username: row.external_username ?? null,
     bios_id: row.bios_id ?? null,
     customer_id: row.customer_id ?? null,
+    customer_name: row.customer_name ?? null,
+    customer_username: row.customer_username ?? null,
+    license_id: row.license_id ?? null,
+    program_id: row.program_id ?? null,
+    program_name: row.program_name ?? null,
     ip_address: row.ip_address,
     timestamp: row.timestamp,
+    parsed_at: row.parsed_at ?? null,
     country: row.country ?? 'Unknown',
     city: row.city ?? '',
     country_code: row.country_code ?? '',
     isp: row.isp ?? '',
     proxy: Boolean(row.proxy),
     hosting: Boolean(row.hosting),
-  })), [logsQuery.data?.pages])
-
-  const paged = useMemo(() => {
-    const start = (page - 1) * perPage
-    return rows.slice(start, start + perPage)
-  }, [rows, page, perPage])
+  })), [logsQuery.data?.data])
 
   const countryStats = useMemo(() => {
     const grouped = rows.reduce<Record<string, number>>((acc, row) => {
@@ -85,8 +113,8 @@ export function IpAnalyticsPage() {
     return Object.entries(grouped).map(([country, count]) => ({ country, count }))
   }, [rows])
 
-  const meta = logsQuery.data?.pages.at(-1)?.meta
-  const total = logsQuery.data?.pages[0]?.meta.total ?? 0
+  const meta = logsQuery.data?.meta
+  const total = logsQuery.data?.meta.total ?? 0
 
   const columns = useMemo<Array<DataTableColumn<SoftwareIpRow>>>(() => [
     { key: 'username', label: t('common.username'), sortable: true, sortValue: (row) => row.username, render: (row) => row.username },
@@ -111,7 +139,13 @@ export function IpAnalyticsPage() {
         </span>
       ) : '-'),
     },
-    { key: 'time', label: t('common.timestamp'), sortable: true, sortValue: (row) => row.timestamp, render: (row) => (Date.parse(row.timestamp) ? formatDate(row.timestamp, locale) : row.timestamp) },
+    {
+      key: 'time',
+      label: t('common.timestamp'),
+      sortable: true,
+      sortValue: (row) => row.parsed_at ?? row.timestamp,
+      render: (row) => (row.parsed_at ? formatDate(row.parsed_at, locale) : row.timestamp),
+    },
   ], [locale, t])
 
   return (
@@ -127,7 +161,19 @@ export function IpAnalyticsPage() {
       />
 
       <Card>
-        <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_180px_minmax(0,0.9fr)]">
+        <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(220px,0.9fr)_minmax(0,1fr)_180px_minmax(0,0.9fr)]">
+          <select
+            value={selectedProgramId ?? ''}
+            onChange={(event) => setSelectedProgramId(event.target.value ? Number(event.target.value) : null)}
+            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+          >
+            <option value="">{t('programLogs.selectProgram')}</option>
+            {(programsQuery.data ?? []).map((program) => (
+              <option key={program.id} value={program.id}>
+                {program.name} ({program.external_software_id ?? '-'})
+              </option>
+            ))}
+          </select>
           <Input value={searchIp} onChange={(event) => setSearchIp(event.target.value)} placeholder={t('managerParent.pages.ipAnalytics.searchPlaceholder')} />
           <select value={reputation} onChange={(event) => setReputation(event.target.value as 'all' | 'safe' | 'proxy')} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
             <option value="all">{t('managerParent.pages.ipAnalytics.allReputationScores')}</option>
@@ -135,25 +181,25 @@ export function IpAnalyticsPage() {
             <option value="proxy">{t('ipAnalytics.vpnProxy')}</option>
           </select>
           <DateRangePicker value={range} onChange={setRange} />
+          <p className="lg:col-span-4 text-xs text-slate-500 dark:text-slate-400">
+            {t('programLogs.dynamicHint')}
+          </p>
         </CardContent>
       </Card>
 
       <DataTable
         columns={columns}
-        data={paged}
+        data={rows}
         rowKey={(row) => row.id}
-        isLoading={logsQuery.isLoading || logsQuery.isFetchingNextPage}
+        isLoading={programsQuery.isLoading || logsQuery.isLoading || logsQuery.isFetching}
         pagination={{
           page,
-          lastPage: meta?.last_page ?? Math.max(1, Math.ceil(total / perPage)),
+          lastPage: meta?.last_page ?? 1,
           total,
           perPage,
         }}
         onPageChange={(nextPage) => {
           setPage(nextPage)
-          if (nextPage > (logsQuery.data?.pages.length ?? 0) && logsQuery.hasNextPage) {
-            void logsQuery.fetchNextPage()
-          }
         }}
         onPageSizeChange={(size) => {
           setPerPage(size)

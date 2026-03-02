@@ -28,7 +28,7 @@ class TenantScope
             $throttleKey = 'licenses:expire:tenant:'.$tenantId;
             if (Cache::add($throttleKey, 1, 60)) {
                 try {
-                    $this->licenseExpiryService->expireDue($tenantId, false, 200);
+                    $this->licenseExpiryService->expireDue($tenantId, true, 50);
                 } catch (\Throwable $exception) {
                     report($exception);
                 }

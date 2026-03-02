@@ -22,9 +22,19 @@ class LogController extends BaseManagerParentController
         ]);
 
         $query = ApiLog::query()
+            ->select([
+                'id',
+                'tenant_id',
+                'user_id',
+                'endpoint',
+                'method',
+                'status_code',
+                'response_time_ms',
+                'created_at',
+            ])
             ->with(['tenant:id,name', 'user:id,name'])
             ->where('tenant_id', $this->currentTenantId($request))
-            ->latest();
+            ->latest('id');
 
         if (! empty($validated['endpoint'])) {
             $query->where('endpoint', 'like', '%'.$validated['endpoint'].'%');

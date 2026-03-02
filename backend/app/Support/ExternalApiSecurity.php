@@ -14,6 +14,18 @@ class ExternalApiSecurity
             return null;
         }
 
+        $parts = parse_url($normalized);
+
+        if ($parts !== false && ! empty($parts['scheme']) && ! empty($parts['host'])) {
+            $baseUrl = strtolower((string) $parts['scheme']).'://'.$parts['host'];
+
+            if (! empty($parts['port'])) {
+                $baseUrl .= ':'.(int) $parts['port'];
+            }
+
+            return rtrim($baseUrl, '/');
+        }
+
         return rtrim($normalized, '/');
     }
 

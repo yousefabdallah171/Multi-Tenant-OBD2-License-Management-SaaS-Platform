@@ -48,6 +48,7 @@ export function TeamManagementPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<'active' | 'suspended' | 'inactive' | ''>('')
   const [formOpen, setFormOpen] = useState(false)
+  const [inviteRole, setInviteRole] = useState<'manager' | 'reseller'>('manager')
   const [deleteTarget, setDeleteTarget] = useState<TeamMemberSummary | null>(null)
   const [editingMember, setEditingMember] = useState<TeamMemberSummary | null>(null)
   const [form, setForm] = useState<TeamFormState>(EMPTY_FORM)
@@ -60,7 +61,7 @@ export function TeamManagementPage() {
   const createMutation = useMutation({
     mutationFn: (payload: TeamPayload) => teamService.create(payload),
     onSuccess: () => {
-      toast.success(t(role === 'manager' ? 'managerParent.pages.teamManagement.managerInvited' : 'managerParent.pages.teamManagement.resellerInvited'))
+      toast.success(t(inviteRole === 'manager' ? 'managerParent.pages.teamManagement.managerInvited' : 'managerParent.pages.teamManagement.resellerInvited'))
       closeForm()
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
     },
@@ -159,6 +160,7 @@ export function TeamManagementPage() {
               variant="ghost"
               onClick={() => {
                 setEditingMember(row)
+                setInviteRole(row.role === 'reseller' ? 'reseller' : 'manager')
                 setForm({
                   name: row.name,
                   email: row.email,
@@ -200,6 +202,7 @@ export function TeamManagementPage() {
   function closeForm() {
     setFormOpen(false)
     setEditingMember(null)
+    setInviteRole('manager')
     setForm(EMPTY_FORM)
   }
 
@@ -236,7 +239,7 @@ export function TeamManagementPage() {
       email: form.email.trim(),
       password: form.password,
       phone: form.phone.trim() || null,
-      role: role === 'reseller' ? 'reseller' : 'manager',
+      role: inviteRole,
     })
   }
 
@@ -250,11 +253,12 @@ export function TeamManagementPage() {
             type="button"
             onClick={() => {
               setEditingMember(null)
+              setInviteRole(role === 'reseller' ? 'reseller' : 'manager')
               setForm(EMPTY_FORM)
               setFormOpen(true)
             }}
           >
-            {role === 'reseller' ? t('managerParent.pages.teamManagement.inviteReseller') : t('managerParent.pages.teamManagement.inviteManager')}
+            {t('managerParent.pages.dashboard.actions.inviteTeamMember')}
           </Button>
         }
       />
@@ -346,13 +350,25 @@ export function TeamManagementPage() {
             <DialogTitle>
               {editingMember
                 ? t('managerParent.pages.teamManagement.editTitle')
-                : role === 'reseller'
-                  ? t('managerParent.pages.teamManagement.inviteReseller')
-                  : t('managerParent.pages.teamManagement.inviteManager')}
+                : t('managerParent.pages.dashboard.actions.inviteTeamMember')}
             </DialogTitle>
             <DialogDescription>{editingMember ? t('managerParent.pages.teamManagement.editDescription') : t('managerParent.pages.teamManagement.formDescription')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
+            {!editingMember ? (
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="team-role">{t('common.role')}</Label>
+                <select
+                  id="team-role"
+                  value={inviteRole}
+                  onChange={(event) => setInviteRole(event.target.value as 'manager' | 'reseller')}
+                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                >
+                  <option value="manager">{t('roles.manager')}</option>
+                  <option value="reseller">{t('roles.reseller')}</option>
+                </select>
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="team-name">{t('common.name')}</Label>
               <Input id="team-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
