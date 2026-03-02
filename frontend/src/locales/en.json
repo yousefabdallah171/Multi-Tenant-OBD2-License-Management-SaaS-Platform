@@ -1,12 +1,12 @@
 {
   "brand": {
     "badge": "License Platform",
-    "title": "OBD2SW foundation is now live"
+    "title": "OBD2SW License Management Platform"
   },
   "auth": {
     "loginTitle": "Sign in",
     "loginSubtitle": "Use one login flow for all five roles.",
-    "heroDescription": "This Phase 01 shell connects the React frontend to the Laravel API, keeps auth state in Zustand, and routes each user to the correct dashboard.",
+    "heroDescription": "A production-ready platform that connects the React frontend to the Laravel API with secure auth and role-based routing.",
     "email": "Email",
     "password": "Password",
     "submit": "Sign in",
@@ -27,8 +27,8 @@
         "description": "Each role is redirected to its own dashboard namespace."
       },
       "speed": {
-        "title": "Phase 01 ready",
-        "description": "The foundation is aligned with the docs and ready for feature work."
+        "title": "Production Ready",
+        "description": "Core authentication, routing, and dashboard modules are ready for daily operations."
       }
     }
   },
@@ -43,10 +43,10 @@
     "roleLabel": "Role dashboard",
     "lightMode": "Light mode",
     "darkMode": "Dark mode",
-    "foundationTitle": "Phase 01 foundation",
-    "foundationDescription": "The shell is ready for the remaining business modules.",
-    "foundationCopy": "Auth, guards, shared UI, theme persistence, and dashboard metrics are now wired together across the production frontend.",
-    "nextSteps": "Next work should fill the role pages, services, and module-specific flows from the creation checklist.",
+    "foundationTitle": "Platform Overview",
+    "foundationDescription": "The platform is configured and running with core modules enabled.",
+    "foundationCopy": "Authentication, route guards, shared UI, theme persistence, and dashboard analytics are fully integrated.",
+    "nextSteps": "Continue with operational workflows, QA validation, and release monitoring.",
     "stats": {
       "users": "Users",
       "programs": "Programs",
