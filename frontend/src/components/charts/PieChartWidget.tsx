@@ -55,6 +55,8 @@ export function PieChartWidget<TData extends ChartRow>({
           <PieChart>
             <Tooltip
               contentStyle={{ backgroundColor: palette.tooltipBackground, borderColor: palette.tooltipBorder, borderRadius: 16 }}
+              labelStyle={{ color: palette.axis }}
+              itemStyle={{ color: palette.axis }}
               formatter={(value: number | string | undefined, _name, item) => {
                 const payload = item.payload as TData
                 const row = payload as Record<string, string | number | null | undefined>
