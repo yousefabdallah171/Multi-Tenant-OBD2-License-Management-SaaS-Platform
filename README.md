@@ -92,6 +92,18 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 - Online users floating widget is live with role-based visibility and Super Admin settings toggle.
 - Single and bulk deactivate flows now return clearer, actionable API errors.
 
+### Latest Stability Fixes (2026-03-02)
+
+- License expiry now auto-reconciles to `expired` when duration is over:
+  - Scheduled command: `php artisan licenses:expire` (every minute).
+  - Request-time fallback added (tenant-throttled) so status still updates even if scheduler is delayed.
+- Program edit flow now supports clearing optional fields correctly:
+  - `file_size`
+  - `system_requirements`
+  - `installation_guide_url`
+  - `external_logs_endpoint`
+- Program edit validation hardened to reduce false `422` errors for optional external API fields.
+
 ---
 
 ## 2. Tech Stack
@@ -1637,6 +1649,14 @@ cd backend && composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 sudo systemctl reload nginx
+```
+
+### Scheduler (Required for Auto Expiry)
+
+Add Laravel scheduler to server cron (once):
+
+```bash
+* * * * * cd /home/obd2sw-panel/htdocs/panel.obd2sw.com/backend && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 ### CI/CD Pipeline
