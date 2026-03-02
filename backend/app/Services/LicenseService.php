@@ -13,6 +13,7 @@ use App\Models\BiosConflict;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -104,6 +105,7 @@ class LicenseService
             $license->load(['customer', 'program', 'reseller']);
 
             event(new LicenseActivated($license));
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
         });
@@ -142,6 +144,7 @@ class LicenseService
             $license->load(['customer', 'program', 'reseller']);
 
             event(new LicenseRenewed($license));
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
         });
@@ -189,6 +192,7 @@ class LicenseService
             $license->load(['customer', 'program', 'reseller']);
 
             event(new LicenseDeactivated($license));
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
         });
@@ -366,5 +370,33 @@ class LicenseService
             'ip_address' => request()->ip(),
             'metadata' => $metadata,
         ]);
+    }
+
+    private function forgetDashboardCaches(int $tenantId, int $resellerId): void
+    {
+        $managerId = (int) (User::query()->whereKey($resellerId)->value('created_by') ?? 0);
+
+        foreach ([
+            "dashboard:manager-parent:tenant:{$tenantId}:stats",
+            "dashboard:manager-parent:tenant:{$tenantId}:revenue-chart",
+            "dashboard:manager-parent:tenant:{$tenantId}:expiry-forecast",
+            "dashboard:manager-parent:tenant:{$tenantId}:team-performance",
+            "dashboard:manager-parent:tenant:{$tenantId}:conflict-rate",
+            "dashboard:global:stats",
+            "dashboard:tenant:{$tenantId}:stats",
+        ] as $key) {
+            Cache::forget($key);
+        }
+
+        if ($managerId > 0) {
+            foreach ([
+                "dashboard:manager:{$managerId}:stats",
+                "dashboard:manager:{$managerId}:activations-chart",
+                "dashboard:manager:{$managerId}:revenue-chart",
+                "dashboard:manager:{$managerId}:recent-activity",
+            ] as $key) {
+                Cache::forget($key);
+            }
+        }
     }
 }

@@ -6,7 +6,10 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
+import { queryClient } from '@/lib/queryClient'
 import { routePaths } from '@/router/routes'
+import { managerService } from '@/services/manager.service'
+import { managerParentService } from '@/services/manager-parent.service'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { cn } from '@/lib/utils'
 
@@ -132,6 +135,33 @@ export function Sidebar() {
     { key: 'apiStatus', icon: Activity, href: routePaths.managerParent.apiStatus, translationKey: 'managerParent.nav.apiStatus' },
   ]
 
+  const prefetchNavData = (key: string) => {
+    if (user?.role === 'manager_parent') {
+      if (key === 'dashboard') {
+        void queryClient.prefetchQuery({
+          queryKey: ['manager-parent', 'dashboard'],
+          queryFn: () => managerParentService.getDashboard(),
+        })
+      }
+
+      if (key === 'programLogs') {
+        void queryClient.prefetchQuery({
+          queryKey: ['manager-parent', 'programs-with-external-api'],
+          queryFn: () => managerParentService.getProgramsWithExternalApi(),
+          staleTime: Number.POSITIVE_INFINITY,
+          gcTime: 24 * 60 * 60 * 1000,
+        })
+      }
+    }
+
+    if (user?.role === 'manager' && key === 'dashboard') {
+      void queryClient.prefetchQuery({
+        queryKey: ['manager', 'dashboard'],
+        queryFn: () => managerService.getDashboard(),
+      })
+    }
+  }
+
   const handleInstallClick = async () => {
     if (!canInstall) {
       window.alert(isIos ? t('common.installAppIosHint') : t('common.installAppUnavailable'))
@@ -190,6 +220,7 @@ export function Sidebar() {
                         setCollapsed(true)
                       }
                     }}
+                    onMouseEnter={() => prefetchNavData(child.key)}
                   >
                     <ChildIcon className="h-4 w-4 shrink-0" />
                     <span>{childLabel}</span>
@@ -220,6 +251,7 @@ export function Sidebar() {
                 setCollapsed(true)
               }
             }}
+            onMouseEnter={() => prefetchNavData(item.key)}
           >
             <Icon className="h-4 w-4 shrink-0" />
             <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>

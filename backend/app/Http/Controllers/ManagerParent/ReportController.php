@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers\ManagerParent;
 
-use App\Exports\ReportExporter;
 use App\Models\License;
+use App\Services\ExportTaskService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends BaseManagerParentController
 {
@@ -79,14 +78,27 @@ class ReportController extends BaseManagerParentController
         ]);
     }
 
-    public function exportCsv(Request $request): StreamedResponse
+    public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
     {
-        return app(ReportExporter::class)->toCsv('manager-parent-reports.csv', $this->exportSections($request));
+        $task = $exportTaskService->queue(
+            $request,
+            'csv',
+            'manager-parent-reports.csv',
+            'Manager Parent Reports',
+            $this->exportSections($request),
+            [],
+            $this->dateRangeLabel($request),
+            $this->reportLanguage($request),
+        );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
-    public function exportPdf(Request $request)
+    public function exportPdf(Request $request, ExportTaskService $exportTaskService): JsonResponse
     {
-        return app(ReportExporter::class)->toPdf(
+        $task = $exportTaskService->queue(
+            $request,
+            'pdf',
             'manager-parent-reports.pdf',
             'Manager Parent Reports',
             $this->exportSections($request),
@@ -94,6 +106,8 @@ class ReportController extends BaseManagerParentController
             $this->dateRangeLabel($request),
             $this->reportLanguage($request),
         );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
     private function filteredLicenses(Request $request)

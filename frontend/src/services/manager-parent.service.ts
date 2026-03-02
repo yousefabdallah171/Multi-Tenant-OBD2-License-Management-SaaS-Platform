@@ -9,6 +9,7 @@ import type {
   IpAnalyticsStats,
   LogFilters,
   ManagerParentApiStatus,
+  ManagerParentDashboardPayload,
   ManagerParentDashboardStats,
   ManagerParentLogEntry,
   PaginatedResponse,
@@ -22,6 +23,10 @@ import type { LicenseFilters, LicenseSummary } from '@/types/manager-reseller.ty
 import { downloadFile } from '@/utils/download'
 
 export const managerParentService = {
+  async getDashboard() {
+    const { data } = await api.get<ManagerParentDashboardPayload>('/dashboard')
+    return data
+  },
   async getDashboardStats() {
     const { data } = await api.get<{ stats: ManagerParentDashboardStats }>('/dashboard/stats')
     return data
@@ -80,8 +85,8 @@ export const managerParentService = {
     const { data } = await api.get<{ data: { bios_id: string; events: BiosHistoryEntry[] } }>(`/bios-history/${biosId}`)
     return data
   },
-  async getIpAnalytics() {
-    const { data } = await api.get<{ data: IpAnalyticsEntry[] }>('/ip-analytics')
+  async getIpAnalytics(params?: { page?: number; per_page?: number; search?: string; reputation?: 'all' | 'safe' | 'proxy'; from?: string; to?: string }) {
+    const { data } = await api.get<{ data: IpAnalyticsEntry[]; meta: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }>('/ip-analytics', { params })
     return data
   },
   async getIpStats() {
@@ -144,8 +149,8 @@ export const managerParentService = {
     const { data } = await api.get<PaginatedResponse<ProgramSummary>>('/programs', { params: { per_page: 100, status: 'active' } })
     return data.data.filter((program) => program.has_external_api)
   },
-  async getProgramLogs(programId: number): Promise<{ raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]> }> {
-    const { data } = await api.get<{ data: { raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]> } }>(`/manager-parent/programs/${programId}/logs`)
+  async getProgramLogs(programId: number, params?: { page?: number; per_page?: number }): Promise<{ raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]>; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }> {
+    const { data } = await api.get<{ data: { raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]>; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } } }>(`/manager-parent/programs/${programId}/logs`, { params })
     return data.data
   },
   async getLicenses(params?: LicenseFilters & { reseller_id?: number | '' }) {

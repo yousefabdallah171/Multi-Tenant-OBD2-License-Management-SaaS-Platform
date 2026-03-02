@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
@@ -39,6 +40,14 @@ export default defineConfig({
         ],
       },
     }),
+    process.env.BUNDLE_ANALYZE === 'true'
+      ? visualizer({
+          filename: 'dist/bundle-report.html',
+          gzipSize: true,
+          brotliSize: true,
+          open: false,
+        })
+      : undefined,
   ],
   build: {
     rollupOptions: {
@@ -55,6 +64,10 @@ export default defineConfig({
 
           if (['react', 'react-dom', 'react-router', 'react-router-dom', 'scheduler'].includes(normalizedPackage)) {
             return 'vendor-react'
+          }
+
+          if (normalizedPackage === '@tanstack/react-query') {
+            return 'vendor-query'
           }
 
           if (['recharts', 'victory-vendor'].includes(normalizedPackage)) {

@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers\Reseller;
 
-use App\Exports\ReportExporter;
 use App\Models\License;
+use App\Services\ExportTaskService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends BaseResellerController
 {
@@ -46,14 +45,27 @@ class ReportController extends BaseResellerController
         ]);
     }
 
-    public function exportCsv(Request $request): StreamedResponse
+    public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
     {
-        return app(ReportExporter::class)->toCsv('reseller-report.csv', $this->exportSections($request));
+        $task = $exportTaskService->queue(
+            $request,
+            'csv',
+            'reseller-report.csv',
+            'Reseller Report',
+            $this->exportSections($request),
+            [],
+            $this->dateRangeLabel($request),
+            $this->reportLanguage($request),
+        );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
-    public function exportPdf(Request $request)
+    public function exportPdf(Request $request, ExportTaskService $exportTaskService): JsonResponse
     {
-        return app(ReportExporter::class)->toPdf(
+        $task = $exportTaskService->queue(
+            $request,
+            'pdf',
             'reseller-report.pdf',
             'Reseller Report',
             $this->exportSections($request),
@@ -61,6 +73,8 @@ class ReportController extends BaseResellerController
             $this->dateRangeLabel($request),
             $this->reportLanguage($request),
         );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
     private function filteredLicenses(Request $request): array

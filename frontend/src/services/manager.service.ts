@@ -7,6 +7,7 @@ import type {
   ManagerActivationPoint,
   ManagerCustomerDetails,
   ManagerCustomerFilters,
+  ManagerDashboardPayload,
   ManagerCustomerSummary,
   ManagerDashboardStats,
   ManagerRevenueRow,
@@ -27,6 +28,10 @@ import type { LicenseFilters, LicenseSummary } from '@/types/manager-reseller.ty
 import { downloadFile } from '@/utils/download'
 
 export const managerService = {
+  async getDashboard() {
+    const { data } = await api.get<ManagerDashboardPayload>('/manager/dashboard')
+    return data
+  },
   async getDashboardStats() {
     const { data } = await api.get<{ stats: ManagerDashboardStats }>('/manager/dashboard/stats')
     return data

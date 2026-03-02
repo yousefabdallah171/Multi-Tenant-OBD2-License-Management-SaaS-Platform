@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
-use App\Exports\ReportExporter;
 use App\Models\License;
 use App\Models\Tenant;
+use App\Services\ExportTaskService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FinancialReportController extends BaseSuperAdminController
 {
@@ -76,18 +75,29 @@ class FinancialReportController extends BaseSuperAdminController
         ]);
     }
 
-    public function exportCsv(Request $request): StreamedResponse
+    public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
     {
         $report = $this->index($request)->getData(true)['data'];
+        $task = $exportTaskService->queue(
+            $request,
+            'csv',
+            'super-admin-financial-report.csv',
+            'Super Admin Financial Report',
+            $this->exportSections($report),
+            $this->summaryLabels($report['summary']),
+            $this->dateRangeLabel($request),
+            $this->reportLanguage($request),
+        );
 
-        return app(ReportExporter::class)->toCsv('super-admin-financial-report.csv', $this->exportSections($report));
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
-    public function exportPdf(Request $request)
+    public function exportPdf(Request $request, ExportTaskService $exportTaskService): JsonResponse
     {
         $report = $this->index($request)->getData(true)['data'];
-
-        return app(ReportExporter::class)->toPdf(
+        $task = $exportTaskService->queue(
+            $request,
+            'pdf',
             'super-admin-financial-report.pdf',
             'Super Admin Financial Report',
             $this->exportSections($report),
@@ -95,6 +105,8 @@ class FinancialReportController extends BaseSuperAdminController
             $this->dateRangeLabel($request),
             $this->reportLanguage($request),
         );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
     private function filteredLicenses(Request $request)

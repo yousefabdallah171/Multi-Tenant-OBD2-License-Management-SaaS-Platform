@@ -11,6 +11,14 @@ export interface ManagerParentDashboardStats {
   monthly_revenue: number
 }
 
+export interface ManagerParentDashboardPayload {
+  stats: ManagerParentDashboardStats
+  revenueChart: Array<{ month: string; revenue: number }>
+  expiryForecast: Array<{ range: string; count: number }>
+  teamPerformance: Array<{ id: number; name: string; role: string; activations: number; revenue: number; customers: number }>
+  conflictRate: Array<{ month: string; count: number }>
+}
+
 export interface ChartPoint {
   month?: string
   range?: string

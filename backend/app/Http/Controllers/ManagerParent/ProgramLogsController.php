@@ -16,6 +16,13 @@ class ProgramLogsController extends BaseManagerParentController
 
     public function show(Request $request, Program $program): JsonResponse
     {
+        $validated = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
+        ]);
+        $page = (int) ($validated['page'] ?? 1);
+        $perPage = (int) ($validated['per_page'] ?? 100);
+
         $resolved = $this->resolveProgram($request, $program);
         $guard = $this->guardExternalApi($resolved);
         if ($guard !== null) {
@@ -91,11 +98,24 @@ class ProgramLogsController extends BaseManagerParentController
             }
         }
 
+        $total = count($rows);
+        $offset = max(0, ($page - 1) * $perPage);
+        $pagedRows = array_slice($rows, $offset, $perPage);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+
         return response()->json([
             'data' => [
                 ...$response['data'],
                 'licenses' => $licensesMap,
-                'rows' => $rows,
+                'rows' => $pagedRows,
+                'meta' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'last_page' => $lastPage,
+                    'has_next_page' => $page < $lastPage,
+                    'next_page' => $page < $lastPage ? $page + 1 : null,
+                ],
             ],
         ], $response['status_code'] ?? 200);
     }

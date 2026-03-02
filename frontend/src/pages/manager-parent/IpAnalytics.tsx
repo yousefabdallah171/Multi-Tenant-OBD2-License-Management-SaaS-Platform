@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { PieChartWidget } from '@/components/charts/PieChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -37,12 +37,25 @@ export function IpAnalyticsPage() {
   const [reputation, setReputation] = useState<'all' | 'safe' | 'proxy'>('all')
   const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
 
-  const logsQuery = useQuery({
-    queryKey: ['manager-parent', 'ip-analytics', 'global'],
-    queryFn: () => managerParentService.getIpAnalytics(),
+  useEffect(() => {
+    setPage(1)
+  }, [searchIp, reputation, range.from, range.to, perPage])
+
+  const logsQuery = useInfiniteQuery({
+    queryKey: ['manager-parent', 'ip-analytics', searchIp, reputation, range.from, range.to, perPage],
+    queryFn: ({ pageParam }) => managerParentService.getIpAnalytics({
+      page: Number(pageParam),
+      per_page: perPage,
+      search: searchIp || undefined,
+      reputation,
+      from: range.from || undefined,
+      to: range.to || undefined,
+    }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.meta.has_next_page ? lastPage.meta.next_page ?? undefined : undefined),
   })
 
-  const rows = useMemo<SoftwareIpRow[]>(() => (logsQuery.data?.data ?? []).map((row, index) => ({
+  const rows = useMemo<SoftwareIpRow[]>(() => (logsQuery.data?.pages ?? []).flatMap((page) => page.data).map((row, index) => ({
     id: `${row.ip_address}-${index}`,
     username: row.username,
     bios_id: row.bios_id ?? null,
@@ -55,52 +68,25 @@ export function IpAnalyticsPage() {
     isp: row.isp ?? '',
     proxy: Boolean(row.proxy),
     hosting: Boolean(row.hosting),
-  })), [logsQuery.data?.data])
-
-  const filtered = useMemo(() => rows
-    .filter((row) => {
-      if (searchIp && !row.ip_address.toLowerCase().includes(searchIp.toLowerCase()) && !row.username.toLowerCase().includes(searchIp.toLowerCase())) {
-        return false
-      }
-
-      if (reputation === 'proxy' && !(row.proxy || row.hosting)) {
-        return false
-      }
-
-      if (reputation === 'safe' && (row.proxy || row.hosting)) {
-        return false
-      }
-
-      if (range.from || range.to) {
-        const time = Date.parse(row.timestamp)
-        if (!Number.isNaN(time)) {
-          if (range.from && time < Date.parse(range.from)) {
-            return false
-          }
-          if (range.to && time > Date.parse(`${range.to}T23:59:59`)) {
-            return false
-          }
-        }
-      }
-
-      return true
-    })
-    .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)), [reputation, rows, searchIp, range.from, range.to])
+  })), [logsQuery.data?.pages])
 
   const paged = useMemo(() => {
     const start = (page - 1) * perPage
-    return filtered.slice(start, start + perPage)
-  }, [filtered, page, perPage])
+    return rows.slice(start, start + perPage)
+  }, [rows, page, perPage])
 
   const countryStats = useMemo(() => {
-    const grouped = filtered.reduce<Record<string, number>>((acc, row) => {
+    const grouped = rows.reduce<Record<string, number>>((acc, row) => {
       const key = row.country || 'Unknown'
       acc[key] = (acc[key] ?? 0) + 1
       return acc
     }, {})
 
     return Object.entries(grouped).map(([country, count]) => ({ country, count }))
-  }, [filtered])
+  }, [rows])
+
+  const meta = logsQuery.data?.pages.at(-1)?.meta
+  const total = logsQuery.data?.pages[0]?.meta.total ?? 0
 
   const columns = useMemo<Array<DataTableColumn<SoftwareIpRow>>>(() => [
     { key: 'username', label: t('common.username'), sortable: true, sortValue: (row) => row.username, render: (row) => row.username },
@@ -156,14 +142,19 @@ export function IpAnalyticsPage() {
         columns={columns}
         data={paged}
         rowKey={(row) => row.id}
-        isLoading={logsQuery.isLoading}
+        isLoading={logsQuery.isLoading || logsQuery.isFetchingNextPage}
         pagination={{
           page,
-          lastPage: Math.max(1, Math.ceil(filtered.length / perPage)),
-          total: filtered.length,
+          lastPage: meta?.last_page ?? Math.max(1, Math.ceil(total / perPage)),
+          total,
           perPage,
         }}
-        onPageChange={setPage}
+        onPageChange={(nextPage) => {
+          setPage(nextPage)
+          if (nextPage > (logsQuery.data?.pages.length ?? 0) && logsQuery.hasNextPage) {
+            void logsQuery.fetchNextPage()
+          }
+        }}
         onPageSizeChange={(size) => {
           setPerPage(size)
           setPage(1)

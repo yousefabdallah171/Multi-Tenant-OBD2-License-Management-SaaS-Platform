@@ -1847,6 +1847,8 @@ Default local setup used in this project:
 - Password: empty
 - Database: `license`
 
+If port `3306` is already used on your machine (for example by WSL forwarding), use Laragon MySQL on `3307` and update `backend/.env` accordingly.
+
 ### 4. Backend Environment
 
 Create `backend/.env` from `backend/.env.example` and use values like these:
@@ -1983,6 +1985,10 @@ Check:
 - Laragon MySQL is running
 - Database `license` exists
 - `backend/.env` uses `127.0.0.1`, `3306`, `root`, empty password
+
+If you see `SQLSTATE[HY000] [1698] Access denied for user 'root'@'localhost'`:
+- Confirm what process owns port `3306` (`netstat -ano | findstr 3306`).
+- If it is not Laragon MySQL (for example `wslrelay.exe`), switch Laragon MySQL to another port (commonly `3307`), then set `DB_PORT=3307` in `backend/.env`.
 
 ### 10. Local Dev Summary
 
