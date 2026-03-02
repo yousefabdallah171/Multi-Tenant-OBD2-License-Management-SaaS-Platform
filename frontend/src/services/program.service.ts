@@ -26,11 +26,19 @@ export interface ProgramPayload {
   status?: 'active' | 'inactive'
 }
 
-function buildProgramPayload(payload: Partial<ProgramPayload>) {
+function buildProgramPayload(payload: Partial<ProgramPayload>, includeEmptyKeys: string[] = []) {
   const formData = new FormData()
+  const includeEmpty = new Set(includeEmptyKeys)
 
   for (const [key, value] of Object.entries(payload)) {
-    if (value === undefined || value === null || value === '') {
+    if (value === undefined) {
+      continue
+    }
+
+    if (value === null || value === '') {
+      if (includeEmpty.has(key)) {
+        formData.append(key, '')
+      }
       continue
     }
 
@@ -59,7 +67,12 @@ export const programService = {
     return data
   },
   async update(id: number, payload: Partial<ProgramPayload>) {
-    const formData = buildProgramPayload(payload)
+    const formData = buildProgramPayload(payload, [
+      'file_size',
+      'system_requirements',
+      'installation_guide_url',
+      'external_logs_endpoint',
+    ])
     formData.append('_method', 'PUT')
 
     const { data } = await api.post<{ data: ProgramSummary }>(`/programs/${id}`, formData, {
