@@ -116,7 +116,7 @@ class DashboardController extends BaseManagerController
                 ->whereNotNull('activated_at')
                 ->where('activated_at', '>=', $firstMonth)
                 ->selectRaw("DATE_FORMAT(activated_at, '%Y-%m') as month_key, COUNT(*) as total")
-                ->groupByRaw('YEAR(activated_at), MONTH(activated_at)')
+                ->groupByRaw("DATE_FORMAT(activated_at, '%Y-%m')")
                 ->pluck('total', 'month_key');
 
             return $months->map(fn (CarbonImmutable $month): array => [

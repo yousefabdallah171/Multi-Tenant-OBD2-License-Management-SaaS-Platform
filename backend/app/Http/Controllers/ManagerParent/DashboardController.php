@@ -121,7 +121,7 @@ class DashboardController extends BaseManagerParentController
                 ->whereNotNull('activated_at')
                 ->where('activated_at', '>=', $firstMonth)
                 ->selectRaw("DATE_FORMAT(activated_at, '%Y-%m') as month_key, COALESCE(SUM(price), 0) as revenue")
-                ->groupByRaw('YEAR(activated_at), MONTH(activated_at)')
+                ->groupByRaw("DATE_FORMAT(activated_at, '%Y-%m')")
                 ->pluck('revenue', 'month_key');
 
             return $months->map(fn (CarbonImmutable $month): array => [
@@ -224,7 +224,7 @@ class DashboardController extends BaseManagerParentController
                 ->where('tenant_id', $tenantId)
                 ->where('created_at', '>=', $firstMonth)
                 ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month_key, COUNT(*) as total")
-                ->groupByRaw('YEAR(created_at), MONTH(created_at)')
+                ->groupByRaw("DATE_FORMAT(created_at, '%Y-%m')")
                 ->pluck('total', 'month_key');
 
             return $months->map(fn (CarbonImmutable $month): array => [
