@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ManagerParent;
 use App\Models\License;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class LicenseController extends BaseManagerParentController
 {
@@ -91,6 +92,40 @@ class LicenseController extends BaseManagerParentController
         ]);
     }
 
+    public function destroy(Request $request, License $license): JsonResponse
+    {
+        $resolved = $this->resolveTenantLicense($request, $license);
+
+        if ($resolved->status === 'active') {
+            return response()->json([
+                'message' => 'Cannot delete an active license. Deactivate it first.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $licenseId = $resolved->id;
+        $biosId = $resolved->bios_id;
+        $customerId = $resolved->customer_id;
+        $programId = $resolved->program_id;
+
+        $resolved->delete();
+
+        $this->logActivity(
+            $request,
+            'license.delete',
+            sprintf('Deleted license #%d for BIOS %s.', $licenseId, $biosId),
+            [
+                'license_id' => $licenseId,
+                'customer_id' => $customerId,
+                'program_id' => $programId,
+                'bios_id' => $biosId,
+            ],
+        );
+
+        return response()->json([
+            'message' => 'License deleted successfully.',
+        ]);
+    }
+
     private function resolveTenantLicense(Request $request, License $license): License
     {
         abort_unless((int) $license->tenant_id === $this->currentTenantId($request), 404);
@@ -121,4 +156,3 @@ class LicenseController extends BaseManagerParentController
         ];
     }
 }
-

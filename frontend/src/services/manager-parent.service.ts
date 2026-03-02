@@ -157,6 +157,10 @@ export const managerParentService = {
     const { data } = await api.get<PaginatedResponse<LicenseSummary>>('/licenses', { params })
     return data
   },
+  async deleteLicense(id: number) {
+    const { data } = await api.delete<{ message: string }>(`/licenses/${id}`)
+    return data
+  },
   async getLicensesExpiring() {
     const { data } = await api.get<{ data: { day1: number; day3: number; day7: number } }>('/licenses/expiring')
     return data

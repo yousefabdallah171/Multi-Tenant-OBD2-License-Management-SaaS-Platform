@@ -44,6 +44,7 @@ const EMPTY_FORM = {
 }
 const MAX_PRICE = 99_999_999.99
 const MAX_DURATION_DAYS = 36_500
+const MIN_DURATION_DAYS = 1 / 1440
 
 export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLicenseFormProps) {
   const { t } = useTranslation()
@@ -135,14 +136,14 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       nextErrors.bios_id = requiredMessage
     }
 
-    if (form.mode === 'duration' && (durationDays < 0.014 || durationDays > MAX_DURATION_DAYS)) {
+    if (form.mode === 'duration' && (durationDays < MIN_DURATION_DAYS || durationDays > MAX_DURATION_DAYS)) {
       nextErrors.duration = invalidNumberMessage
     }
 
     if (form.mode === 'end_date') {
       if (!form.end_date) {
         nextErrors.end_date = requiredMessage
-      } else if (durationDays < 0.014 || durationDays > MAX_DURATION_DAYS) {
+      } else if (durationDays < MIN_DURATION_DAYS || durationDays > MAX_DURATION_DAYS) {
         nextErrors.end_date = invalidNumberMessage
       }
     }

@@ -25,7 +25,7 @@ class LicenseController extends Controller
             'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9]+$/'],
             'bios_id' => ['required', 'string', 'max:255'],
-            'duration_days' => ['required', 'numeric', 'min:0.014', 'max:36500'],
+            'duration_days' => ['required', 'numeric', 'min:0.001', 'max:36500'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
         ]);
 
@@ -67,7 +67,7 @@ class LicenseController extends Controller
     public function renew(Request $request, License $license): JsonResponse
     {
         $validated = $request->validate([
-            'duration_days' => ['required', 'numeric', 'min:0.014', 'max:36500'],
+            'duration_days' => ['required', 'numeric', 'min:0.001', 'max:36500'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
         ]);
 
@@ -95,7 +95,7 @@ class LicenseController extends Controller
     {
         $validated = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
-            'duration_days' => ['required', 'numeric', 'min:0.014', 'max:36500'],
+            'duration_days' => ['required', 'numeric', 'min:0.001', 'max:36500'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
         ]);
 

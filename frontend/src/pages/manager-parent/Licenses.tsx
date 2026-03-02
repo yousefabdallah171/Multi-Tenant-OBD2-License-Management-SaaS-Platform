@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, RotateCw, ShieldOff } from 'lucide-react'
+import { Eye, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -39,6 +39,7 @@ export function LicensesPage() {
   const [renewUnit, setRenewUnit] = useState<DurationUnit>('days')
   const [renewPrice, setRenewPrice] = useState('0')
   const [deactivateTarget, setDeactivateTarget] = useState<LicenseSummary | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<LicenseSummary | null>(null)
 
   const licensesQuery = useQuery({
     queryKey: ['manager-parent', 'licenses', page, perPage, search, status, resellerId],
@@ -114,6 +115,16 @@ export function LicensesPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (licenseId: number) => managerParentService.deleteLicense(licenseId),
+    onSuccess: (response) => {
+      toast.success(response.message ?? t('common.saved'))
+      setDeleteTarget(null)
+      invalidate(queryClient)
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
+  })
+
   const rows = licensesQuery.data?.data ?? []
   const visibleIds = rows.map((row) => row.id)
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id))
@@ -160,6 +171,10 @@ export function LicensesPage() {
           <Button type="button" size="sm" variant="ghost" onClick={() => setDeactivateTarget(row)}>
             <ShieldOff className="me-1 h-4 w-4" />
             {t('common.deactivate')}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(row)} disabled={row.status === 'active'}>
+            <Trash2 className="me-1 h-4 w-4" />
+            {t('common.delete')}
           </Button>
         </div>
       ),
@@ -268,6 +283,24 @@ export function LicensesPage() {
         onConfirm={() => {
           if (deactivateTarget) {
             deactivateMutation.mutate(deactivateTarget.id)
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+          }
+        }}
+        title={t('common.delete')}
+        description={deleteTarget ? `${deleteTarget.customer_name ?? '-'} • ${deleteTarget.bios_id}` : undefined}
+        confirmLabel={t('common.delete')}
+        isDestructive
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteMutation.mutate(deleteTarget.id)
           }
         }}
       />

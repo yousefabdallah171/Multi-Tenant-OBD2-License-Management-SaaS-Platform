@@ -1241,6 +1241,7 @@
     "externalApiKeyPlaceholder": "مثال: L9H2F7Q8XK6M4A",
     "externalSoftwareIdPlaceholder": "مثال: 8",
     "externalApiBaseUrlPlaceholder": "مثال: http://72.60.69.185",
+    "externalApiBaseUrlReplacePlaceholder": "اتركه فارغًا للاحتفاظ بالرابط الحالي",
     "externalLogsEndpointPlaceholder": "مثال: apilogs",
     "apiConfigured": "تم إعداد API",
     "apiNotConfigured": "لا يوجد مفتاح API",

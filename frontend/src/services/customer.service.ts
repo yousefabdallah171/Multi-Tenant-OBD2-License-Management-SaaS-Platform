@@ -20,6 +20,10 @@ export const customerService = {
     const { data } = await api.get<{ data: CustomerDetails }>(`/customers/${id}`)
     return data
   },
+  async remove(id: number) {
+    const { data } = await api.delete<{ message: string }>(`/customers/${id}`)
+    return data
+  },
 }
 
 export const customerPortalService = {

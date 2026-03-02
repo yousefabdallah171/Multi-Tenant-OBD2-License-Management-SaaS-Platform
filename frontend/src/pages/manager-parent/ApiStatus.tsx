@@ -76,12 +76,7 @@ export function ApiStatusPage() {
         <CardHeader>
           <CardTitle>{t('managerParent.pages.apiStatus.summaryTitle')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-2xl bg-slate-100 p-4 dark:bg-slate-900">
-            <span>{t('managerParent.pages.apiStatus.endpoint')}</span>
-            <code>{status?.external_url ?? '—'}</code>
-          </div>
-          <div className="flex items-center justify-between rounded-2xl bg-slate-100 p-4 dark:bg-slate-900">
+        <CardContent className="space-y-4">          <div className="flex items-center justify-between rounded-2xl bg-slate-100 p-4 dark:bg-slate-900">
             <span>{t('software.externalSoftwareId')}</span>
             <code>{status?.software_id ?? '-'}</code>
           </div>
@@ -97,3 +92,5 @@ export function ApiStatusPage() {
     </div>
   )
 }
+
+

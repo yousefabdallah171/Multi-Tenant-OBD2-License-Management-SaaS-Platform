@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, RotateCw, ShieldOff } from 'lucide-react'
+import { Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -64,6 +64,7 @@ export function CustomersPage() {
   const [renewUnit, setRenewUnit] = useState<DurationUnit>('days')
   const [renewPrice, setRenewPrice] = useState('')
   const [deactivateTarget, setDeactivateTarget] = useState<CustomerSummary | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<CustomerSummary | null>(null)
 
   const customersQuery = useQuery({
     queryKey: ['manager-parent', 'customers', page, perPage, search, status, resellerId, programId],
@@ -130,6 +131,19 @@ export function CustomersPage() {
     onError: () => toast.error(t('common.error')),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (customerId: number) => customerService.remove(customerId),
+    onSuccess: (response) => {
+      toast.success(response.message ?? t('common.saved'))
+      setDeleteTarget(null)
+      invalidate(queryClient)
+    },
+    onError: (error: unknown) => {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(message ?? t('common.error'))
+    },
+  })
+
   const columns = useMemo<Array<DataTableColumn<CustomerSummary>>>(() => [
     {
       key: 'name',
@@ -163,6 +177,10 @@ export function CustomersPage() {
           <Button type="button" size="sm" variant="ghost" onClick={() => setDeactivateTarget(row)} disabled={!row.license_id}>
             <ShieldOff className="me-1 h-4 w-4" />
             {t('common.deactivate')}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(row)}>
+            <Trash2 className="me-1 h-4 w-4" />
+            {t('common.delete')}
           </Button>
         </div>
       ),
@@ -316,6 +334,24 @@ export function CustomersPage() {
         onConfirm={() => {
           if (deactivateTarget?.license_id) {
             deactivateMutation.mutate(deactivateTarget.license_id)
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+          }
+        }}
+        title={t('common.delete')}
+        description={deleteTarget ? `${deleteTarget.name} (${deleteTarget.email ?? '-'})` : undefined}
+        confirmLabel={t('common.delete')}
+        isDestructive
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteMutation.mutate(deleteTarget.id)
           }
         }}
       />

@@ -140,9 +140,11 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
 
         Route::get('/customers', [ManagerParentCustomerController::class, 'index']);
         Route::get('/customers/{user}', [ManagerParentCustomerController::class, 'show']);
+        Route::delete('/customers/{user}', [ManagerParentCustomerController::class, 'destroy']);
         Route::get('/licenses', [ManagerParentLicenseController::class, 'index']);
         Route::get('/licenses/expiring', [ManagerParentLicenseController::class, 'expiring']);
         Route::get('/licenses/{license}', [ManagerParentLicenseController::class, 'show']);
+        Route::delete('/licenses/{license}', [ManagerParentLicenseController::class, 'destroy']);
 
         Route::get('/settings', [ManagerParentSettingsController::class, 'index']);
         Route::put('/settings', [ManagerParentSettingsController::class, 'update']);

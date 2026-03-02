@@ -216,7 +216,7 @@ class ProgramController extends BaseManagerParentController
             'icon' => $program->icon ? Storage::disk('public')->url($program->icon) : null,
             'has_external_api' => (bool) $program->has_external_api,
             'external_software_id' => $program->external_software_id,
-            'external_api_base_url' => $program->external_api_base_url,
+            'external_api_base_url' => null,
             'external_logs_endpoint' => $this->normalizeExternalLogsEndpoint($program->external_logs_endpoint),
             'status' => $program->status,
             'licenses_sold' => (int) ($program->total_licenses_count ?? 0),

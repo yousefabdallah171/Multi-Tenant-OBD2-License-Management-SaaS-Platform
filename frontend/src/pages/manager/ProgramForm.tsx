@@ -60,6 +60,7 @@ export function ProgramFormPage() {
   const editingId = id ? Number(id) : null
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [showApiKey, setShowApiKey] = useState(false)
+  const [showApiBaseUrl, setShowApiBaseUrl] = useState(false)
   const [hasConfiguredApi, setHasConfiguredApi] = useState(false)
 
   const programQuery = useQuery({
@@ -89,7 +90,7 @@ export function ProgramFormPage() {
       icon: program.icon ?? '',
       external_api_key: '',
       external_software_id: program.external_software_id ? String(program.external_software_id) : '',
-      external_api_base_url: program.external_api_base_url ?? '',
+      external_api_base_url: '',
       external_logs_endpoint: program.external_logs_endpoint || 'apilogs',
     })
   }, [programQuery.data])
@@ -113,12 +114,15 @@ export function ProgramFormPage() {
         icon: form.icon.trim() || null,
         active: form.status === 'active',
         external_software_id: form.external_software_id.trim() ? Number(form.external_software_id) : null,
-        external_api_base_url: form.external_api_base_url.trim() || null,
         external_logs_endpoint: form.external_logs_endpoint.trim() || 'apilogs',
       }
 
       if (form.external_api_key.trim()) {
         payload.external_api_key = form.external_api_key.trim()
+      }
+
+      if (form.external_api_base_url.trim()) {
+        payload.external_api_base_url = form.external_api_base_url.trim()
       }
 
       if (editingId) {
@@ -174,12 +178,17 @@ export function ProgramFormPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
             </Field>
             <Field label={t('software.externalApiBaseUrl')}>
-              <Input
-                type="url"
-                placeholder={t('software.externalApiBaseUrlPlaceholder')}
-                value={form.external_api_base_url}
-                onChange={(event) => setForm((current) => ({ ...current, external_api_base_url: event.target.value }))}
-              />
+              <div className="flex gap-2">
+                <Input
+                  type={showApiBaseUrl ? 'url' : 'password'}
+                  placeholder={editingId ? t('software.externalApiBaseUrlReplacePlaceholder') : t('software.externalApiBaseUrlPlaceholder')}
+                  value={form.external_api_base_url}
+                  onChange={(event) => setForm((current) => ({ ...current, external_api_base_url: event.target.value }))}
+                />
+                <Button type="button" variant="outline" size="icon" onClick={() => setShowApiBaseUrl((value) => !value)}>
+                  {showApiBaseUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiBaseUrlHint')}</p>
             </Field>
             <Field label={t('software.externalLogsEndpoint')}>

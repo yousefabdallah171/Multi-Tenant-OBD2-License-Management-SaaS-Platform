@@ -1238,6 +1238,7 @@
     "externalApiKeyPlaceholder": "Example: L9H2F7Q8XK6M4A",
     "externalSoftwareIdPlaceholder": "Example: 8",
     "externalApiBaseUrlPlaceholder": "Example: http://72.60.69.185",
+    "externalApiBaseUrlReplacePlaceholder": "Leave blank to keep existing base URL",
     "externalLogsEndpointPlaceholder": "Example: apilogs",
     "apiConfigured": "API Configured",
     "apiNotConfigured": "No API Key Set",

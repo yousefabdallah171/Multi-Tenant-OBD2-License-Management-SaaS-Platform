@@ -35,7 +35,6 @@ export function ApiStatusPage() {
   })
 
   const columns: Array<DataTableColumn<ApiEndpointStatus>> = [
-    { key: 'endpoint', label: t('superAdmin.pages.apiStatus.endpoint'), sortable: true, sortValue: (row) => row.endpoint, render: (row) => <code>{row.endpoint}</code> },
     { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
     { key: 'code', label: t('superAdmin.pages.logs.statusCode'), sortable: true, sortValue: (row) => row.status_code ?? 0, render: (row) => row.status_code ?? '-' },
     { key: 'last', label: t('common.lastChecked'), sortable: true, sortValue: (row) => row.last_checked_at ?? '', render: (row) => row.last_checked_at ?? '-' },
