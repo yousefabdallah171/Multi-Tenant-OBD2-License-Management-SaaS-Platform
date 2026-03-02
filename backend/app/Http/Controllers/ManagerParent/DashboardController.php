@@ -11,54 +11,128 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class DashboardController extends BaseManagerParentController
 {
     public function dashboard(Request $request): JsonResponse
     {
+        $tenantId = $this->currentTenantId($request);
+
         return response()
             ->json([
-                'stats' => $this->statsData($request),
-                'revenueChart' => $this->revenueChartData($request),
-                'expiryForecast' => $this->expiryForecastData($request),
-                'teamPerformance' => $this->teamPerformanceData($request),
-                'conflictRate' => $this->conflictRateData($request),
+                'stats' => $this->safeResolve(
+                    fn (): array => $this->statsData($request),
+                    $this->defaultStatsData(),
+                    'stats',
+                    $tenantId,
+                ),
+                'revenueChart' => $this->safeResolve(
+                    fn (): array => $this->revenueChartData($request),
+                    $this->defaultRevenueChartData(),
+                    'revenue_chart',
+                    $tenantId,
+                ),
+                'expiryForecast' => $this->safeResolve(
+                    fn (): array => $this->expiryForecastData($request),
+                    $this->defaultExpiryForecastData(),
+                    'expiry_forecast',
+                    $tenantId,
+                ),
+                'teamPerformance' => $this->safeResolve(
+                    fn (): array => $this->teamPerformanceData($request),
+                    [],
+                    'team_performance',
+                    $tenantId,
+                ),
+                'conflictRate' => $this->safeResolve(
+                    fn (): array => $this->conflictRateData($request),
+                    $this->defaultConflictRateData(),
+                    'conflict_rate',
+                    $tenantId,
+                ),
             ])
             ->header('Cache-Control', 'private, max-age=60');
     }
 
     public function stats(Request $request): JsonResponse
     {
+        $tenantId = $this->currentTenantId($request);
+
         return response()
-            ->json(['stats' => $this->statsData($request)])
+            ->json([
+                'stats' => $this->safeResolve(
+                    fn (): array => $this->statsData($request),
+                    $this->defaultStatsData(),
+                    'stats',
+                    $tenantId,
+                ),
+            ])
             ->header('Cache-Control', 'private, max-age=300');
     }
 
     public function revenueChart(Request $request): JsonResponse
     {
+        $tenantId = $this->currentTenantId($request);
+
         return response()
-            ->json(['data' => $this->revenueChartData($request)])
+            ->json([
+                'data' => $this->safeResolve(
+                    fn (): array => $this->revenueChartData($request),
+                    $this->defaultRevenueChartData(),
+                    'revenue_chart',
+                    $tenantId,
+                ),
+            ])
             ->header('Cache-Control', 'private, max-age=60');
     }
 
     public function expiryForecast(Request $request): JsonResponse
     {
+        $tenantId = $this->currentTenantId($request);
+
         return response()
-            ->json(['data' => $this->expiryForecastData($request)])
+            ->json([
+                'data' => $this->safeResolve(
+                    fn (): array => $this->expiryForecastData($request),
+                    $this->defaultExpiryForecastData(),
+                    'expiry_forecast',
+                    $tenantId,
+                ),
+            ])
             ->header('Cache-Control', 'private, max-age=300');
     }
 
     public function teamPerformance(Request $request): JsonResponse
     {
+        $tenantId = $this->currentTenantId($request);
+
         return response()
-            ->json(['data' => $this->teamPerformanceData($request)])
+            ->json([
+                'data' => $this->safeResolve(
+                    fn (): array => $this->teamPerformanceData($request),
+                    [],
+                    'team_performance',
+                    $tenantId,
+                ),
+            ])
             ->header('Cache-Control', 'private, max-age=60');
     }
 
     public function conflictRate(Request $request): JsonResponse
     {
+        $tenantId = $this->currentTenantId($request);
+
         return response()
-            ->json(['data' => $this->conflictRateData($request)])
+            ->json([
+                'data' => $this->safeResolve(
+                    fn (): array => $this->conflictRateData($request),
+                    $this->defaultConflictRateData(),
+                    'conflict_rate',
+                    $tenantId,
+                ),
+            ])
             ->header('Cache-Control', 'private, max-age=60');
     }
 
@@ -237,5 +311,86 @@ class DashboardController extends BaseManagerParentController
     private function cacheKey(int $tenantId, string $suffix): string
     {
         return sprintf('dashboard:manager-parent:tenant:%d:%s', $tenantId, $suffix);
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $resolver
+     * @param  T  $fallback
+     * @return T
+     */
+    private function safeResolve(callable $resolver, mixed $fallback, string $section, int $tenantId): mixed
+    {
+        try {
+            return $resolver();
+        } catch (Throwable $exception) {
+            Log::warning('manager-parent-dashboard-fallback', [
+                'tenant_id' => $tenantId,
+                'section' => $section,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return $fallback;
+        }
+    }
+
+    /**
+     * @return array<string, int|float>
+     */
+    private function defaultStatsData(): array
+    {
+        return [
+            'users' => 0,
+            'programs' => 0,
+            'licenses' => 0,
+            'active_licenses' => 0,
+            'revenue' => 0,
+            'team_members' => 0,
+            'total_customers' => 0,
+            'monthly_revenue' => 0,
+        ];
+    }
+
+    /**
+     * @return array<int, array{month: string, revenue: float}>
+     */
+    private function defaultRevenueChartData(): array
+    {
+        return collect(range(11, 0))
+            ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset))
+            ->map(fn (CarbonImmutable $month): array => [
+                'month' => $month->format('M Y'),
+                'revenue' => 0,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{range: string, count: int}>
+     */
+    private function defaultExpiryForecastData(): array
+    {
+        return [
+            ['range' => '0-30', 'count' => 0],
+            ['range' => '31-60', 'count' => 0],
+            ['range' => '61-90', 'count' => 0],
+        ];
+    }
+
+    /**
+     * @return array<int, array{month: string, count: int}>
+     */
+    private function defaultConflictRateData(): array
+    {
+        return collect(range(11, 0))
+            ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset))
+            ->map(fn (CarbonImmutable $month): array => [
+                'month' => $month->format('M Y'),
+                'count' => 0,
+            ])
+            ->values()
+            ->all();
     }
 }

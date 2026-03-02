@@ -8,46 +8,66 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class DashboardController extends BaseManagerController
 {
     public function dashboard(Request $request): JsonResponse
     {
+        $managerId = $this->currentManager($request)->id;
+
         return response()
             ->json([
-                'stats' => $this->statsData($request),
-                'activationsChart' => $this->activationsChartData($request),
-                'revenueChart' => $this->revenueChartData($request),
-                'recentActivity' => $this->recentActivityData($request),
+                'stats' => $this->safeResolve(fn (): array => $this->statsData($request), $this->defaultStatsData(), 'stats', $managerId),
+                'activationsChart' => $this->safeResolve(fn (): array => $this->activationsChartData($request), $this->defaultActivationsChartData(), 'activations_chart', $managerId),
+                'revenueChart' => $this->safeResolve(fn (): array => $this->revenueChartData($request), [], 'revenue_chart', $managerId),
+                'recentActivity' => $this->safeResolve(fn (): array => $this->recentActivityData($request), [], 'recent_activity', $managerId),
             ])
             ->header('Cache-Control', 'private, max-age=60');
     }
 
     public function stats(Request $request): JsonResponse
     {
+        $managerId = $this->currentManager($request)->id;
+
         return response()
-            ->json(['stats' => $this->statsData($request)])
+            ->json([
+                'stats' => $this->safeResolve(fn (): array => $this->statsData($request), $this->defaultStatsData(), 'stats', $managerId),
+            ])
             ->header('Cache-Control', 'private, max-age=300');
     }
 
     public function activationsChart(Request $request): JsonResponse
     {
+        $managerId = $this->currentManager($request)->id;
+
         return response()
-            ->json(['data' => $this->activationsChartData($request)])
+            ->json([
+                'data' => $this->safeResolve(fn (): array => $this->activationsChartData($request), $this->defaultActivationsChartData(), 'activations_chart', $managerId),
+            ])
             ->header('Cache-Control', 'private, max-age=60');
     }
 
     public function revenueChart(Request $request): JsonResponse
     {
+        $managerId = $this->currentManager($request)->id;
+
         return response()
-            ->json(['data' => $this->revenueChartData($request)])
+            ->json([
+                'data' => $this->safeResolve(fn (): array => $this->revenueChartData($request), [], 'revenue_chart', $managerId),
+            ])
             ->header('Cache-Control', 'private, max-age=60');
     }
 
     public function recentActivity(Request $request): JsonResponse
     {
+        $managerId = $this->currentManager($request)->id;
+
         return response()
-            ->json(['data' => $this->recentActivityData($request)])
+            ->json([
+                'data' => $this->safeResolve(fn (): array => $this->recentActivityData($request), [], 'recent_activity', $managerId),
+            ])
             ->header('Cache-Control', 'private, max-age=60');
     }
 
@@ -191,5 +211,57 @@ class DashboardController extends BaseManagerController
     private function cacheKey(int $managerId, string $suffix): string
     {
         return sprintf('dashboard:manager:%d:%s', $managerId, $suffix);
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $resolver
+     * @param  T  $fallback
+     * @return T
+     */
+    private function safeResolve(callable $resolver, mixed $fallback, string $section, int $managerId): mixed
+    {
+        try {
+            return $resolver();
+        } catch (Throwable $exception) {
+            Log::warning('manager-dashboard-fallback', [
+                'manager_id' => $managerId,
+                'section' => $section,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return $fallback;
+        }
+    }
+
+    /**
+     * @return array<string, int|float>
+     */
+    private function defaultStatsData(): array
+    {
+        return [
+            'team_resellers' => 0,
+            'team_customers' => 0,
+            'active_licenses' => 0,
+            'team_revenue' => 0,
+            'monthly_activations' => 0,
+        ];
+    }
+
+    /**
+     * @return array<int, array{month: string, count: int, revenue: int}>
+     */
+    private function defaultActivationsChartData(): array
+    {
+        return collect(range(11, 0))
+            ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset))
+            ->map(fn (CarbonImmutable $month): array => [
+                'month' => $month->format('M Y'),
+                'count' => 0,
+                'revenue' => 0,
+            ])
+            ->values()
+            ->all();
     }
 }

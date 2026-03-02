@@ -86,8 +86,8 @@ api.interceptors.response.use(
       window.location.assign(routePaths.errors.accessDenied(resolveCurrentLanguage()))
     }
 
-    if (status >= 500 && typeof window !== 'undefined' && !isAuthLoginRequest && !window.location.pathname.includes('/server-error')) {
-      window.location.assign(routePaths.errors.serverError(resolveCurrentLanguage()))
+    if (status >= 500 && typeof window !== 'undefined' && !isAuthLoginRequest) {
+      toast.error(i18n.t('common.errorPages.serverError.description'))
     }
 
     if (!error?.response && typeof window !== 'undefined') {
