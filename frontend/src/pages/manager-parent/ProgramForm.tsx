@@ -27,6 +27,8 @@ interface FormState {
   status: 'active' | 'inactive'
   external_api_key: string
   external_software_id: string
+  external_api_base_url: string
+  external_logs_endpoint: string
 }
 
 const EMPTY_FORM: FormState = {
@@ -42,6 +44,8 @@ const EMPTY_FORM: FormState = {
   status: 'active',
   external_api_key: '',
   external_software_id: '',
+  external_api_base_url: '',
+  external_logs_endpoint: 'apilogs',
 }
 
 export function ProgramFormPage() {
@@ -80,11 +84,17 @@ export function ProgramFormPage() {
       status: program.status,
       external_api_key: '',
       external_software_id: program.external_software_id ? String(program.external_software_id) : '',
+      external_api_base_url: program.external_api_base_url ?? '',
+      external_logs_endpoint: program.external_logs_endpoint || 'apilogs',
     })
   }, [programQuery.data])
 
   const mutation = useMutation({
     mutationFn: async () => {
+      if (!editingId && !form.external_api_base_url.trim()) {
+        throw new Error(t('software.externalApiBaseUrlRequired'))
+      }
+
       const payload: ProgramPayload = {
         name: form.name.trim(),
         description: form.description.trim() || null,
@@ -97,6 +107,8 @@ export function ProgramFormPage() {
         base_price: Number(form.base_price),
         status: form.status,
         external_software_id: form.external_software_id.trim() ? Number(form.external_software_id) : null,
+        external_api_base_url: form.external_api_base_url.trim() || null,
+        external_logs_endpoint: form.external_logs_endpoint.trim() || 'apilogs',
       }
 
       if (form.external_api_key.trim()) {
@@ -108,6 +120,9 @@ export function ProgramFormPage() {
       }
 
       return programService.create(payload)
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : t('common.tryAgain'))
     },
     onSuccess: () => {
       toast.success(editingId ? t('managerParent.pages.softwareManagement.updateSuccess') : t('managerParent.pages.softwareManagement.createSuccess'))
@@ -151,6 +166,23 @@ export function ProgramFormPage() {
             <Field label={t('software.externalSoftwareId')}>
               <Input type="number" min={1} placeholder="e.g. 8" value={form.external_software_id} onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))} />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
+            </Field>
+            <Field label={t('software.externalApiBaseUrl')}>
+              <Input
+                type="url"
+                placeholder="http://72.60.69.185"
+                value={form.external_api_base_url}
+                onChange={(event) => setForm((current) => ({ ...current, external_api_base_url: event.target.value }))}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiBaseUrlHint')}</p>
+            </Field>
+            <Field label={t('software.externalLogsEndpoint')}>
+              <Input
+                placeholder="apilogs"
+                value={form.external_logs_endpoint}
+                onChange={(event) => setForm((current) => ({ ...current, external_logs_endpoint: event.target.value }))}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.logsEndpointHint')}</p>
             </Field>
             <Field label={t('software.externalApiKey')}>
               <div className="flex gap-2">

@@ -21,6 +21,8 @@ export interface ProgramPayload {
   icon?: File | string | null
   external_api_key?: string | null
   external_software_id?: number | null
+  external_api_base_url?: string | null
+  external_logs_endpoint?: string | null
   status?: 'active' | 'inactive'
 }
 

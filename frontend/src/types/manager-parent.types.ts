@@ -70,6 +70,8 @@ export interface ProgramSummary {
   icon: string | null
   has_external_api: boolean
   external_software_id: number | null
+  external_api_base_url: string | null
+  external_logs_endpoint: string
   status: 'active' | 'inactive'
   licenses_sold: number
   active_licenses_count: number

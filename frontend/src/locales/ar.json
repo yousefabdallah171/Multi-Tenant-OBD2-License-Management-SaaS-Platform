@@ -1231,13 +1231,18 @@
   "software": {
     "externalApiKey": "مفتاح API الخارجي",
     "externalSoftwareId": "معرف البرنامج الخارجي",
+    "externalApiBaseUrl": "رابط API الخارجي الأساسي",
+    "externalLogsEndpoint": "مسار سجلات API الخارجي",
     "externalApiKeyRequired": "مفتاح API الخارجي مطلوب للبرامج الجديدة.",
     "externalSoftwareIdRequired": "معرف البرنامج الخارجي مطلوب للبرامج الجديدة.",
+    "externalApiBaseUrlRequired": "رابط API الخارجي الأساسي مطلوب للبرامج الجديدة.",
     "apiKeyHint": "مشفر ومحفوظ بأمان. لن يظهر مرة أخرى بعد الحفظ.",
     "apiKeyReplacePlaceholder": "اتركه فارغًا للاحتفاظ بالمفتاح الحالي",
     "apiConfigured": "تم إعداد API",
     "apiNotConfigured": "لا يوجد مفتاح API",
     "noApiWarning": "هذا البرنامج لا يحتوي على API خارجي. التفعيل سيفشل.",
+    "apiBaseUrlHint": "يُستخدم كعنوان أساسي لاستدعاءات API الخارجية، مثال: http://72.60.69.185",
+    "logsEndpointHint": "المسار فقط بدون عنوان الخادم. مثال: apilogs",
     "apiKeyUrlHint": "يُستخدم كالتالي: /apiuseradd/[KEY]/username/bios",
     "softwareIdUrlHint": "يُستخدم كالتالي: /apilogs/[ID] و /apiusers/[ID]"
   },

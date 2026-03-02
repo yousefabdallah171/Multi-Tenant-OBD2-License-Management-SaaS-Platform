@@ -51,7 +51,7 @@ class BiosActivationService
             $externalUsername = $biosId;
         }
 
-        $response = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId);
+        $response = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId, $program->external_api_base_url);
 
         BiosAccessLog::query()->create([
             'bios_id' => $biosId,

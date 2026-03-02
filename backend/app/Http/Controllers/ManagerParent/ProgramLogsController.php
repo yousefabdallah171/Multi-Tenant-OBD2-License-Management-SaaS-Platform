@@ -29,7 +29,11 @@ class ProgramLogsController extends BaseManagerParentController
             return $guard;
         }
 
-        $response = $this->externalApiService->getProgramLogs((int) $resolved->external_software_id);
+        $response = $this->externalApiService->getProgramLogs(
+            (int) $resolved->external_software_id,
+            $resolved->external_api_base_url,
+            (string) ($resolved->external_logs_endpoint ?: 'apilogs'),
+        );
         $externalOk = (bool) ($response['success'] ?? false);
         $licensesMap = License::query()
             ->where('tenant_id', $this->currentTenantId($request))
@@ -131,7 +135,7 @@ class ProgramLogsController extends BaseManagerParentController
             return $guard;
         }
 
-        $response = $this->externalApiService->getActiveUsers((int) $resolved->external_software_id);
+        $response = $this->externalApiService->getActiveUsers((int) $resolved->external_software_id, $resolved->external_api_base_url);
         $externalOk = (bool) ($response['success'] ?? false);
 
         return response()->json([
@@ -149,7 +153,7 @@ class ProgramLogsController extends BaseManagerParentController
             return $guard;
         }
 
-        $response = $this->externalApiService->getSoftwareStats((int) $resolved->external_software_id);
+        $response = $this->externalApiService->getSoftwareStats((int) $resolved->external_software_id, $resolved->external_api_base_url);
         $externalOk = (bool) ($response['success'] ?? false);
 
         return response()->json([

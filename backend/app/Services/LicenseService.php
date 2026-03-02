@@ -56,7 +56,7 @@ class LicenseService
 
         $this->assertBiosAvailable($reseller, $program, $biosId);
 
-        $apiResponse = $this->externalApiService->activateUser($apiKey, $customerName, $biosId);
+        $apiResponse = $this->externalApiService->activateUser($apiKey, $customerName, $biosId, $program->external_api_base_url);
 
         $this->logBiosAccess($reseller, $biosId, 'activate', [
             'program_id' => $program->id,
@@ -166,7 +166,7 @@ class LicenseService
 
         if ($apiKey !== null) {
             $externalUsername = $license->external_username ?: $license->bios_id;
-            $apiResponse = $this->externalApiService->deactivateUser($apiKey, $externalUsername);
+            $apiResponse = $this->externalApiService->deactivateUser($apiKey, $externalUsername, $program?->external_api_base_url);
         }
 
         $this->logBiosAccess($reseller, $license->bios_id, 'deactivate', [

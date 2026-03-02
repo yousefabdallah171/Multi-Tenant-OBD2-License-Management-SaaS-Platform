@@ -6,8 +6,10 @@ use App\Enums\UserRole;
 use App\Models\Program;
 use App\Models\User;
 use App\Services\BiosActivationService;
+use App\Support\ExternalApiSecurity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 use Illuminate\Validation\ValidationException;
 
 class SoftwareController extends BaseManagerController
@@ -65,6 +67,14 @@ class SoftwareController extends BaseManagerController
             'status' => ['nullable', 'in:active,inactive'],
             'external_api_key' => ['nullable', 'string', 'max:100'],
             'external_software_id' => ['nullable', 'integer', 'min:1'],
+            'external_api_base_url' => ['nullable', 'url', 'max:1000', function (string $attribute, mixed $value, \Closure $fail): void {
+                try {
+                    ExternalApiSecurity::assertSafeBaseUrl((string) $value);
+                } catch (InvalidArgumentException $exception) {
+                    $fail($exception->getMessage());
+                }
+            }],
+            'external_logs_endpoint' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]+$/'],
         ]);
 
         $program = Program::query()->create([
@@ -81,6 +91,8 @@ class SoftwareController extends BaseManagerController
             'icon' => $validated['icon'] ?? null,
             'status' => $this->resolveStatus($validated),
             'external_software_id' => $validated['external_software_id'] ?? null,
+            'external_api_base_url' => $validated['external_api_base_url'] ?? null,
+            'external_logs_endpoint' => $this->normalizeExternalLogsEndpoint($validated['external_logs_endpoint'] ?? null),
             'has_external_api' => ! empty($validated['external_api_key']),
         ]);
 
@@ -115,6 +127,14 @@ class SoftwareController extends BaseManagerController
             'status' => ['nullable', 'in:active,inactive'],
             'external_api_key' => ['nullable', 'string', 'max:100'],
             'external_software_id' => ['nullable', 'integer', 'min:1'],
+            'external_api_base_url' => ['nullable', 'url', 'max:1000', function (string $attribute, mixed $value, \Closure $fail): void {
+                try {
+                    ExternalApiSecurity::assertSafeBaseUrl((string) $value);
+                } catch (InvalidArgumentException $exception) {
+                    $fail($exception->getMessage());
+                }
+            }],
+            'external_logs_endpoint' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]+$/'],
         ]);
 
         if (array_key_exists('active', $validated) || array_key_exists('status', $validated)) {
@@ -125,12 +145,20 @@ class SoftwareController extends BaseManagerController
             $target->external_software_id = $validated['external_software_id'];
         }
 
+        if (array_key_exists('external_api_base_url', $validated)) {
+            $target->external_api_base_url = $validated['external_api_base_url'];
+        }
+
+        if (array_key_exists('external_logs_endpoint', $validated)) {
+            $target->external_logs_endpoint = $this->normalizeExternalLogsEndpoint($validated['external_logs_endpoint']);
+        }
+
         if (! empty($validated['external_api_key'])) {
             $target->setExternalApiKeyAttribute($validated['external_api_key']);
             $target->has_external_api = true;
         }
 
-        unset($validated['external_api_key'], $validated['external_software_id']);
+        unset($validated['external_api_key'], $validated['external_software_id'], $validated['external_api_base_url'], $validated['external_logs_endpoint']);
         unset($validated['active']);
 
         $target->update($validated);
@@ -279,11 +307,24 @@ class SoftwareController extends BaseManagerController
             'icon' => $program->icon,
             'has_external_api' => (bool) $program->has_external_api,
             'external_software_id' => $program->external_software_id,
+            'external_api_base_url' => $program->external_api_base_url,
+            'external_logs_endpoint' => $this->normalizeExternalLogsEndpoint($program->external_logs_endpoint),
             'status' => $program->status,
             'licenses_sold' => (int) ($program->total_licenses_count ?? $program->licenses()->count()),
             'active_licenses_count' => (int) ($program->active_licenses_count ?? $program->licenses()->where('status', 'active')->count()),
             'revenue' => round((float) ($program->total_revenue ?? $program->licenses()->sum('price')), 2),
             'created_at' => $program->created_at?->toIso8601String(),
         ];
+    }
+
+    private function normalizeExternalLogsEndpoint(?string $value): string
+    {
+        $normalized = trim((string) $value, " \t\n\r\0\x0B/");
+
+        if ($normalized === '') {
+            return 'apilogs';
+        }
+
+        return preg_match('/^[A-Za-z0-9_-]+$/', $normalized) === 1 ? $normalized : 'apilogs';
     }
 }
