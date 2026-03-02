@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
+use App\Jobs\ResolveIpGeolocation;
 use App\Mail\SuspiciousLoginMail;
 use App\Models\ActivityLog;
 use App\Models\User;
-use App\Services\GeoIpService;
 use App\Services\LoginSecurityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +18,6 @@ class AuthController extends Controller
 {
     public function __construct(
         private readonly LoginSecurityService $loginSecurity,
-        private readonly GeoIpService $geoIpService,
     ) {
     }
 
@@ -89,24 +88,24 @@ class AuthController extends Controller
             ->where('action', 'login.success')
             ->exists();
 
-        $geo = $this->geoIpService->lookup($ip);
-        $user->ipLogs()->create([
+        $ipLog = $user->ipLogs()->create([
             'tenant_id' => $user->tenant_id,
             'ip_address' => $ip,
-            'country' => $geo['country_name'] ?? null,
-            'city' => $geo['city'] ?? null,
-            'isp' => $geo['isp'] ?? null,
+            'country' => null,
+            'city' => null,
+            'isp' => null,
             'reputation_score' => 'low',
             'action' => 'login.success',
         ]);
+        ResolveIpGeolocation::dispatch((int) $ipLog->id);
 
         if (! $knownIp) {
             try {
                 Mail::to($user->email)->queue(new SuspiciousLoginMail(
                     userEmail: $user->email,
                     ip: $ip,
-                    country: (string) ($geo['country_name'] ?? 'Unknown'),
-                    city: (string) ($geo['city'] ?? ''),
+                    country: 'Unknown',
+                    city: '',
                     device: $this->loginSecurity->summarizeDevice($userAgent),
                     loginTime: now()->toDateTimeString(),
                 ));

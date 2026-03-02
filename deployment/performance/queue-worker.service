@@ -1,0 +1,14 @@
+[Unit]
+Description=License Queue Worker
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+RestartSec=5
+WorkingDirectory=/var/www/obd2sw/backend
+ExecStart=/usr/bin/php artisan queue:work --queue=default --tries=3 --sleep=3 --timeout=120
+
+[Install]
+WantedBy=multi-user.target

@@ -23,28 +23,13 @@ export function DashboardPage() {
   const ActionIcon = isRtl ? ArrowLeft : ArrowRight
 
   const statsQuery = useQuery({
-    queryKey: ['manager', 'dashboard', 'stats'],
-    queryFn: () => managerService.getDashboardStats(),
-  })
-
-  const activationsQuery = useQuery({
-    queryKey: ['manager', 'dashboard', 'activations-chart'],
-    queryFn: () => managerService.getActivationsChart(),
-  })
-
-  const revenueQuery = useQuery({
-    queryKey: ['manager', 'dashboard', 'revenue-chart'],
-    queryFn: () => managerService.getRevenueChart(),
-  })
-
-  const activityQuery = useQuery({
-    queryKey: ['manager', 'dashboard', 'recent-activity'],
-    queryFn: () => managerService.getRecentActivity(),
+    queryKey: ['manager', 'dashboard'],
+    queryFn: () => managerService.getDashboard(),
   })
 
   const stats = statsQuery.data?.stats
-  const recentActivity = activityQuery.data?.data ?? []
-  const activationSeries = (activationsQuery.data?.data ?? []).map((point) => ({
+  const recentActivity = statsQuery.data?.recentActivity ?? []
+  const activationSeries = (statsQuery.data?.activationsChart ?? []).map((point) => ({
     ...point,
     month: point.month ? localizeMonthLabel(point.month, locale) : point.month,
   }))
@@ -81,14 +66,14 @@ export function DashboardPage() {
         <LineChartWidget
           title={t('manager.pages.dashboard.teamActivations')}
           data={activationSeries}
-          isLoading={activationsQuery.isLoading}
+          isLoading={statsQuery.isLoading}
           xKey="month"
           series={[{ key: 'count', label: t('common.activations') }]}
         />
         <BarChartWidget
           title={t('manager.pages.dashboard.teamRevenue')}
-          data={revenueQuery.data?.data ?? []}
-          isLoading={revenueQuery.isLoading}
+          data={statsQuery.data?.revenueChart ?? []}
+          isLoading={statsQuery.isLoading}
           xKey="reseller"
           horizontal
           showLabels
@@ -103,7 +88,7 @@ export function DashboardPage() {
             <CardTitle className="text-lg">{t('manager.pages.dashboard.recentTeamActivity')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {recentActivity.length === 0 && !activityQuery.isLoading ? (
+            {recentActivity.length === 0 && !statsQuery.isLoading ? (
               <EmptyState title={t('manager.pages.dashboard.noTeamActivityTitle')} description={t('manager.pages.dashboard.noTeamActivityDescription')} />
             ) : null}
             {recentActivity.map((entry) => (

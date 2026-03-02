@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Exports\ReportExporter;
+use App\Models\ExportTask;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
+
+class GenerateExportTask implements ShouldQueue
+{
+    use Queueable;
+
+    public function __construct(private readonly string $exportTaskId)
+    {
+    }
+
+    public function handle(ReportExporter $reportExporter): void
+    {
+        $task = ExportTask::query()->find($this->exportTaskId);
+        if (! $task) {
+            return;
+        }
+
+        $task->forceFill([
+            'status' => 'processing',
+            'error_message' => null,
+        ])->save();
+
+        try {
+            $payload = $task->payload ?? [];
+            $sections = $payload['sections'] ?? [];
+            $summary = $payload['summary'] ?? [];
+            $dateRange = $payload['date_range'] ?? null;
+            $lang = $payload['lang'] ?? 'en';
+            $title = $task->title ?? 'Report';
+
+            $binary = $task->format === 'pdf'
+                ? $reportExporter->pdfBinary($title, $sections, $summary, is_string($dateRange) ? $dateRange : null, is_string($lang) ? $lang : 'en')
+                : $reportExporter->csvString($sections);
+
+            $disk = 'local';
+            $path = sprintf('exports/%s/%s', now()->format('Y/m/d'), $task->id.'.'.$task->format);
+            Storage::disk($disk)->put($path, $binary);
+
+            $task->forceFill([
+                'status' => 'completed',
+                'storage_disk' => $disk,
+                'storage_path' => $path,
+                'mime_type' => $task->format === 'pdf' ? 'application/pdf' : 'text/csv',
+                'completed_at' => now(),
+            ])->save();
+        } catch (Throwable $exception) {
+            $task->forceFill([
+                'status' => 'failed',
+                'error_message' => $exception->getMessage(),
+            ])->save();
+        }
+    }
+}

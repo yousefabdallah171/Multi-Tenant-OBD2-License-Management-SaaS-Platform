@@ -151,7 +151,7 @@ name: Test & Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [master]
 
 jobs:
   test:
@@ -189,7 +189,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
 
@@ -206,7 +206,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /var/www/obd2sw
-            git pull origin main
+            git pull origin master
             cd backend && composer install --no-dev --optimize-autoloader
             php artisan migrate --force
             php artisan config:cache
@@ -311,7 +311,7 @@ find $BACKUP_DIR -name "db_*.sql.gz" -mtime +30 -delete
 - [ ] License activation works in production
 - [ ] External API calls succeed through proxy
 - [ ] Frontend loads in < 3 seconds
-- [ ] CI/CD: push to main triggers automated deploy
+- [ ] CI/CD: push to master triggers automated deploy
 - [ ] Automated backups running daily
 - [ ] UptimeRobot monitoring active
 - [ ] No server errors in logs after 1 hour of testing

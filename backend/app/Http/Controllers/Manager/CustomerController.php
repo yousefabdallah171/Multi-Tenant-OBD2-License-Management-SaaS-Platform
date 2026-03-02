@@ -21,8 +21,10 @@ class CustomerController extends BaseManagerController
         $resellerIds = $this->teamResellerIds($request);
 
         $query = $this->teamCustomersQuery($request)
+            ->select(['id', 'tenant_id', 'name', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $resellerIds)
+                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'price', 'activated_at', 'expires_at'])
                 ->with(['program:id,name', 'reseller:id,name'])])
             ->latest();
 
@@ -70,6 +72,7 @@ class CustomerController extends BaseManagerController
 
         $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->whereIn('reseller_id', $resellerIds)
+            ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'price', 'activated_at', 'expires_at'])
             ->with(['program:id,name', 'reseller:id,name'])]);
 
         return response()->json([

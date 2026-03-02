@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
-use App\Exports\ReportExporter;
 use App\Models\License;
 use App\Models\User;
+use App\Services\ExportTaskService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends BaseSuperAdminController
 {
@@ -96,16 +95,28 @@ class ReportController extends BaseSuperAdminController
         return response()->json(['data' => $data]);
     }
 
-    public function exportCsv(Request $request): StreamedResponse
+    public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
     {
         $sections = $this->exportSections($request);
+        $task = $exportTaskService->queue(
+            $request,
+            'csv',
+            'super-admin-reports.csv',
+            'Super Admin Reports',
+            $sections,
+            [],
+            $this->dateRangeLabel($request),
+            $this->reportLanguage($request),
+        );
 
-        return app(ReportExporter::class)->toCsv('super-admin-reports.csv', $sections);
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
-    public function exportPdf(Request $request)
+    public function exportPdf(Request $request, ExportTaskService $exportTaskService): JsonResponse
     {
-        return app(ReportExporter::class)->toPdf(
+        $task = $exportTaskService->queue(
+            $request,
+            'pdf',
             'super-admin-reports.pdf',
             'Super Admin Reports',
             $this->exportSections($request),
@@ -113,6 +124,8 @@ class ReportController extends BaseSuperAdminController
             $this->dateRangeLabel($request),
             $this->reportLanguage($request),
         );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
     private function filteredLicenses(Request $request)

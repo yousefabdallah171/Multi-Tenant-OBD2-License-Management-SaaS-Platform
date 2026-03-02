@@ -1,11 +1,15 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, FileText, History, KeyRound, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users, Wallet } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, Download, FileText, History, KeyRound, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users, Wallet } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
+import { usePwaInstall } from '@/hooks/usePwaInstall'
+import { queryClient } from '@/lib/queryClient'
 import { routePaths } from '@/router/routes'
+import { managerService } from '@/services/manager.service'
+import { managerParentService } from '@/services/manager-parent.service'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { cn } from '@/lib/utils'
 
@@ -86,14 +90,23 @@ export function Sidebar() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { lang, isRtl } = useLanguage()
+  const { canInstall, isInstalled, promptInstall } = usePwaInstall()
   const location = useLocation()
   const collapsed = useSidebarStore((state) => state.collapsed)
   const setCollapsed = useSidebarStore((state) => state.setCollapsed)
+  const [installing, setInstalling] = useState(false)
   const logsChildPaths = useMemo(() => ([
     routePaths.managerParent.activity(lang),
     routePaths.managerParent.logs(lang),
     routePaths.managerParent.apiStatus(lang),
   ]), [lang])
+  const isIos = useMemo(() => {
+    if (typeof navigator === 'undefined') {
+      return false
+    }
+
+    return /iphone|ipad|ipod/i.test(navigator.userAgent)
+  }, [])
   const shouldExpandLogs = user?.role === 'manager_parent' && logsChildPaths.some((path) => location.pathname.startsWith(path))
   const [logsOpen, setLogsOpen] = useState(shouldExpandLogs)
 
@@ -121,6 +134,50 @@ export function Sidebar() {
     { key: 'logs', icon: ScrollText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logs' },
     { key: 'apiStatus', icon: Activity, href: routePaths.managerParent.apiStatus, translationKey: 'managerParent.nav.apiStatus' },
   ]
+
+  const prefetchNavData = (key: string) => {
+    if (user?.role === 'manager_parent') {
+      if (key === 'dashboard') {
+        void queryClient.prefetchQuery({
+          queryKey: ['manager-parent', 'dashboard'],
+          queryFn: () => managerParentService.getDashboard(),
+        })
+      }
+
+      if (key === 'programLogs') {
+        void queryClient.prefetchQuery({
+          queryKey: ['manager-parent', 'programs-with-external-api'],
+          queryFn: () => managerParentService.getProgramsWithExternalApi(),
+          staleTime: Number.POSITIVE_INFINITY,
+          gcTime: 24 * 60 * 60 * 1000,
+        })
+      }
+    }
+
+    if (user?.role === 'manager' && key === 'dashboard') {
+      void queryClient.prefetchQuery({
+        queryKey: ['manager', 'dashboard'],
+        queryFn: () => managerService.getDashboard(),
+      })
+    }
+  }
+
+  const handleInstallClick = async () => {
+    if (!canInstall) {
+      window.alert(isIos ? t('common.installAppIosHint') : t('common.installAppUnavailable'))
+      return
+    }
+
+    setInstalling(true)
+    try {
+      await promptInstall()
+    } finally {
+      setInstalling(false)
+    }
+  }
+
+  const showInstallSection = !isInstalled
+  const showIosHint = isIos && !canInstall
 
   const navContent = (
     <nav className="space-y-2">
@@ -163,6 +220,7 @@ export function Sidebar() {
                         setCollapsed(true)
                       }
                     }}
+                    onMouseEnter={() => prefetchNavData(child.key)}
                   >
                     <ChildIcon className="h-4 w-4 shrink-0" />
                     <span>{childLabel}</span>
@@ -193,12 +251,39 @@ export function Sidebar() {
                 setCollapsed(true)
               }
             }}
+            onMouseEnter={() => prefetchNavData(item.key)}
           >
             <Icon className="h-4 w-4 shrink-0" />
             <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
           </NavLink>
         )
       })}
+
+      {showInstallSection ? (
+        <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-800 lg:hidden">
+          <button
+            type="button"
+            className={cn(
+              'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition',
+              'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+              collapsed && 'justify-center lg:px-0',
+            )}
+            title={t('common.installApp')}
+            onClick={() => void handleInstallClick()}
+            disabled={installing}
+          >
+            <Download className="h-4 w-4 shrink-0" />
+            <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>
+              {installing ? t('common.installing') : t('common.installApp')}
+            </span>
+          </button>
+          {showIosHint ? (
+            <p className={cn('px-3 pt-1 text-xs text-slate-500 dark:text-slate-400', collapsed && 'lg:hidden')}>
+              {t('common.installAppIosHint')}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </nav>
   )
 

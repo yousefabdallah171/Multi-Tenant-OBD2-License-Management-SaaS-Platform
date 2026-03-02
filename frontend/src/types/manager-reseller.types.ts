@@ -19,6 +19,13 @@ export interface ManagerDashboardStats {
   monthly_activations: number
 }
 
+export interface ManagerDashboardPayload {
+  stats: ManagerDashboardStats
+  activationsChart: DashboardSeriesPoint[]
+  revenueChart: DashboardSeriesPoint[]
+  recentActivity: RoleActivityEntry[]
+}
+
 export interface ResellerDashboardStats {
   customers: number
   active_licenses: number

@@ -154,7 +154,7 @@ export function ProgramFormPage() {
             </Field>
             <Field label={t('software.externalApiKey')}>
               <div className="flex gap-2">
-                <Input type={showApiKey ? 'text' : 'password'} maxLength={50} placeholder={editingId ? t('software.apiKeyReplacePlaceholder') : 'e.g. L9H2F7Q8XK6M4A'} value={form.external_api_key} onChange={(event) => setForm((current) => ({ ...current, external_api_key: event.target.value }))} />
+                <Input type={showApiKey ? 'text' : 'password'} maxLength={50} placeholder={editingId ? t('software.apiKeyReplacePlaceholder') : 'e.g. YOUR_EXTERNAL_API_KEY'} value={form.external_api_key} onChange={(event) => setForm((current) => ({ ...current, external_api_key: event.target.value }))} />
                 <Button type="button" variant="outline" size="icon" onClick={() => setShowApiKey((value) => !value)}>
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>

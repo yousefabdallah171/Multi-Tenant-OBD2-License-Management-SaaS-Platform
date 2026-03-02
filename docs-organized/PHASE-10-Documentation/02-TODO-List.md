@@ -9,46 +9,46 @@
 
 ### DOC-0.1 Remove Console Logs and Debug Code
 
-- [ ] Find console.log in frontend:
+- [x] Find console.log in frontend:
   ```bash
   grep -r "console\.log\|console\.warn\|debugger" frontend/src/ --include="*.tsx" --include="*.ts" | grep -v ".test."
   ```
-- [ ] Remove all found instances (keep only intentional error logging in ErrorBoundary)
-- [ ] Find debug dumps in backend:
+- [x] Remove all found instances (keep only intentional error logging in ErrorBoundary)
+- [x] Find debug dumps in backend:
   ```bash
   grep -r "dd(\|dump(\|var_dump(\|print_r(" backend/app/ --include="*.php"
   ```
-- [ ] Remove all found instances
+- [x] Remove all found instances
 
 ### DOC-0.2 Remove TODO Comments from Code
 
-- [ ] Search:
+- [x] Search:
   ```bash
   grep -r "TODO\|FIXME\|HACK\|XXX\|@todo" frontend/src/ backend/app/ --include="*.tsx" --include="*.ts" --include="*.php"
   ```
-- [ ] Resolve or remove all found instances
+- [x] Resolve or remove all found instances
 
 ### DOC-0.3 Linting Pass
 
 - [ ] Frontend: `cd frontend && npm run lint` — 0 errors
 - [ ] Backend: `cd backend && vendor/bin/pint` — 0 errors
-- [ ] TypeScript: `cd frontend && npx tsc --noEmit` — 0 errors
+- [x] TypeScript: `cd frontend && npx tsc --noEmit` — 0 errors
 
 ### DOC-0.4 Final Build Verification
 
-- [ ] `cd frontend && npm run build` — passes clean
-- [ ] `cd backend && php artisan test` — all tests pass
-- [ ] `cd backend && php artisan route:list | grep forgot` — zero results
+- [x] `cd frontend && npm run build` — passes clean
+- [x] `cd backend && php artisan test` — all tests pass
+- [x] `cd backend && php artisan route:list | grep forgot` — zero results
 
 ### DOC-0.5 Security Final Check
 
-- [ ] No hardcoded secrets in committed code:
+- [x] No hardcoded secrets in committed code:
   ```bash
   grep -r "72\.60\.69\.185\|L9H2F7Q8XK6M4A" --include="*.php" --include="*.ts" --include="*.tsx" backend/ frontend/
   # Expected: zero results
   ```
-- [ ] `.env` is not in git history: `git log --all --full-history -- "**/.env"`
-- [ ] `.env.example` has only placeholder values
+- [x] `.env` is not in git history: `git log --all --full-history -- "**/.env"`
+- [x] `.env.example` has only placeholder values
 
 ---
 
@@ -276,7 +276,7 @@
 
 ## DOC-8: Handoff
 
-- [ ] Push final: `git push origin main`
+- [ ] Push final: `git push origin master`
 - [ ] Tag: `git tag v1.0.0 && git push --tags`
 - [ ] Share with client (via secure channel):
   - [ ] GitHub repo access (transfer or admin)

@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import axios from 'axios'
-import { Eye, EyeOff, LoaderCircle, Moon, Sun, X } from 'lucide-react'
+import { Download, Eye, EyeOff, LoaderCircle, Moon, Sun, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { SkipToContent } from '@/components/shared/SkipToContent'
 import { LockoutBanner } from '@/components/auth/LockoutBanner'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
+import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { useTheme } from '@/hooks/useTheme'
 import { isRequired, isValidEmail } from '@/lib/validators'
 import { Button } from '@/components/ui/button'
@@ -28,10 +29,12 @@ export function LoginPage() {
   const { t } = useTranslation()
   const { lang, switchLanguage, isRtl } = useLanguage()
   const { toggleTheme, isDark } = useTheme()
+  const { canInstall, promptInstall } = usePwaInstall()
   const { login, getDefaultRoute } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [notice, setNotice] = useState<{ tone: NoticeTone; message: string } | null>(null)
@@ -54,7 +57,7 @@ export function LoginPage() {
 
     try {
       setIsSubmitting(true)
-      const result = await login(email, password)
+      const result = await login(email, password, rememberMe)
       navigate(getDefaultRoute(lang, result.user.role), { replace: true })
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -113,6 +116,19 @@ export function LoginPage() {
         >
           {lang === 'ar' ? 'EN' : 'AR'}
         </Button>
+
+        {canInstall ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="absolute top-4 z-10"
+            style={isRtl ? { left: '5.5rem' } : { right: '5.5rem' }}
+            onClick={() => void promptInstall()}
+            aria-label={lang === 'ar' ? 'تثبيت التطبيق' : 'Install app'}
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        ) : null}
 
         <div className={`w-full max-w-[440px] ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
           <Card className={`rounded-none border-white/20 bg-white/95 shadow-2xl sm:rounded-3xl dark:border-slate-800/80 dark:bg-slate-950/90`}>
@@ -196,6 +212,16 @@ export function LoginPage() {
                     </button>
                   </div>
                 </div>
+                <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    disabled={isSubmitting || isLocked}
+                    onChange={(event) => setRememberMe(event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-900"
+                  />
+                  <span>{lang === 'ar' ? 'البقاء مسجل الدخول' : 'Keep me signed in'}</span>
+                </label>
                 <Button className="h-11 w-full" disabled={isSubmitting || isLocked} type="submit">
                   {isSubmitting ? <LoaderCircle className="me-2 h-4 w-4 animate-spin" /> : null}
                   {isSubmitting ? t('login.signingIn') : t('login.submitBtn')}

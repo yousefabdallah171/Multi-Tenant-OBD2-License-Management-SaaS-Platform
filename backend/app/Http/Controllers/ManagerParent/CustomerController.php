@@ -24,7 +24,10 @@ class CustomerController extends BaseManagerParentController
         $query = User::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('role', UserRole::CUSTOMER->value)
-            ->with(['customerLicenses.program:id,name', 'customerLicenses.reseller:id,name'])
+            ->select(['id', 'tenant_id', 'name', 'email', 'phone', 'role', 'created_at'])
+            ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
+                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'activated_at', 'expires_at', 'price'])
+                ->with(['program:id,name', 'reseller:id,name'])])
             ->latest();
 
         if (! empty($validated['search'])) {
@@ -61,7 +64,12 @@ class CustomerController extends BaseManagerParentController
         $user = $this->resolveTenantUser($request, $user);
         abort_unless(($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value, 404);
 
-        $user->load(['customerLicenses.program:id,name', 'customerLicenses.reseller:id,name,email', 'createdBy:id,name,email']);
+        $user->load([
+            'customerLicenses' => fn ($licenseQuery) => $licenseQuery
+                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'external_username', 'status', 'duration_days', 'price', 'activated_at', 'expires_at'])
+                ->with(['program:id,name', 'reseller:id,name,email']),
+            'createdBy:id,name,email',
+        ]);
 
         $resellersSummary = $user->customerLicenses
             ->groupBy('reseller_id')
@@ -79,6 +87,7 @@ class CustomerController extends BaseManagerParentController
             ->values();
 
         $ipLogs = UserIpLog::query()
+            ->select(['id', 'tenant_id', 'user_id', 'ip_address', 'country', 'city', 'isp', 'reputation_score', 'action', 'created_at'])
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('user_id', $user->id)
             ->latest()
@@ -97,6 +106,7 @@ class CustomerController extends BaseManagerParentController
             ->values();
 
         $activity = ActivityLog::query()
+            ->select(['id', 'tenant_id', 'user_id', 'action', 'description', 'metadata', 'ip_address', 'created_at'])
             ->where('tenant_id', $this->currentTenantId($request))
             ->where(function ($query) use ($user): void {
                 $query->where('user_id', $user->id)->orWhere('metadata->customer_id', $user->id);

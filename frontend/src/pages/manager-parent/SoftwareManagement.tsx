@@ -428,7 +428,7 @@ export function SoftwareManagementPage() {
                   type={showApiKey ? 'text' : 'password'}
                   value={form.external_api_key}
                   maxLength={50}
-                  placeholder={editingProgram?.has_external_api ? 'Leave blank to keep current key (••••••••••••••)' : 'e.g. L9H2F7Q8XK6M4A'}
+                  placeholder={editingProgram?.has_external_api ? 'Leave blank to keep current key (••••••••••••••)' : 'e.g. YOUR_EXTERNAL_API_KEY'}
                   onChange={(event) => setForm((current) => ({ ...current, external_api_key: event.target.value }))}
                 />
                 <Button type="button" variant="outline" size="icon" onClick={() => setShowApiKey((value) => !value)}>

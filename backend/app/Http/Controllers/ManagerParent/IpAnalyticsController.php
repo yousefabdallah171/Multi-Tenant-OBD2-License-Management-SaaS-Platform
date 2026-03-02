@@ -24,6 +24,17 @@ class IpAnalyticsController extends BaseManagerParentController
 
     public function index(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'search' => ['nullable', 'string'],
+            'reputation' => ['nullable', 'in:all,safe,proxy'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
+        $page = (int) ($validated['page'] ?? 1);
+        $perPage = (int) ($validated['per_page'] ?? 100);
+
         $response = $this->externalApiService->getGlobalLogs();
 
         if (! ($response['success'] ?? false)) {
@@ -79,8 +90,7 @@ class IpAnalyticsController extends BaseManagerParentController
 
         $geoData = $this->fetchGeoData($uniquePublicIps);
 
-        return response()->json([
-            'data' => $rows->map(static function (array $row) use ($licenseLookup, $geoData): array {
+        $data = $rows->map(static function (array $row) use ($licenseLookup, $geoData): array {
                 $license = $licenseLookup->get($row['username']);
                 $geo = $geoData[$row['ip_address']] ?? [
                     'country' => 'Unknown',
@@ -104,7 +114,56 @@ class IpAnalyticsController extends BaseManagerParentController
                     'proxy' => $geo['proxy'],
                     'hosting' => $geo['hosting'],
                 ];
-            })->values(),
+            })->values();
+
+        if (! empty($validated['search'])) {
+            $search = mb_strtolower((string) $validated['search']);
+            $data = $data->filter(fn (array $row): bool => str_contains(mb_strtolower((string) $row['ip_address']), $search)
+                || str_contains(mb_strtolower((string) $row['username']), $search));
+        }
+
+        if (($validated['reputation'] ?? 'all') === 'proxy') {
+            $data = $data->filter(fn (array $row): bool => (bool) ($row['proxy'] || $row['hosting']));
+        } elseif (($validated['reputation'] ?? 'all') === 'safe') {
+            $data = $data->filter(fn (array $row): bool => ! ((bool) ($row['proxy'] || $row['hosting'])));
+        }
+
+        if (! empty($validated['from']) || ! empty($validated['to'])) {
+            $from = ! empty($validated['from']) ? strtotime((string) $validated['from']) : null;
+            $to = ! empty($validated['to']) ? strtotime((string) $validated['to'].' 23:59:59') : null;
+            $data = $data->filter(function (array $row) use ($from, $to): bool {
+                $time = strtotime((string) $row['timestamp']);
+                if ($time === false) {
+                    return false;
+                }
+
+                if ($from !== null && $time < $from) {
+                    return false;
+                }
+
+                if ($to !== null && $time > $to) {
+                    return false;
+                }
+
+                return true;
+            });
+        }
+
+        $data = $data->sortByDesc('timestamp')->values();
+        $total = $data->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $offset = max(0, ($page - 1) * $perPage);
+
+        return response()->json([
+            'data' => $data->slice($offset, $perPage)->values(),
+            'meta' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'last_page' => $lastPage,
+                'has_next_page' => $page < $lastPage,
+                'next_page' => $page < $lastPage ? $page + 1 : null,
+            ],
         ]);
     }
 

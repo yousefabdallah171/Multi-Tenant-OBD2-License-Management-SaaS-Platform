@@ -36,6 +36,7 @@ use App\Http\Controllers\ManagerParent\SettingsController as ManagerParentSettin
 use App\Http\Controllers\ManagerParent\TeamController as ManagerParentTeamController;
 use App\Http\Controllers\ManagerParent\UsernameManagementController as ManagerParentUsernameManagementController;
 use App\Http\Controllers\OnlineUsersController;
+use App\Http\Controllers\ExportTaskController;
 use App\Http\Controllers\Reseller\CustomerController as ResellerCustomerController;
 use App\Http\Controllers\Reseller\DashboardController as ResellerDashboardController;
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
@@ -75,6 +76,9 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::put('/password', [AuthController::class, 'updatePassword']);
     });
 
+    Route::get('/exports/{exportTask}', [ExportTaskController::class, 'show']);
+    Route::get('/exports/{exportTask}/download', [ExportTaskController::class, 'download']);
+
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
     Route::prefix('external')->middleware(['api.logger'])->group(function (): void {
@@ -97,6 +101,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
     Route::get('/programs/{program}', [ManagerParentProgramController::class, 'show'])->middleware('role:manager_parent,manager,reseller');
 
     Route::middleware('role:manager_parent')->group(function (): void {
+        Route::get('/dashboard', [ManagerParentDashboardController::class, 'dashboard']);
         Route::get('/dashboard/revenue-chart', [ManagerParentDashboardController::class, 'revenueChart']);
         Route::get('/dashboard/expiry-forecast', [ManagerParentDashboardController::class, 'expiryForecast']);
         Route::get('/dashboard/team-performance', [ManagerParentDashboardController::class, 'teamPerformance']);
@@ -169,6 +174,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
     });
 
     Route::prefix('manager')->middleware('role:manager')->group(function (): void {
+        Route::get('/dashboard', [ManagerDashboardController::class, 'dashboard']);
         Route::get('/dashboard/stats', [ManagerDashboardController::class, 'stats']);
         Route::get('/dashboard/activations-chart', [ManagerDashboardController::class, 'activationsChart']);
         Route::get('/dashboard/revenue-chart', [ManagerDashboardController::class, 'revenueChart']);

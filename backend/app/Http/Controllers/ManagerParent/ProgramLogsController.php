@@ -16,6 +16,13 @@ class ProgramLogsController extends BaseManagerParentController
 
     public function show(Request $request, Program $program): JsonResponse
     {
+        $validated = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
+        ]);
+        $page = (int) ($validated['page'] ?? 1);
+        $perPage = (int) ($validated['per_page'] ?? 100);
+
         $resolved = $this->resolveProgram($request, $program);
         $guard = $this->guardExternalApi($resolved);
         if ($guard !== null) {
@@ -23,6 +30,7 @@ class ProgramLogsController extends BaseManagerParentController
         }
 
         $response = $this->externalApiService->getProgramLogs((int) $resolved->external_software_id);
+        $externalOk = (bool) ($response['success'] ?? false);
         $licensesMap = License::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('program_id', $resolved->id)
@@ -91,13 +99,28 @@ class ProgramLogsController extends BaseManagerParentController
             }
         }
 
+        $total = count($rows);
+        $offset = max(0, ($page - 1) * $perPage);
+        $pagedRows = array_slice($rows, $offset, $perPage);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+
         return response()->json([
             'data' => [
                 ...$response['data'],
                 'licenses' => $licensesMap,
-                'rows' => $rows,
+                'rows' => $pagedRows,
+                'external_available' => $externalOk,
+                'meta' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'last_page' => $lastPage,
+                    'has_next_page' => $page < $lastPage,
+                    'next_page' => $page < $lastPage ? $page + 1 : null,
+                ],
             ],
-        ], $response['status_code'] ?? 200);
+            'message' => $externalOk ? null : 'External API is currently unavailable. Showing cached/empty logs.',
+        ], 200);
     }
 
     public function activeUsers(Request $request, Program $program): JsonResponse
@@ -109,8 +132,13 @@ class ProgramLogsController extends BaseManagerParentController
         }
 
         $response = $this->externalApiService->getActiveUsers((int) $resolved->external_software_id);
+        $externalOk = (bool) ($response['success'] ?? false);
 
-        return response()->json(['data' => $response['data']], $response['status_code'] ?? 200);
+        return response()->json([
+            'data' => $response['data'],
+            'external_available' => $externalOk,
+            'message' => $externalOk ? null : 'External API is currently unavailable.',
+        ], 200);
     }
 
     public function stats(Request $request, Program $program): JsonResponse
@@ -122,8 +150,13 @@ class ProgramLogsController extends BaseManagerParentController
         }
 
         $response = $this->externalApiService->getSoftwareStats((int) $resolved->external_software_id);
+        $externalOk = (bool) ($response['success'] ?? false);
 
-        return response()->json(['data' => $response['data']], $response['status_code'] ?? 200);
+        return response()->json([
+            'data' => $response['data'],
+            'external_available' => $externalOk,
+            'message' => $externalOk ? null : 'External API is currently unavailable.',
+        ], 200);
     }
 
     private function resolveProgram(Request $request, Program $program): Program

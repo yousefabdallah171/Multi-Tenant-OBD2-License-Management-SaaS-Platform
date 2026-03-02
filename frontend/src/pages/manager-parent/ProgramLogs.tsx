@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { Download } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -88,25 +88,35 @@ export function ProgramLogsPage() {
   const programsQuery = useQuery({
     queryKey: ['manager-parent', 'programs-with-external-api'],
     queryFn: () => managerParentService.getProgramsWithExternalApi(),
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 24 * 60 * 60 * 1000,
   })
 
-  const logsQuery = useQuery({
+  const logsQuery = useInfiniteQuery({
     queryKey: ['manager-parent', 'program-logs', selectedProgramId],
-    queryFn: async () => {
+    queryFn: async ({ pageParam }) => {
       if (!selectedProgramId) {
-        return { raw: '', licenses: {} as Record<string, ProgramLogLicenseInfo[]> }
+        return { raw: '', licenses: {} as Record<string, ProgramLogLicenseInfo[]>, rows: [], meta: { has_next_page: false, next_page: null } }
       }
-      return managerParentService.getProgramLogs(selectedProgramId)
+      return managerParentService.getProgramLogs(selectedProgramId, { page: Number(pageParam), per_page: 100 })
     },
     enabled: selectedProgramId !== null,
     refetchInterval: autoRefresh ? 30000 : false,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.meta?.has_next_page ? lastPage.meta.next_page ?? undefined : undefined),
   })
 
-  const parsedLogs = useMemo(
-    () => (logsQuery.data?.rows && logsQuery.data.rows.length > 0 ? logsQuery.data.rows : parseProgramLogs(logsQuery.data?.raw ?? '')),
-    [logsQuery.data?.raw, logsQuery.data?.rows],
-  )
-  const licenseMap = logsQuery.data?.licenses ?? {}
+  const allPages = logsQuery.data?.pages ?? []
+  const parsedLogs = useMemo(() => {
+    const apiRows = allPages.flatMap((page) => page.rows ?? [])
+    if (apiRows.length > 0) {
+      return apiRows
+    }
+
+    const latestRaw = allPages[0]?.raw ?? ''
+    return parseProgramLogs(latestRaw)
+  }, [allPages])
+  const licenseMap = allPages[0]?.licenses ?? {}
   const activationRows = parsedLogs.filter((entry) => entry.type === 'add' || entry.type === 'delete')
   const loginRows = parsedLogs.filter((entry) => entry.type === 'login')
 
@@ -259,6 +269,13 @@ export function ProgramLogsPage() {
                   </table>
                 </div>
               )}
+              {logsQuery.hasNextPage ? (
+                <div className="mt-4">
+                  <Button type="button" variant="outline" onClick={() => logsQuery.fetchNextPage()} disabled={logsQuery.isFetchingNextPage}>
+                    {logsQuery.isFetchingNextPage ? t('common.loading', { defaultValue: 'Loading...' }) : t('common.loadMore', { defaultValue: 'Load more' })}
+                  </Button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>
@@ -320,6 +337,13 @@ export function ProgramLogsPage() {
                   </table>
                 </div>
               )}
+              {logsQuery.hasNextPage ? (
+                <div className="mt-4">
+                  <Button type="button" variant="outline" onClick={() => logsQuery.fetchNextPage()} disabled={logsQuery.isFetchingNextPage}>
+                    {logsQuery.isFetchingNextPage ? t('common.loading', { defaultValue: 'Loading...' }) : t('common.loadMore', { defaultValue: 'Load more' })}
+                  </Button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>

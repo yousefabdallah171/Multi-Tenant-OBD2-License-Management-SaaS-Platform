@@ -34,41 +34,21 @@ export function DashboardPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
 
   const statsQuery = useQuery({
-    queryKey: ['manager-parent', 'dashboard', 'stats'],
-    queryFn: () => managerParentService.getDashboardStats(),
-  })
-
-  const revenueQuery = useQuery({
-    queryKey: ['manager-parent', 'dashboard', 'revenue-chart'],
-    queryFn: () => managerParentService.getRevenueChart(),
-  })
-
-  const expiryQuery = useQuery({
-    queryKey: ['manager-parent', 'dashboard', 'expiry-forecast'],
-    queryFn: () => managerParentService.getExpiryForecast(),
-  })
-
-  const performanceQuery = useQuery({
-    queryKey: ['manager-parent', 'dashboard', 'team-performance'],
-    queryFn: () => managerParentService.getTeamPerformance(),
-  })
-
-  const conflictQuery = useQuery({
-    queryKey: ['manager-parent', 'dashboard', 'conflict-rate'],
-    queryFn: () => managerParentService.getConflictRate(),
+    queryKey: ['manager-parent', 'dashboard'],
+    queryFn: () => managerParentService.getDashboard(),
   })
 
   const stats = statsQuery.data?.stats
-  const topPerformers = (performanceQuery.data?.data ?? []).slice(0, 4)
-  const revenueSeries = (revenueQuery.data?.data ?? []).map((point) => ({
+  const topPerformers = (statsQuery.data?.teamPerformance ?? []).slice(0, 4)
+  const revenueSeries = (statsQuery.data?.revenueChart ?? []).map((point) => ({
     ...point,
     month: localizeMonthLabel(point.month, locale),
   }))
-  const conflictSeries = (conflictQuery.data?.data ?? []).map((point) => ({
+  const conflictSeries = (statsQuery.data?.conflictRate ?? []).map((point) => ({
     ...point,
     month: localizeMonthLabel(point.month, locale),
   }))
-  const expirySeries = (expiryQuery.data?.data ?? []).map((point) => ({
+  const expirySeries = (statsQuery.data?.expiryForecast ?? []).map((point) => ({
     ...point,
     rangeKey: point.range,
     range: localizeExpiryRange(point.range, t),
@@ -102,7 +82,7 @@ export function DashboardPage() {
         <LineChartWidget
           title={t('managerParent.pages.dashboard.monthlyRevenue')}
           data={revenueSeries}
-          isLoading={revenueQuery.isLoading}
+          isLoading={statsQuery.isLoading}
           xKey="month"
           series={[{ key: 'revenue', label: t('common.revenue') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
@@ -110,7 +90,7 @@ export function DashboardPage() {
         <BarChartWidget
           title={t('managerParent.pages.dashboard.licenseExpiryForecast')}
           data={expirySeries}
-          isLoading={expiryQuery.isLoading}
+          isLoading={statsQuery.isLoading}
           xKey="range"
           series={[{ key: 'count', label: t('managerParent.pages.dashboard.licenseCount') }]}
           showLabels
@@ -133,8 +113,8 @@ export function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <BarChartWidget
           title={t('managerParent.pages.dashboard.teamPerformance')}
-          data={(performanceQuery.data?.data ?? []).map((member) => ({ name: member.name, activations: member.activations }))}
-          isLoading={performanceQuery.isLoading}
+          data={(statsQuery.data?.teamPerformance ?? []).map((member) => ({ name: member.name, activations: member.activations }))}
+          isLoading={statsQuery.isLoading}
           xKey="name"
           horizontal
           showLabels
@@ -144,7 +124,7 @@ export function DashboardPage() {
           title={t('managerParent.pages.dashboard.conflictRate')}
           description={t('managerParent.pages.dashboard.conflictRateDescription')}
           data={conflictSeries}
-          isLoading={conflictQuery.isLoading}
+          isLoading={statsQuery.isLoading}
           xKey="month"
           series={[{ key: 'count', label: t('managerParent.pages.dashboard.conflicts') }]}
         />

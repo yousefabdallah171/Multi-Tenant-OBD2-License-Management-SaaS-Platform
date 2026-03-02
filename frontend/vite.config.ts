@@ -1,10 +1,54 @@
 import path from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['vite.svg'],
+      manifest: {
+        name: 'OBD2SW License Platform',
+        short_name: 'OBD2SW',
+        description: 'OBD2SW License Management Platform',
+        theme_color: '#0f172a',
+        background_color: '#0f172a',
+        display: 'standalone',
+        start_url: '/',
+        scope: '/',
+        icons: [
+          {
+            src: '/icons/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: '/icons/icon-512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+    }),
+    process.env.BUNDLE_ANALYZE === 'true'
+      ? visualizer({
+          filename: 'dist/bundle-report.html',
+          gzipSize: true,
+          brotliSize: true,
+          open: false,
+        })
+      : undefined,
+  ],
   build: {
     rollupOptions: {
       output: {
@@ -20,6 +64,10 @@ export default defineConfig({
 
           if (['react', 'react-dom', 'react-router', 'react-router-dom', 'scheduler'].includes(normalizedPackage)) {
             return 'vendor-react'
+          }
+
+          if (normalizedPackage === '@tanstack/react-query') {
+            return 'vendor-query'
           }
 
           if (['recharts', 'victory-vendor'].includes(normalizedPackage)) {

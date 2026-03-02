@@ -137,6 +137,10 @@
     "connectionLost": "انقطع الاتصال. يرجى التحقق من الشبكة والمحاولة مرة أخرى.",
     "openNavigation": "فتح قائمة التنقل",
     "closeNavigation": "إغلاق قائمة التنقل",
+    "installApp": "تثبيت التطبيق",
+    "installing": "جارٍ تجهيز التثبيت...",
+    "installAppUnavailable": "طلب التثبيت غير متاح الآن. افتح قائمة المتصفح واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية.",
+    "installAppIosHint": "على iPhone/iPad اضغط مشاركة ثم إضافة إلى الشاشة الرئيسية.",
     "closeDialog": "إغلاق النافذة",
     "switchLanguage": "تبديل اللغة",
     "toggleTheme": "تبديل السمة",
@@ -759,7 +763,17 @@
       },
       "software": {
         "title": "كتالوج البرامج",
-        "description": "تصفح جميع البرامج المتاحة للتفعيل في نطاق عملك."
+        "description": "تصفح جميع البرامج المتاحة للتفعيل في نطاق عملك.",
+        "searchPlaceholder": "ابحث باسم البرنامج",
+        "emptyTitle": "لم يتم العثور على برامج",
+        "emptyDescription": "عدّل عبارة البحث للعثور على البرامج المتاحة.",
+        "version": "الإصدار",
+        "noDescription": "لا يوجد وصف متاح.",
+        "basePrice": "السعر الأساسي",
+        "trialDays": "أيام التجربة",
+        "licensesSold": "التراخيص المباعة",
+        "activeLicenses": "التراخيص النشطة",
+        "openDownload": "فتح التحميل"
       },
       "licenses": {
         "title": "التراخيص",
