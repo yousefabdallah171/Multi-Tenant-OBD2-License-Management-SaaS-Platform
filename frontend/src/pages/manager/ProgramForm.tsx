@@ -79,13 +79,13 @@ export function ProgramFormPage() {
     setForm({
       name: program.name,
       description: program.description ?? '',
-      version: program.version,
+      version: program.version ?? '1.0',
       download_link: program.download_link,
       file_size: program.file_size ?? '',
       system_requirements: program.system_requirements ?? '',
       installation_guide_url: program.installation_guide_url ?? '',
-      trial_days: String(program.trial_days),
-      base_price: String(program.base_price),
+      trial_days: String(program.trial_days ?? 0),
+      base_price: String(program.base_price ?? 0),
       status: program.status,
       icon: program.icon ?? '',
       external_api_key: '',
@@ -101,6 +101,10 @@ export function ProgramFormPage() {
         throw new Error(t('software.externalApiBaseUrlRequired'))
       }
 
+      const trialDays = Number(form.trial_days)
+      const basePrice = Number(form.base_price)
+      const parsedExternalSoftwareId = form.external_software_id.trim() ? Number(form.external_software_id) : NaN
+
       const payload: CreateManagerSoftwareData = {
         name: form.name.trim(),
         description: form.description.trim() || null,
@@ -109,11 +113,11 @@ export function ProgramFormPage() {
         file_size: form.file_size.trim() || null,
         system_requirements: form.system_requirements.trim() || null,
         installation_guide_url: form.installation_guide_url.trim() || null,
-        trial_days: Number(form.trial_days),
-        base_price: Number(form.base_price),
+        trial_days: Number.isFinite(trialDays) ? trialDays : 0,
+        base_price: Number.isFinite(basePrice) ? basePrice : 0,
         icon: form.icon.trim() || null,
         active: form.status === 'active',
-        external_software_id: form.external_software_id.trim() ? Number(form.external_software_id) : null,
+        external_software_id: Number.isFinite(parsedExternalSoftwareId) && parsedExternalSoftwareId > 0 ? parsedExternalSoftwareId : null,
         external_logs_endpoint: form.external_logs_endpoint.trim() || 'apilogs',
       }
 

@@ -68,13 +68,18 @@ class SoftwareController extends BaseManagerController
             'external_api_key' => ['nullable', 'string', 'max:100'],
             'external_software_id' => ['nullable', 'integer', 'min:1'],
             'external_api_base_url' => ['nullable', 'url', 'max:1000', function (string $attribute, mixed $value, \Closure $fail): void {
+                $normalized = trim((string) $value);
+                if ($normalized === '') {
+                    return;
+                }
+
                 try {
-                    ExternalApiSecurity::assertSafeBaseUrl((string) $value);
+                    ExternalApiSecurity::assertSafeBaseUrl($normalized);
                 } catch (InvalidArgumentException $exception) {
                     $fail($exception->getMessage());
                 }
             }],
-            'external_logs_endpoint' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'external_logs_endpoint' => ['nullable', 'string', 'max:100'],
         ]);
 
         $program = Program::query()->create([
@@ -128,13 +133,18 @@ class SoftwareController extends BaseManagerController
             'external_api_key' => ['nullable', 'string', 'max:100'],
             'external_software_id' => ['nullable', 'integer', 'min:1'],
             'external_api_base_url' => ['nullable', 'url', 'max:1000', function (string $attribute, mixed $value, \Closure $fail): void {
+                $normalized = trim((string) $value);
+                if ($normalized === '') {
+                    return;
+                }
+
                 try {
-                    ExternalApiSecurity::assertSafeBaseUrl((string) $value);
+                    ExternalApiSecurity::assertSafeBaseUrl($normalized);
                 } catch (InvalidArgumentException $exception) {
                     $fail($exception->getMessage());
                 }
             }],
-            'external_logs_endpoint' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'external_logs_endpoint' => ['nullable', 'string', 'max:100'],
         ]);
 
         if (array_key_exists('active', $validated) || array_key_exists('status', $validated)) {

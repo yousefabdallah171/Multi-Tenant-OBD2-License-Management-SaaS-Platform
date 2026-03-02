@@ -96,6 +96,10 @@ export function ProgramFormPage() {
         throw new Error(t('software.externalApiBaseUrlRequired'))
       }
 
+      const trialDays = Number(form.trial_days)
+      const basePrice = Number(form.base_price)
+      const parsedExternalSoftwareId = form.external_software_id.trim() ? Number(form.external_software_id) : NaN
+
       const payload: ProgramPayload = {
         name: form.name.trim(),
         description: form.description.trim() || null,
@@ -104,10 +108,10 @@ export function ProgramFormPage() {
         file_size: form.file_size.trim() || null,
         system_requirements: form.system_requirements.trim() || null,
         installation_guide_url: form.installation_guide_url.trim() || null,
-        trial_days: Number(form.trial_days),
-        base_price: Number(form.base_price),
+        trial_days: Number.isFinite(trialDays) ? trialDays : 0,
+        base_price: Number.isFinite(basePrice) ? basePrice : 0,
         status: form.status,
-        external_software_id: form.external_software_id.trim() ? Number(form.external_software_id) : null,
+        external_software_id: Number.isFinite(parsedExternalSoftwareId) && parsedExternalSoftwareId > 0 ? parsedExternalSoftwareId : null,
         external_logs_endpoint: form.external_logs_endpoint.trim() || 'apilogs',
       }
 
