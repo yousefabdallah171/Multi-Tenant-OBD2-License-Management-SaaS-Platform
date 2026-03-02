@@ -45,26 +45,26 @@ class ProductionSeeder extends Seeder
             $program->save();
         }
 
-        $managerParent = User::query()->firstOrCreate(
+        $managerParent = User::query()->updateOrCreate(
             ['email' => 'manager@obd2sw.com'],
             [
                 'tenant_id' => $tenant->id,
                 'name' => 'Main Manager',
                 'email' => 'manager@obd2sw.com',
-                'password' => Hash::make(env('SEED_MANAGER_PASSWORD', 'ChangeMe123!')),
+                'password' => Hash::make('password'),
                 'role' => UserRole::MANAGER_PARENT,
                 'status' => 'active',
                 'username' => 'main_manager',
             ]
         );
 
-        $reseller1 = User::query()->firstOrCreate(
+        $reseller1 = User::query()->updateOrCreate(
             ['email' => 'reseller1@obd2sw.com'],
             [
                 'tenant_id' => $tenant->id,
                 'name' => 'Ahmed Reseller',
                 'email' => 'reseller1@obd2sw.com',
-                'password' => Hash::make(env('SEED_RESELLER_PASSWORD', 'ChangeMe123!')),
+                'password' => Hash::make('password'),
                 'role' => UserRole::RESELLER,
                 'status' => 'active',
                 'username' => 'ahmed_reseller',
@@ -72,13 +72,13 @@ class ProductionSeeder extends Seeder
             ]
         );
 
-        $reseller2 = User::query()->firstOrCreate(
+        $reseller2 = User::query()->updateOrCreate(
             ['email' => 'reseller2@obd2sw.com'],
             [
                 'tenant_id' => $tenant->id,
                 'name' => 'Mohamed Reseller',
                 'email' => 'reseller2@obd2sw.com',
-                'password' => Hash::make(env('SEED_RESELLER_PASSWORD', 'ChangeMe123!')),
+                'password' => Hash::make('password'),
                 'role' => UserRole::RESELLER,
                 'status' => 'active',
                 'username' => 'mohamed_reseller',
@@ -96,13 +96,13 @@ class ProductionSeeder extends Seeder
 
         foreach ($customers as $entry) {
             $expired = $entry['days'] < 0;
-            $customer = User::query()->firstOrCreate(
+            $customer = User::query()->updateOrCreate(
                 ['email' => $entry['email']],
                 [
                     'tenant_id' => $tenant->id,
                     'name' => $entry['name'],
                     'email' => $entry['email'],
-                    'password' => Hash::make(env('SEED_CUSTOMER_PASSWORD', 'ChangeMe123!')),
+                    'password' => Hash::make('password'),
                     'role' => UserRole::CUSTOMER,
                     'status' => 'active',
                     'username' => $entry['bios'],
@@ -129,6 +129,6 @@ class ProductionSeeder extends Seeder
         }
 
         $this->command?->info('Production seed complete - 1 tenant, 1 program, 2 resellers, 5 customers (4 active + 1 expired)');
-        $this->command?->warn('Change all SEED_*_PASSWORD values in .env before going live.');
+        $this->command?->warn('Default seeded password is "password". Change it before going live.');
     }
 }
