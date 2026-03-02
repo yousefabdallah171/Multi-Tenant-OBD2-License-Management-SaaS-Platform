@@ -202,7 +202,7 @@
     },
     "pages": {
       "dashboard": {
-        "eyebrow": "Phase 02",
+        "eyebrow": "Platform Overview",
         "title": "Super Admin Dashboard",
         "description": "A global view of platform tenants, revenue, license volume, and the latest system activity.",
         "revenueTrend": "Revenue trend",
