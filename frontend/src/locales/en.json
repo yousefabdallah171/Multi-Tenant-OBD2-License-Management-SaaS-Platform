@@ -760,7 +760,17 @@
       },
       "software": {
         "title": "Software Catalog",
-        "description": "Browse all programs available for activation in your tenant."
+        "description": "Browse all programs available for activation in your tenant.",
+        "searchPlaceholder": "Search by program name",
+        "emptyTitle": "No programs found",
+        "emptyDescription": "Adjust the search term to find available programs.",
+        "version": "Version",
+        "noDescription": "No description provided.",
+        "basePrice": "Base Price",
+        "trialDays": "Trial Days",
+        "licensesSold": "Licenses Sold",
+        "activeLicenses": "Active Licenses",
+        "openDownload": "Open Download"
       },
       "licenses": {
         "title": "Licenses",

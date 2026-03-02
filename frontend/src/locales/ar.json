@@ -763,7 +763,17 @@
       },
       "software": {
         "title": "كتالوج البرامج",
-        "description": "تصفح جميع البرامج المتاحة للتفعيل في نطاق عملك."
+        "description": "تصفح جميع البرامج المتاحة للتفعيل في نطاق عملك.",
+        "searchPlaceholder": "ابحث باسم البرنامج",
+        "emptyTitle": "لم يتم العثور على برامج",
+        "emptyDescription": "عدّل عبارة البحث للعثور على البرامج المتاحة.",
+        "version": "الإصدار",
+        "noDescription": "لا يوجد وصف متاح.",
+        "basePrice": "السعر الأساسي",
+        "trialDays": "أيام التجربة",
+        "licensesSold": "التراخيص المباعة",
+        "activeLicenses": "التراخيص النشطة",
+        "openDownload": "فتح التحميل"
       },
       "licenses": {
         "title": "التراخيص",
