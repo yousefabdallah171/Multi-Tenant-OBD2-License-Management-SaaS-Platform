@@ -2122,6 +2122,16 @@ curl -I https://panel.obd2sw.com
 
 ### Real Issues We Faced and Fixes
 
+**Issue: `Class "Laravel\Telescope\TelescopeApplicationServiceProvider" not found` in production**
+
+- Cause: production uses `composer install --no-dev`, so Telescope is not installed, but provider was being loaded.
+- Fix: conditionally register `App\Providers\TelescopeServiceProvider` only when Telescope package exists (`backend/bootstrap/providers.php`).
+
+**Issue: local `php artisan migrate` failed with `SQLSTATE[HY000] [1698] Access denied for user 'root'@'localhost'`**
+
+- Cause: local `3306` was owned by WSL relay (`wslrelay.exe`), not Laragon MySQL.
+- Fix: run Laragon MySQL on another port (e.g. `3307`) and update `backend/.env` `DB_PORT`.
+
 **Issue: `curl -I https://panel.obd2sw.com` returned `403` and `/api/health` returned `404`**
 
 - Cause: Nginx routing was not correctly sending `/api` to Laravel.
@@ -2188,6 +2198,18 @@ curl -i -X POST https://panel.obd2sw.com/api/auth/login \
 6. `php artisan optimize:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache`
 7. Restart `php8.3-fpm` and reload `nginx`
 8. Run health/login smoke tests.
+
+### Phase 13 Performance Completion Notes
+
+- Dashboard endpoints consolidated for Manager Parent and Manager.
+- SQL aggregations replaced N+1/data-heavy loops in dashboard/reporting hotspots.
+- React Query global cache defaults are configured in `frontend/src/lib/queryClient.ts`.
+- Route-level lazy loading and vendor chunk splitting are active (including `vendor-query`).
+- Export flows support queued generation with status polling/download endpoints.
+- Added DB performance indexes via migrations:
+  - `2026_03_02_120000_add_performance_indexes`
+  - `2026_03_02_130000_create_export_tasks_table`
+- Telescope is installed for dev/staging and guarded for production-safe boot.
 
 **Author:** Yousef Abdallah | Full Stack Developer | Tanta, Egypt
 
