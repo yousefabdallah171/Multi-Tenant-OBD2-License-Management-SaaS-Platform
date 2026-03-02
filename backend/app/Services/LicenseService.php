@@ -44,6 +44,8 @@ class LicenseService
             throw ValidationException::withMessages(['customer_name' => 'The customer name field is required.']);
         }
 
+        $externalUsername = $this->normalizeExternalUsername($customerName, $biosId);
+
         if ($program->status !== 'active') {
             throw ValidationException::withMessages(['program_id' => 'The selected program is not active.']);
         }
@@ -56,7 +58,7 @@ class LicenseService
 
         $this->assertBiosAvailable($reseller, $program, $biosId);
 
-        $apiResponse = $this->externalApiService->activateUser($apiKey, $customerName, $biosId, $program->external_api_base_url);
+        $apiResponse = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId, $program->external_api_base_url);
 
         $this->logBiosAccess($reseller, $biosId, 'activate', [
             'program_id' => $program->id,
@@ -69,7 +71,7 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($data, $customerName, $reseller, $program, $biosId, $apiResponse): License {
+        return DB::transaction(function () use ($data, $customerName, $externalUsername, $reseller, $program, $biosId, $apiResponse): License {
             $customer = $this->upsertCustomer($reseller, $data, $biosId);
             $durationDays = (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
@@ -80,7 +82,7 @@ class LicenseService
                 'reseller_id' => $reseller->id,
                 'program_id' => $program->id,
                 'bios_id' => $biosId,
-                'external_username' => $customerName,
+                'external_username' => $externalUsername,
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
@@ -343,9 +345,44 @@ class LicenseService
 
     private function extractExternalMessage(array $response, string $fallback): string
     {
-        $message = $response['data']['message'] ?? $response['data']['error'] ?? null;
+        $message = $response['data']['message'] ?? $response['data']['error'] ?? $response['data']['response'] ?? null;
+        $statusCode = (int) ($response['status_code'] ?? 0);
 
-        return is_string($message) && $message !== '' ? $message : $fallback;
+        if (is_string($message) && $message !== '') {
+            $cleaned = trim(strip_tags($message));
+            if ($cleaned !== '') {
+                return Str::limit($cleaned, 220, '...');
+            }
+        }
+
+        if ($statusCode >= 500) {
+            return 'The external license server returned an internal error. Check External API Base URL, API Key, and the generated username format.';
+        }
+
+        return $fallback;
+    }
+
+    private function normalizeExternalUsername(string $customerName, string $biosId): string
+    {
+        $candidate = Str::of($customerName)
+            ->ascii()
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->trim('_')
+            ->limit(50, '')
+            ->value();
+
+        if ($candidate !== '') {
+            return $candidate;
+        }
+
+        return Str::of($biosId)
+            ->ascii()
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->trim('_')
+            ->limit(50, '')
+            ->value() ?: 'user_'.Str::lower(Str::random(8));
     }
 
     private function logActivity(User $user, string $action, string $description, array $metadata = []): void

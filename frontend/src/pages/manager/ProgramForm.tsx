@@ -170,13 +170,13 @@ export function ProgramFormPage() {
               </select>
             </Field>
             <Field label={t('software.externalSoftwareId')}>
-              <Input type="number" min={1} placeholder="e.g. 8" value={form.external_software_id} onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))} />
+              <Input type="number" min={1} placeholder={t('software.externalSoftwareIdPlaceholder')} value={form.external_software_id} onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))} />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
             </Field>
             <Field label={t('software.externalApiBaseUrl')}>
               <Input
                 type="url"
-                placeholder="http://72.60.69.185"
+                placeholder={t('software.externalApiBaseUrlPlaceholder')}
                 value={form.external_api_base_url}
                 onChange={(event) => setForm((current) => ({ ...current, external_api_base_url: event.target.value }))}
               />
@@ -184,7 +184,7 @@ export function ProgramFormPage() {
             </Field>
             <Field label={t('software.externalLogsEndpoint')}>
               <Input
-                placeholder="apilogs"
+                placeholder={t('software.externalLogsEndpointPlaceholder')}
                 value={form.external_logs_endpoint}
                 onChange={(event) => setForm((current) => ({ ...current, external_logs_endpoint: event.target.value }))}
               />
@@ -192,13 +192,14 @@ export function ProgramFormPage() {
             </Field>
             <Field label={t('software.externalApiKey')}>
               <div className="flex gap-2">
-                <Input type={showApiKey ? 'text' : 'password'} maxLength={50} placeholder={editingId ? t('software.apiKeyReplacePlaceholder') : 'e.g. YOUR_EXTERNAL_API_KEY'} value={form.external_api_key} onChange={(event) => setForm((current) => ({ ...current, external_api_key: event.target.value }))} />
+                <Input type={showApiKey ? 'text' : 'password'} maxLength={50} placeholder={editingId ? t('software.apiKeyReplacePlaceholder') : t('software.externalApiKeyPlaceholder')} value={form.external_api_key} onChange={(event) => setForm((current) => ({ ...current, external_api_key: event.target.value }))} />
                 <Button type="button" variant="outline" size="icon" onClick={() => setShowApiKey((value) => !value)}>
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyHint')}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyUrlHint')}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.addUserUrlExample')}</p>
               {editingId && hasConfiguredApi ? <p className="text-xs text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p> : null}
             </Field>
           </div>

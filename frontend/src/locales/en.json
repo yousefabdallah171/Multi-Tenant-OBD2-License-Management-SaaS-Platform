@@ -1235,13 +1235,18 @@
     "externalApiBaseUrlRequired": "External API base URL is required for new programs.",
     "apiKeyHint": "Encrypted and stored securely. Not visible after saving.",
     "apiKeyReplacePlaceholder": "Leave blank to keep existing key",
+    "externalApiKeyPlaceholder": "Example: L9H2F7Q8XK6M4A",
+    "externalSoftwareIdPlaceholder": "Example: 8",
+    "externalApiBaseUrlPlaceholder": "Example: http://72.60.69.185",
+    "externalLogsEndpointPlaceholder": "Example: apilogs",
     "apiConfigured": "API Configured",
     "apiNotConfigured": "No API Key Set",
     "noApiWarning": "This program has no external API configured. Activation will fail.",
-    "apiBaseUrlHint": "Used as the base host for external API calls, e.g. http://72.60.69.185",
-    "logsEndpointHint": "Path only, without host. Example: apilogs",
-    "apiKeyUrlHint": "Used as: /apiuseradd/[KEY]/username/bios",
-    "softwareIdUrlHint": "Used as: /apilogs/[ID] and /apiusers/[ID]"
+    "apiBaseUrlHint": "Main host only (no path): http://72.60.69.185",
+    "logsEndpointHint": "Logs path only: apilogs. Full call becomes /apilogs/[ID].",
+    "apiKeyUrlHint": "API key value used in /apiuseradd/[KEY] and /apideluser/[KEY].",
+    "softwareIdUrlHint": "Software ID used in /apiusers/[ID], /showallapi/[ID], and /apilogs/[ID].",
+    "addUserUrlExample": "Add-user test: /apiuseradd/[KEY]/john_doe/ABC123XYZ"
   },
   "programLogs": {
     "title": "Program Logs",

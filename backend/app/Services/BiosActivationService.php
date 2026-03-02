@@ -8,6 +8,7 @@ use App\Models\BiosConflict;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class BiosActivationService
@@ -46,10 +47,7 @@ class BiosActivationService
             throw ValidationException::withMessages(['bios_id' => 'An active license already exists for this BIOS ID.']);
         }
 
-        $externalUsername = trim((string) ($customer->name ?? ''));
-        if ($externalUsername === '') {
-            $externalUsername = $biosId;
-        }
+        $externalUsername = $this->normalizeExternalUsername((string) ($customer->name ?? ''), $biosId);
 
         $response = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId, $program->external_api_base_url);
 
@@ -91,5 +89,28 @@ class BiosActivationService
             ],
             'status_code' => 201,
         ];
+    }
+
+    private function normalizeExternalUsername(string $customerName, string $biosId): string
+    {
+        $candidate = Str::of($customerName)
+            ->ascii()
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->trim('_')
+            ->limit(50, '')
+            ->value();
+
+        if ($candidate !== '') {
+            return $candidate;
+        }
+
+        return Str::of($biosId)
+            ->ascii()
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->trim('_')
+            ->limit(50, '')
+            ->value() ?: 'user_'.Str::lower(Str::random(8));
     }
 }

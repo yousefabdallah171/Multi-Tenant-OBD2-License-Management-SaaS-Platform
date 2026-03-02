@@ -1238,13 +1238,18 @@
     "externalApiBaseUrlRequired": "رابط API الخارجي الأساسي مطلوب للبرامج الجديدة.",
     "apiKeyHint": "مشفر ومحفوظ بأمان. لن يظهر مرة أخرى بعد الحفظ.",
     "apiKeyReplacePlaceholder": "اتركه فارغًا للاحتفاظ بالمفتاح الحالي",
+    "externalApiKeyPlaceholder": "مثال: L9H2F7Q8XK6M4A",
+    "externalSoftwareIdPlaceholder": "مثال: 8",
+    "externalApiBaseUrlPlaceholder": "مثال: http://72.60.69.185",
+    "externalLogsEndpointPlaceholder": "مثال: apilogs",
     "apiConfigured": "تم إعداد API",
     "apiNotConfigured": "لا يوجد مفتاح API",
     "noApiWarning": "هذا البرنامج لا يحتوي على API خارجي. التفعيل سيفشل.",
-    "apiBaseUrlHint": "يُستخدم كعنوان أساسي لاستدعاءات API الخارجية، مثال: http://72.60.69.185",
-    "logsEndpointHint": "المسار فقط بدون عنوان الخادم. مثال: apilogs",
-    "apiKeyUrlHint": "يُستخدم كالتالي: /apiuseradd/[KEY]/username/bios",
-    "softwareIdUrlHint": "يُستخدم كالتالي: /apilogs/[ID] و /apiusers/[ID]"
+    "apiBaseUrlHint": "ضع عنوان الخادم فقط بدون مسار: http://72.60.69.185",
+    "logsEndpointHint": "ضع مسار السجلات فقط: apilogs. المسار الكامل يصبح /apilogs/[ID].",
+    "apiKeyUrlHint": "قيمة المفتاح تُستخدم داخل /apiuseradd/[KEY] و /apideluser/[KEY].",
+    "softwareIdUrlHint": "معرف البرنامج يُستخدم داخل /apiusers/[ID] و /showallapi/[ID] و /apilogs/[ID].",
+    "addUserUrlExample": "مثال اختبار إضافة مستخدم: /apiuseradd/[KEY]/john_doe/ABC123XYZ"
   },
   "programLogs": {
     "title": "سجلات البرامج",
