@@ -1727,11 +1727,11 @@ VITE_DEFAULT_LOCALE=ar
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super Admin | admin@obd2sw.com | password |
-| Manager Parent | parent@obd2sw.com | password |
-| Manager | manager@obd2sw.com | password |
-| Reseller | reseller@obd2sw.com | password |
-| Customer | customer@obd2sw.com | password |
+| Super Admin | admin@obd2sw.com | set via secure env/secret |
+| Manager Parent | parent@obd2sw.com | set via secure env/secret |
+| Manager | manager@obd2sw.com | set via secure env/secret |
+| Reseller | reseller@obd2sw.com | set via secure env/secret |
+| Customer | customer@obd2sw.com | set via secure env/secret |
 
 ---
 
@@ -2078,7 +2078,6 @@ cd /home/obd2sw-panel/htdocs/panel.obd2sw.com/backend
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan db:seed --class=SuperAdminSeeder --force
-php artisan db:seed --class=ProductionSeeder --force
 ```
 3. Frontend build:
 ```bash

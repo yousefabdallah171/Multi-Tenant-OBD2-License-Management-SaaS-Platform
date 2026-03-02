@@ -30,6 +30,7 @@ class ProgramLogsController extends BaseManagerParentController
         }
 
         $response = $this->externalApiService->getProgramLogs((int) $resolved->external_software_id);
+        $externalOk = (bool) ($response['success'] ?? false);
         $licensesMap = License::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('program_id', $resolved->id)
@@ -108,6 +109,7 @@ class ProgramLogsController extends BaseManagerParentController
                 ...$response['data'],
                 'licenses' => $licensesMap,
                 'rows' => $pagedRows,
+                'external_available' => $externalOk,
                 'meta' => [
                     'page' => $page,
                     'per_page' => $perPage,
@@ -117,7 +119,8 @@ class ProgramLogsController extends BaseManagerParentController
                     'next_page' => $page < $lastPage ? $page + 1 : null,
                 ],
             ],
-        ], $response['status_code'] ?? 200);
+            'message' => $externalOk ? null : 'External API is currently unavailable. Showing cached/empty logs.',
+        ], 200);
     }
 
     public function activeUsers(Request $request, Program $program): JsonResponse
@@ -129,8 +132,13 @@ class ProgramLogsController extends BaseManagerParentController
         }
 
         $response = $this->externalApiService->getActiveUsers((int) $resolved->external_software_id);
+        $externalOk = (bool) ($response['success'] ?? false);
 
-        return response()->json(['data' => $response['data']], $response['status_code'] ?? 200);
+        return response()->json([
+            'data' => $response['data'],
+            'external_available' => $externalOk,
+            'message' => $externalOk ? null : 'External API is currently unavailable.',
+        ], 200);
     }
 
     public function stats(Request $request, Program $program): JsonResponse
@@ -142,8 +150,13 @@ class ProgramLogsController extends BaseManagerParentController
         }
 
         $response = $this->externalApiService->getSoftwareStats((int) $resolved->external_software_id);
+        $externalOk = (bool) ($response['success'] ?? false);
 
-        return response()->json(['data' => $response['data']], $response['status_code'] ?? 200);
+        return response()->json([
+            'data' => $response['data'],
+            'external_available' => $externalOk,
+            'message' => $externalOk ? null : 'External API is currently unavailable.',
+        ], 200);
     }
 
     private function resolveProgram(Request $request, Program $program): Program

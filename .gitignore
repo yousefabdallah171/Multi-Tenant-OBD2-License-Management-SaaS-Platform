@@ -32,6 +32,8 @@ scripts/
 frontend/lighthouse-*.report.html
 frontend/lighthouse-*.report.json
 frontend/lighthouse-*
+backend/tests/
+backend/database/seeders/ProductionSeeder.php
 
 # IDE
 .idea/
