@@ -21,7 +21,7 @@ class ExportTaskController extends Controller
                 'filename' => $exportTask->filename,
                 'format' => $exportTask->format,
                 'error' => $exportTask->error_message,
-                'download_url' => $exportTask->status === 'completed' ? '/api/exports/'.$exportTask->id.'/download' : null,
+                'download_url' => $exportTask->status === 'completed' ? '/exports/'.$exportTask->id.'/download' : null,
                 'completed_at' => $exportTask->completed_at?->toIso8601String(),
             ],
         ]);

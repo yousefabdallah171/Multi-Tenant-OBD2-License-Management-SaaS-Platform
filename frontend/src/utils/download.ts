@@ -50,6 +50,18 @@ function saveBlob(blob: Blob, filename: string) {
   window.URL.revokeObjectURL(blobUrl)
 }
 
+function normalizeDownloadPath(downloadUrl: string) {
+  if (/^https?:\/\//i.test(downloadUrl)) {
+    return downloadUrl
+  }
+
+  if (downloadUrl.startsWith('/api/')) {
+    return downloadUrl.slice(4)
+  }
+
+  return downloadUrl.startsWith('/') ? downloadUrl : `/${downloadUrl}`
+}
+
 export async function downloadFile(url: string, filename: string, params?: DownloadParams) {
   const lang = typeof document !== 'undefined' && document.documentElement.lang === 'ar' ? 'ar' : 'en'
   const response = await api.get<Blob>(url, {
@@ -71,7 +83,8 @@ export async function downloadFile(url: string, filename: string, params?: Downl
         throw new Error('Export completed without a download URL')
       }
 
-      const downloadResponse = await api.get<Blob>(task.download_url, { responseType: 'blob' })
+      const normalizedUrl = normalizeDownloadPath(task.download_url)
+      const downloadResponse = await api.get<Blob>(normalizedUrl, { responseType: 'blob' })
       const downloadBlob = downloadResponse.data instanceof Blob ? downloadResponse.data : new Blob([downloadResponse.data])
       saveBlob(downloadBlob, task.filename || filename)
       return

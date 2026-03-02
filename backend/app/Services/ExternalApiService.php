@@ -185,17 +185,21 @@ class ExternalApiService
 
     private function logApiCall(string $endpoint, string $method, array $payload, array $responseBody, int $statusCode, float $startedAt): void
     {
-        $user = auth()->user();
+        try {
+            $user = auth()->user();
 
-        ApiLog::query()->create([
-            'tenant_id' => $user?->tenant_id,
-            'user_id' => $user?->id,
-            'endpoint' => '/'.$endpoint,
-            'method' => $method,
-            'request_body' => $payload === [] ? null : $payload,
-            'response_body' => $responseBody === [] ? null : $responseBody,
-            'status_code' => $statusCode,
-            'response_time_ms' => (int) round((microtime(true) - $startedAt) * 1000),
-        ]);
+            ApiLog::query()->create([
+                'tenant_id' => $user?->tenant_id,
+                'user_id' => $user?->id,
+                'endpoint' => '/'.$endpoint,
+                'method' => $method,
+                'request_body' => $payload === [] ? null : $payload,
+                'response_body' => $responseBody === [] ? null : $responseBody,
+                'status_code' => $statusCode,
+                'response_time_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+            ]);
+        } catch (Throwable) {
+            // External API telemetry must never break business flow.
+        }
     }
 }
