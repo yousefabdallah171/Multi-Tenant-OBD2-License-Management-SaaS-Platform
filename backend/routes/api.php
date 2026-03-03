@@ -22,6 +22,7 @@ use App\Http\Controllers\Manager\UsernameManagementController as ManagerUsername
 use App\Http\Controllers\ManagerParent\ActivityController as ManagerParentActivityController;
 use App\Http\Controllers\ManagerParent\ApiStatusController as ManagerParentApiStatusController;
 use App\Http\Controllers\ManagerParent\BiosHistoryController as ManagerParentBiosHistoryController;
+use App\Http\Controllers\ManagerParent\BiosDetailsController as ManagerParentBiosDetailsController;
 use App\Http\Controllers\ManagerParent\BiosConflictController as ManagerParentBiosConflictController;
 use App\Http\Controllers\ManagerParent\CustomerController as ManagerParentCustomerController;
 use App\Http\Controllers\ManagerParent\DashboardController as ManagerParentDashboardController;
@@ -47,6 +48,7 @@ use App\Http\Controllers\Reseller\SoftwareController as ResellerSoftwareControll
 use App\Http\Controllers\SuperAdmin\ApiStatusController;
 use App\Http\Controllers\SuperAdmin\BiosBlacklistController as SuperAdminBiosBlacklistController;
 use App\Http\Controllers\SuperAdmin\BiosHistoryController;
+use App\Http\Controllers\SuperAdmin\BiosDetailsController as SuperAdminBiosDetailsController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\FinancialReportController;
 use App\Http\Controllers\SuperAdmin\LogController;
@@ -70,7 +72,7 @@ Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login']);
 });
 
-Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_seen'])->group(function (): void {
+Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_seen', 'track.online'])->group(function (): void {
     Route::prefix('auth')->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
@@ -155,6 +157,12 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
 
         Route::get('/bios-history', [ManagerParentBiosHistoryController::class, 'index']);
         Route::get('/bios-history/{biosId}', [ManagerParentBiosHistoryController::class, 'show']);
+        Route::get('/bios/search', [ManagerParentBiosDetailsController::class, 'search']);
+        Route::get('/bios/{biosId}', [ManagerParentBiosDetailsController::class, 'show']);
+        Route::get('/bios/{biosId}/licenses', [ManagerParentBiosDetailsController::class, 'licenses']);
+        Route::get('/bios/{biosId}/resellers', [ManagerParentBiosDetailsController::class, 'resellers']);
+        Route::get('/bios/{biosId}/ips', [ManagerParentBiosDetailsController::class, 'ips']);
+        Route::get('/bios/{biosId}/activity', [ManagerParentBiosDetailsController::class, 'activity']);
         Route::get('/bios-conflicts', [ManagerParentBiosConflictController::class, 'index']);
         Route::put('/bios-conflicts/{id}/resolve', [ManagerParentBiosConflictController::class, 'resolve']);
 
@@ -298,6 +306,12 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
 
         Route::get('/bios-history', [BiosHistoryController::class, 'index']);
         Route::get('/bios-history/{biosId}', [BiosHistoryController::class, 'show']);
+        Route::get('/bios/search', [SuperAdminBiosDetailsController::class, 'search']);
+        Route::get('/bios/{biosId}', [SuperAdminBiosDetailsController::class, 'show']);
+        Route::get('/bios/{biosId}/licenses', [SuperAdminBiosDetailsController::class, 'licenses']);
+        Route::get('/bios/{biosId}/resellers', [SuperAdminBiosDetailsController::class, 'resellers']);
+        Route::get('/bios/{biosId}/ips', [SuperAdminBiosDetailsController::class, 'ips']);
+        Route::get('/bios/{biosId}/activity', [SuperAdminBiosDetailsController::class, 'activity']);
 
         Route::prefix('reports')->group(function (): void {
             Route::get('/revenue', [ReportController::class, 'revenue']);

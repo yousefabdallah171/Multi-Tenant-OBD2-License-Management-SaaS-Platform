@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
+import { COMMON_TIMEZONES } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 import { settingsService } from '@/services/settings.service'
 import type { SystemSettings } from '@/types/super-admin.types'
@@ -104,6 +105,22 @@ export function SettingsPage() {
                 />
                 {t('superAdmin.pages.settings.maintenanceMode')}
               </label>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="server-timezone">{t('settings.serverTimezone')}</Label>
+                <select
+                  id="server-timezone"
+                  value={form.general.server_timezone}
+                  onChange={(event) => setDraft((current) => ({ ...(current ?? form), general: { ...(current ?? form).general, server_timezone: event.target.value } }))}
+                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                >
+                  {COMMON_TIMEZONES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('settings.timezonePurpose')}</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

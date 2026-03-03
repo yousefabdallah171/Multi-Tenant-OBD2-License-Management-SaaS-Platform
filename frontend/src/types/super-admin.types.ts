@@ -166,6 +166,7 @@ export interface SystemSettings {
     platform_name: string
     default_trial_days: number
     maintenance_mode: boolean
+    server_timezone: string
   }
   api: {
     url: string

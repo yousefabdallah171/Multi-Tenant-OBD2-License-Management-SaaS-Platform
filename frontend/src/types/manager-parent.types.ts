@@ -291,7 +291,8 @@ export interface BiosHistoryEntry {
 
 export interface IpAnalyticsEntry {
   username: string
-  external_username: string | null
+  raw_username?: string
+  external_username?: string | null
   bios_id: string | null
   customer_id: number | null
   customer_name?: string | null
@@ -299,6 +300,7 @@ export interface IpAnalyticsEntry {
   license_id?: number | null
   program_id?: number | null
   program_name?: string | null
+  external_software_id?: number | null
   ip_address: string
   timestamp: string
   parsed_at?: string | null

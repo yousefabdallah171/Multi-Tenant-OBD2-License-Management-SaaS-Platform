@@ -6,6 +6,7 @@ const defaultSettings: SystemSettings = {
     platform_name: '',
     default_trial_days: 7,
     maintenance_mode: false,
+    server_timezone: 'UTC',
   },
   api: {
     url: '',

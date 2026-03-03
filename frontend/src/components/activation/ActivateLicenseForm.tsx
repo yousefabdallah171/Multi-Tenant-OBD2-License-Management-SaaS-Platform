@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { COMMON_TIMEZONES } from '@/lib/timezones'
 import { activateLicense } from '@/services/activation.service'
 
 export interface ActivationProgram {
@@ -41,6 +42,9 @@ const EMPTY_FORM = {
   duration_unit: 'days' as 'minutes' | 'hours' | 'days',
   mode: 'duration' as 'duration' | 'end_date',
   end_date: '',
+  is_scheduled: false,
+  scheduled_date_time: '',
+  scheduled_timezone: 'UTC',
 }
 const MAX_PRICE = 99_999_999.99
 const MAX_DURATION_DAYS = 36_500
@@ -143,6 +147,17 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       }
     }
 
+    if (form.is_scheduled) {
+      if (!form.scheduled_date_time) {
+        nextErrors.end_date = requiredMessage
+      } else {
+        const scheduledAt = new Date(form.scheduled_date_time).getTime()
+        if (!Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
+          nextErrors.end_date = invalidNumberMessage
+        }
+      }
+    }
+
     if (priceMode === 'manual' && priceInput.trim() === '') {
       nextErrors.price = requiredMessage
     } else if (!Number.isFinite(totalPrice) || totalPrice < 0) {
@@ -166,9 +181,16 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         bios_id: form.bios_id.trim(),
         duration_days: Number(durationDays.toFixed(3)),
         price: totalPrice,
+        is_scheduled: form.is_scheduled,
+        scheduled_date_time: form.is_scheduled ? form.scheduled_date_time : undefined,
+        scheduled_timezone: form.is_scheduled ? form.scheduled_timezone : undefined,
       }),
     onSuccess: (data) => {
-      toast.success(`${t('activate.successTitle')} - ${t('activate.successMessage', { key: data.license_key })}`)
+      if (form.is_scheduled && form.scheduled_date_time) {
+        toast.success(t('activate.scheduledSuccess', { dateTime: new Date(form.scheduled_date_time).toLocaleString() }))
+      } else {
+        toast.success(`${t('activate.successTitle')} - ${t('activate.successMessage', { key: data.license_key })}`)
+      }
       onSuccess?.()
     },
     onError: (error: unknown) => {
@@ -195,6 +217,10 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
   })
 
   const isExternalConfigured = program.has_external_api !== false
+  const biosPreview = `${form.customer_name.trim() || 'username'}-${form.bios_id.trim() || 'BIOS ID'}`
+  const schedulePreview = form.is_scheduled && form.scheduled_date_time
+    ? `${new Date(form.scheduled_date_time).toLocaleString()} ${form.scheduled_timezone}`
+    : ''
 
   function handleSubmit() {
     if (!isExternalConfigured) {
@@ -255,6 +281,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         <Label htmlFor="activate-customer-name">{t('activate.customerName')}</Label>
         <Input id="activate-customer-name" value={form.customer_name} onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))} />
         <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.customerNameHint')}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.biosConcatenationHint', { value: biosPreview })}</p>
         {errors.customer_name ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.customer_name}</p> : null}
       </div>
       <div className="space-y-2">
@@ -338,6 +365,47 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
             {errors.end_date ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.end_date}</p> : null}
           </>
         )}
+      </div>
+      <div className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+          <input
+            type="checkbox"
+            checked={form.is_scheduled}
+            onChange={(event) => setForm((current) => ({ ...current, is_scheduled: event.target.checked }))}
+          />
+          {t('activate.scheduleToggle')}
+        </label>
+        {form.is_scheduled ? (
+          <div className="grid gap-2 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>{t('activate.selectDateTime')}</Label>
+              <Input
+                type="datetime-local"
+                value={form.scheduled_date_time}
+                onChange={(event) => setForm((current) => ({ ...current, scheduled_date_time: event.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('activate.selectTimezone')}</Label>
+              <select
+                value={form.scheduled_timezone}
+                onChange={(event) => setForm((current) => ({ ...current, scheduled_timezone: event.target.value }))}
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                {COMMON_TIMEZONES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {schedulePreview ? (
+              <p className="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">
+                {t('activate.preview', { dateTime: schedulePreview })}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between">

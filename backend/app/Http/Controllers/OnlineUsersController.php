@@ -59,12 +59,13 @@ class OnlineUsersController extends Controller
         $users = $query
             ->orderByDesc('last_seen_at')
             ->limit(100)
-            ->get(['id', 'name', 'role']);
+            ->get(['id', 'name', 'role', 'last_seen_at']);
 
         return response()->json([
             'data' => $users->map(fn (User $user): array => [
                 'masked_name' => $this->maskName((string) $user->name),
                 'role' => $user->role?->value ?? (string) $user->role,
+                'last_seen_at' => $user->last_seen_at?->toIso8601String(),
             ])->values(),
         ]);
     }
@@ -93,4 +94,3 @@ class OnlineUsersController extends Controller
         return $first.str_repeat('*', max(1, $length - 2)).$last;
     }
 }
-

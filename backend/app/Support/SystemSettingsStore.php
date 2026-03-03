@@ -57,6 +57,7 @@ class SystemSettingsStore
                 'platform_name' => config('app.name', 'OBD2SW'),
                 'default_trial_days' => 7,
                 'maintenance_mode' => false,
+                'server_timezone' => config('app.timezone', 'UTC'),
             ],
             'api' => [
                 'url' => config('external-api.url'),

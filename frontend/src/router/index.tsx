@@ -43,6 +43,7 @@ const ActivateLicensePageForManagerParent = lazyNamed(() => import('@/pages/mana
 const ManagerParentApiStatusPage = lazyNamed(() => import('@/pages/manager-parent/ApiStatus'), 'ApiStatusPage')
 const ManagerParentBiosBlacklistPage = lazyNamed(() => import('@/pages/manager-parent/BiosBlacklist'), 'BiosBlacklistPage')
 const ManagerParentBiosConflictsPage = lazyNamed(() => import('@/pages/manager-parent/BiosConflicts'), 'BiosConflictsPage')
+const ManagerParentBiosDetailsPage = lazyNamed(() => import('@/pages/manager-parent/BiosDetails'), 'BiosDetailsPage')
 const ManagerParentBiosHistoryPage = lazyNamed(() => import('@/pages/manager-parent/BiosHistory'), 'BiosHistoryPage')
 const ManagerParentCustomersPage = lazyNamed(() => import('@/pages/manager-parent/Customers'), 'CustomersPage')
 const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-parent/CustomerDetail'), 'CustomerDetailPage')
@@ -65,6 +66,7 @@ const ManagerParentUsernameManagementPage = lazyNamed(() => import('@/pages/mana
 
 const ApiStatusPage = lazyNamed(() => import('@/pages/super-admin/ApiStatus'), 'ApiStatusPage')
 const BiosBlacklistPage = lazyNamed(() => import('@/pages/super-admin/BiosBlacklist'), 'BiosBlacklistPage')
+const SuperAdminBiosDetailsPage = lazyNamed(() => import('@/pages/super-admin/BiosDetails'), 'BiosDetailsPage')
 const BiosHistoryPage = lazyNamed(() => import('@/pages/super-admin/BiosHistory'), 'BiosHistoryPage')
 const DashboardPage = lazyNamed(() => import('@/pages/super-admin/Dashboard'), 'DashboardPage')
 const FinancialReportsPage = lazyNamed(() => import('@/pages/super-admin/FinancialReports'), 'FinancialReportsPage')
@@ -118,6 +120,7 @@ export function AppRouter() {
                   <Route path="admin-management" element={<AdminManagementPage />} />
                   <Route path="bios-blacklist" element={<BiosBlacklistPage />} />
                   <Route path="bios-history" element={<BiosHistoryPage />} />
+                  <Route path="bios-details" element={<SuperAdminBiosDetailsPage />} />
                   <Route path="username-management" element={<UsernameManagementPage />} />
                   <Route path="security-locks" element={<SecurityLocksPage />} />
                   <Route path="financial-reports" element={<FinancialReportsPage />} />
@@ -141,6 +144,7 @@ export function AppRouter() {
                   <Route path="software-management/:id/activate" element={<ActivateLicensePageForManagerParent />} />
                   <Route path="bios-blacklist" element={<ManagerParentBiosBlacklistPage />} />
                   <Route path="bios-history" element={<ManagerParentBiosHistoryPage />} />
+                  <Route path="bios-details" element={<ManagerParentBiosDetailsPage />} />
                   <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
                   <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />
                   <Route path="logs" element={<ManagerParentLogsPage />} />

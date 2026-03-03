@@ -7,6 +7,7 @@ use App\Http\Middleware\BiosBlacklistCheck;
 use App\Http\Middleware\IpTracker;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\TenantScope;
+use App\Http\Middleware\TrackOnlineStatus;
 use App\Http\Middleware\UpdateLastSeen;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -32,10 +33,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'bios.blacklist' => BiosBlacklistCheck::class,
             'ip.tracker' => IpTracker::class,
             'update.last_seen' => UpdateLastSeen::class,
+            'track.online' => TrackOnlineStatus::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('licenses:expire')->everyMinute()->withoutOverlapping();
+        $schedule->command('licenses:schedule-activate')->everyMinute()->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

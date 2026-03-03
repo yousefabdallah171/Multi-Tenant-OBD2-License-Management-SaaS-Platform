@@ -27,6 +27,9 @@ class LicenseController extends Controller
             'bios_id' => ['required', 'string', 'max:255'],
             'duration_days' => ['required', 'numeric', 'min:0.001', 'max:36500'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'is_scheduled' => ['nullable', 'boolean'],
+            'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
+            'scheduled_timezone' => ['nullable', 'string', 'max:64'],
         ]);
 
         $license = $this->licenseService->activate($validated);
@@ -51,6 +54,9 @@ class LicenseController extends Controller
                 'activated_at' => $license->activated_at?->toIso8601String(),
                 'expires_at' => $license->expires_at?->toIso8601String(),
                 'status' => $license->status,
+                'is_scheduled' => (bool) $license->is_scheduled,
+                'scheduled_at' => $license->scheduled_at?->toIso8601String(),
+                'scheduled_timezone' => $license->scheduled_timezone,
             ],
         ], 201);
     }
@@ -69,6 +75,9 @@ class LicenseController extends Controller
         $validated = $request->validate([
             'duration_days' => ['required', 'numeric', 'min:0.001', 'max:36500'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'is_scheduled' => ['nullable', 'boolean'],
+            'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
+            'scheduled_timezone' => ['nullable', 'string', 'max:64'],
         ]);
 
         $resolved = $this->resolveAccessibleLicense($request, $license);
@@ -184,6 +193,9 @@ class LicenseController extends Controller
             'price' => (float) $license->price,
             'activated_at' => $license->activated_at?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),
+            'scheduled_at' => $license->scheduled_at?->toIso8601String(),
+            'scheduled_timezone' => $license->scheduled_timezone,
+            'is_scheduled' => (bool) $license->is_scheduled,
             'status' => $license->status,
         ];
     }

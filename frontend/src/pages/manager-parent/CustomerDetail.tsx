@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { customerService } from '@/services/customer.service'
 import { IpLocationCell } from '@/utils/countryFlag'
 
@@ -42,60 +44,81 @@ export function CustomerDetailPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader><CardTitle>{t('managerParent.pages.customers.licenseHistory')}</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {(customer.licenses ?? []).map((license) => (
-                <div key={license.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                  <div className="grid gap-2 md:grid-cols-4">
-                    <Info label={t('common.program')} value={license.program ?? '-'} />
-                    <Info label={t('managerParent.pages.customers.biosId')} value={`${license.bios_id}${license.external_username ? `\n@${license.external_username}` : ''}`} />
-                    <Info label={t('common.reseller')} value={license.reseller ?? '-'} />
-                    <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="licenses" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="licenses">{t('managerParent.pages.customers.licenseHistory')}</TabsTrigger>
+              <TabsTrigger value="bios">{t('managerParent.pages.customers.biosId')}</TabsTrigger>
+              <TabsTrigger value="ips">{t('managerParent.pages.ipAnalytics.title')}</TabsTrigger>
+              <TabsTrigger value="activity">{t('managerParent.nav.activity')}</TabsTrigger>
+            </TabsList>
 
-          <Card>
-            <CardHeader><CardTitle>{t('common.reseller')}</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {(customer.resellers_summary ?? []).map((reseller) => (
-                <div key={`${reseller.reseller_id}-${reseller.reseller_email}`} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                  <p className="font-medium">{reseller.reseller_name ?? '-'}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.reseller_email ?? '-'}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{reseller.activations_count} activations</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+            <TabsContent value="licenses">
+              <Card>
+                <CardHeader><CardTitle>{t('managerParent.pages.customers.licenseHistory')}</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {(customer.licenses ?? []).map((license) => (
+                    <div key={license.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                      <div className="grid gap-2 md:grid-cols-4">
+                        <Info label={t('common.program')} value={license.program ?? '-'} />
+                        <Info
+                          label={t('managerParent.pages.customers.biosId')}
+                          value={(
+                            <Link className="text-sky-600 hover:underline" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(license.bios_id)}`}>
+                              {license.bios_id}
+                            </Link>
+                          )}
+                        />
+                        <Info label={t('common.reseller')} value={license.reseller ?? '-'} />
+                        <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <Card>
-            <CardHeader><CardTitle>{t('managerParent.pages.ipAnalytics.title')}</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {(customer.ip_logs ?? []).map((log) => (
-                <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                  <p className="font-medium">{log.ip_address}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+            <TabsContent value="bios">
+              <Card>
+                <CardContent className="space-y-2 p-4">
+                  {(customer.licenses ?? []).map((license) => (
+                    <Link key={`bios-${license.id}`} className="block rounded-xl border border-slate-200 p-3 text-sky-600 hover:underline dark:border-slate-700" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(license.bios_id)}`}>
+                      {license.bios_id}
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <Card>
-            <CardHeader><CardTitle>{t('managerParent.nav.activity')}</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {(customer.activity ?? []).map((entry) => (
-                <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                  <p className="font-medium">{entry.action}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+            <TabsContent value="ips">
+              <Card>
+                <CardHeader><CardTitle>{t('managerParent.pages.ipAnalytics.title')}</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {(customer.ip_logs ?? []).map((log) => (
+                    <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                      <p className="font-medium">{log.ip_address}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="activity">
+              <Card>
+                <CardHeader><CardTitle>{t('managerParent.nav.activity')}</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {(customer.activity ?? []).map((entry) => (
+                    <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                      <p className="font-medium">{entry.action}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </>
       ) : null}
     </div>

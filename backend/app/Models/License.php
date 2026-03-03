@@ -24,6 +24,10 @@ class License extends Model
         'price',
         'activated_at',
         'expires_at',
+        'scheduled_at',
+        'scheduled_timezone',
+        'is_scheduled',
+        'activated_at_scheduled',
         'status',
     ];
 
@@ -34,6 +38,9 @@ class License extends Model
             'price' => 'decimal:2',
             'activated_at' => 'datetime',
             'expires_at' => 'datetime',
+            'scheduled_at' => 'datetime',
+            'is_scheduled' => 'boolean',
+            'activated_at_scheduled' => 'datetime',
         ];
     }
 

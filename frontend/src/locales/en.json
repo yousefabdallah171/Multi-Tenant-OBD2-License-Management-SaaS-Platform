@@ -184,6 +184,7 @@
       "adminManagement": "Admin Mgmt",
       "biosBlacklist": "BIOS Blacklist",
       "biosHistory": "BIOS History",
+      "biosDetails": "BIOS Details",
       "usernameManagement": "Username Mgmt",
       "securityLocks": "Security Locks",
       "financialReports": "Financial",
@@ -399,6 +400,7 @@
       "softwareManagement": "Software Management",
       "biosBlacklist": "BIOS Blacklist",
       "biosHistory": "BIOS History",
+      "biosDetails": "BIOS Details",
       "biosConflicts": "BIOS Conflicts",
       "ipAnalytics": "IP Analytics",
       "logs": "Platform Logs",
@@ -1271,7 +1273,9 @@
     "columns": {
       "country": "Country",
       "location": "Location",
-      "biosId": "BIOS ID"
+      "biosId": "BIOS ID",
+      "program": "Program",
+      "externalId": "External ID"
     },
     "vpnProxy": "VPN/Proxy"
   },
@@ -1298,7 +1302,13 @@
     "errorTitle": "Activation Failed",
     "biosAlreadyActive": "This BIOS ID already has an active license for this program.",
     "biosBlacklisted": "This BIOS ID is blacklisted and cannot be activated.",
-    "customerNameHint": "Will be used as the external username on the license server."
+    "customerNameHint": "Will be used as the external username on the license server.",
+    "biosConcatenationHint": "Your BIOS will be registered as: {{value}}",
+    "scheduleToggle": "Schedule activation for later",
+    "selectDateTime": "Select date and time",
+    "selectTimezone": "Select timezone",
+    "preview": "License will activate on {{dateTime}}",
+    "scheduledSuccess": "License scheduled successfully. Will activate on {{dateTime}}."
   },
   "customerPortal": {
     "layout": {
@@ -1380,6 +1390,34 @@
   "onlineWidget": {
     "title": "Online Now",
     "collapsed": "{{count}} online",
-    "empty": "No users online"
+    "empty": "No users online",
+    "lastSeen": "Last seen",
+    "role": "Role"
+  },
+  "biosDetails": {
+    "title": "BIOS ID Details",
+    "search": "Search BIOS ID",
+    "overview": "Overview",
+    "licenses": "License History",
+    "resellers": "Resellers",
+    "ips": "IP Analytics",
+    "activity": "Activity Log",
+    "blacklist": "Blacklist Status",
+    "originalBios": "Original BIOS",
+    "username": "Username",
+    "customer": "Customer",
+    "reseller": "Reseller",
+    "status": "Status",
+    "firstActivation": "First Activation",
+    "lastActivity": "Last Activity",
+    "totalActivations": "Total Activations",
+    "avgDaysBetween": "Average Days Between Purchases",
+    "notBlacklisted": "Not blacklisted"
+  },
+  "settings": {
+    "serverTimezone": "Server Timezone",
+    "timezonePurpose": "Set the timezone for all dashboard displays and scheduled tasks.",
+    "saved": "Settings updated successfully",
+    "error": "Failed to save settings"
   }
 }

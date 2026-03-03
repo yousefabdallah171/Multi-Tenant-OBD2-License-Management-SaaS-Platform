@@ -13,6 +13,7 @@ use App\Models\BiosConflict;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -45,6 +46,10 @@ class LicenseService
         }
 
         $externalUsername = $this->normalizeExternalUsername($customerName, $biosId);
+        $appendedBiosId = $this->appendBiosId($externalUsername, $biosId);
+        $isScheduled = (bool) ($data['is_scheduled'] ?? false);
+        $scheduledTimezone = (string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC'));
+        $scheduledAt = $isScheduled ? Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc() : null;
 
         if ($program->status !== 'active') {
             throw ValidationException::withMessages(['program_id' => 'The selected program is not active.']);
@@ -56,13 +61,22 @@ class LicenseService
             ]);
         }
 
-        $this->assertBiosAvailable($reseller, $program, $biosId);
+        $this->assertBiosAvailable($reseller, $program, $appendedBiosId);
 
-        $apiResponse = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId, $program->external_api_base_url);
+        $apiResponse = [
+            'success' => true,
+            'data' => ['response' => 'Scheduled activation pending.'],
+            'status_code' => 202,
+        ];
 
-        $this->logBiosAccess($reseller, $biosId, 'activate', [
+        if (! $isScheduled) {
+            $apiResponse = $this->externalApiService->activateUser($apiKey, $externalUsername, $appendedBiosId, $program->external_api_base_url);
+        }
+
+        $this->logBiosAccess($reseller, $appendedBiosId, $isScheduled ? 'schedule_activate' : 'activate', [
             'program_id' => $program->id,
             'external' => $apiResponse,
+            'is_scheduled' => $isScheduled,
         ]);
 
         if (! $apiResponse['success']) {
@@ -71,42 +85,51 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($data, $customerName, $externalUsername, $reseller, $program, $biosId, $apiResponse): License {
-            $customer = $this->upsertCustomer($reseller, $data, $biosId);
+        return DB::transaction(function () use ($data, $externalUsername, $reseller, $program, $appendedBiosId, $apiResponse, $isScheduled, $scheduledTimezone, $scheduledAt): License {
+            $customer = $this->upsertCustomer($reseller, $data, $externalUsername);
             $durationDays = (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
+            $activationAnchor = $scheduledAt ?? now();
 
             $license = License::query()->create([
                 'tenant_id' => $reseller->tenant_id,
                 'customer_id' => $customer->id,
                 'reseller_id' => $reseller->id,
                 'program_id' => $program->id,
-                'bios_id' => $biosId,
+                'bios_id' => $appendedBiosId,
                 'external_username' => $externalUsername,
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
-                'activated_at' => now(),
-                'expires_at' => now()->addMinutes($durationMinutes),
-                'status' => 'active',
+                'activated_at' => $isScheduled ? null : now(),
+                'expires_at' => $activationAnchor->copy()->addMinutes($durationMinutes),
+                'scheduled_at' => $scheduledAt,
+                'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
+                'is_scheduled' => $isScheduled,
+                'status' => $isScheduled ? 'pending' : 'active',
             ]);
 
             $this->balanceService->recordRevenue($reseller, (float) $license->price, true);
             $this->logActivity(
                 $reseller,
-                'license.activated',
-                sprintf('Activated %s for BIOS %s.', $program->name, $biosId),
+                $isScheduled ? 'license.scheduled' : 'license.activated',
+                $isScheduled
+                    ? sprintf('Scheduled %s for BIOS %s at %s.', $program->name, $appendedBiosId, $scheduledAt?->toIso8601String() ?? '')
+                    : sprintf('Activated %s for BIOS %s.', $program->name, $appendedBiosId),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $customer->id,
                     'program_id' => $program->id,
                     'price' => (float) $license->price,
+                    'is_scheduled' => $isScheduled,
                 ],
             );
 
             $license->load(['customer', 'program', 'reseller']);
 
-            event(new LicenseActivated($license));
+            if (! $isScheduled) {
+                event(new LicenseActivated($license));
+            }
             $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
@@ -123,12 +146,18 @@ class LicenseService
             $anchor = $license->expires_at && $license->expires_at->isFuture() ? $license->expires_at->copy() : now();
             $durationDays = (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
+            $isScheduled = (bool) ($data['is_scheduled'] ?? false);
+            $scheduledTimezone = (string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC'));
+            $scheduledAt = $isScheduled ? Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc() : null;
 
             $license->forceFill([
                 'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
-                'expires_at' => $anchor->addMinutes($durationMinutes),
-                'status' => 'active',
+                'expires_at' => ($scheduledAt ?? $anchor)->addMinutes($durationMinutes),
+                'status' => $isScheduled ? 'pending' : 'active',
+                'scheduled_at' => $scheduledAt,
+                'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
+                'is_scheduled' => $isScheduled,
             ])->save();
 
             $this->balanceService->recordRevenue($reseller, (float) $license->price);
@@ -167,8 +196,8 @@ class LicenseService
         ];
 
         if ($apiKey !== null) {
-            $externalUsername = $license->external_username ?: $license->bios_id;
-            $apiResponse = $this->externalApiService->deactivateUser($apiKey, $externalUsername, $program?->external_api_base_url);
+            $deactivationIdentifier = $license->bios_id;
+            $apiResponse = $this->externalApiService->deactivateUser($apiKey, $deactivationIdentifier, $program?->external_api_base_url);
         }
 
         $this->logBiosAccess($reseller, $license->bios_id, 'deactivate', [
@@ -235,16 +264,16 @@ class LicenseService
         }
     }
 
-    private function upsertCustomer(User $reseller, array $data, string $biosId): User
+    private function upsertCustomer(User $reseller, array $data, string $externalUsername): User
     {
-        $email = $this->resolveCustomerEmail($reseller, $biosId, $data['customer_email'] ?? null);
+        $email = $this->resolveCustomerEmail($reseller, $externalUsername, $data['customer_email'] ?? null);
 
         $customer = User::query()
             ->where('tenant_id', $reseller->tenant_id)
-            ->where(function ($query) use ($email, $biosId): void {
+            ->where(function ($query) use ($email, $externalUsername): void {
                 $query
                     ->where('email', $email)
-                    ->orWhere('username', $biosId);
+                    ->orWhere('username', $externalUsername);
             })
             ->where('role', UserRole::CUSTOMER->value)
             ->first();
@@ -261,7 +290,7 @@ class LicenseService
             'role' => UserRole::CUSTOMER,
             'status' => 'active',
             'created_by' => $reseller->id,
-            'username' => $customer->username ?: $biosId,
+            'username' => $customer->username_locked ? $customer->username : $externalUsername,
             'username_locked' => true,
         ];
 
@@ -376,6 +405,11 @@ class LicenseService
             ->trim('_')
             ->limit(50, '')
             ->value() ?: 'user_'.Str::lower(Str::random(8));
+    }
+
+    private function appendBiosId(string $username, string $biosId): string
+    {
+        return $username.'-'.$biosId;
     }
 
     private function logActivity(User $user, string $action, string $description, array $metadata = []): void

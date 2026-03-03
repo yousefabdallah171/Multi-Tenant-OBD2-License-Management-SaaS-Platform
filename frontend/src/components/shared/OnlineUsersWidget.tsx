@@ -6,16 +6,11 @@ import { RoleBadge } from '@/components/shared/RoleBadge'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { cn } from '@/lib/utils'
-import { api } from '@/services/api'
 import { managerParentService } from '@/services/manager-parent.service'
 import { managerService } from '@/services/manager.service'
+import { onlineService, type OnlineUser } from '@/services/online.service'
 import { settingsService } from '@/services/settings.service'
-import type { UserRole } from '@/types/user.types'
-
-interface OnlineUser {
-  masked_name: string
-  role: UserRole
-}
+import { formatDate } from '@/lib/utils'
 
 export function OnlineUsersWidget() {
   const { t } = useTranslation()
@@ -54,12 +49,10 @@ export function OnlineUsersWidget() {
         return response.data as OnlineUser[]
       }
       if (user?.role === 'super_admin') {
-        const { data } = await api.get<{ data: OnlineUser[] }>('/super-admin/online-users')
-        return data.data
+        return onlineService.getOnlineUsers('/super-admin/online-users')
       }
       if (user?.role === 'reseller') {
-        const { data } = await api.get<{ data: OnlineUser[] }>('/reseller/online-users')
-        return data.data
+        return onlineService.getOnlineUsers('/reseller/online-users')
       }
       return []
     },
@@ -98,7 +91,12 @@ export function OnlineUsersWidget() {
               <p className="text-sm text-slate-500 dark:text-slate-400">{t('onlineWidget.empty')}</p>
             ) : rows.map((entry, index) => (
               <div key={`${entry.masked_name}-${index}`} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2 dark:border-slate-800">
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{entry.masked_name}</p>
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{entry.masked_name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {t('onlineWidget.lastSeen')}: {entry.last_seen_at ? formatDate(entry.last_seen_at, lang === 'ar' ? 'ar-EG' : 'en-US') : '-'}
+                  </p>
+                </div>
                 <RoleBadge role={entry.role} />
               </div>
             ))}

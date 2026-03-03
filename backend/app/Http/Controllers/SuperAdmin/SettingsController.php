@@ -26,6 +26,7 @@ class SettingsController extends BaseSuperAdminController
             'general.platform_name' => ['sometimes', 'string', 'max:255'],
             'general.default_trial_days' => ['sometimes', 'integer', 'min:0', 'max:365'],
             'general.maintenance_mode' => ['sometimes', 'boolean'],
+            'general.server_timezone' => ['sometimes', 'string', 'max:64'],
             'api' => ['sometimes', 'array'],
             'api.url' => ['sometimes', 'url'],
             'api.key' => ['sometimes', 'string'],
