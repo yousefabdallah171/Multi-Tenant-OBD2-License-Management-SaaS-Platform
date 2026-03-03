@@ -27,8 +27,8 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 2. [Tech Stack](#2-tech-stack)
 3. [Architecture](#3-architecture)
 4. [User Roles & RBAC](#4-user-roles--rbac)
-5. [All Pages (42 Total)](#5-all-pages-42-total)
-6. [Database Schema (12 Tables)](#6-database-schema-12-tables)
+5. [Dashboard Pages & Key Routes](#5-dashboard-pages--key-routes)
+6. [Database Schema (Core Runtime Tables)](#6-database-schema-core-runtime-tables)
 7. [External API Integration](#7-external-api-integration)
 8. [BIOS Activation Flow](#8-bios-activation-flow)
 9. [Frontend Structure & Coding Standards](#9-frontend-structure--coding-standards)
@@ -48,9 +48,9 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 | Field | Value |
 |-------|-------|
 | **Version** | 1.0.0 |
-| **Status** | Phase 12 UX Editing + Phase 08 Testing complete (deployment hardening pending) |
-| **Last Updated** | 2026-03-01 |
-| **Scale** | Multi-tenant SaaS, 42 Pages, 12 Tables, 101 API Endpoints |
+| **Status** | Phase 12 UX Editing + seller tracking updates complete (deployment hardening pending) |
+| **Last Updated** | 2026-03-03 |
+| **Scale** | Multi-tenant SaaS, 4 active dashboard roles, queued exports, tenant-scoped external API workflows |
 | **Budget** | $30 |
 | **Timeline** | 15 Days (Day 0 - Day 14) |
 | **Domain** | obd2sw.com |
@@ -83,16 +83,18 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | PHASE-09-Deployment | :red_circle: Not Started | Day 12-13 |
 | PHASE-10-Documentation | :red_circle: Not Started | Day 14 |
 
-### Latest Implemented UX Updates (2026-03-01)
+### Latest Implemented UX Updates (2026-03-03)
 
-- IP Analytics now reads tenant-matched global logs and defaults to newest-first rows.
-- GeoIP and VPN/hosting detection moved to ip-api.com batch flow.
-- Manager Parent sidebar now has a collapsible Logs group.
+- IP Analytics is now software-scoped with a program selector, parsed external timestamps, and tenant/program-aware matching.
+- Manager Parent and Manager now have dedicated seller activity pages for activations, renewals, deactivations, and deletions.
+- Manager and Manager Parent customer names in licenses/logs now link into customer detail/history views.
+- Manager Parent Team Management and Manager Team now expose richer recent-license and recent-activity drill-down panels.
+- Manager Parent sidebar now has a collapsible Logs group and seller-log navigation.
 - Manager and Manager Parent now have Licenses pages with bulk actions.
 - Online users floating widget is live with role-based visibility and Super Admin settings toggle.
 - Single and bulk deactivate flows now return clearer, actionable API errors.
 
-### Latest Stability Fixes (2026-03-02)
+### Latest Stability Fixes (2026-03-03)
 
 - License expiry now auto-reconciles to `expired` when duration is over:
   - Scheduled command: `php artisan licenses:expire` (every minute).
@@ -103,6 +105,8 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
   - `installation_guide_url`
   - `external_logs_endpoint`
 - Program edit validation hardened to reduce false `422` errors for optional external API fields.
+- Activation/customer flows now accept long external usernames and numeric-looking customer names.
+- Manager and Manager Parent direct sales are now attributed consistently across reports, customer history, and seller-log views.
 
 ---
 
@@ -155,7 +159,7 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
            │                                  │
            v                                  v
 ┌─────────────────────┐          ┌─────────────────────────┐
-│   Laravel 11 API    │          │  Static Frontend Build   │
+│   Laravel 12 API    │          │  Static Frontend Build   │
 │   PHP 8.3 + FPM     │          │  (Vite → dist/ ~1.2MB)   │
 │                     │          └─────────────────────────┘
 │  Middleware Stack:   │
@@ -168,8 +172,8 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 │                     │    └──────────────────────────┘
 │  Pusher Events      │
 └──────────┬──────────┘    ┌──────────────────────────┐
-           │               │    ipapi.co               │
-           │               │    IP Geolocation API     │
+           │               │    ip-api.com             │
+           │               │    Batch IP geolocation   │
            v               └──────────────────────────┘
     ┌──────────────┐    ┌──────────────┐
     │  MySQL 8.0   │    │    Redis 7   │
@@ -217,7 +221,7 @@ Super Admin (GLOBAL scope)
 |-----------|:-----------:|:--------------:|:-------:|:--------:|:--------:|
 | Scope | Global | Tenant | Team | Personal | Removed |
 | Login to dashboard | Yes | Yes | Yes | Yes | No (silent 401) |
-| Dashboard page count | 10 | 18 | 9 | 5 | 0 |
+| Dashboard page count | 14 | 21 | 11 | 5 | 0 |
 | Tenant management | Yes | No | No | No | No |
 | Team management | No | Yes | Read-only team scope | No | No |
 | Username management | No | Yes | Yes (team scope) | No | No |
@@ -225,8 +229,9 @@ Super Admin (GLOBAL scope)
 | BIOS conflicts page | No | Yes | No | No | No |
 | Logs + API status pages | Yes | Yes | No | No | No |
 | Software management CRUD | No | Yes | Yes | No | No |
-| Software catalog + activate modal | No | No | Yes | Yes | No |
-| Customers + licenses workflow | No | Tenant visibility | Team visibility | Yes | No |
+| Software catalog + activate modal | No | Yes | Yes | Yes | No |
+| Customers + licenses workflow | No | Tenant visibility + detail views | Team visibility + detail views | Yes | No |
+| Seller activity tracking | Yes | Yes | Yes | No | No |
 
 ### Username & Password Rules
 
@@ -250,32 +255,39 @@ const canManageUsers = useHasPermission('manage_users');
 
 ---
 
-## 5. All Pages (42 Total)
+## 5. Dashboard Pages & Key Routes
 
 > **i18n URL Routing:** All routes use `/:lang/` prefix (`/ar/...` or `/en/...`). Default language is Arabic. Root `/` redirects to `/ar/`.
 
-### Super Admin (10 pages) - SYSTEM OWNER
+### Super Admin (14 pages) - SYSTEM OWNER
 
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/super-admin/dashboard` | Dashboard | 5 stats cards + 3 charts + activity feed |
 | `/:lang/super-admin/tenants` | Tenant Management | CRUD + stats per tenant |
 | `/:lang/super-admin/users` | All Users | Cross-tenant user table + IP info |
+| `/:lang/super-admin/admin-management` | Admin Management | Manage admin-level accounts |
 | `/:lang/super-admin/reports` | Reports | Cross-tenant analytics + export |
 | `/:lang/super-admin/financial-reports` | Financial Reports | Revenue breakdown all tenants |
 | `/:lang/super-admin/bios-blacklist` | BIOS Blacklist | Global BIOS blacklist CRUD |
 | `/:lang/super-admin/bios-history` | BIOS History | Full history all tenants |
+| `/:lang/super-admin/username-management` | Username Management | Unlock and rename usernames |
+| `/:lang/super-admin/security-locks` | Security Locks | Locked-account and blocked-IP review |
 | `/:lang/super-admin/logs` | System Logs | All activity + API logs |
 | `/:lang/super-admin/api-status` | API Health | External API monitor |
 | `/:lang/super-admin/settings` | Settings | System configuration + profile tab |
+| `/:lang/super-admin/profile` | Profile | Profile management |
 
-### Manager Parent (18 pages) - TENANT OWNER
+### Manager Parent (21 pages) - TENANT OWNER
 
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/dashboard` | Dashboard | Tenant stats overview |
 | `/:lang/team-management` | Team Management | Add Managers/Resellers |
 | `/:lang/reseller-pricing` | Reseller Pricing | Pricing tiers & commissions |
+| `/:lang/software` | Software | Tenant software catalog |
+| `/:lang/licenses` | Licenses | Tenant license management + bulk actions |
+| `/:lang/program-logs` | Program Logs | External activation/login events per program |
 | `/:lang/software-management` | Software Management | Programs + Download Links CRUD |
 | `/:lang/financial-reports` | Financial Reports | Tenant-level revenue |
 | `/:lang/bios-blacklist` | BIOS Blacklist | Tenant-level blacklist |
@@ -283,7 +295,7 @@ const canManageUsers = useHasPermission('manage_users');
 | `/:lang/bios-conflicts` | BIOS Conflicts | Conflict history + resolution |
 | `/:lang/ip-analytics` | IP Analytics | Geolocation analytics |
 | `/:lang/logs` | Logs | Tenant API/operation logs |
-| `/:lang/program-logs` | Program Logs | External activation/login events per program |
+| `/:lang/reseller-logs` | Reseller Logs | Seller activity + revenue tracking |
 | `/:lang/api-status` | API Status | Tenant view for API health |
 | `/:lang/username-management` | Username Management | Tenant user credentials |
 | `/:lang/reports` | Reports | Tenant revenue & analytics |
@@ -292,7 +304,9 @@ const canManageUsers = useHasPermission('manage_users');
 | `/:lang/settings` | Settings | Tenant configuration |
 | `/:lang/profile` | Profile | Profile management |
 
-### Manager (9 pages) - TEAM LEADER
+Additional workflow/detail routes also exist for program create/edit/activate and customer detail pages.
+
+### Manager (11 pages) - TEAM LEADER
 
 | Route | Page | Key Features |
 |-------|------|-------------|
@@ -300,11 +314,15 @@ const canManageUsers = useHasPermission('manage_users');
 | `/:lang/manager/team` | Team | Manage resellers only |
 | `/:lang/manager/username-management` | Username Management | Team credentials only |
 | `/:lang/manager/customers` | Customers | Team customer overview |
+| `/:lang/manager/licenses` | Licenses | Team license management + bulk actions |
 | `/:lang/manager/software` | Software | Available programs (read-only) |
 | `/:lang/manager/software-management` | Software Management | Team-scoped CRUD + activation popup |
 | `/:lang/manager/reports` | Reports | Personal/team reports |
 | `/:lang/manager/activity` | Activity | Team activity logs |
+| `/:lang/manager/reseller-logs` | Reseller Logs | Team seller activity and direct-sale tracking |
 | `/:lang/manager/profile` | Profile | Profile management |
+
+Additional workflow/detail routes also exist for customer detail pages and program create/edit/activate flows.
 
 ### Reseller (5 pages) - ACTIVATOR
 
@@ -328,7 +346,9 @@ const canManageUsers = useHasPermission('manage_users');
 
 ---
 
-## 6. Database Schema (12 Tables)
+## 6. Database Schema (Core Runtime Tables)
+
+> Core runtime tables are documented below. Phase 13 also adds `export_tasks` for queued CSV/PDF generation.
 
 ```sql
 -- ============================================
@@ -348,7 +368,7 @@ CREATE TABLE tenants (
 CREATE TABLE users (
     id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id       BIGINT UNSIGNED NULL,
-    name            VARCHAR(255) NOT NULL,
+    name            TEXT NOT NULL,
     email           VARCHAR(255) UNIQUE NOT NULL,
     username        VARCHAR(255) NULL,
     password        VARCHAR(255) NOT NULL,
@@ -983,7 +1003,7 @@ frontend/
 │   │   │   ├── ApiStatus.tsx
 │   │   │   ├── Settings.tsx
 │   │   │   └── Profile.tsx
-│   │   ├── manager-parent/                # 12 pages
+│   │   ├── manager-parent/                # manager parent pages
 │   │   │   ├── Dashboard.tsx
 │   │   │   ├── TeamManagement.tsx
 │   │   │   ├── SoftwareManagement.tsx
@@ -999,7 +1019,7 @@ frontend/
 │   │   │   ├── Customers.tsx
 │   │   │   ├── Settings.tsx
 │   │   │   └── Profile.tsx
-│   │   ├── manager/                       # 8 pages
+│   │   ├── manager/                       # manager pages
 │   │   │   ├── Dashboard.tsx
 │   │   │   ├── Team.tsx
 │   │   │   ├── UsernameManagement.tsx
@@ -1183,7 +1203,7 @@ backend/
 │       ├── SuperAdminSeeder.php
 │       └── TestDataSeeder.php
 ├── routes/
-│   └── api.php                                # 101 API endpoints
+│   └── api.php                                # role and workflow API routes
 ├── config/
 │   ├── external-api.php
 │   └── ip-geolocation.php
@@ -1278,8 +1298,8 @@ obd2sw/
 │   │   ├── pages/
 │   │   │   ├── auth/Login.test.tsx
 │   │   │   ├── super-admin/     # 13 page tests (45 tests)
-│   │   │   ├── manager-parent/  # 12 page tests (30 tests)
-│   │   │   ├── manager/         # 8 page tests (12 tests)
+│   │   │   ├── manager-parent/  # manager parent page tests
+│   │   │   ├── manager/         # manager page tests
 │   │   │   ├── reseller/        # 7 page tests (12 tests)
 │   │   │   └── customer/        # 3 page tests (8 tests)
 │   │   ├── hooks/
@@ -1568,8 +1588,8 @@ const { isRtl } = useLanguage();
 | 00 Setup | 0 | Monorepo scaffold + Docker + packages | Smoke checks |
 | 01 Foundation | 1-2 | Laravel + Docker + MySQL (12 tables) + Auth + IP Geo + BIOS | 15 unit |
 | 02 Super Admin | 3 | 13 pages + Admin Mgmt + BIOS + Username + RTL | 35 component |
-| 03 Manager Parent | 4-5 | 17 pages + Software + Team + BIOS + IP + Financial | 43 integration |
-| 04 Manager+Reseller | 6 | Manager 9p + Reseller 5p + BIOS activation + Username | 25 E2E |
+| 03 Manager Parent | 4-5 | Tenant dashboards, software, logs, BIOS, pricing, and financial flows | 43 integration |
+| 04 Manager+Reseller | 6 | Manager team oversight + reseller activation, customer, and license flows | 25 E2E |
 | 05 Customer Portal | 7 | Portal removed (silent deny + route cleanup) | 15 component |
 | 06 Reports | 8 | 18 Charts (Recharts) + Export CSV/PDF | 20 unit |
 | 07 UI/UX Polish | 9-10 | Animations + Dark/Light + Mobile (41 pages) | 25 responsive |
@@ -1596,8 +1616,8 @@ Week 2:  Reports → UI Polish → Testing → Deployment → Documentation
 | [`PHASE-00-Setup/`](docs-organized/PHASE-00-Setup/) | Monorepo + Docker + packages | [Overview](docs-organized/PHASE-00-Setup/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-00-Setup/02-TODO-List.md) |
 | [`PHASE-01-Foundation/`](docs-organized/PHASE-01-Foundation/) | Laravel + Auth + DB (12 tables) | [Overview](docs-organized/PHASE-01-Foundation/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-01-Foundation/02-TODO-List.md) |
 | [`PHASE-02-SuperAdmin/`](docs-organized/PHASE-02-SuperAdmin/) | 13 pages + RBAC + RTL | [Overview](docs-organized/PHASE-02-SuperAdmin/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-02-SuperAdmin/02-TODO-List.md) |
-| [`PHASE-03-ManagerParent/`](docs-organized/PHASE-03-ManagerParent/) | 17 pages + Software + Financial | [Overview](docs-organized/PHASE-03-ManagerParent/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-03-ManagerParent/02-TODO-List.md) |
-| [`PHASE-04-ManagerReseller/`](docs-organized/PHASE-04-ManagerReseller/) | Manager (9p) + Reseller (4p) | [Overview](docs-organized/PHASE-04-ManagerReseller/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-04-ManagerReseller/02-TODO-List.md) / [Checklist](docs-organized/PHASE-04-ManagerReseller/03-Completion-Checklist.md) |
+| [`PHASE-03-ManagerParent/`](docs-organized/PHASE-03-ManagerParent/) | Tenant owner dashboards, logs, software, and financial flows | [Overview](docs-organized/PHASE-03-ManagerParent/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-03-ManagerParent/02-TODO-List.md) |
+| [`PHASE-04-ManagerReseller/`](docs-organized/PHASE-04-ManagerReseller/) | Manager team oversight + reseller customer/license workflows | [Overview](docs-organized/PHASE-04-ManagerReseller/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-04-ManagerReseller/02-TODO-List.md) / [Checklist](docs-organized/PHASE-04-ManagerReseller/03-Completion-Checklist.md) |
 | [`PHASE-05-CustomerPortal/`](docs-organized/PHASE-05-CustomerPortal/) | Portal removed in Phase 11 | [Overview](docs-organized/PHASE-05-CustomerPortal/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-05-CustomerPortal/02-TODO-List.md) |
 | [`PHASE-06-ReportsAnalytics/`](docs-organized/PHASE-06-ReportsAnalytics/) | 18 Charts + Export | [Overview](docs-organized/PHASE-06-ReportsAnalytics/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-06-ReportsAnalytics/02-TODO-List.md) |
 | [`PHASE-07-UIUXPolish/`](docs-organized/PHASE-07-UIUXPolish/) | Animations + Mobile | [Overview](docs-organized/PHASE-07-UIUXPolish/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-07-UIUXPolish/02-TODO-List.md) |
