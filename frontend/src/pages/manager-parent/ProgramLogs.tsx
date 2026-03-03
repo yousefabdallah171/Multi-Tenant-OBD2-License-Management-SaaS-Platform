@@ -244,7 +244,7 @@ export function ProgramLogsPage() {
                             </td>
                             <td className="p-2">
                               {row.customer_id ? (
-                                <Link className="text-blue-600 hover:underline dark:text-blue-300" to={`/${lang}/customers/${row.customer_id}`}>
+                                <Link className="text-blue-600 hover:underline dark:text-blue-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
                                   @{row.username}
                                 </Link>
                               ) : (
@@ -252,7 +252,13 @@ export function ProgramLogsPage() {
                               )}
                             </td>
                             <td className="p-2">
-                              <div className="font-medium">{row.bios_id ?? '-'}</div>
+                              {row.bios_id ? (
+                                <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`}>
+                                  {row.bios_id}
+                                </Link>
+                              ) : (
+                                <div className="font-medium">-</div>
+                              )}
                               <div className="text-xs text-slate-500 dark:text-slate-400">@{match?.external_username ?? row.username}</div>
                             </td>
                             <td className="p-2">
@@ -311,7 +317,7 @@ export function ProgramLogsPage() {
                           <tr key={`${row.username}-${row.timestamp}-${index}`} className="border-b border-slate-100 dark:border-slate-900">
                             <td className="p-2">
                               {row.customer_id ? (
-                                <Link className="text-blue-600 hover:underline dark:text-blue-300" to={`/${lang}/customers/${row.customer_id}`}>
+                                <Link className="text-blue-600 hover:underline dark:text-blue-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
                                   @{row.username}
                                 </Link>
                               ) : (

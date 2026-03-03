@@ -167,7 +167,7 @@ class IpAnalyticsController extends BaseManagerParentController
                 if (! $response->successful()) {
                     foreach ($chunk as $ip) {
                         $result[$ip] = $fallback;
-                        Cache::put('ip-analytics:geo:'.$ip, $fallback, now()->addHour());
+                        $this->cacheGeo("ip-analytics:geo:{$ip}", $fallback);
                     }
                     continue;
                 }
@@ -177,7 +177,7 @@ class IpAnalyticsController extends BaseManagerParentController
                     if ($ip === '' || ($item['status'] ?? '') !== 'success') {
                         if ($ip !== '') {
                             $result[$ip] = $fallback;
-                            Cache::put('ip-analytics:geo:'.$ip, $fallback, now()->addHour());
+                            $this->cacheGeo("ip-analytics:geo:{$ip}", $fallback);
                         }
                         continue;
                     }
@@ -192,17 +192,28 @@ class IpAnalyticsController extends BaseManagerParentController
                     ];
 
                     $result[$ip] = $geo;
-                    Cache::put('ip-analytics:geo:'.$ip, $geo, now()->addHour());
+                    $this->cacheGeo("ip-analytics:geo:{$ip}", $geo);
                 }
             } catch (\Throwable) {
                 foreach ($chunk as $ip) {
                     $result[$ip] = $fallback;
-                    Cache::put('ip-analytics:geo:'.$ip, $fallback, now()->addHour());
+                    $this->cacheGeo("ip-analytics:geo:{$ip}", $fallback);
                 }
             }
         }
 
         return $result;
     }
-}
 
+    /**
+     * @param array{country: string, country_code: string, city: string, isp: string, proxy: bool, hosting: bool} $payload
+     */
+    private function cacheGeo(string $key, array $payload): void
+    {
+        try {
+            Cache::put($key, $payload, now()->addHour());
+        } catch (\Throwable) {
+            // Skip cache failures so analytics endpoint remains available.
+        }
+    }
+}

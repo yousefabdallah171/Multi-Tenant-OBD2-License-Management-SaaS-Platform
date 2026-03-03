@@ -362,12 +362,40 @@ export function CustomersPage() {
         sortValue: (row) => row.name,
         render: (row) => (
           <div>
-            <p className="font-medium text-slate-950 dark:text-white">{isLikelyBios(row.name) ? '—' : row.name}</p>
+            <p className="font-medium text-slate-950 dark:text-white">
+              <button
+                type="button"
+                className="text-start text-sky-600 hover:underline dark:text-sky-300"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setSelectedCustomerId(row.id)
+                }}
+              >
+                {isLikelyBios(row.name) ? '-' : row.name}
+              </button>
+            </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{row.email ?? '-'}</p>
           </div>
         ),
       },
-      { key: 'bios', label: text.table.bios, sortable: true, sortValue: (row) => row.bios_id ?? '', render: (row) => row.bios_id ?? '-' },
+      {
+        key: 'bios',
+        label: text.table.bios,
+        sortable: true,
+        sortValue: (row) => row.bios_id ?? '',
+        render: (row) => row.bios_id ? (
+          <button
+            type="button"
+            className="text-sky-600 hover:underline dark:text-sky-300"
+            onClick={(event) => {
+              event.stopPropagation()
+              setSelectedCustomerId(row.id)
+            }}
+          >
+            {row.bios_id}
+          </button>
+        ) : '-',
+      },
       { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'status', label: text.table.status, sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
       { key: 'price', label: text.table.price, sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },

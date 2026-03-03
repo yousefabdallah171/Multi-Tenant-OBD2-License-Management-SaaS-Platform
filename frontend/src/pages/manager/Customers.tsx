@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, RotateCw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -14,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
 import { programService } from '@/services/program.service'
@@ -144,7 +146,17 @@ export function CustomersPage() {
       sortValue: (row) => row.phone ?? '',
       render: (row) => (row.phone && row.phone.length > 20 ? '—' : row.phone ?? '-'),
     },
-    { key: 'bios', label: t('manager.pages.customers.biosId'), sortable: true, sortValue: (row) => row.bios_id ?? '', render: (row) => row.bios_id ?? '-' },
+    {
+      key: 'bios',
+      label: t('manager.pages.customers.biosId'),
+      sortable: true,
+      sortValue: (row) => row.bios_id ?? '',
+      render: (row) => row.bios_id ? (
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.id)}>
+          {row.bios_id}
+        </Link>
+      ) : '-',
+    },
     { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
     { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
     {
@@ -171,7 +183,7 @@ export function CustomersPage() {
         </div>
       ),
     },
-  ], [locale, t])
+  ], [lang, locale, t])
 
   return (
     <div className="space-y-6">

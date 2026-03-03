@@ -48,7 +48,7 @@ class LicenseService
         $externalUsername = $this->normalizeExternalUsername($customerName, $biosId);
         $appendedBiosId = $this->appendBiosId($externalUsername, $biosId);
         $isScheduled = (bool) ($data['is_scheduled'] ?? false);
-        $scheduledTimezone = (string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC'));
+        $scheduledTimezone = $this->normalizeTimezone((string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC')));
         $scheduledAt = $isScheduled ? Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc() : null;
 
         if ($program->status !== 'active') {
@@ -147,7 +147,7 @@ class LicenseService
             $durationDays = (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
             $isScheduled = (bool) ($data['is_scheduled'] ?? false);
-            $scheduledTimezone = (string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC'));
+            $scheduledTimezone = $this->normalizeTimezone((string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC')));
             $scheduledAt = $isScheduled ? Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc() : null;
 
             $license->forceFill([
@@ -410,6 +410,34 @@ class LicenseService
     private function appendBiosId(string $username, string $biosId): string
     {
         return $username.'-'.$biosId;
+    }
+
+    private function normalizeTimezone(string $timezone): string
+    {
+        $trimmed = trim($timezone);
+        if ($trimmed === '') {
+            return (string) config('app.timezone', 'UTC');
+        }
+
+        if (in_array($trimmed, timezone_identifiers_list(), true)) {
+            return $trimmed;
+        }
+
+        if (preg_match('/^UTC([+-])(\d{1,2})(?::?(\d{2}))?$/i', $trimmed, $matches)) {
+            $hours = str_pad((string) min(23, (int) $matches[2]), 2, '0', STR_PAD_LEFT);
+            $minutes = str_pad((string) min(59, (int) ($matches[3] ?? 0)), 2, '0', STR_PAD_LEFT);
+
+            return sprintf('%s%s:%s', $matches[1], $hours, $minutes);
+        }
+
+        if (preg_match('/^([+-])(\d{1,2})(?::?(\d{2}))$/', $trimmed, $matches)) {
+            $hours = str_pad((string) min(23, (int) $matches[2]), 2, '0', STR_PAD_LEFT);
+            $minutes = str_pad((string) min(59, (int) $matches[3]), 2, '0', STR_PAD_LEFT);
+
+            return sprintf('%s%s:%s', $matches[1], $hours, $minutes);
+        }
+
+        return (string) config('app.timezone', 'UTC');
     }
 
     private function logActivity(User $user, string $action, string $description, array $metadata = []): void

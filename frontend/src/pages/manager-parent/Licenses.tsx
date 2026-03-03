@@ -161,7 +161,17 @@ export function LicensesPage() {
         </Link>
       ) : `${row.customer_name ?? '-'} (${row.customer_email ?? '-'})`,
     },
-    { key: 'bios', label: t('activate.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => row.bios_id },
+    {
+      key: 'bios',
+      label: t('activate.biosId'),
+      sortable: true,
+      sortValue: (row) => row.bios_id,
+      render: (row) => (
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`}>
+          {row.bios_id}
+        </Link>
+      ),
+    },
     { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
     { key: 'duration', label: t('common.duration'), sortable: true, sortValue: (row) => row.duration_days, render: (row) => `${row.duration_days} ${t('common.days')}` },
     { key: 'price', label: t('common.price'), sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },

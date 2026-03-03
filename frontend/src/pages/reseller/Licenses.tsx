@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, CheckSquare, Eye, RotateCw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -16,6 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import type { DurationUnit, LicenseSummary } from '@/types/manager-reseller.types'
 
@@ -336,7 +338,13 @@ export function LicensesPage() {
         sortValue: (row) => row.customer_name ?? '',
         render: (row) => (
           <div>
-            <p className="font-medium text-slate-950 dark:text-white">{row.customer_name ?? '-'}</p>
+            <p className="font-medium text-slate-950 dark:text-white">
+              {row.customer_id ? (
+                <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customers(lang)}>
+                  {row.customer_name ?? '-'}
+                </Link>
+              ) : (row.customer_name ?? '-')}
+            </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{row.customer_email ?? '-'}</p>
           </div>
         ),
@@ -348,7 +356,13 @@ export function LicensesPage() {
         sortValue: (row) => row.bios_id,
         render: (row) => (
           <div>
-            <p className="font-medium">{row.bios_id}</p>
+            <p className="font-medium">
+              {row.customer_id ? (
+                <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customers(lang)}>
+                  {row.bios_id}
+                </Link>
+              ) : row.bios_id}
+            </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">@{row.external_username ?? '-'}</p>
           </div>
         ),
@@ -390,7 +404,7 @@ export function LicensesPage() {
         ),
       },
     ],
-    [locale, selectedIds, text],
+    [lang, locale, selectedIds, text],
   )
 
   const detailLicense = detailQuery.data?.data

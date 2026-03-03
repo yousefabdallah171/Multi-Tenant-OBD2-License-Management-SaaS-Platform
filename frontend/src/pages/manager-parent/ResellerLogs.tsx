@@ -136,7 +136,18 @@ export function ResellerLogsPage() {
       label: t('activate.biosId'),
       sortable: true,
       sortValue: (row) => row.bios_id ?? getMetadataString(row.metadata, 'bios_id') ?? '',
-      render: (row) => row.bios_id ?? getMetadataString(row.metadata, 'bios_id') ?? '-',
+      render: (row) => {
+        const biosId = row.bios_id ?? getMetadataString(row.metadata, 'bios_id')
+        if (!biosId) {
+          return '-'
+        }
+
+        return (
+          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(biosId)}`}>
+            {biosId}
+          </Link>
+        )
+      },
     },
     {
       key: 'price',

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -15,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { teamService, type TeamPayload } from '@/services/team.service'
 import type { TeamMemberSummary } from '@/types/manager-parent.types'
 import type { UserRole } from '@/types/user.types'
@@ -433,7 +435,12 @@ export function TeamManagementPage() {
                       <div key={license.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
                         <p className="font-medium text-slate-950 dark:text-white">{license.customer?.name ?? '-'}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400">{license.program ?? '-'}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.biosId')} {license.bios_id}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {t('activate.biosId')}{' '}
+                          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(license.bios_id)}`}>
+                            {license.bios_id}
+                          </Link>
+                        </p>
                       </div>
                     ))
                   )}
