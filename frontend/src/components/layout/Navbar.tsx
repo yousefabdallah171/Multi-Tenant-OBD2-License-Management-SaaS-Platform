@@ -1,4 +1,5 @@
 import { Download, Globe, LogOut, Menu, MoonStar, SunMedium } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -7,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { useTheme } from '@/hooks/useTheme'
+import { settingsService } from '@/services/settings.service'
 import { useSidebarStore } from '@/stores/sidebarStore'
 
 export function Navbar() {
@@ -16,6 +18,13 @@ export function Navbar() {
   const { canInstall, promptInstall } = usePwaInstall()
   const { user, logout } = useAuth()
   const toggleSidebar = useSidebarStore((state) => state.toggle)
+  const timezoneQuery = useQuery({
+    queryKey: ['navbar', 'timezone'],
+    queryFn: () => settingsService.getOnlineWidgetSettings(),
+    enabled: Boolean(user),
+    staleTime: 5 * 60 * 1000,
+  })
+  const serverTimezone = timezoneQuery.data?.data.server_timezone ?? 'UTC'
   const title = user
     ? user.role === 'super_admin'
       ? t('superAdmin.layout.title')
@@ -51,7 +60,12 @@ export function Navbar() {
           </Button>
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400">{eyebrow}</p>
-            <h1 className="truncate text-sm font-semibold text-slate-950 dark:text-white">{title}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="truncate text-sm font-semibold text-slate-950 dark:text-white">{title}</h1>
+              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                {t('settings.serverTimezone', { defaultValue: 'Server Timezone' })}: {serverTimezone}
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">

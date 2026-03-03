@@ -50,7 +50,7 @@ export const settingsService = {
     return data
   },
   async getOnlineWidgetSettings() {
-    const { data } = await api.get<{ data: { show_online_widget_to_resellers: boolean } }>('/online-widget/settings')
+    const { data } = await api.get<{ data: { show_online_widget_to_resellers: boolean; server_timezone: string } }>('/online-widget/settings')
     return data
   },
 }

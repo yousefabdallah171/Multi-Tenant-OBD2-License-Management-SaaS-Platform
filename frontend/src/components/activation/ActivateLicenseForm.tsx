@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { COMMON_TIMEZONES } from '@/lib/timezones'
 import { activateLicense } from '@/services/activation.service'
+import { settingsService } from '@/services/settings.service'
 
 export interface ActivationProgram {
   id: number
@@ -30,6 +31,7 @@ interface ActivationFormErrors {
   bios_id?: string
   duration?: string
   end_date?: string
+  scheduled_date_time?: string
   price?: string
 }
 
@@ -43,6 +45,9 @@ const EMPTY_FORM = {
   mode: 'duration' as 'duration' | 'end_date',
   end_date: '',
   is_scheduled: false,
+  schedule_mode: 'custom' as 'relative' | 'custom',
+  schedule_offset_value: '1',
+  schedule_offset_unit: 'hours' as 'minutes' | 'hours' | 'days',
   scheduled_date_time: '',
   scheduled_timezone: 'UTC',
 }
@@ -50,11 +55,43 @@ const MAX_PRICE = 99_999_999.99
 const MAX_DURATION_DAYS = 36_500
 const MIN_DURATION_DAYS = 1 / 1440
 
+function formatDateTimeLocalInput(value: Date): string {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  const hours = String(value.getHours()).padStart(2, '0')
+  const minutes = String(value.getMinutes()).padStart(2, '0')
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+function computeRelativeScheduleDate(value: number, unit: 'minutes' | 'hours' | 'days'): Date {
+  const next = new Date()
+
+  if (unit === 'minutes') {
+    next.setMinutes(next.getMinutes() + value)
+    return next
+  }
+
+  if (unit === 'hours') {
+    next.setHours(next.getHours() + value)
+    return next
+  }
+
+  next.setDate(next.getDate() + value)
+  return next
+}
+
 export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLicenseFormProps) {
   const { t } = useTranslation()
   const [form, setForm] = useState(EMPTY_FORM)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
+  const timezoneQuery = useQuery({
+    queryKey: ['activation', 'server-timezone'],
+    queryFn: () => settingsService.getOnlineWidgetSettings(),
+    staleTime: 5 * 60 * 1000,
+  })
   const requiredMessage = t('validation.required', { defaultValue: 'Field required' })
   const invalidEmailMessage = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
   const invalidPhoneMessage = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
@@ -114,6 +151,34 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     return Number(Math.min(manual, MAX_PRICE).toFixed(2))
   }, [autoPrice, priceInput, priceMode])
 
+  useEffect(() => {
+    const serverTimezone = timezoneQuery.data?.data.server_timezone
+    if (!serverTimezone) {
+      return
+    }
+
+    if (form.scheduled_timezone === 'UTC') {
+      setForm((current) => ({ ...current, scheduled_timezone: serverTimezone }))
+    }
+  }, [form.scheduled_timezone, timezoneQuery.data?.data.server_timezone])
+
+  useEffect(() => {
+    if (!form.is_scheduled || form.schedule_mode !== 'relative') {
+      return
+    }
+
+    const value = Number(form.schedule_offset_value)
+    if (!Number.isFinite(value) || value <= 0) {
+      return
+    }
+
+    const scheduledAt = computeRelativeScheduleDate(value, form.schedule_offset_unit)
+    setForm((current) => ({
+      ...current,
+      scheduled_date_time: formatDateTimeLocalInput(scheduledAt),
+    }))
+  }, [form.is_scheduled, form.schedule_mode, form.schedule_offset_unit, form.schedule_offset_value])
+
   const errors = useMemo<ActivationFormErrors>(() => {
     const nextErrors: ActivationFormErrors = {}
 
@@ -148,12 +213,19 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     }
 
     if (form.is_scheduled) {
+      if (form.schedule_mode === 'relative') {
+        const relativeValue = Number(form.schedule_offset_value)
+        if (!Number.isFinite(relativeValue) || relativeValue <= 0) {
+          nextErrors.scheduled_date_time = invalidNumberMessage
+        }
+      }
+
       if (!form.scheduled_date_time) {
-        nextErrors.end_date = requiredMessage
+        nextErrors.scheduled_date_time = requiredMessage
       } else {
         const scheduledAt = new Date(form.scheduled_date_time).getTime()
         if (!Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
-          nextErrors.end_date = invalidNumberMessage
+          nextErrors.scheduled_date_time = invalidNumberMessage
         }
       }
     }
@@ -167,7 +239,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     }
 
     return nextErrors
-  }, [durationDays, form.bios_id, form.customer_email, form.customer_name, form.customer_phone, form.end_date, form.mode, invalidEmailMessage, invalidNumberMessage, invalidPhoneMessage, maxPriceMessage, priceInput, priceMode, requiredMessage, totalPrice])
+  }, [durationDays, form.bios_id, form.customer_email, form.customer_name, form.customer_phone, form.end_date, form.is_scheduled, form.mode, form.schedule_mode, form.schedule_offset_value, form.scheduled_date_time, invalidEmailMessage, invalidNumberMessage, invalidPhoneMessage, maxPriceMessage, priceInput, priceMode, requiredMessage, totalPrice])
 
   const isFormValid = useMemo(() => Object.keys(errors).length === 0, [errors])
 
@@ -371,20 +443,88 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
           <input
             type="checkbox"
             checked={form.is_scheduled}
-            onChange={(event) => setForm((current) => ({ ...current, is_scheduled: event.target.checked }))}
+            onChange={(event) => setForm((current) => {
+              if (event.target.checked) {
+                const defaultScheduledAt = computeRelativeScheduleDate(1, 'hours')
+                return {
+                  ...current,
+                  is_scheduled: true,
+                  schedule_mode: 'relative',
+                  schedule_offset_value: current.schedule_offset_value || '1',
+                  schedule_offset_unit: current.schedule_offset_unit || 'hours',
+                  scheduled_date_time: current.scheduled_date_time || formatDateTimeLocalInput(defaultScheduledAt),
+                }
+              }
+
+              return { ...current, is_scheduled: false }
+            })}
           />
           {t('activate.scheduleToggle')}
         </label>
         {form.is_scheduled ? (
-          <div className="grid gap-2 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>{t('activate.selectDateTime')}</Label>
-              <Input
-                type="datetime-local"
-                value={form.scheduled_date_time}
-                onChange={(event) => setForm((current) => ({ ...current, scheduled_date_time: event.target.value }))}
-              />
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={form.schedule_mode === 'relative' ? 'default' : 'outline'}
+                onClick={() => setForm((current) => ({ ...current, schedule_mode: 'relative' }))}
+              >
+                {t('activate.durationMode')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={form.schedule_mode === 'custom' ? 'default' : 'outline'}
+                onClick={() => setForm((current) => ({ ...current, schedule_mode: 'custom' }))}
+              >
+                {t('activate.endDateMode')}
+              </Button>
             </div>
+            {form.schedule_mode === 'relative' ? (
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>{t('activate.duration')}</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={form.schedule_offset_value}
+                    onChange={(event) => setForm((current) => ({ ...current, schedule_offset_value: normalizeDecimalInput(event.target.value) }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('common.unit')}</Label>
+                  <select
+                    value={form.schedule_offset_unit}
+                    onChange={(event) => setForm((current) => ({ ...current, schedule_offset_unit: event.target.value as 'minutes' | 'hours' | 'days' }))}
+                    className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                  >
+                    <option value="minutes">{t('activate.minutes')}</option>
+                    <option value="hours">{t('activate.hours')}</option>
+                    <option value="days">{t('activate.days')}</option>
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>{t('activate.selectDateTime')}</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.scheduled_date_time}
+                  onChange={(event) => setForm((current) => ({ ...current, scheduled_date_time: event.target.value }))}
+                />
+              </div>
+            )}
+            {form.schedule_mode === 'relative' ? (
+              <div className="space-y-2">
+                <Label>{t('activate.selectDateTime')}</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.scheduled_date_time}
+                  readOnly
+                />
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label>{t('activate.selectTimezone')}</Label>
               <select
@@ -399,8 +539,9 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
                 ))}
               </select>
             </div>
+            {errors.scheduled_date_time ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.scheduled_date_time}</p> : null}
             {schedulePreview ? (
-              <p className="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {t('activate.preview', { dateTime: schedulePreview })}
               </p>
             ) : null}

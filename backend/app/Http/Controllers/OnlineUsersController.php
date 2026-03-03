@@ -72,9 +72,12 @@ class OnlineUsersController extends Controller
 
     public function widgetSettings(): JsonResponse
     {
+        $settings = $this->settingsStore->all();
+
         return response()->json([
             'data' => [
-                'show_online_widget_to_resellers' => (bool) data_get($this->settingsStore->all(), 'widgets.show_online_widget_to_resellers', false),
+                'show_online_widget_to_resellers' => (bool) data_get($settings, 'widgets.show_online_widget_to_resellers', false),
+                'server_timezone' => (string) data_get($settings, 'general.server_timezone', config('app.timezone', 'UTC')),
             ],
         ]);
     }
