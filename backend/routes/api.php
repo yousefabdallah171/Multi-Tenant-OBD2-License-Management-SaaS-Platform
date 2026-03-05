@@ -235,6 +235,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
 
         Route::get('/customers', [ResellerCustomerController::class, 'index']);
         Route::post('/customers', [ResellerCustomerController::class, 'store']);
+        Route::put('/customers/{user}', [ResellerCustomerController::class, 'update']);
         Route::get('/customers/{user}', [ResellerCustomerController::class, 'show']);
 
         Route::get('/licenses/expiring', [ResellerLicenseController::class, 'expiring']);

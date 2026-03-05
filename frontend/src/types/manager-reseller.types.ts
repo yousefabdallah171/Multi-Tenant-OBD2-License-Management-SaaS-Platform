@@ -157,11 +157,15 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
 export interface ResellerCustomerSummary {
   id: number
   name: string
+  client_name: string | null
+  username: string | null
   email: string | null
   phone: string | null
   license_id: number | null
   bios_id: string | null
+  external_username: string | null
   program: string | null
+  program_id: number | null
   status: 'active' | 'expired' | 'suspended' | 'pending'
   price: number
   expiry: string | null
@@ -217,6 +221,7 @@ export interface LicenseDetails extends LicenseSummary {
 
 export interface ActivateLicenseData {
   customer_name: string
+  client_name?: string
   customer_email?: string
   customer_phone?: string
   bios_id: string
@@ -259,6 +264,7 @@ export interface ResellerCustomerFilters {
   per_page?: number
   status?: string
   search?: string
+  program_id?: number | ''
 }
 
 export interface LicenseFilters {
@@ -266,6 +272,7 @@ export interface LicenseFilters {
   per_page?: number
   status?: string
   search?: string
+  program_id?: number | ''
 }
 
 export interface ReportRangeFilters {

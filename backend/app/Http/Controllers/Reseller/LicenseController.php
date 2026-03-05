@@ -22,6 +22,7 @@ class LicenseController extends BaseResellerController
             'status' => ['nullable', 'in:active,expired,suspended,pending'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'program_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $query = $this->licenseQuery($request)
@@ -30,6 +31,10 @@ class LicenseController extends BaseResellerController
 
         if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
+        }
+
+        if (! empty($validated['program_id'])) {
+            $query->where('program_id', $validated['program_id']);
         }
 
         if (! empty($validated['search'])) {

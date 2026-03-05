@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { COMMON_TIMEZONES } from '@/lib/timezones'
 import { activateLicense } from '@/services/activation.service'
 import { settingsService } from '@/services/settings.service'
+import { formatUsername } from '@/utils/biosId'
 
 export interface ActivationProgram {
   id: number
@@ -26,6 +27,7 @@ interface ActivateLicenseFormProps {
 
 interface ActivationFormErrors {
   customer_name?: string
+  client_name?: string
   customer_email?: string
   customer_phone?: string
   bios_id?: string
@@ -37,6 +39,7 @@ interface ActivationFormErrors {
 
 const EMPTY_FORM = {
   customer_name: '',
+  client_name: '',
   customer_email: '',
   customer_phone: '',
   bios_id: '',
@@ -184,6 +187,8 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
 
     if (form.customer_name.trim().length < 2) {
       nextErrors.customer_name = requiredMessage
+    } else if (/\s/.test(form.customer_name)) {
+      nextErrors.customer_name = t('activate.usernameNoSpaces', { defaultValue: 'Username cannot contain spaces' })
     }
 
     const trimmedEmail = form.customer_email.trim()
@@ -248,6 +253,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       activateLicense({
         program_id: program.id,
         customer_name: form.customer_name.trim(),
+        client_name: form.client_name.trim() || undefined,
         customer_email: form.customer_email.trim() || undefined,
         customer_phone: form.customer_phone.trim() || undefined,
         bios_id: form.bios_id.trim(),
@@ -289,7 +295,6 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
   })
 
   const isExternalConfigured = program.has_external_api !== false
-  const biosPreview = `${form.customer_name.trim() || 'username'}-${form.bios_id.trim() || 'BIOS ID'}`
   const schedulePreview = form.is_scheduled && form.scheduled_date_time
     ? `${new Date(form.scheduled_date_time).toLocaleString()} ${form.scheduled_timezone}`
     : ''
@@ -350,11 +355,27 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="activate-customer-name">{t('activate.customerName')}</Label>
-        <Input id="activate-customer-name" value={form.customer_name} onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))} />
-        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.customerNameHint')}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.biosConcatenationHint', { value: biosPreview })}</p>
+        <Label htmlFor="activate-customer-name">{t('activate.username')}</Label>
+        <Input
+          id="activate-customer-name"
+          value={form.customer_name}
+          onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))}
+          onBlur={(event) => setForm((current) => ({ ...current, customer_name: formatUsername(event.target.value) }))}
+          placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.usernameHint', { defaultValue: 'API username — auto-formatted (no spaces)' })}</p>
         {errors.customer_name ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.customer_name}</p> : null}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="activate-client-name">{t('activate.clientName')}</Label>
+        <Input
+          id="activate-client-name"
+          value={form.client_name}
+          onChange={(event) => setForm((current) => ({ ...current, client_name: event.target.value }))}
+          placeholder={t('activate.clientNamePlaceholder', { defaultValue: 'Full client name (optional)' })}
+        />
+        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.clientNameHint', { defaultValue: 'Human-readable name for display in your dashboard' })}</p>
+        {errors.client_name ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.client_name}</p> : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="activate-customer-email">{t('activate.customerEmail')}</Label>

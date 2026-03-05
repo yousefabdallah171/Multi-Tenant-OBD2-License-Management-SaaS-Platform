@@ -24,6 +24,7 @@ class User extends Authenticatable
     protected $fillable = [
         'tenant_id',
         'name',
+        'client_name',
         'username',
         'email',
         'phone',

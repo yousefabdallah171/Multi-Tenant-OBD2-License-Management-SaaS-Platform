@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Plus, RotateCw, ShieldOff } from 'lucide-react'
+import { Eye, Pencil, Plus, RotateCw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -19,12 +19,14 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
 import { resellerService } from '@/services/reseller.service'
+import { formatUsername, rawBiosId } from '@/utils/biosId'
 import type { DurationUnit, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'suspended', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'expired'] as const
 
 interface ActivationFormState {
   customer_name: string
+  client_name: string
   customer_email: string
   customer_phone: string
   bios_id: string
@@ -36,6 +38,7 @@ interface ActivationFormState {
 
 const EMPTY_ACTIVATION_FORM: ActivationFormState = {
   customer_name: '',
+  client_name: '',
   customer_email: '',
   customer_phone: '',
   bios_id: '',
@@ -56,7 +59,7 @@ export function CustomersPage() {
         title: 'العملاء',
         description: 'أنشئ العملاء وفعلهم ثم أدِر عمليات التجديد والإلغاء من مساحة عملك الشخصية كموزع.',
         addCustomer: 'إضافة عميل',
-        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', suspended: 'معلق', pending: 'قيد الانتظار' },
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي' },
         searchPlaceholder: 'ابحث بالاسم أو البريد الإلكتروني أو BIOS ID',
         table: {
           customer: 'العميل',
@@ -73,7 +76,9 @@ export function CustomersPage() {
           description: 'انتقل بين الخطوات لإنشاء العميل وتفعيل الترخيص.',
           steps: ['بيانات العميل', 'تفعيل BIOS', 'السعر والمدة', 'المراجعة'],
           stepLabel: 'الخطوة',
-          customerName: 'اسم العميل',
+          username: 'اسم المستخدم (API)',
+          usernameHint: 'حروف وأرقام وشرطة سفلية فقط',
+          clientName: 'الاسم الظاهر للعميل',
           customerEmail: 'بريد العميل الإلكتروني',
           phone: 'الهاتف',
           biosId: 'BIOS ID',
@@ -132,7 +137,7 @@ export function CustomersPage() {
           deactivated: 'تم إلغاء الترخيص بنجاح.',
         },
         validation: {
-          customerName: 'يجب أن يكون اسم العميل مكوناً من حرفين على الأقل.',
+          customerName: 'يجب أن يكون اسم المستخدم مكوناً من حرفين على الأقل.',
           nameNotBiosId: t('validation.nameNotBiosId'),
           customerEmail: 'Invalid customer email.',
           biosId: 'BIOS ID must be at least 5 characters.',
@@ -152,8 +157,6 @@ export function CustomersPage() {
           all: t('common.all'),
           active: t('common.active'),
           expired: t('common.expired'),
-          suspended: t('common.suspended'),
-          pending: t('common.pending'),
         },
         searchPlaceholder: t('reseller.pages.customers.searchPlaceholder'),
         table: {
@@ -175,7 +178,9 @@ export function CustomersPage() {
           description: t('reseller.pages.customers.activationDialog.description'),
           steps: t('reseller.pages.customers.activationDialog.steps', { returnObjects: true }) as string[],
           stepLabel: t('reseller.pages.customers.activationDialog.stepLabel'),
-          customerName: t('reseller.pages.customers.activationDialog.customerName'),
+          username: t('activate.username', { defaultValue: 'Username (API)' }),
+          usernameHint: t('activate.usernameHint', { defaultValue: 'Letters, numbers, underscores only' }),
+          clientName: t('activate.clientName', { defaultValue: 'Client Display Name' }),
           customerEmail: t('reseller.pages.customers.activationDialog.customerEmail'),
           phone: t('common.phone'),
           biosId: t('reseller.pages.customers.activationDialog.biosId'),
@@ -253,7 +258,10 @@ export function CustomersPage() {
   const [perPage, setPerPage] = useState(10)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
+  const [programFilter, setProgramFilter] = useState<number | ''>('')
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null)
+  const [editCustomerId, setEditCustomerId] = useState<number | null>(null)
+  const [editClientName, setEditClientName] = useState('')
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
@@ -265,13 +273,14 @@ export function CustomersPage() {
   const [deactivateTarget, setDeactivateTarget] = useState<ResellerCustomerSummary | null>(null)
 
   const customersQuery = useQuery({
-    queryKey: ['reseller', 'customers', page, perPage, search, status],
+    queryKey: ['reseller', 'customers', page, perPage, search, status, programFilter],
     queryFn: () =>
       resellerService.getCustomers({
         page,
         per_page: perPage,
         search,
         status: status === 'all' ? '' : status,
+        program_id: programFilter || undefined,
       }),
   })
 
@@ -294,10 +303,22 @@ export function CustomersPage() {
 
   const activationSteps = text.activationDialog.steps
 
+  const editMutation = useMutation({
+    mutationFn: () =>
+      resellerService.updateCustomer(editCustomerId ?? 0, { client_name: editClientName.trim() }),
+    onSuccess: () => {
+      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      setEditCustomerId(null)
+      void queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] })
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
   const activateMutation = useMutation({
     mutationFn: () =>
       licenseService.activate({
         customer_name: activationForm.customer_name.trim(),
+        client_name: activationForm.client_name.trim() || undefined,
         customer_email: activationForm.customer_email.trim() || undefined,
         customer_phone: activationForm.customer_phone.trim() || undefined,
         bios_id: activationForm.bios_id.trim(),
@@ -392,7 +413,7 @@ export function CustomersPage() {
               setSelectedCustomerId(row.id)
             }}
           >
-            {row.bios_id}
+            {rawBiosId(row.bios_id, row.external_username)}
           </button>
         ) : '-',
       },
@@ -416,6 +437,19 @@ export function CustomersPage() {
             >
               <Eye className="me-1 h-4 w-4" />
               {text.actions.view}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={(event) => {
+                event.stopPropagation()
+                setEditCustomerId(row.id)
+                setEditClientName(row.client_name ?? row.name ?? '')
+              }}
+            >
+              <Pencil className="me-1 h-4 w-4" />
+              {t('common.edit', { defaultValue: 'Edit' })}
             </Button>
             <Button
               type="button"
@@ -489,7 +523,7 @@ export function CustomersPage() {
         </TabsList>
         <TabsContent value={status} className="space-y-4">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_200px]">
               <Input
                 value={search}
                 onChange={(event) => {
@@ -498,6 +532,19 @@ export function CustomersPage() {
                 }}
                 placeholder={text.searchPlaceholder}
               />
+              <select
+                value={programFilter}
+                onChange={(event) => {
+                  setProgramFilter(event.target.value ? Number(event.target.value) : '')
+                  setPage(1)
+                }}
+                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="">{lang === 'ar' ? 'كل البرامج' : 'All Programs'}</option>
+                {(programsQuery.data?.data ?? []).map((program) => (
+                  <option key={program.id} value={program.id}>{program.name}</option>
+                ))}
+              </select>
             </CardContent>
           </Card>
 
@@ -554,8 +601,22 @@ export function CustomersPage() {
           <div className="space-y-4">
             {activationStep === 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
-                <FormField label={text.activationDialog.customerName} htmlFor="customer-name">
-                  <Input id="customer-name" value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} />
+                <FormField label={text.activationDialog.username} htmlFor="customer-name">
+                  <Input
+                    id="customer-name"
+                    value={activationForm.customer_name}
+                    onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))}
+                    onBlur={() => setActivationForm((current) => ({ ...current, customer_name: formatUsername(current.customer_name) }))}
+                    placeholder={text.activationDialog.usernameHint}
+                  />
+                </FormField>
+                <FormField label={text.activationDialog.clientName} htmlFor="client-name">
+                  <Input
+                    id="client-name"
+                    value={activationForm.client_name}
+                    onChange={(event) => setActivationForm((current) => ({ ...current, client_name: event.target.value }))}
+                    placeholder={lang === 'ar' ? 'مثال: محمد أحمد' : 'e.g. John Smith'}
+                  />
                 </FormField>
                 <FormField label={text.activationDialog.customerEmail} htmlFor="customer-email">
                   <Input id="customer-email" type="email" value={activationForm.customer_email} onChange={(event) => setActivationForm((current) => ({ ...current, customer_email: event.target.value }))} />
@@ -811,6 +872,40 @@ export function CustomersPage() {
           }
         }}
       />
+
+      <Dialog open={editCustomerId !== null} onOpenChange={(open) => { if (!open) setEditCustomerId(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{lang === 'ar' ? 'تعديل اسم العميل' : 'Edit Client Name'}</DialogTitle>
+            <DialogDescription>{lang === 'ar' ? 'عدّل الاسم الظاهر لهذا العميل.' : 'Update the display name for this customer.'}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <FormField label={lang === 'ar' ? 'الاسم الظاهر' : 'Client Display Name'} htmlFor="edit-client-name">
+              <Input
+                id="edit-client-name"
+                value={editClientName}
+                onChange={(event) => setEditClientName(event.target.value)}
+                autoFocus
+              />
+            </FormField>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setEditCustomerId(null)}>
+              {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (editClientName.trim().length < 1) return
+                editMutation.mutate()
+              }}
+              disabled={editMutation.isPending || editClientName.trim().length < 1}
+            >
+              {editMutation.isPending ? (lang === 'ar' ? 'جارٍ الحفظ...' : 'Saving...') : (lang === 'ar' ? 'حفظ' : 'Save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 

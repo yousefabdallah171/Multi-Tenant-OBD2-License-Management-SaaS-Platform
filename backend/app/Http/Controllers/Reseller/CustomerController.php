@@ -18,6 +18,7 @@ class CustomerController extends BaseResellerController
             'status' => ['nullable', 'in:active,expired,suspended,pending'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'program_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $resellerId = $this->currentReseller($request)->id;
@@ -44,6 +45,12 @@ class CustomerController extends BaseResellerController
             $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                 ->where('reseller_id', $resellerId)
                 ->where('status', $validated['status']));
+        }
+
+        if (! empty($validated['program_id'])) {
+            $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
+                ->where('reseller_id', $resellerId)
+                ->where('program_id', $validated['program_id']));
         }
 
         $customers = $query->paginate((int) ($validated['per_page'] ?? 10));
@@ -101,6 +108,31 @@ class CustomerController extends BaseResellerController
         return response()->json(['data' => $this->serializeCustomer($customer)], 201);
     }
 
+    public function update(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveCustomer($request, $user);
+
+        $validated = $request->validate([
+            'client_name' => ['required', 'string', 'min:1', 'max:255'],
+        ]);
+
+        $customer->fill([
+            'client_name' => $validated['client_name'],
+            'name' => $validated['client_name'],
+        ])->save();
+
+        $this->logActivity($request, 'customer.updated', sprintf('Updated client name for customer %d.', $customer->id), [
+            'customer_id' => $customer->id,
+        ]);
+
+        $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
+            ->where('reseller_id', $this->currentReseller($request)->id)
+            ->with(['program:id,name'])
+            ->latest('activated_at')]);
+
+        return response()->json(['data' => $this->serializeCustomer($customer)]);
+    }
+
     public function show(Request $request, User $user): JsonResponse
     {
         $customer = $this->resolveCustomer($request, $user);
@@ -134,11 +166,15 @@ class CustomerController extends BaseResellerController
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'client_name' => $user->client_name,
+            'username' => $user->username,
             'email' => $this->visibleEmail($user->email),
             'phone' => $user->phone,
             'license_id' => $license?->id,
             'bios_id' => $license?->bios_id,
+            'external_username' => $license?->external_username,
             'program' => $license?->program?->name,
+            'program_id' => $license?->program_id,
             'status' => $license?->status ?? 'pending',
             'price' => $license ? (float) $license->price : 0,
             'expiry' => $license?->expires_at?->toIso8601String(),

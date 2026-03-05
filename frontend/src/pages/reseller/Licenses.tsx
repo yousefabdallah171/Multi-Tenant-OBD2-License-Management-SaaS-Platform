@@ -19,7 +19,9 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
+import { programService } from '@/services/program.service'
 import type { DurationUnit, LicenseSummary } from '@/types/manager-reseller.types'
+import { rawBiosId } from '@/utils/biosId'
 
 const STATUS_OPTIONS = ['all', 'active', 'expired', 'suspended', 'pending'] as const
 
@@ -224,15 +226,22 @@ export function LicensesPage() {
   const [bulkPrice, setBulkPrice] = useState('0')
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
   const [deactivateTarget, setDeactivateTarget] = useState<LicenseSummary | null>(null)
+  const [programFilter, setProgramFilter] = useState<number | ''>('')
+
+  const programsQuery = useQuery({
+    queryKey: ['reseller', 'licenses', 'programs'],
+    queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
+  })
 
   const licensesQuery = useQuery({
-    queryKey: ['reseller', 'licenses', page, perPage, search, status],
+    queryKey: ['reseller', 'licenses', page, perPage, search, status, programFilter],
     queryFn: () =>
       licenseService.getAll({
         page,
         per_page: perPage,
         search,
         status: status === 'all' ? '' : status,
+        program_id: programFilter || undefined,
       }),
   })
 
@@ -359,9 +368,9 @@ export function LicensesPage() {
             <p className="font-medium">
               {row.customer_id ? (
                 <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customers(lang)}>
-                  {row.bios_id}
+                  {rawBiosId(row.bios_id, row.external_username)}
                 </Link>
-              ) : row.bios_id}
+              ) : rawBiosId(row.bios_id, row.external_username)}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">@{row.external_username ?? '-'}</p>
           </div>
@@ -437,7 +446,7 @@ export function LicensesPage() {
         </TabsList>
         <TabsContent value={status} className="space-y-4">
           <Card>
-            <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_180px_140px_120px]">
+            <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_180px_180px_140px_120px]">
               <Input
                 value={search}
                 onChange={(event) => {
@@ -446,6 +455,20 @@ export function LicensesPage() {
                 }}
                 placeholder={text.searchPlaceholder}
               />
+              <select
+                value={programFilter}
+                onChange={(event) => {
+                  setProgramFilter(event.target.value ? Number(event.target.value) : '')
+                  setPage(1)
+                  setSelectedIds([])
+                }}
+                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="">{lang === 'ar' ? 'كل البرامج' : 'All Programs'}</option>
+                {(programsQuery.data?.data ?? []).map((program) => (
+                  <option key={program.id} value={program.id}>{program.name}</option>
+                ))}
+              </select>
               <select
                 value={bulkAction}
                 onChange={(event) => setBulkAction(event.target.value as 'renew' | 'deactivate' | '')}

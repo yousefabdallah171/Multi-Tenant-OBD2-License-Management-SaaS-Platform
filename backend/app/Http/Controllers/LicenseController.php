@@ -22,6 +22,7 @@ class LicenseController extends Controller
         $validated = $request->validate([
             'program_id' => ['required', 'integer'],
             'customer_name' => ['required', 'string', 'max:5000'],
+            'client_name' => ['nullable', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9]+$/'],
             'bios_id' => ['required', 'string', 'max:255'],
