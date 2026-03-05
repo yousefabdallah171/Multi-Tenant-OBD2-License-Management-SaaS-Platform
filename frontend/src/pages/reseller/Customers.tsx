@@ -38,8 +38,15 @@ interface ActivationFormState {
   bios_id: string
   program_id: number | ''
   duration_value: string
-  duration_unit: DurationUnit
-  price: string
+  duration_unit: 'minutes' | 'hours' | 'days'
+  mode: 'duration' | 'end_date'
+  end_date: string
+  is_scheduled: boolean
+  schedule_mode: 'relative' | 'custom'
+  schedule_offset_value: string
+  schedule_offset_unit: 'minutes' | 'hours' | 'days'
+  scheduled_date_time: string
+  scheduled_timezone: string
 }
 
 const EMPTY_ACTIVATION_FORM: ActivationFormState = {
@@ -51,7 +58,14 @@ const EMPTY_ACTIVATION_FORM: ActivationFormState = {
   program_id: '',
   duration_value: '30',
   duration_unit: 'days',
-  price: '',
+  mode: 'duration',
+  end_date: '',
+  is_scheduled: false,
+  schedule_mode: 'relative',
+  schedule_offset_value: '1',
+  schedule_offset_unit: 'hours',
+  scheduled_date_time: '',
+  scheduled_timezone: 'UTC',
 }
 
 export function CustomersPage() {
@@ -297,6 +311,8 @@ export function CustomersPage() {
   const [renewPrice, setRenewPrice] = useState('')
   const [deactivateTarget, setDeactivateTarget] = useState<ResellerCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ResellerCustomerSummary | null>(null)
+  const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
+  const [priceInput, setPriceInput] = useState('0.00')
 
   const customersQuery = useQuery({
     queryKey: ['reseller', 'customers', page, perPage, search, status, programFilter],
@@ -329,6 +345,35 @@ export function CustomersPage() {
 
   const activationSteps = text.activationDialog.steps
 
+  const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
+  const basePrice = selectedProgram?.base_price ?? 0
+  const durationDays = useMemo(() => {
+    if (activationForm.mode === 'end_date' && activationForm.end_date) {
+      const endDate = new Date(activationForm.end_date)
+      const today = new Date()
+      return Math.max(0, (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    }
+    return durationToDays(Number(activationForm.duration_value || 0), activationForm.duration_unit)
+  }, [activationForm.mode, activationForm.end_date, activationForm.duration_value, activationForm.duration_unit])
+
+  const autoPrice = useMemo(() => {
+    if (!selectedProgram || durationDays <= 0) return 0
+    return durationDays * basePrice
+  }, [selectedProgram, durationDays, basePrice])
+
+  const totalPrice = useMemo(() => {
+    if (priceMode === 'auto') {
+      return autoPrice
+    }
+    const price = parseFloat(priceInput || '0')
+    return Number.isFinite(price) ? price : 0
+  }, [priceMode, autoPrice, priceInput])
+
+  const expiryPreview = useMemo(() => {
+    if (durationDays <= 0) return null
+    return new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000)
+  }, [durationDays])
+
   const editMutation = useMutation({
     mutationFn: () =>
       resellerService.updateCustomer(editCustomerId ?? 0, { client_name: editClientName.trim() }),
@@ -349,8 +394,8 @@ export function CustomersPage() {
         customer_phone: activationForm.customer_phone.trim() || undefined,
         bios_id: activationForm.bios_id.trim(),
         program_id: Number(activationForm.program_id),
-        duration_days: durationToDays(Number(activationForm.duration_value), activationForm.duration_unit),
-        price: Number(activationForm.price),
+        duration_days: durationDays,
+        price: totalPrice,
       }),
     onSuccess: () => {
       toast.success(text.toasts.activated)
@@ -1055,12 +1100,30 @@ function InfoCard({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-function durationToDays(value: number, unit: DurationUnit) {
+function normalizeDecimalInput(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  const num = parseFloat(trimmed)
+  if (!Number.isFinite(num)) return ''
+  return String(num)
+}
+
+function clampPriceInput(value: string): string {
+  const num = parseFloat(value)
+  if (!Number.isFinite(num)) return '0.00'
+  return Math.min(Math.max(num, 0), 99_999_999.99).toFixed(2)
+}
+
+function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | 'months' | 'years'): number {
   if (!Number.isFinite(value) || value <= 0) {
     return 0
   }
 
   switch (unit) {
+    case 'minutes':
+      return value / 1440
+    case 'hours':
+      return value / 24
     case 'months':
       return value * 30
     case 'years':
