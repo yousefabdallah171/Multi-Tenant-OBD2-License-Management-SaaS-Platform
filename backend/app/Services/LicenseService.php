@@ -195,8 +195,7 @@ class LicenseService
         ];
 
         if ($apiKey !== null) {
-            $deactivationIdentifier = $license->bios_id;
-            $apiResponse = $this->externalApiService->deactivateUser($apiKey, $deactivationIdentifier, $program?->external_api_base_url);
+            $apiResponse = $this->externalApiService->deactivateUser($apiKey, (string) $license->external_username, $program?->external_api_base_url);
         }
 
         $this->logBiosAccess($reseller, $license->bios_id, 'deactivate', [
@@ -243,7 +242,7 @@ class LicenseService
         ];
 
         if ($apiKey !== null) {
-            $apiResponse = $this->externalApiService->deactivateUser($apiKey, $license->bios_id, $program?->external_api_base_url);
+            $apiResponse = $this->externalApiService->deactivateUser($apiKey, (string) $license->external_username, $program?->external_api_base_url);
         }
 
         $this->logBiosAccess($reseller, $license->bios_id, 'pause', [
