@@ -80,6 +80,12 @@
     "expired": "Expired",
     "suspended": "Suspended",
     "cancelled": "Cancelled",
+    "pause": "Pause",
+    "resume": "Resume",
+    "reactivate": "Reactivate",
+    "pauseSuccess": "License paused successfully.",
+    "resumeSuccess": "License resumed successfully.",
+    "reactivateSuccess": "License reactivated successfully.",
     "inactive": "Inactive",
     "pending": "Pending",
     "allRoles": "All roles",
@@ -1066,10 +1072,17 @@
           "title": "Deactivate license?",
           "description": "This will deactivate the license for BIOS ID: {{biosId}}"
         },
+        "pauseDialog": {
+          "title": "Pause license?",
+          "description": "This will temporarily pause the license for BIOS ID: {{biosId}}"
+        },
         "toasts": {
           "activated": "License activated successfully.",
           "renewed": "License renewed successfully.",
-          "deactivated": "License deactivated successfully."
+          "deactivated": "License deactivated successfully.",
+          "paused": "License paused successfully.",
+          "resumed": "License resumed successfully.",
+          "reactivated": "License reactivated successfully."
         },
         "validation": {
           "customerName": "Customer name must be at least 2 characters.",
@@ -1124,13 +1137,18 @@
           "bulkDeactivateDescription": "This will deactivate {{count}} selected licenses.",
           "deactivateTitle": "Deactivate license?",
           "deactivateDescription": "This will deactivate the license for BIOS ID: {{biosId}}",
-          "deactivateSelected": "Deactivate Selected"
+          "deactivateSelected": "Deactivate Selected",
+          "pauseTitle": "Pause license?",
+          "pauseDescription": "This will temporarily pause the license for BIOS ID: {{biosId}}"
         },
         "toasts": {
           "renewed": "License renewed successfully.",
           "deactivated": "License deactivated successfully.",
           "bulkRenewed": "Selected licenses renewed successfully.",
-          "bulkDeactivated": "Selected licenses deactivated successfully."
+          "bulkDeactivated": "Selected licenses deactivated successfully.",
+          "paused": "License paused successfully.",
+          "resumed": "License resumed successfully.",
+          "reactivated": "License reactivated successfully."
         },
         "errors": {
           "selectAction": "Select licenses and a bulk action first.",

@@ -80,6 +80,12 @@
     "expired": "منتهي",
     "suspended": "معلق",
     "cancelled": "ملغي",
+    "pause": "إيقاف",
+    "resume": "استئناف",
+    "reactivate": "إعادة تفعيل",
+    "pauseSuccess": "تم إيقاف الترخيص بنجاح.",
+    "resumeSuccess": "تم استئناف الترخيص بنجاح.",
+    "reactivateSuccess": "تم إعادة تفعيل الترخيص بنجاح.",
     "inactive": "غير نشط",
     "pending": "قيد الانتظار",
     "allRoles": "كل الأدوار",
@@ -1055,10 +1061,17 @@
           "title": "إلغاء الترخيص؟",
           "description": "سيؤدي هذا إلى إلغاء الترخيص الخاص بـ BIOS ID: {{biosId}}"
         },
+        "pauseDialog": {
+          "title": "إيقاف الترخيص؟",
+          "description": "سيؤدي هذا إلى إيقاف الترخيص مؤقتاً لـ BIOS ID: {{biosId}}"
+        },
         "toasts": {
           "activated": "تم تفعيل الترخيص بنجاح.",
           "renewed": "تم تجديد الترخيص بنجاح.",
-          "deactivated": "تم إلغاء الترخيص بنجاح."
+          "deactivated": "تم إلغاء الترخيص بنجاح.",
+          "paused": "تم إيقاف الترخيص بنجاح.",
+          "resumed": "تم استئناف الترخيص بنجاح.",
+          "reactivated": "تم إعادة تفعيل الترخيص بنجاح."
         },
         "validation": {
           "customerName": "يجب أن يكون اسم العميل مكونًا من حرفين على الأقل.",
@@ -1113,13 +1126,18 @@
           "bulkDeactivateDescription": "سيؤدي هذا إلى إلغاء {{count}} من التراخيص المحددة.",
           "deactivateTitle": "إلغاء الترخيص؟",
           "deactivateDescription": "سيؤدي هذا إلى إلغاء الترخيص الخاص بـ BIOS ID: {{biosId}}",
-          "deactivateSelected": "إلغاء المحدد"
+          "deactivateSelected": "إلغاء المحدد",
+          "pauseTitle": "إيقاف الترخيص؟",
+          "pauseDescription": "سيؤدي هذا إلى إيقاف الترخيص مؤقتاً لـ BIOS ID: {{biosId}}"
         },
         "toasts": {
           "renewed": "تم تجديد الترخيص بنجاح.",
           "deactivated": "تم إلغاء الترخيص بنجاح.",
           "bulkRenewed": "تم تجديد التراخيص المحددة بنجاح.",
-          "bulkDeactivated": "تم إلغاء التراخيص المحددة بنجاح."
+          "bulkDeactivated": "تم إلغاء التراخيص المحددة بنجاح.",
+          "paused": "تم إيقاف الترخيص بنجاح.",
+          "resumed": "تم استئناف الترخيص بنجاح.",
+          "reactivated": "تم إعادة تفعيل الترخيص بنجاح."
         },
         "errors": {
           "selectAction": "حدد التراخيص والإجراء الجماعي أولًا.",

@@ -61,7 +61,7 @@ export function LicensesPage() {
           status: 'الحالة',
           actions: 'الإجراءات',
         },
-        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء' },
+        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء', pause: 'إيقاف', resume: 'استئناف', reactivate: 'إعادة تفعيل' },
         units: { days: 'أيام', months: 'أشهر', years: 'سنوات' },
         details: {
           titleFallback: 'تفاصيل الترخيص',
@@ -99,12 +99,17 @@ export function LicensesPage() {
           deactivateDescription: (biosId: string) => `سيؤدي هذا إلى إلغاء الترخيص الخاص بـ BIOS ID: ${biosId}`,
           deactivateSelected: 'إلغاء المحدد',
           deactivate: 'إلغاء',
+          pauseTitle: 'إيقاف الترخيص؟',
+          pauseDescription: (biosId: string) => `سيؤدي هذا إلى إيقاف الترخيص مؤقتاً لـ BIOS ID: ${biosId}`,
         },
         toasts: {
           renewed: 'تم تجديد الترخيص بنجاح.',
           deactivated: 'تم إلغاء الترخيص بنجاح.',
           bulkRenewed: 'تم تجديد التراخيص المحددة بنجاح.',
           bulkDeactivated: 'تم إلغاء التراخيص المحددة بنجاح.',
+          paused: 'تم إيقاف الترخيص بنجاح.',
+          resumed: 'تم استئناف الترخيص بنجاح.',
+          reactivated: 'تم إعادة تفعيل الترخيص بنجاح.',
         },
         errors: {
           selectAction: 'حدد التراخيص والإجراء الجماعي أولاً.',
@@ -153,8 +158,9 @@ export function LicensesPage() {
           view: t('common.view'),
           renew: t('common.renew'),
           deactivate: t('common.deactivate'),
-          pause: t('common.pause', { defaultValue: 'Pause' }),
-          resume: t('common.resume', { defaultValue: 'Resume' }),
+          pause: t('common.pause'),
+          resume: t('common.resume'),
+          reactivate: t('common.reactivate'),
         },
         units: {
           days: t('common.days'),
@@ -197,14 +203,17 @@ export function LicensesPage() {
           deactivateDescription: (biosId: string) => t('reseller.pages.licenses.confirm.deactivateDescription', { biosId }),
           deactivateSelected: t('reseller.pages.licenses.confirm.deactivateSelected'),
           deactivate: t('common.deactivate'),
+          pauseTitle: t('reseller.pages.licenses.confirm.pauseTitle'),
+          pauseDescription: (biosId: string) => t('reseller.pages.licenses.confirm.pauseDescription', { biosId }),
         },
         toasts: {
           renewed: t('reseller.pages.licenses.toasts.renewed'),
           deactivated: t('reseller.pages.licenses.toasts.deactivated'),
           bulkRenewed: t('reseller.pages.licenses.toasts.bulkRenewed'),
           bulkDeactivated: t('reseller.pages.licenses.toasts.bulkDeactivated'),
-          paused: t('common.pauseSuccess', { defaultValue: 'License paused successfully.' }),
-          resumed: t('common.resumeSuccess', { defaultValue: 'License resumed successfully.' }),
+          paused: t('reseller.pages.licenses.toasts.paused'),
+          resumed: t('reseller.pages.licenses.toasts.resumed'),
+          reactivated: t('reseller.pages.licenses.toasts.reactivated'),
         },
         errors: {
           selectAction: t('reseller.pages.licenses.errors.selectAction'),
@@ -425,6 +434,17 @@ export function LicensesPage() {
               >
                 <Play className="me-1 h-4 w-4" />
                 {text.actions.resume}
+              </Button>
+            ) : row.status === 'cancelled' ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={resumeMutation.isPending}
+                onClick={() => resumeMutation.mutate(row.id)}
+              >
+                <Play className="me-1 h-4 w-4" />
+                {text.actions.reactivate}
               </Button>
             ) : (
               <>
@@ -755,9 +775,9 @@ export function LicensesPage() {
         onOpenChange={(open) => {
           if (!open) setPauseTarget(null)
         }}
-        title={lang === 'ar' ? 'إيقاف الترخيص؟' : 'Pause license?'}
-        description={pauseTarget ? (lang === 'ar' ? `سيؤدي هذا إلى إيقاف الترخيص مؤقتاً لـ BIOS: ${pauseTarget.bios_id}` : `This will pause the license for BIOS ID: ${pauseTarget.bios_id}`) : undefined}
-        confirmLabel={lang === 'ar' ? 'إيقاف' : 'Pause'}
+        title={text.confirm.pauseTitle}
+        description={pauseTarget ? text.confirm.pauseDescription(pauseTarget.bios_id) : undefined}
+        confirmLabel={text.actions.pause}
         onConfirm={() => {
           if (pauseTarget) {
             pauseMutation.mutate(pauseTarget.id)

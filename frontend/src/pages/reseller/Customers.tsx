@@ -70,7 +70,7 @@ export function CustomersPage() {
           expiry: 'الانتهاء',
           actions: 'الإجراءات',
         },
-        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء', pause: 'إيقاف', resume: 'استئناف' },
+        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء', pause: 'إيقاف', resume: 'استئناف', reactivate: 'إعادة تفعيل' },
         activationDialog: {
           title: 'إضافة عميل',
           description: 'انتقل بين الخطوات لإنشاء العميل وتفعيل الترخيص.',
@@ -130,6 +130,10 @@ export function CustomersPage() {
           description: (biosId: string) => `سيؤدي هذا إلى إلغاء الترخيص الخاص بـ BIOS ID: ${biosId}`,
           confirm: 'إلغاء',
         },
+        pauseDialog: {
+          title: 'إيقاف الترخيص؟',
+          description: (biosId: string) => `سيؤدي هذا إلى إيقاف الترخيص مؤقتاً لـ BIOS ID: ${biosId}`,
+        },
         units: { days: 'أيام', months: 'أشهر', years: 'سنوات' },
         toasts: {
           activated: 'تم تفعيل الترخيص بنجاح.',
@@ -137,6 +141,7 @@ export function CustomersPage() {
           deactivated: 'تم إلغاء الترخيص بنجاح.',
           paused: 'تم إيقاف الترخيص بنجاح.',
           resumed: 'تم استئناف الترخيص بنجاح.',
+          reactivated: 'تم إعادة تفعيل الترخيص بنجاح.',
         },
         validation: {
           customerName: 'يجب أن يكون اسم المستخدم مكوناً من حرفين على الأقل.',
@@ -176,8 +181,9 @@ export function CustomersPage() {
           view: t('common.view'),
           renew: t('common.renew'),
           deactivate: t('common.deactivate'),
-          pause: t('common.pause', { defaultValue: 'Pause' }),
-          resume: t('common.resume', { defaultValue: 'Resume' }),
+          pause: t('common.pause'),
+          resume: t('common.resume'),
+          reactivate: t('common.reactivate'),
         },
         activationDialog: {
           title: t('reseller.pages.customers.activationDialog.title'),
@@ -238,6 +244,10 @@ export function CustomersPage() {
           description: (biosId: string) => t('reseller.pages.customers.deactivateDialog.description', { biosId }),
           confirm: t('common.deactivate'),
         },
+        pauseDialog: {
+          title: t('reseller.pages.customers.pauseDialog.title'),
+          description: (biosId: string) => t('reseller.pages.customers.pauseDialog.description', { biosId }),
+        },
         units: {
           days: t('common.days'),
           months: t('common.months'),
@@ -247,8 +257,9 @@ export function CustomersPage() {
           activated: t('reseller.pages.customers.toasts.activated'),
           renewed: t('reseller.pages.customers.toasts.renewed'),
           deactivated: t('reseller.pages.customers.toasts.deactivated'),
-          paused: t('common.pauseSuccess', { defaultValue: 'License paused successfully.' }),
-          resumed: t('common.resumeSuccess', { defaultValue: 'License resumed successfully.' }),
+          paused: t('reseller.pages.customers.toasts.paused'),
+          resumed: t('reseller.pages.customers.toasts.resumed'),
+          reactivated: t('reseller.pages.customers.toasts.reactivated'),
         },
         validation: {
           customerName: t('reseller.pages.customers.validation.customerName'),
@@ -498,6 +509,20 @@ export function CustomersPage() {
               >
                 <Play className="me-1 h-4 w-4" />
                 {text.actions.resume}
+              </Button>
+            ) : row.status === 'cancelled' ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={!row.license_id || resumeMutation.isPending}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  if (row.license_id) resumeMutation.mutate(row.license_id)
+                }}
+              >
+                <Play className="me-1 h-4 w-4" />
+                {text.actions.reactivate}
               </Button>
             ) : (
               <>
@@ -945,9 +970,9 @@ export function CustomersPage() {
         onOpenChange={(open) => {
           if (!open) setPauseTarget(null)
         }}
-        title={lang === 'ar' ? 'إيقاف الترخيص؟' : 'Pause license?'}
-        description={pauseTarget ? (lang === 'ar' ? `سيؤدي هذا إلى إيقاف الترخيص مؤقتاً لـ BIOS: ${pauseTarget.bios_id ?? '-'}` : `This will pause the license for BIOS ID: ${pauseTarget.bios_id ?? '-'}`) : undefined}
-        confirmLabel={lang === 'ar' ? 'إيقاف' : 'Pause'}
+        title={text.pauseDialog.title}
+        description={pauseTarget ? text.pauseDialog.description(pauseTarget.bios_id ?? '-') : undefined}
+        confirmLabel={text.actions.pause}
         onConfirm={() => {
           if (pauseTarget?.license_id) {
             pauseMutation.mutate(pauseTarget.license_id)
