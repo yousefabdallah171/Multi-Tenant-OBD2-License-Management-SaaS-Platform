@@ -21,7 +21,7 @@ import { managerService } from '@/services/manager.service'
 import { programService } from '@/services/program.service'
 import type { DurationUnit, ManagerCustomerSummary } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'suspended', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -164,7 +164,7 @@ export function CustomersPage() {
       label: t('common.status'),
       sortable: true,
       sortValue: (row) => row.status ?? '',
-      render: (row) => (row.status ? <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-'),
+      render: (row) => (row.status ? <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'} /> : '-'),
     },
     { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
     {

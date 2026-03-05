@@ -79,6 +79,7 @@
     "active": "نشط",
     "expired": "منتهي",
     "suspended": "معلق",
+    "cancelled": "ملغي",
     "inactive": "غير نشط",
     "pending": "قيد الانتظار",
     "allRoles": "كل الأدوار",

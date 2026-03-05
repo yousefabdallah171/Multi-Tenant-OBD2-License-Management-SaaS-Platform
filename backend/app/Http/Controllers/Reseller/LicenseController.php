@@ -19,7 +19,7 @@ class LicenseController extends BaseResellerController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:active,expired,suspended,pending'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'program_id' => ['nullable', 'integer', 'min:1'],

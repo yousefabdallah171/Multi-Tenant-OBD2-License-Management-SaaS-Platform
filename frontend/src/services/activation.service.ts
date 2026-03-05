@@ -3,6 +3,7 @@ import { api } from '@/services/api'
 export interface ActivationPayload {
   program_id: number
   customer_name: string
+  client_name?: string
   customer_email?: string
   customer_phone?: string
   bios_id: string

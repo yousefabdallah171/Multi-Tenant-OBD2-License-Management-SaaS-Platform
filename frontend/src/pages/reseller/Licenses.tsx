@@ -23,7 +23,7 @@ import { programService } from '@/services/program.service'
 import type { DurationUnit, LicenseSummary } from '@/types/manager-reseller.types'
 import { rawBiosId } from '@/utils/biosId'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'suspended', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled'] as const
 
 export function LicensesPage() {
   const { t } = useTranslation()
@@ -41,7 +41,7 @@ export function LicensesPage() {
           day7: 'تنتهي خلال 7 أيام',
           licenses: 'ترخيص',
         },
-        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', suspended: 'معلق', pending: 'قيد الانتظار' },
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي' },
         searchPlaceholder: 'ابحث بالعميل أو BIOS ID أو البرنامج',
         bulkActionPlaceholder: 'إجراء جماعي',
         bulkRenew: 'تجديد المحدد',
@@ -127,8 +127,7 @@ export function LicensesPage() {
           all: t('common.all'),
           active: t('common.active'),
           expired: t('common.expired'),
-          suspended: t('common.suspended'),
-          pending: t('common.pending'),
+          cancelled: t('common.cancelled'),
         },
         searchPlaceholder: t('reseller.pages.licenses.searchPlaceholder'),
         bulkActionPlaceholder: t('reseller.pages.licenses.bulkActionPlaceholder'),

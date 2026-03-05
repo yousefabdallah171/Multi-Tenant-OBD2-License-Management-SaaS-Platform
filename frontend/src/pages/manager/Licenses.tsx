@@ -21,7 +21,7 @@ import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
 import type { DurationUnit, LicenseSummary } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'suspended', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
 
 export function LicensesPage() {
   const { t } = useTranslation()

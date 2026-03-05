@@ -22,7 +22,7 @@ import { resellerService } from '@/services/reseller.service'
 import { formatUsername, rawBiosId } from '@/utils/biosId'
 import type { DurationUnit, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired'] as const
+const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -59,7 +59,7 @@ export function CustomersPage() {
         title: 'العملاء',
         description: 'أنشئ العملاء وفعلهم ثم أدِر عمليات التجديد والإلغاء من مساحة عملك الشخصية كموزع.',
         addCustomer: 'إضافة عميل',
-        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي' },
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي' },
         searchPlaceholder: 'ابحث بالاسم أو البريد الإلكتروني أو BIOS ID',
         table: {
           customer: 'العميل',
@@ -157,6 +157,7 @@ export function CustomersPage() {
           all: t('common.all'),
           active: t('common.active'),
           expired: t('common.expired'),
+          cancelled: t('common.cancelled'),
         },
         searchPlaceholder: t('reseller.pages.customers.searchPlaceholder'),
         table: {
@@ -787,7 +788,7 @@ export function CustomersPage() {
                         <p className="text-sm text-slate-500 dark:text-slate-400">{text.detail.activated} {license.activated_at ? formatDate(license.activated_at, locale) : '-'}</p>
                       </div>
                       <div className="text-right">
-                        <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />
+                        <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'} />
                         <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-white">{formatCurrency(license.price, 'USD', locale)}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">{text.detail.expires} {license.expires_at ? formatDate(license.expires_at, locale) : '-'}</p>
                       </div>

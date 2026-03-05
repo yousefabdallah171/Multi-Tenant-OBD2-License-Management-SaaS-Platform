@@ -166,7 +166,7 @@ export interface ResellerCustomerSummary {
   external_username: string | null
   program: string | null
   program_id: number | null
-  status: 'active' | 'expired' | 'suspended' | 'pending'
+  status: 'active' | 'expired' | 'suspended' | 'cancelled' | 'pending'
   price: number
   expiry: string | null
   license_count: number
@@ -199,7 +199,7 @@ export interface LicenseSummary {
   price: number
   activated_at: string | null
   expires_at: string | null
-  status: 'active' | 'expired' | 'suspended' | 'pending'
+  status: 'active' | 'expired' | 'suspended' | 'cancelled' | 'pending'
 }
 
 export interface LicenseDetails extends LicenseSummary {

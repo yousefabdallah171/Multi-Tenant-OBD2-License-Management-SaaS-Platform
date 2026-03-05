@@ -206,7 +206,7 @@ class LicenseService
 
         $deactivatedLicense = DB::transaction(function () use ($license, $reseller, $apiResponse): License {
             $license->forceFill([
-                'status' => 'suspended',
+                'status' => 'cancelled',
                 'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Local-only deactivation.'),
             ])->save();
 

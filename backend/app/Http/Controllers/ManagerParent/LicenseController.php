@@ -12,7 +12,7 @@ class LicenseController extends BaseManagerParentController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:active,expired,suspended,pending'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending'],
             'search' => ['nullable', 'string'],
             'reseller_id' => ['nullable', 'integer'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],

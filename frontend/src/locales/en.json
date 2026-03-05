@@ -79,6 +79,7 @@
     "active": "Active",
     "expired": "Expired",
     "suspended": "Suspended",
+    "cancelled": "Cancelled",
     "inactive": "Inactive",
     "pending": "Pending",
     "allRoles": "All roles",

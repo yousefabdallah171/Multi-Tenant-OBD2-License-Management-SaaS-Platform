@@ -23,7 +23,7 @@ import { teamService } from '@/services/team.service'
 import type { CustomerSummary } from '@/types/manager-parent.types'
 import type { DurationUnit } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'suspended', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -175,7 +175,7 @@ export function CustomersPage() {
     },
     { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
     { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
-    { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status ?? '', render: (row) => (row.status ? <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-') },
+    { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status ?? '', render: (row) => (row.status ? <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'} /> : '-') },
     { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
     {
       key: 'actions',

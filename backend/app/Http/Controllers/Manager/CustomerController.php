@@ -15,7 +15,7 @@ class CustomerController extends BaseManagerController
         $validated = $request->validate([
             'reseller_id' => ['nullable', 'integer'],
             'program_id' => ['nullable', 'integer'],
-            'status' => ['nullable', 'in:active,expired,suspended,pending'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
