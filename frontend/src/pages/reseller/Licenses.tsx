@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CheckSquare, Eye, Pause, Play, RotateCw, ShieldOff } from 'lucide-react'
+import { AlertTriangle, CheckSquare, Eye, MoreVertical, Pause, Play, RotateCw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -419,61 +425,57 @@ export function LicensesPage() {
         key: 'actions',
         label: text.table.actions,
         render: (row) => (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <Button type="button" size="sm" variant="ghost" onClick={() => setDetailLicenseId(row.id)}>
               <Eye className="me-1 h-4 w-4" />
               {text.actions.view}
             </Button>
-            {row.status === 'pending' ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={resumeMutation.isPending}
-                onClick={() => resumeMutation.mutate(row.id)}
-              >
-                <Play className="me-1 h-4 w-4" />
-                {text.actions.resume}
-              </Button>
-            ) : row.status === 'cancelled' ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={resumeMutation.isPending}
-                onClick={() => resumeMutation.mutate(row.id)}
-              >
-                <Play className="me-1 h-4 w-4" />
-                {text.actions.reactivate}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setRenewTargetId(row.id)
-                    setRenewDuration('30')
-                    setRenewUnit('days')
-                    setRenewPrice(String(row.price))
-                  }}
-                >
-                  <RotateCw className="me-1 h-4 w-4" />
-                  {text.actions.renew}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" size="sm" variant="ghost">
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
-                {row.status === 'active' && (
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setPauseTarget(row)}>
-                    <Pause className="me-1 h-4 w-4" />
-                    {text.actions.pause}
-                  </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {row.status === 'pending' && (
+                  <DropdownMenuItem onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
+                    <Play className="me-2 h-4 w-4" />
+                    {text.actions.resume}
+                  </DropdownMenuItem>
                 )}
-                <Button type="button" size="sm" variant="ghost" onClick={() => setDeactivateTarget(row)}>
-                  <ShieldOff className="me-1 h-4 w-4" />
-                  {text.actions.deactivate}
-                </Button>
-              </>
-            )}
+                {row.status === 'cancelled' && (
+                  <DropdownMenuItem onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
+                    <Play className="me-2 h-4 w-4" />
+                    {text.actions.reactivate}
+                  </DropdownMenuItem>
+                )}
+                {row.status !== 'pending' && row.status !== 'cancelled' && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setRenewTargetId(row.id)
+                        setRenewDuration('30')
+                        setRenewUnit('days')
+                        setRenewPrice(String(row.price))
+                      }}
+                    >
+                      <RotateCw className="me-2 h-4 w-4" />
+                      {text.actions.renew}
+                    </DropdownMenuItem>
+                    {row.status === 'active' && (
+                      <DropdownMenuItem onClick={() => setPauseTarget(row)}>
+                        <Pause className="me-2 h-4 w-4" />
+                        {text.actions.pause}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
+                      <ShieldOff className="me-2 h-4 w-4" />
+                      {text.actions.deactivate}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ),
       },

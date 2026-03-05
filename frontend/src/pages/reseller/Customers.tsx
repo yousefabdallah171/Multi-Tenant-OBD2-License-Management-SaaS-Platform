@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Pause, Pencil, Play, Plus, RotateCw, ShieldOff } from 'lucide-react'
+import { Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -9,6 +9,12 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -470,7 +476,7 @@ export function CustomersPage() {
         key: 'actions',
         label: text.table.actions,
         render: (row) => (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             <Button
               type="button"
               size="sm"
@@ -496,82 +502,78 @@ export function CustomersPage() {
               <Pencil className="me-1 h-4 w-4" />
               {t('common.edit', { defaultValue: 'Edit' })}
             </Button>
-            {row.status === 'pending' ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={!row.license_id || resumeMutation.isPending}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  if (row.license_id) resumeMutation.mutate(row.license_id)
-                }}
-              >
-                <Play className="me-1 h-4 w-4" />
-                {text.actions.resume}
-              </Button>
-            ) : row.status === 'cancelled' ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={!row.license_id || resumeMutation.isPending}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  if (row.license_id) resumeMutation.mutate(row.license_id)
-                }}
-              >
-                <Play className="me-1 h-4 w-4" />
-                {text.actions.reactivate}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={!row.license_id}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setRenewLicenseId(row.license_id)
-                    setRenewDuration('30')
-                    setRenewUnit('days')
-                    setRenewPrice(String(row.price || '0'))
-                  }}
-                >
-                  <RotateCw className="me-1 h-4 w-4" />
-                  {text.actions.renew}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" size="sm" variant="ghost">
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
-                {row.status === 'active' && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={!row.license_id}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {row.status === 'pending' && (
+                  <DropdownMenuItem
+                    disabled={!row.license_id || resumeMutation.isPending}
                     onClick={(event) => {
                       event.stopPropagation()
-                      setPauseTarget(row)
+                      if (row.license_id) resumeMutation.mutate(row.license_id)
                     }}
                   >
-                    <Pause className="me-1 h-4 w-4" />
-                    {text.actions.pause}
-                  </Button>
+                    <Play className="me-2 h-4 w-4" />
+                    {text.actions.resume}
+                  </DropdownMenuItem>
                 )}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={!row.license_id}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setDeactivateTarget(row)
-                  }}
-                >
-                  <ShieldOff className="me-1 h-4 w-4" />
-                  {text.actions.deactivate}
-                </Button>
-              </>
-            )}
+                {row.status === 'cancelled' && (
+                  <DropdownMenuItem
+                    disabled={!row.license_id || resumeMutation.isPending}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      if (row.license_id) resumeMutation.mutate(row.license_id)
+                    }}
+                  >
+                    <Play className="me-2 h-4 w-4" />
+                    {text.actions.reactivate}
+                  </DropdownMenuItem>
+                )}
+                {row.status !== 'pending' && row.status !== 'cancelled' && (
+                  <>
+                    <DropdownMenuItem
+                      disabled={!row.license_id}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setRenewLicenseId(row.license_id)
+                        setRenewDuration('30')
+                        setRenewUnit('days')
+                        setRenewPrice(String(row.price || '0'))
+                      }}
+                    >
+                      <RotateCw className="me-2 h-4 w-4" />
+                      {text.actions.renew}
+                    </DropdownMenuItem>
+                    {row.status === 'active' && (
+                      <DropdownMenuItem
+                        disabled={!row.license_id}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setPauseTarget(row)
+                        }}
+                      >
+                        <Pause className="me-2 h-4 w-4" />
+                        {text.actions.pause}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      disabled={!row.license_id}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setDeactivateTarget(row)
+                      }}
+                    >
+                      <ShieldOff className="me-2 h-4 w-4" />
+                      {text.actions.deactivate}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ),
       },
