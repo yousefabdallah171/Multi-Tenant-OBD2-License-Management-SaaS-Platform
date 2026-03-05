@@ -48,8 +48,8 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 | Field | Value |
 |-------|-------|
 | **Version** | 1.0.0 |
-| **Status** | Phase 12 UX Editing + seller tracking updates complete (deployment hardening pending) |
-| **Last Updated** | 2026-03-03 |
+| **Status** | Phase 12 UX Editing + seller tracking + pause/resume licensing complete (deployment hardening pending) |
+| **Last Updated** | 2026-03-05 |
 | **Scale** | Multi-tenant SaaS, 4 active dashboard roles, queued exports, tenant-scoped external API workflows |
 | **Budget** | $30 |
 | **Timeline** | 15 Days (Day 0 - Day 14) |
@@ -83,7 +83,32 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | PHASE-09-Deployment | :red_circle: Not Started | Day 12-13 |
 | PHASE-10-Documentation | :red_circle: Not Started | Day 14 |
 
-### Latest Implemented UX Updates (2026-03-03)
+### Latest Implemented Features (2026-03-05)
+
+**Pause/Resume & Reactivate Licensing (New)**
+- Added `pause` and `resume` actions for resellers to temporarily pause active licenses
+- Paused licenses have status `pending` and disable the software externally via API
+- Resume/Reactivate buttons restore access using the `resume` endpoint (reuses external API `activateUser`)
+- Added "Reactivate" button for `cancelled` licenses (deactivated licenses can be re-activated)
+- Pause/Resume/Reactivate dialogs with full localization (English + Arabic)
+- All UI strings moved to `frontend/src/locales/{en,ar}.json` (no more hardcoded JSX strings)
+- Action buttons converted to dropdown menu (`...`) for cleaner UX
+- Pause/Resume/Reactivate action logging in `bios_access_logs` table
+
+**Backend Changes**
+- `LicenseService::pause()` - calls external API `deactivateUser`, sets status='pending'
+- `LicenseService::resume()` - calls external API `activateUser`, sets status='active' (works for both pause→resume and cancelled→reactivate)
+- Routes: `POST /licenses/{id}/pause` and `POST /licenses/{id}/resume` (reseller + manager + manager_parent)
+- Migration: Extended `bios_access_logs.action` ENUM to include `'pause'`, `'resume'`, `'reactivate'`
+
+**Translation Keys Added**
+- `common.pause`, `common.resume`, `common.reactivate`
+- `common.pauseSuccess`, `common.resumeSuccess`, `common.reactivateSuccess`
+- `reseller.pages.customers.pauseDialog` (title + description with biosId interpolation)
+- `reseller.pages.licenses.confirm.pauseTitle`, `pauseDescription`
+- All keys in both `en.json` and `ar.json`
+
+### Previously Implemented UX Updates (2026-03-03)
 
 - IP Analytics is now software-scoped with a program selector, parsed external timestamps, and tenant/program-aware matching.
 - Manager Parent and Manager now have dedicated seller activity pages for activations, renewals, deactivations, and deletions.
