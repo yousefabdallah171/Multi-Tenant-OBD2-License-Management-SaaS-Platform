@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, Pencil, Plus, RotateCw, ShieldOff } from 'lucide-react'
+import { Eye, Pause, Pencil, Play, Plus, RotateCw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -22,7 +22,7 @@ import { resellerService } from '@/services/reseller.service'
 import { formatUsername, rawBiosId } from '@/utils/biosId'
 import type { DurationUnit, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled'] as const
+const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -59,7 +59,7 @@ export function CustomersPage() {
         title: 'العملاء',
         description: 'أنشئ العملاء وفعلهم ثم أدِر عمليات التجديد والإلغاء من مساحة عملك الشخصية كموزع.',
         addCustomer: 'إضافة عميل',
-        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي' },
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي', pending: 'موقف' },
         searchPlaceholder: 'ابحث بالاسم أو البريد الإلكتروني أو BIOS ID',
         table: {
           customer: 'العميل',
@@ -70,7 +70,7 @@ export function CustomersPage() {
           expiry: 'الانتهاء',
           actions: 'الإجراءات',
         },
-        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء' },
+        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء', pause: 'إيقاف', resume: 'استئناف' },
         activationDialog: {
           title: 'إضافة عميل',
           description: 'انتقل بين الخطوات لإنشاء العميل وتفعيل الترخيص.',
@@ -135,6 +135,8 @@ export function CustomersPage() {
           activated: 'تم تفعيل الترخيص بنجاح.',
           renewed: 'تم تجديد الترخيص بنجاح.',
           deactivated: 'تم إلغاء الترخيص بنجاح.',
+          paused: 'تم إيقاف الترخيص بنجاح.',
+          resumed: 'تم استئناف الترخيص بنجاح.',
         },
         validation: {
           customerName: 'يجب أن يكون اسم المستخدم مكوناً من حرفين على الأقل.',
@@ -158,6 +160,7 @@ export function CustomersPage() {
           active: t('common.active'),
           expired: t('common.expired'),
           cancelled: t('common.cancelled'),
+          pending: t('common.pending'),
         },
         searchPlaceholder: t('reseller.pages.customers.searchPlaceholder'),
         table: {
@@ -173,6 +176,8 @@ export function CustomersPage() {
           view: t('common.view'),
           renew: t('common.renew'),
           deactivate: t('common.deactivate'),
+          pause: t('common.pause', { defaultValue: 'Pause' }),
+          resume: t('common.resume', { defaultValue: 'Resume' }),
         },
         activationDialog: {
           title: t('reseller.pages.customers.activationDialog.title'),
@@ -242,6 +247,8 @@ export function CustomersPage() {
           activated: t('reseller.pages.customers.toasts.activated'),
           renewed: t('reseller.pages.customers.toasts.renewed'),
           deactivated: t('reseller.pages.customers.toasts.deactivated'),
+          paused: t('common.pauseSuccess', { defaultValue: 'License paused successfully.' }),
+          resumed: t('common.resumeSuccess', { defaultValue: 'License resumed successfully.' }),
         },
         validation: {
           customerName: t('reseller.pages.customers.validation.customerName'),
@@ -272,6 +279,7 @@ export function CustomersPage() {
   const [renewUnit, setRenewUnit] = useState<DurationUnit>('days')
   const [renewPrice, setRenewPrice] = useState('')
   const [deactivateTarget, setDeactivateTarget] = useState<ResellerCustomerSummary | null>(null)
+  const [pauseTarget, setPauseTarget] = useState<ResellerCustomerSummary | null>(null)
 
   const customersQuery = useQuery({
     queryKey: ['reseller', 'customers', page, perPage, search, status, programFilter],
@@ -375,6 +383,31 @@ export function CustomersPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
+  const pauseMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.pause(licenseId),
+    onSuccess: () => {
+      toast.success(text.toasts.paused)
+      setPauseTarget(null)
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
+  const resumeMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.resume(licenseId),
+    onSuccess: () => {
+      toast.success(text.toasts.resumed)
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
   const columns = useMemo<Array<DataTableColumn<ResellerCustomerSummary>>>(
     () => [
       {
@@ -452,35 +485,68 @@ export function CustomersPage() {
               <Pencil className="me-1 h-4 w-4" />
               {t('common.edit', { defaultValue: 'Edit' })}
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              disabled={!row.license_id}
-              onClick={(event) => {
-                event.stopPropagation()
-                setRenewLicenseId(row.license_id)
-                setRenewDuration('30')
-                setRenewUnit('days')
-                setRenewPrice(String(row.price || '0'))
-              }}
-            >
-              <RotateCw className="me-1 h-4 w-4" />
-              {text.actions.renew}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              disabled={!row.license_id}
-              onClick={(event) => {
-                event.stopPropagation()
-                setDeactivateTarget(row)
-              }}
-            >
-              <ShieldOff className="me-1 h-4 w-4" />
-              {text.actions.deactivate}
-            </Button>
+            {row.status === 'pending' ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={!row.license_id || resumeMutation.isPending}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  if (row.license_id) resumeMutation.mutate(row.license_id)
+                }}
+              >
+                <Play className="me-1 h-4 w-4" />
+                {text.actions.resume}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!row.license_id}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setRenewLicenseId(row.license_id)
+                    setRenewDuration('30')
+                    setRenewUnit('days')
+                    setRenewPrice(String(row.price || '0'))
+                  }}
+                >
+                  <RotateCw className="me-1 h-4 w-4" />
+                  {text.actions.renew}
+                </Button>
+                {row.status === 'active' && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={!row.license_id}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setPauseTarget(row)
+                    }}
+                  >
+                    <Pause className="me-1 h-4 w-4" />
+                    {text.actions.pause}
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!row.license_id}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setDeactivateTarget(row)
+                  }}
+                >
+                  <ShieldOff className="me-1 h-4 w-4" />
+                  {text.actions.deactivate}
+                </Button>
+              </>
+            )}
           </div>
         ),
       },
@@ -870,6 +936,21 @@ export function CustomersPage() {
         onConfirm={() => {
           if (deactivateTarget?.license_id) {
             deactivateMutation.mutate(deactivateTarget.license_id)
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={pauseTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setPauseTarget(null)
+        }}
+        title={lang === 'ar' ? 'إيقاف الترخيص؟' : 'Pause license?'}
+        description={pauseTarget ? (lang === 'ar' ? `سيؤدي هذا إلى إيقاف الترخيص مؤقتاً لـ BIOS: ${pauseTarget.bios_id ?? '-'}` : `This will pause the license for BIOS ID: ${pauseTarget.bios_id ?? '-'}`) : undefined}
+        confirmLabel={lang === 'ar' ? 'إيقاف' : 'Pause'}
+        onConfirm={() => {
+          if (pauseTarget?.license_id) {
+            pauseMutation.mutate(pauseTarget.license_id)
           }
         }}
       />

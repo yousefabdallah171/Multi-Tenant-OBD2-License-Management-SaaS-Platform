@@ -243,6 +243,8 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::get('/licenses/{license}', [ResellerLicenseController::class, 'show']);
         Route::post('/licenses/bulk-renew', [ResellerLicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-deactivate', [ResellerLicenseController::class, 'bulkDeactivate']);
+        Route::post('/licenses/{license}/pause', [ResellerLicenseController::class, 'pause']);
+        Route::post('/licenses/{license}/resume', [ResellerLicenseController::class, 'resume']);
         Route::get('/software', [ResellerSoftwareController::class, 'index']);
         Route::get('/online-users', [OnlineUsersController::class, 'index']);
 
@@ -259,6 +261,8 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::get('/licenses/{license}', [LicenseController::class, 'show']);
         Route::post('/licenses/{license}/renew', [LicenseController::class, 'renew']);
         Route::post('/licenses/{license}/deactivate', [LicenseController::class, 'deactivate']);
+        Route::post('/licenses/{license}/pause', [LicenseController::class, 'pause']);
+        Route::post('/licenses/{license}/resume', [LicenseController::class, 'resume']);
         Route::post('/licenses/bulk-renew', [LicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-deactivate', [LicenseController::class, 'bulkDeactivate']);
     });

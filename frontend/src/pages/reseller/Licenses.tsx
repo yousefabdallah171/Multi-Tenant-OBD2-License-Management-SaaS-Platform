@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CheckSquare, Eye, RotateCw, ShieldOff } from 'lucide-react'
+import { AlertTriangle, CheckSquare, Eye, Pause, Play, RotateCw, ShieldOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -23,7 +23,7 @@ import { programService } from '@/services/program.service'
 import type { DurationUnit, LicenseSummary } from '@/types/manager-reseller.types'
 import { rawBiosId } from '@/utils/biosId'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled'] as const
+const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
 
 export function LicensesPage() {
   const { t } = useTranslation()
@@ -41,7 +41,7 @@ export function LicensesPage() {
           day7: 'تنتهي خلال 7 أيام',
           licenses: 'ترخيص',
         },
-        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي' },
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي', pending: 'موقف' },
         searchPlaceholder: 'ابحث بالعميل أو BIOS ID أو البرنامج',
         bulkActionPlaceholder: 'إجراء جماعي',
         bulkRenew: 'تجديد المحدد',
@@ -128,6 +128,7 @@ export function LicensesPage() {
           active: t('common.active'),
           expired: t('common.expired'),
           cancelled: t('common.cancelled'),
+          pending: t('common.pending'),
         },
         searchPlaceholder: t('reseller.pages.licenses.searchPlaceholder'),
         bulkActionPlaceholder: t('reseller.pages.licenses.bulkActionPlaceholder'),
@@ -152,6 +153,8 @@ export function LicensesPage() {
           view: t('common.view'),
           renew: t('common.renew'),
           deactivate: t('common.deactivate'),
+          pause: t('common.pause', { defaultValue: 'Pause' }),
+          resume: t('common.resume', { defaultValue: 'Resume' }),
         },
         units: {
           days: t('common.days'),
@@ -200,6 +203,8 @@ export function LicensesPage() {
           deactivated: t('reseller.pages.licenses.toasts.deactivated'),
           bulkRenewed: t('reseller.pages.licenses.toasts.bulkRenewed'),
           bulkDeactivated: t('reseller.pages.licenses.toasts.bulkDeactivated'),
+          paused: t('common.pauseSuccess', { defaultValue: 'License paused successfully.' }),
+          resumed: t('common.resumeSuccess', { defaultValue: 'License resumed successfully.' }),
         },
         errors: {
           selectAction: t('reseller.pages.licenses.errors.selectAction'),
@@ -225,6 +230,7 @@ export function LicensesPage() {
   const [bulkPrice, setBulkPrice] = useState('0')
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
   const [deactivateTarget, setDeactivateTarget] = useState<LicenseSummary | null>(null)
+  const [pauseTarget, setPauseTarget] = useState<LicenseSummary | null>(null)
   const [programFilter, setProgramFilter] = useState<number | ''>('')
 
   const programsQuery = useQuery({
@@ -280,6 +286,25 @@ export function LicensesPage() {
     onSuccess: () => {
       toast.success(text.toasts.deactivated)
       setDeactivateTarget(null)
+      invalidateLicenseQueries(queryClient)
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
+  })
+
+  const pauseMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.pause(licenseId),
+    onSuccess: () => {
+      toast.success(text.toasts.paused)
+      setPauseTarget(null)
+      invalidateLicenseQueries(queryClient)
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
+  })
+
+  const resumeMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.resume(licenseId),
+    onSuccess: () => {
+      toast.success(text.toasts.resumed)
       invalidateLicenseQueries(queryClient)
     },
     onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
@@ -390,24 +415,45 @@ export function LicensesPage() {
               <Eye className="me-1 h-4 w-4" />
               {text.actions.view}
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setRenewTargetId(row.id)
-                setRenewDuration('30')
-                setRenewUnit('days')
-                setRenewPrice(String(row.price))
-              }}
-            >
-              <RotateCw className="me-1 h-4 w-4" />
-              {text.actions.renew}
-            </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setDeactivateTarget(row)}>
-              <ShieldOff className="me-1 h-4 w-4" />
-              {text.actions.deactivate}
-            </Button>
+            {row.status === 'pending' ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={resumeMutation.isPending}
+                onClick={() => resumeMutation.mutate(row.id)}
+              >
+                <Play className="me-1 h-4 w-4" />
+                {text.actions.resume}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setRenewTargetId(row.id)
+                    setRenewDuration('30')
+                    setRenewUnit('days')
+                    setRenewPrice(String(row.price))
+                  }}
+                >
+                  <RotateCw className="me-1 h-4 w-4" />
+                  {text.actions.renew}
+                </Button>
+                {row.status === 'active' && (
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setPauseTarget(row)}>
+                    <Pause className="me-1 h-4 w-4" />
+                    {text.actions.pause}
+                  </Button>
+                )}
+                <Button type="button" size="sm" variant="ghost" onClick={() => setDeactivateTarget(row)}>
+                  <ShieldOff className="me-1 h-4 w-4" />
+                  {text.actions.deactivate}
+                </Button>
+              </>
+            )}
           </div>
         ),
       },
@@ -700,6 +746,21 @@ export function LicensesPage() {
         onConfirm={() => {
           if (deactivateTarget) {
             deactivateMutation.mutate(deactivateTarget.id)
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={pauseTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setPauseTarget(null)
+        }}
+        title={lang === 'ar' ? 'إيقاف الترخيص؟' : 'Pause license?'}
+        description={pauseTarget ? (lang === 'ar' ? `سيؤدي هذا إلى إيقاف الترخيص مؤقتاً لـ BIOS: ${pauseTarget.bios_id}` : `This will pause the license for BIOS ID: ${pauseTarget.bios_id}`) : undefined}
+        confirmLabel={lang === 'ar' ? 'إيقاف' : 'Pause'}
+        onConfirm={() => {
+          if (pauseTarget) {
+            pauseMutation.mutate(pauseTarget.id)
           }
         }}
       />

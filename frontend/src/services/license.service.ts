@@ -42,4 +42,12 @@ export const licenseService = {
     })
     return response.data
   },
+  async pause(id: number) {
+    const response = await api.post<{ message: string; data: LicenseSummary }>(`/licenses/${id}/pause`)
+    return response.data
+  },
+  async resume(id: number) {
+    const response = await api.post<{ message: string; data: LicenseSummary }>(`/licenses/${id}/resume`)
+    return response.data
+  },
 }

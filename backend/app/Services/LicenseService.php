@@ -230,6 +230,99 @@ class LicenseService
         return $deactivatedLicense;
     }
 
+    public function pause(License $license): License
+    {
+        $actor = $this->currentActor();
+        $reseller = $this->resolveReseller($actor, $license->reseller);
+        $program = $license->program()->first();
+        $apiKey = $program?->getDecryptedApiKey();
+        $apiResponse = [
+            'success' => false,
+            'data' => ['response' => null],
+            'status_code' => 0,
+        ];
+
+        if ($apiKey !== null) {
+            $apiResponse = $this->externalApiService->deactivateUser($apiKey, $license->bios_id, $program?->external_api_base_url);
+        }
+
+        $this->logBiosAccess($reseller, $license->bios_id, 'pause', [
+            'license_id' => $license->id,
+            'external' => $apiResponse,
+        ]);
+
+        return DB::transaction(function () use ($license, $reseller, $apiResponse): License {
+            $license->forceFill([
+                'status' => 'pending',
+                'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Paused locally.'),
+            ])->save();
+
+            $this->logActivity(
+                $reseller,
+                'license.paused',
+                sprintf('Paused license %d for BIOS %s.', $license->id, $license->bios_id),
+                ['license_id' => $license->id],
+            );
+
+            $license->load(['customer', 'program', 'reseller']);
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+
+            return $license;
+        });
+    }
+
+    public function resume(License $license): License
+    {
+        $actor = $this->currentActor();
+        $reseller = $this->resolveReseller($actor, $license->reseller);
+        $program = $license->program()->first();
+        $apiKey = $program?->getDecryptedApiKey();
+        $apiResponse = [
+            'success' => true,
+            'data' => ['response' => 'Resumed locally.'],
+            'status_code' => 200,
+        ];
+
+        if ($apiKey !== null) {
+            $apiResponse = $this->externalApiService->activateUser(
+                $apiKey,
+                (string) $license->external_username,
+                (string) $license->bios_id,
+                $program?->external_api_base_url
+            );
+        }
+
+        $this->logBiosAccess($reseller, $license->bios_id, 'resume', [
+            'license_id' => $license->id,
+            'external' => $apiResponse,
+        ]);
+
+        if (! $apiResponse['success']) {
+            throw ValidationException::withMessages([
+                'license' => $this->extractExternalMessage($apiResponse, 'The resume request was rejected by the external service.'),
+            ]);
+        }
+
+        return DB::transaction(function () use ($license, $reseller, $apiResponse): License {
+            $license->forceFill([
+                'status' => 'active',
+                'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
+            ])->save();
+
+            $this->logActivity(
+                $reseller,
+                'license.resumed',
+                sprintf('Resumed license %d for BIOS %s.', $license->id, $license->bios_id),
+                ['license_id' => $license->id],
+            );
+
+            $license->load(['customer', 'program', 'reseller']);
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+
+            return $license;
+        });
+    }
+
     private function assertBiosAvailable(User $reseller, Program $program, string $biosId, string $externalUsername): void
     {
         if (BiosBlacklist::query()->where('bios_id', $biosId)->where('status', 'active')->exists()) {

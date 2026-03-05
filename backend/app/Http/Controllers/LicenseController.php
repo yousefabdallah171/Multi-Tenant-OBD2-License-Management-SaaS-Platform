@@ -101,6 +101,28 @@ class LicenseController extends Controller
         ]);
     }
 
+    public function pause(Request $request, License $license): JsonResponse
+    {
+        $resolved = $this->resolveAccessibleLicense($request, $license);
+        $paused = $this->licenseService->pause($resolved);
+
+        return response()->json([
+            'message' => 'License paused successfully.',
+            'data' => $this->serializeLicense($paused),
+        ]);
+    }
+
+    public function resume(Request $request, License $license): JsonResponse
+    {
+        $resolved = $this->resolveAccessibleLicense($request, $license);
+        $resumed = $this->licenseService->resume($resolved);
+
+        return response()->json([
+            'message' => 'License resumed successfully.',
+            'data' => $this->serializeLicense($resumed),
+        ]);
+    }
+
     public function bulkRenew(Request $request): JsonResponse
     {
         $validated = $request->validate([
