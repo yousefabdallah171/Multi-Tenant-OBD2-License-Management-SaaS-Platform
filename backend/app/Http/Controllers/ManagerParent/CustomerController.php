@@ -181,12 +181,20 @@ class CustomerController extends BaseManagerParentController
             : sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $this->currentTenantId($request), $username);
 
         $customer = User::query()
-            ->where('tenant_id', $this->currentTenantId($request))
             ->where(function ($query) use ($email, $username): void {
                 $query->where('email', $email)->orWhere('username', $username);
             })
-            ->where('role', UserRole::CUSTOMER->value)
-            ->first() ?? new User();
+            ->first();
+
+        if ($customer && ($customer->tenant_id !== $this->currentTenantId($request))) {
+            throw ValidationException::withMessages([
+                'email' => 'The provided email or username is already used by another tenant.',
+            ]);
+        }
+
+        if (! $customer) {
+            $customer = new User();
+        }
 
         if ($customer->exists && ($customer->role?->value ?? (string) $customer->role) !== UserRole::CUSTOMER->value) {
             throw ValidationException::withMessages([

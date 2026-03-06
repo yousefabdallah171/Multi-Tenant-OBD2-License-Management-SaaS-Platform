@@ -82,10 +82,21 @@ class CustomerController extends BaseResellerController
             ? strtolower(trim($validated['email']))
             : sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $this->currentTenantId($request), $username);
 
-        $customer = User::query()->firstOrNew([
-            'tenant_id' => $this->currentTenantId($request),
-            'email' => $email,
-        ]);
+        $customer = User::query()
+            ->where(function ($query) use ($email, $username): void {
+                $query->where('email', $email)->orWhere('username', $username);
+            })
+            ->first();
+
+        if ($customer && ($customer->tenant_id !== $this->currentTenantId($request))) {
+            throw ValidationException::withMessages([
+                'email' => 'The provided email or username is already used by another tenant.',
+            ]);
+        }
+
+        if (! $customer) {
+            $customer = new User();
+        }
 
         if ($customer->exists && ($customer->role?->value ?? (string) $customer->role) !== UserRole::CUSTOMER->value) {
             throw ValidationException::withMessages([

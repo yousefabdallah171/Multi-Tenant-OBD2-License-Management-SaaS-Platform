@@ -190,7 +190,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       toast.success(t('common.saved', { defaultValue: 'Saved' }))
       navigate(backPath(lang))
     },
-    onError: () => toast.error(t('common.error')),
+    onError: (error: unknown) => toast.error(getApiErrorMessage(error, t('common.error'))),
   })
 
   const activateMutation = useMutation({
@@ -257,7 +257,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
           <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
             <label className="flex items-center gap-3 text-sm font-medium">
               <input type="checkbox" checked={createLicenseNow} onChange={(event) => setCreateLicenseNow(event.target.checked)} />
-              {t('activate.submit', { defaultValue: 'Activate License' })}
+              {t('activate.scheduleToggleNow', { defaultValue: 'Activate license now' })}
             </label>
             <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               {createLicenseNow
@@ -386,6 +386,15 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       </Card>
     </div>
   )
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }).response
+    return response?.data?.message ?? Object.values(response?.data?.errors ?? {})[0]?.[0] ?? fallback
+  }
+
+  return fallback
 }
 
 function Field({ label, children, hint, error }: { label: string; children: React.ReactNode; hint?: string; error?: string }) {
