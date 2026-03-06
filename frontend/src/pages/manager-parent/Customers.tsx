@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MoreVertical, Pause, Play, Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -24,6 +24,7 @@ import { programService } from '@/services/program.service'
 import { teamService } from '@/services/team.service'
 import type { CustomerSummary } from '@/types/manager-parent.types'
 import type { DurationUnit } from '@/types/manager-reseller.types'
+import { formatUsername } from '@/utils/biosId'
 
 const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
 
@@ -246,6 +247,7 @@ export function CustomersPage() {
   const selectableIds = customerRows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
+  const activationSteps = t('reseller.pages.customers.activationDialog.steps', { returnObjects: true }) as string[]
 
   const columns = useMemo<Array<DataTableColumn<CustomerSummary>>>(() => [
     {
@@ -446,18 +448,39 @@ export function CustomersPage() {
             <DialogDescription>{t('reseller.pages.customers.activationDialog.description')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 md:grid-cols-4">
-            {(t('reseller.pages.customers.activationDialog.steps', { returnObjects: true }) as string[]).map((label, index) => (
+            {activationSteps.map((label, index) => (
               <div key={label} className={`rounded-2xl border px-4 py-3 text-sm ${index === activationStep ? 'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-400 dark:bg-sky-950/30 dark:text-sky-300' : 'border-slate-200 text-slate-500 dark:border-slate-800 dark:text-slate-400'}`}>
-                {label}
+                <div className="text-xs uppercase tracking-wide">{t('reseller.pages.customers.activationDialog.stepLabel')} {index + 1}</div>
+                <div className="mt-1 flex items-center gap-2 font-semibold">
+                  {index === 0 ? <UserRound className="h-4 w-4" /> : null}
+                  {index === 1 ? <Cpu className="h-4 w-4" /> : null}
+                  {index === 2 ? <Clock3 className="h-4 w-4" /> : null}
+                  {index === 3 ? <CheckCircle2 className="h-4 w-4" /> : null}
+                  <span>{label}</span>
+                </div>
               </div>
             ))}
           </div>
+          <div className="space-y-1">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+              <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all duration-300" style={{ width: `${((activationStep + 1) / activationSteps.length) * 100}%` }} />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(((activationStep + 1) / activationSteps.length) * 100)}%</p>
+          </div>
           {activationStep === 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
-              <Input placeholder={t('reseller.pages.customers.activationDialog.customerName')} value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} />
-              <Input placeholder={t('activate.username', { defaultValue: 'Username (API)' })} value={activationForm.client_name} onChange={(event) => setActivationForm((current) => ({ ...current, client_name: event.target.value }))} />
-              <Input placeholder={t('reseller.pages.customers.activationDialog.customerEmail')} value={activationForm.customer_email} onChange={(event) => setActivationForm((current) => ({ ...current, customer_email: event.target.value }))} />
-              <Input placeholder={t('common.phone')} value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value.replace(/\D+/g, '') }))} />
+              <FormField label={t('activate.username', { defaultValue: 'Username (API)' })} htmlFor="mp-customer-username">
+                <Input id="mp-customer-username" placeholder={t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })} value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} onBlur={() => setActivationForm((current) => ({ ...current, customer_name: formatUsername(current.customer_name) }))} />
+              </FormField>
+              <FormField label={t('activate.clientName', { defaultValue: 'Client Display Name' })} htmlFor="mp-client-name">
+                <Input id="mp-client-name" placeholder={t('activate.clientName', { defaultValue: 'Client Display Name' })} value={activationForm.client_name} onChange={(event) => setActivationForm((current) => ({ ...current, client_name: event.target.value }))} />
+              </FormField>
+              <FormField label={t('reseller.pages.customers.activationDialog.customerEmail')} htmlFor="mp-customer-email">
+                <Input id="mp-customer-email" type="email" value={activationForm.customer_email} onChange={(event) => setActivationForm((current) => ({ ...current, customer_email: event.target.value }))} />
+              </FormField>
+              <FormField label={t('common.phone')} htmlFor="mp-customer-phone">
+                <Input id="mp-customer-phone" value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value.replace(/\D+/g, '') }))} />
+              </FormField>
               <p className="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">{t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })}</p>
             </div>
           ) : null}
@@ -772,6 +795,15 @@ function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
 function isLikelyBios(value: string | null | undefined): boolean {
   void value
   return false
+}
+
+function FormField({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+    </div>
+  )
 }
 
 function buildScheduledDateTime(form: ActivationFormState) {
