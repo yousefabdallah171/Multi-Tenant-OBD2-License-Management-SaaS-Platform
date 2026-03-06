@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, isLikelyBios } from '@/lib/utils'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
 import { resellerService } from '@/services/reseller.service'
@@ -635,39 +635,32 @@ export function CustomersPage() {
         key: 'actions',
         label: text.table.actions,
         render: (row) => (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={(event) => {
-                event.stopPropagation()
-                setSelectedCustomerId(row.id)
-              }}
-            >
-              <Eye className="me-1 h-4 w-4" />
-              {text.actions.view}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={(event) => {
-                event.stopPropagation()
-                setEditCustomerId(row.id)
-                setEditClientName(row.client_name ?? row.name ?? '')
-              }}
-            >
-              <Pencil className="me-1 h-4 w-4" />
-              {t('common.edit', { defaultValue: 'Edit' })}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" size="sm" variant="ghost">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" size="sm" variant="ghost">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setSelectedCustomerId(row.id)
+                }}
+              >
+                <Eye className="me-2 h-4 w-4" />
+                {text.actions.view}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setEditCustomerId(row.id)
+                  setEditClientName(row.client_name ?? row.name ?? '')
+                }}
+              >
+                <Pencil className="me-2 h-4 w-4" />
+                {t('common.edit', { defaultValue: 'Edit' })}
+              </DropdownMenuItem>
                 {row.status === 'pending' && (
                   <DropdownMenuItem
                     disabled={!row.license_id || resumeMutation.isPending}
@@ -740,9 +733,8 @@ export function CustomersPage() {
                   <Trash2 className="me-2 h-4 w-4" />
                   {t('common.delete')}
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -965,7 +957,7 @@ export function CustomersPage() {
                       size="sm"
                       onClick={() => setActivationForm((current) => ({ ...current, mode: 'duration' }))}
                     >
-                      Duration
+                      {t('activate.durationMode')}
                     </Button>
                     <Button
                       type="button"
@@ -973,7 +965,7 @@ export function CustomersPage() {
                       size="sm"
                       onClick={() => setActivationForm((current) => ({ ...current, mode: 'end_date' }))}
                     >
-                      End Date
+                      {t('common.endDate', { defaultValue: 'End Date' })}
                     </Button>
                   </div>
 
@@ -996,15 +988,15 @@ export function CustomersPage() {
                             onChange={(event) => setActivationForm((current) => ({ ...current, duration_unit: event.target.value as 'minutes' | 'hours' | 'days' }))}
                             className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                           >
-                            <option value="minutes">Minutes</option>
-                            <option value="hours">Hours</option>
+                            <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
+                            <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
                             <option value="days">{text.units.days}</option>
                           </select>
                         </FormField>
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-xs text-slate-600 dark:text-slate-400">Quick Presets</Label>
+                        <Label className="text-xs text-slate-600 dark:text-slate-400">{t('activate.quickPresets', { defaultValue: 'Quick Presets' })}</Label>
                         <div className="grid grid-cols-4 gap-2">
                           {[
                             { label: '30 min', value: '30', unit: 'minutes' },
@@ -1036,7 +1028,7 @@ export function CustomersPage() {
                       </div>
                     </div>
                   ) : (
-                    <FormField label="End Date & Time" htmlFor="end-date-input">
+                    <FormField label={t('activate.endDateTime', { defaultValue: 'End Date & Time' })} htmlFor="end-date-input">
                       <Input
                         id="end-date-input"
                         type="datetime-local"
@@ -1058,7 +1050,7 @@ export function CustomersPage() {
                       className="h-4 w-4 rounded border-slate-300"
                     />
                     <Label htmlFor="schedule-checkbox" className="font-medium">
-                      Schedule activation for later
+                      {t('activate.scheduleToggle')}
                     </Label>
                   </div>
 
@@ -1071,7 +1063,7 @@ export function CustomersPage() {
                           size="sm"
                           onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'relative' }))}
                         >
-                          Duration Mode
+                          {t('activate.scheduleModeRelative', { defaultValue: 'Duration Mode' })}
                         </Button>
                         <Button
                           type="button"
@@ -1079,14 +1071,14 @@ export function CustomersPage() {
                           size="sm"
                           onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'custom' }))}
                         >
-                          Custom Date
+                          {t('activate.scheduleModeCustom', { defaultValue: 'Custom Date' })}
                         </Button>
                       </div>
 
                       {activationForm.schedule_mode === 'relative' ? (
                         <div className="space-y-3">
                           <div className="grid gap-3 md:grid-cols-2">
-                            <FormField label="Offset Value" htmlFor="schedule-offset-value">
+                            <FormField label={t('activate.offsetValue', { defaultValue: 'Offset Value' })} htmlFor="schedule-offset-value">
                               <Input
                                 id="schedule-offset-value"
                                 type="number"
@@ -1095,20 +1087,20 @@ export function CustomersPage() {
                                 onChange={(event) => setActivationForm((current) => ({ ...current, schedule_offset_value: event.target.value }))}
                               />
                             </FormField>
-                            <FormField label="Offset Unit" htmlFor="schedule-offset-unit">
+                            <FormField label={t('activate.offsetUnit', { defaultValue: 'Offset Unit' })} htmlFor="schedule-offset-unit">
                               <select
                                 id="schedule-offset-unit"
                                 value={activationForm.schedule_offset_unit}
                                 onChange={(event) => setActivationForm((current) => ({ ...current, schedule_offset_unit: event.target.value as 'minutes' | 'hours' | 'days' }))}
                                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                               >
-                                <option value="minutes">Minutes</option>
-                                <option value="hours">Hours</option>
-                                <option value="days">Days</option>
+                                <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
+                                <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
+                                <option value="days">{t('common.days', { defaultValue: 'Days' })}</option>
                               </select>
                             </FormField>
                           </div>
-                          <FormField label="Timezone" htmlFor="schedule-timezone">
+                          <FormField label={t('activate.timezone', { defaultValue: 'Timezone' })} htmlFor="schedule-timezone">
                             <select
                               id="schedule-timezone"
                               value={activationForm.scheduled_timezone}
@@ -1128,7 +1120,7 @@ export function CustomersPage() {
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          <FormField label="Scheduled Date & Time" htmlFor="scheduled-datetime">
+                          <FormField label={t('activate.scheduledDateTime', { defaultValue: 'Scheduled Date & Time' })} htmlFor="scheduled-datetime">
                             <Input
                               id="scheduled-datetime"
                               type="datetime-local"
@@ -1136,7 +1128,7 @@ export function CustomersPage() {
                               onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_date_time: event.target.value }))}
                             />
                           </FormField>
-                          <FormField label="Timezone" htmlFor="scheduled-timezone">
+                          <FormField label={t('activate.timezone', { defaultValue: 'Timezone' })} htmlFor="scheduled-timezone">
                             <select
                               id="scheduled-timezone"
                               value={activationForm.scheduled_timezone}
@@ -1170,7 +1162,7 @@ export function CustomersPage() {
                         size="sm"
                         onClick={() => setPriceMode('auto')}
                       >
-                        Auto
+                        {t('activate.priceModeAuto')}
                       </Button>
                       <Button
                         type="button"
@@ -1178,7 +1170,7 @@ export function CustomersPage() {
                         size="sm"
                         onClick={() => setPriceMode('manual')}
                       >
-                        Manual
+                        {t('activate.priceModeManual')}
                       </Button>
                     </div>
                   </div>
@@ -1198,7 +1190,9 @@ export function CustomersPage() {
                       className={priceMode === 'auto' ? 'bg-slate-100 dark:bg-slate-900' : ''}
                     />
                     <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                      {priceMode === 'auto' ? 'Auto-calculated' : 'Enter custom price'}
+                      {priceMode === 'auto'
+                        ? t('activate.priceAuto')
+                        : t('activate.priceManualEntry', { defaultValue: 'Enter custom price' })}
                     </p>
                   </div>
                 </div>
@@ -1662,8 +1656,4 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 }
 
 
-function isLikelyBios(value: string): boolean {
-  void value
-  return false
-}
 

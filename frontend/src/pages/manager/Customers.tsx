@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, isLikelyBios } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
@@ -772,11 +772,6 @@ function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
     queryClient.invalidateQueries({ queryKey: ['manager', 'customers'] }),
     queryClient.invalidateQueries({ queryKey: ['manager', 'licenses'] }),
   ])
-}
-
-function isLikelyBios(value: string | null | undefined): boolean {
-  void value
-  return false
 }
 
 function FormField({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {

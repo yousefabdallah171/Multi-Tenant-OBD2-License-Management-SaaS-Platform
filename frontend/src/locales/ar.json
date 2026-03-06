@@ -1299,14 +1299,24 @@
     "priceAuto": "يُحسب تلقائيًا",
     "priceModeAuto": "تلقائي",
     "priceModeManual": "يدوي",
+    "priceManualEntry": "أدخل سعرًا مخصصًا",
     "priceManualHint": "تم تفعيل تعديل السعر يدويًا.",
+    "quickPresets": "إعدادات سريعة",
     "submit": "إنشاء وتفعيل",
+    "endDateTime": "تاريخ ووقت الانتهاء",
     "successTitle": "تم تفعيل الترخيص",
     "successMessage": "مفتاح الترخيص: {{key}}",
     "errorTitle": "فشل التفعيل",
     "biosAlreadyActive": "معرف BIOS هذا لديه ترخيص نشط بالفعل لهذا البرنامج.",
     "biosBlacklisted": "معرف BIOS هذا محظور ولا يمكن تفعيله.",
-    "customerNameHint": "سيُستخدم كاسم مستخدم خارجي على خادم الترخيص."
+    "customerNameHint": "سيُستخدم كاسم مستخدم خارجي على خادم الترخيص.",
+    "scheduleToggle": "جدولة التفعيل لوقت لاحق",
+    "scheduleModeRelative": "وضع المدة",
+    "scheduleModeCustom": "تاريخ مخصص",
+    "offsetValue": "قيمة الإزاحة",
+    "offsetUnit": "وحدة الإزاحة",
+    "timezone": "المنطقة الزمنية",
+    "scheduledDateTime": "تاريخ ووقت الجدولة"
   },
   "customerPortal": {
     "layout": {

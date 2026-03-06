@@ -36,3 +36,33 @@ export function formatDuration(durationDays: number) {
   const days = Math.round((totalHours / 24) * 10) / 10
   return `${days} day${days === 1 ? '' : 's'}`
 }
+
+export function isLikelyBios(value: string | null | undefined) {
+  const normalized = value?.trim()
+  if (!normalized) {
+    return false
+  }
+
+  if (normalized.includes(' ')) {
+    return false
+  }
+
+  const upper = normalized.toUpperCase()
+  const alphaNumeric = upper.replace(/[^A-Z0-9]/g, '')
+  if (alphaNumeric.length < 8) {
+    return false
+  }
+
+  const hasSeparator = /[-_:]/.test(upper)
+  const hasOnlyHardwareChars = /^[A-Z0-9-_:]+$/.test(upper)
+  const digitCount = (upper.match(/\d/g) ?? []).length
+  const letterCount = (upper.match(/[A-Z]/g) ?? []).length
+  const hexLike = /^[A-F0-9-_:]+$/.test(upper) && digitCount >= 4
+  const longHardwareId = alphaNumeric.length >= 12 && digitCount >= 5
+
+  return hasOnlyHardwareChars && (
+    hexLike
+    || (hasSeparator && longHardwareId)
+    || (alphaNumeric.length >= 15 && digitCount >= letterCount)
+  )
+}
