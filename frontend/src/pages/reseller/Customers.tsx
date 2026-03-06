@@ -154,7 +154,7 @@ export function CustomersPage() {
           title: 'إيقاف الترخيص؟',
           description: (biosId: string) => `سيؤدي هذا إلى إيقاف الترخيص مؤقتاً لـ BIOS ID: ${biosId}`,
         },
-        units: { days: 'أيام', months: 'أشهر', years: 'سنوات' },
+        units: { minutes: 'دقائق', hours: 'ساعات', days: 'أيام', months: 'أشهر', years: 'سنوات' },
         toasts: {
           activated: 'تم تفعيل الترخيص بنجاح.',
           renewed: 'تم تجديد الترخيص بنجاح.',
@@ -269,6 +269,8 @@ export function CustomersPage() {
           description: (biosId: string) => t('reseller.pages.customers.pauseDialog.description', { biosId }),
         },
         units: {
+          minutes: t('common.minutes', { defaultValue: 'Minutes' }),
+          hours: t('common.hours', { defaultValue: 'Hours' }),
           days: t('common.days'),
           months: t('common.months'),
           years: t('common.years'),
@@ -626,11 +628,8 @@ export function CustomersPage() {
     [locale, text],
   )
 
-  const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
   const detailCustomer = detailQuery.data?.data
   const renewLicense = renewLicenseQuery.data?.data
-  const durationDays = durationToDays(Number(activationForm.duration_value || 0), activationForm.duration_unit)
-  const expiryPreview = durationDays > 0 ? new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000) : null
 
   return (
     <div className="space-y-6">
@@ -777,12 +776,10 @@ export function CustomersPage() {
                     value={activationForm.program_id}
                     onChange={(event) => {
                       const nextId = event.target.value ? Number(event.target.value) : ''
-                      const program = (programsQuery.data?.data ?? []).find((item) => item.id === nextId)
 
                       setActivationForm((current) => ({
                         ...current,
                         program_id: nextId,
-                        price: current.price || (program ? String(program.base_price) : ''),
                       }))
                     }}
                     className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
@@ -809,29 +806,260 @@ export function CustomersPage() {
             ) : null}
 
             {activationStep === 2 ? (
-              <div className="grid gap-4 md:grid-cols-3">
-                <FormField label={text.activationDialog.duration} htmlFor="duration-value">
-                  <Input id="duration-value" type="number" min={1} value={activationForm.duration_value} onChange={(event) => setActivationForm((current) => ({ ...current, duration_value: event.target.value }))} />
-                </FormField>
-                <FormField label={text.activationDialog.unit} htmlFor="duration-unit">
-                  <select
-                    id="duration-unit"
-                    value={activationForm.duration_unit}
-                    onChange={(event) => setActivationForm((current) => ({ ...current, duration_unit: event.target.value as DurationUnit }))}
-                    className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-                  >
-                    <option value="days">{text.units.days}</option>
-                    <option value="months">{text.units.months}</option>
-                    <option value="years">{text.units.years}</option>
-                  </select>
-                </FormField>
-                <FormField label={text.activationDialog.price} htmlFor="price">
-                  <Input id="price" type="number" step="0.01" min={0} value={activationForm.price} onChange={(event) => setActivationForm((current) => ({ ...current, price: event.target.value }))} />
-                </FormField>
-                <Card className="md:col-span-3">
-                  <CardContent className="grid gap-4 p-4 md:grid-cols-2">
-                    <InfoPair label={text.activationDialog.durationDays} value={durationDays || 0} />
+              <div className="space-y-6">
+                {/* Duration Section */}
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={activationForm.mode === 'duration' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setActivationForm((current) => ({ ...current, mode: 'duration' }))}
+                    >
+                      Duration
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={activationForm.mode === 'end_date' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setActivationForm((current) => ({ ...current, mode: 'end_date' }))}
+                    >
+                      End Date
+                    </Button>
+                  </div>
+
+                  {activationForm.mode === 'duration' ? (
+                    <div className="space-y-3">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <FormField label={text.activationDialog.duration} htmlFor="duration-value">
+                          <Input
+                            id="duration-value"
+                            type="number"
+                            min={1}
+                            value={activationForm.duration_value}
+                            onChange={(event) => setActivationForm((current) => ({ ...current, duration_value: event.target.value }))}
+                          />
+                        </FormField>
+                        <FormField label={text.activationDialog.unit} htmlFor="duration-unit">
+                          <select
+                            id="duration-unit"
+                            value={activationForm.duration_unit}
+                            onChange={(event) => setActivationForm((current) => ({ ...current, duration_unit: event.target.value as 'minutes' | 'hours' | 'days' }))}
+                            className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                          >
+                            <option value="minutes">Minutes</option>
+                            <option value="hours">Hours</option>
+                            <option value="days">{text.units.days}</option>
+                          </select>
+                        </FormField>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs text-slate-600 dark:text-slate-400">Quick Presets</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {[
+                            { label: '30 min', value: '30', unit: 'minutes' },
+                            { label: '1 hr', value: '1', unit: 'hours' },
+                            { label: '6 hr', value: '6', unit: 'hours' },
+                            { label: '1 day', value: '1', unit: 'days' },
+                            { label: '7 days', value: '7', unit: 'days' },
+                            { label: '30 days', value: '30', unit: 'days' },
+                            { label: '90 days', value: '90', unit: 'days' },
+                          ].map((preset) => (
+                            <Button
+                              key={`${preset.value}-${preset.unit}`}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-xs"
+                              onClick={() =>
+                                setActivationForm((current) => ({
+                                  ...current,
+                                  duration_value: preset.value,
+                                  duration_unit: preset.unit as 'minutes' | 'hours' | 'days',
+                                }))
+                              }
+                            >
+                              {preset.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <FormField label="End Date & Time" htmlFor="end-date-input">
+                      <Input
+                        id="end-date-input"
+                        type="datetime-local"
+                        value={activationForm.end_date}
+                        onChange={(event) => setActivationForm((current) => ({ ...current, end_date: event.target.value }))}
+                      />
+                    </FormField>
+                  )}
+                </div>
+
+                {/* Scheduling Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="schedule-checkbox"
+                      checked={activationForm.is_scheduled}
+                      onChange={(event) => setActivationForm((current) => ({ ...current, is_scheduled: event.target.checked }))}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                    <Label htmlFor="schedule-checkbox" className="font-medium">
+                      Schedule activation for later
+                    </Label>
+                  </div>
+
+                  {activationForm.is_scheduled ? (
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={activationForm.schedule_mode === 'relative' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'relative' }))}
+                        >
+                          Duration Mode
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={activationForm.schedule_mode === 'custom' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'custom' }))}
+                        >
+                          Custom Date
+                        </Button>
+                      </div>
+
+                      {activationForm.schedule_mode === 'relative' ? (
+                        <div className="space-y-3">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <FormField label="Offset Value" htmlFor="schedule-offset-value">
+                              <Input
+                                id="schedule-offset-value"
+                                type="number"
+                                min={1}
+                                value={activationForm.schedule_offset_value}
+                                onChange={(event) => setActivationForm((current) => ({ ...current, schedule_offset_value: event.target.value }))}
+                              />
+                            </FormField>
+                            <FormField label="Offset Unit" htmlFor="schedule-offset-unit">
+                              <select
+                                id="schedule-offset-unit"
+                                value={activationForm.schedule_offset_unit}
+                                onChange={(event) => setActivationForm((current) => ({ ...current, schedule_offset_unit: event.target.value as 'minutes' | 'hours' | 'days' }))}
+                                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                              >
+                                <option value="minutes">Minutes</option>
+                                <option value="hours">Hours</option>
+                                <option value="days">Days</option>
+                              </select>
+                            </FormField>
+                          </div>
+                          <FormField label="Timezone" htmlFor="schedule-timezone">
+                            <select
+                              id="schedule-timezone"
+                              value={activationForm.scheduled_timezone}
+                              onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_timezone: event.target.value }))}
+                              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                            >
+                              <option value="UTC">UTC</option>
+                              <option value="America/New_York">America/New_York</option>
+                              <option value="America/Chicago">America/Chicago</option>
+                              <option value="America/Los_Angeles">America/Los_Angeles</option>
+                              <option value="Europe/London">Europe/London</option>
+                              <option value="Europe/Paris">Europe/Paris</option>
+                              <option value="Asia/Tokyo">Asia/Tokyo</option>
+                              <option value="Asia/Dubai">Asia/Dubai</option>
+                            </select>
+                          </FormField>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <FormField label="Scheduled Date & Time" htmlFor="scheduled-datetime">
+                            <Input
+                              id="scheduled-datetime"
+                              type="datetime-local"
+                              value={activationForm.scheduled_date_time}
+                              onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_date_time: event.target.value }))}
+                            />
+                          </FormField>
+                          <FormField label="Timezone" htmlFor="scheduled-timezone">
+                            <select
+                              id="scheduled-timezone"
+                              value={activationForm.scheduled_timezone}
+                              onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_timezone: event.target.value }))}
+                              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                            >
+                              <option value="UTC">UTC</option>
+                              <option value="America/New_York">America/New_York</option>
+                              <option value="America/Chicago">America/Chicago</option>
+                              <option value="America/Los_Angeles">America/Los_Angeles</option>
+                              <option value="Europe/London">Europe/London</option>
+                              <option value="Europe/Paris">Europe/Paris</option>
+                              <option value="Asia/Tokyo">Asia/Tokyo</option>
+                              <option value="Asia/Dubai">Asia/Dubai</option>
+                            </select>
+                          </FormField>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Price Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Label className="font-medium">{text.activationDialog.price}</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={priceMode === 'auto' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPriceMode('auto')}
+                      >
+                        Auto
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={priceMode === 'manual' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPriceMode('manual')}
+                      >
+                        Manual
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      value={priceMode === 'auto' ? totalPrice.toFixed(2) : priceInput}
+                      onChange={(event) => {
+                        if (priceMode === 'manual') {
+                          setPriceInput(normalizeDecimalInput(event.target.value))
+                        }
+                      }}
+                      readOnly={priceMode === 'auto'}
+                      className={priceMode === 'auto' ? 'bg-slate-100 dark:bg-slate-900' : ''}
+                    />
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                      {priceMode === 'auto' ? 'Auto-calculated' : 'Enter custom price'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Summary Card */}
+                <Card>
+                  <CardContent className="grid gap-4 p-4 md:grid-cols-3">
+                    <InfoPair label={text.activationDialog.durationDays} value={Math.round(durationDays) || 0} />
                     <InfoPair label={text.activationDialog.expiryPreview} value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
+                    <InfoPair label={text.activationDialog.price} value={formatCurrency(totalPrice, 'USD', locale)} />
                   </CardContent>
                 </Card>
               </div>
@@ -849,8 +1077,8 @@ export function CustomersPage() {
                     <InfoPair label={text.activationDialog.phone} value={activationForm.customer_phone || '-'} />
                     <InfoPair label={text.activationDialog.biosId} value={activationForm.bios_id || '-'} />
                     <InfoPair label={text.activationDialog.program} value={selectedProgram?.name ?? '-'} />
-                    <InfoPair label={text.activationDialog.duration} value={`${activationForm.duration_value || 0} ${text.units[activationForm.duration_unit]}`} />
-                    <InfoPair label={text.activationDialog.price} value={formatCurrency(Number(activationForm.price || 0), 'USD', locale)} />
+                    <InfoPair label={text.activationDialog.duration} value={`${durationDays.toFixed(2)} ${text.units.days}`} />
+                    <InfoPair label={text.activationDialog.price} value={formatCurrency(totalPrice, 'USD', locale)} />
                     <InfoPair label={text.activationDialog.expiry} value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
                   </CardContent>
                 </Card>
@@ -1100,18 +1328,13 @@ function InfoCard({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function normalizeDecimalInput(value: string): string {
   const trimmed = value.trim()
   if (!trimmed) return ''
   const num = parseFloat(trimmed)
   if (!Number.isFinite(num)) return ''
   return String(num)
-}
-
-function clampPriceInput(value: string): string {
-  const num = parseFloat(value)
-  if (!Number.isFinite(num)) return '0.00'
-  return Math.min(Math.max(num, 0), 99_999_999.99).toFixed(2)
 }
 
 function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | 'months' | 'years'): number {
@@ -1169,12 +1392,12 @@ function validateActivationStep(step: number, form: ActivationFormState, text: {
   }
 
   if (step >= 2) {
-    if (Number(form.duration_value) < 1) {
+    if (Number(form.duration_value) < 1 && form.mode === 'duration') {
       return text.validation.duration
     }
 
-    if (Number(form.price) < 0 || Number.isNaN(Number(form.price))) {
-      return text.validation.price
+    if (form.mode === 'end_date' && !form.end_date) {
+      return text.validation.duration
     }
   }
 
