@@ -69,6 +69,17 @@ export function Navbar() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 px-0 sm:h-9 sm:w-auto sm:px-3"
+            onClick={toggleTheme}
+            aria-label={t('common.toggleTheme')}
+          >
+            {isDark ? <SunMedium className="h-4 w-4 sm:me-2" /> : <MoonStar className="h-4 w-4 sm:me-2" />}
+            <span className="hidden sm:inline">{isDark ? t('common.lightMode') : t('common.darkMode')}</span>
+          </Button>
           {canInstall ? (
             <Button
               type="button"
@@ -110,10 +121,6 @@ export function Navbar() {
                 <DropdownMenuItem className="mt-3" onClick={switchLanguage}>
                   <Globe className="me-2 h-4 w-4" />
                   {lang === 'ar' ? 'English' : 'العربية'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={toggleTheme}>
-                  {isDark ? <SunMedium className="me-2 h-4 w-4" /> : <MoonStar className="me-2 h-4 w-4" />}
-                  {isDark ? t('common.lightMode') : t('common.darkMode')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-2" />
                 <DropdownMenuItem className="p-0 focus:bg-transparent dark:focus:bg-transparent">

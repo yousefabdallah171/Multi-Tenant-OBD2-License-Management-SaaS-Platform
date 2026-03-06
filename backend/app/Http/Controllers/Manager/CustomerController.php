@@ -6,12 +6,16 @@ use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\UserIpLog;
 use App\Models\User;
+use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 class CustomerController extends BaseManagerController
 {
+    public function __construct(private readonly LicenseService $licenseService)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -178,26 +182,22 @@ class CustomerController extends BaseManagerController
         $customer = $this->resolveTeamUser($request, $user);
         $sellerIds = $this->teamSellerIds($request);
 
-        $activeLicensesCount = License::query()
+        $licenses = License::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('customer_id', $customer->id)
             ->whereIn('reseller_id', $sellerIds)
-            ->where('status', 'active')
-            ->count();
-
-        if ($activeLicensesCount > 0) {
-            return response()->json([
-                'message' => 'Cannot delete customer with active licenses. Deactivate licenses first.',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
+            ->get();
 
         $customerName = $customer->name;
         $customerId = $customer->id;
-        $licensesCount = License::query()
-            ->where('tenant_id', $this->currentTenantId($request))
-            ->where('customer_id', $customer->id)
-            ->whereIn('reseller_id', $sellerIds)
-            ->count();
+        $licensesCount = $licenses->count();
+
+        foreach ($licenses as $license) {
+            if ($license->status === 'active') {
+                $this->licenseService->deactivate($license);
+            }
+            $license->delete();
+        }
 
         $customer->delete();
 

@@ -346,7 +346,7 @@ export function CustomersPage() {
               <Play className="me-2 h-4 w-4" />
               {row.status === 'cancelled' ? t('common.reactivate') : t('common.resume')}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDeleteTarget(row)} disabled={row.has_active_license === true}>
+            <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
               <Trash2 className="me-2 h-4 w-4" />
               {t('common.delete')}
             </DropdownMenuItem>
@@ -680,10 +680,6 @@ export function CustomersPage() {
         isDestructive
         onConfirm={() => {
           if (deleteTarget) {
-            if (deleteTarget.has_active_license) {
-              toast.error(t('common.error', { defaultValue: 'Cannot delete customer with active licenses. Deactivate licenses first.' }))
-              return
-            }
             deleteMutation.mutate(deleteTarget.id)
           }
         }}

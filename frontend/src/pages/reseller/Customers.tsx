@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, UserRound } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -313,6 +313,7 @@ export function CustomersPage() {
   const [renewPrice, setRenewPrice] = useState('')
   const [deactivateTarget, setDeactivateTarget] = useState<ResellerCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ResellerCustomerSummary | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ResellerCustomerSummary | null>(null)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
   const [selectedLicenseIds, setSelectedLicenseIds] = useState<number[]>([])
@@ -474,6 +475,19 @@ export function CustomersPage() {
     mutationFn: (licenseId: number) => licenseService.resume(licenseId),
     onSuccess: () => {
       toast.success(text.toasts.resumed)
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (customerId: number) => resellerService.deleteCustomer(customerId),
+    onSuccess: (response) => {
+      toast.success(response.message ?? t('common.deleted', { defaultValue: 'Deleted successfully.' }))
+      setDeleteTarget(null)
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
         queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
@@ -717,6 +731,15 @@ export function CustomersPage() {
                     </DropdownMenuItem>
                   </>
                 )}
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setDeleteTarget(row)
+                  }}
+                >
+                  <Trash2 className="me-2 h-4 w-4" />
+                  {t('common.delete')}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -1359,6 +1382,22 @@ export function CustomersPage() {
       </Dialog>
 
       <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+        title={t('common.delete')}
+        description={deleteTarget ? `${deleteTarget.name} (${deleteTarget.email ?? '-'})` : undefined}
+        confirmLabel={t('common.delete')}
+        isDestructive
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteMutation.mutate(deleteTarget.id)
+          }
+        }}
+      />
+
+      <ConfirmDialog
         open={deactivateTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -1560,7 +1599,7 @@ function validateActivationStep(step: number, form: ActivationFormState, text: {
       return text.validation.nameNotBiosId
     }
 
-    if (!form.customer_email.trim() || !/\S+@\S+\.\S+/.test(form.customer_email.trim())) {
+    if (form.customer_email.trim() && !/\S+@\S+\.\S+/.test(form.customer_email.trim())) {
       return text.validation.customerEmail
     }
 

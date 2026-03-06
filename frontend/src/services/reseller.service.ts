@@ -49,6 +49,10 @@ export const resellerService = {
     const { data } = await api.put<{ data: ResellerCustomerSummary }>(`/reseller/customers/${id}`, payload)
     return data
   },
+  async deleteCustomer(id: number) {
+    const { data } = await api.delete<{ message: string }>(`/reseller/customers/${id}`)
+    return data
+  },
   async getSoftware() {
     const { data } = await api.get<{ data: ResellerSoftwareProgram[] }>('/reseller/software')
     return data

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Reseller;
 
 use App\Enums\UserRole;
+use App\Models\License;
 use App\Models\User;
+use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class CustomerController extends BaseResellerController
 {
+    public function __construct(private readonly LicenseService $licenseService)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -156,6 +162,44 @@ class CustomerController extends BaseResellerController
                     'expires_at' => $license->expires_at?->toIso8601String(),
                 ])->values(),
             ],
+        ]);
+    }
+
+    public function destroy(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveCustomer($request, $user);
+        $resellerId = $this->currentReseller($request)->id;
+
+        $licenses = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('customer_id', $customer->id)
+            ->where('reseller_id', $resellerId)
+            ->get();
+
+        $licensesCount = $licenses->count();
+        foreach ($licenses as $license) {
+            if ($license->status === 'active') {
+                $this->licenseService->deactivate($license);
+            }
+            $license->delete();
+        }
+
+        $customerName = $customer->name;
+        $customerId = $customer->id;
+        $customer->delete();
+
+        $this->logActivity(
+            $request,
+            'customer.deleted',
+            sprintf('Deleted customer profile for %s.', $customerName),
+            [
+                'customer_id' => $customerId,
+                'licenses_deleted' => $licensesCount,
+            ],
+        );
+
+        return response()->json([
+            'message' => 'Customer deleted successfully.',
         ]);
     }
 
