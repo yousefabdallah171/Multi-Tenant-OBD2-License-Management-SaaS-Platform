@@ -1,0 +1,90 @@
+import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
+import { useParams } from 'react-router-dom'
+import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useLanguage } from '@/hooks/useLanguage'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { resellerService } from '@/services/reseller.service'
+
+export function CustomerDetailPage() {
+  const { t } = useTranslation()
+  const { lang } = useLanguage()
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const { id } = useParams<{ id: string }>()
+  const customerId = Number(id)
+
+  const query = useQuery({
+    queryKey: ['reseller', 'customer-detail', customerId],
+    queryFn: () => resellerService.getCustomer(customerId),
+    enabled: Number.isFinite(customerId),
+  })
+
+  const customer = query.data?.data
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow={t('roles.reseller')}
+        title={customer?.name ?? t('reseller.pages.customers.title')}
+        description={customer?.email ?? customer?.phone ?? t('reseller.pages.customers.description')}
+      />
+
+      {customer ? (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('common.customer')}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-3">
+              <Info label={t('common.name')} value={customer.name} />
+              <Info label={t('common.email')} value={customer.email ?? '-'} />
+              <Info label={t('common.phone')} value={customer.phone ?? '-'} />
+              <Info label={t('common.username')} value={customer.username ?? '-'} />
+              <Info label={t('reseller.pages.customers.table.bios')} value={customer.bios_id ?? '-'} />
+              <Info
+                label={t('common.status')}
+                value={<StatusBadge status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} />}
+              />
+              <Info label={t('common.program')} value={customer.program ?? '-'} />
+              <Info label={t('common.price')} value={formatCurrency(customer.price, 'USD', locale)} />
+              <Info label={t('common.expiry')} value={customer.expiry ? formatDate(customer.expiry, locale) : '-'} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('reseller.pages.customers.detail.activationHistory')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(customer.licenses ?? []).map((license) => (
+                <div key={license.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+                  <div className="grid gap-4 md:grid-cols-5">
+                    <Info label={t('common.program')} value={license.program ?? '-'} />
+                    <Info label={t('reseller.pages.customers.detail.bios')} value={license.bios_id} />
+                    <Info
+                      label={t('common.status')}
+                      value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} />}
+                    />
+                    <Info label={t('common.price')} value={formatCurrency(license.price, 'USD', locale)} />
+                    <Info label={t('common.expiry')} value={license.expires_at ? formatDate(license.expires_at, locale) : '-'} />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+    </div>
+  )
+}
+
+function Info({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="mt-1 whitespace-pre-line font-medium">{value}</p>
+    </div>
+  )
+}

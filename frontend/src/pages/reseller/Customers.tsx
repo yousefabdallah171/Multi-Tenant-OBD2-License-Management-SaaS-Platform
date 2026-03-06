@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -22,6 +23,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate, isLikelyBios } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
 import { resellerService } from '@/services/reseller.service'
@@ -302,7 +304,6 @@ export function CustomersPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
   const [programFilter, setProgramFilter] = useState<number | ''>('')
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null)
   const [editCustomerId, setEditCustomerId] = useState<number | null>(null)
   const [editClientName, setEditClientName] = useState('')
   const [activationOpen, setActivationOpen] = useState(false)
@@ -336,12 +337,6 @@ export function CustomersPage() {
         status: status === 'all' ? '' : status,
         program_id: programFilter || undefined,
       }),
-  })
-
-  const detailQuery = useQuery({
-    queryKey: ['reseller', 'customers', 'detail', selectedCustomerId],
-    queryFn: () => resellerService.getCustomer(selectedCustomerId ?? 0),
-    enabled: selectedCustomerId !== null,
   })
 
   const programsQuery = useQuery({
@@ -596,16 +591,12 @@ export function CustomersPage() {
           <div>
             <p className="font-medium text-slate-950 dark:text-white">
               <span className={`me-2 inline-block h-2.5 w-2.5 rounded-full ${row.status === 'active' ? 'bg-emerald-500' : row.status === 'pending' ? 'bg-amber-500' : row.status === 'cancelled' ? 'bg-rose-500' : 'bg-slate-400'}`} />
-              <button
-                type="button"
+              <Link
                 className="text-start text-sky-600 hover:underline dark:text-sky-300"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setSelectedCustomerId(row.id)
-                }}
+                to={routePaths.reseller.customerDetail(lang, row.id)}
               >
                 {isLikelyBios(row.name) ? '-' : row.name}
-              </button>
+              </Link>
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{row.email ?? '-'}</p>
           </div>
@@ -617,16 +608,12 @@ export function CustomersPage() {
         sortable: true,
         sortValue: (row) => row.bios_id ?? '',
         render: (row) => row.bios_id ? (
-          <button
-            type="button"
+          <Link
             className="text-sky-600 hover:underline dark:text-sky-300"
-            onClick={(event) => {
-              event.stopPropagation()
-              setSelectedCustomerId(row.id)
-            }}
+            to={routePaths.reseller.customerDetail(lang, row.id)}
           >
             {rawBiosId(row.bios_id, row.external_username)}
-          </button>
+          </Link>
         ) : '-',
       },
       {
@@ -651,14 +638,11 @@ export function CustomersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setSelectedCustomerId(row.id)
-                }}
-              >
-                <Eye className="me-2 h-4 w-4" />
-                {text.actions.view}
+              <DropdownMenuItem asChild>
+                <Link to={routePaths.reseller.customerDetail(lang, row.id)}>
+                  <Eye className="me-2 h-4 w-4" />
+                  {text.actions.view}
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={(event) => {
@@ -747,10 +731,8 @@ export function CustomersPage() {
         ),
       },
     ],
-    [allVisibleSelected, locale, selectedLicenseIds, selectableIds, someVisibleSelected, text],
+    [allVisibleSelected, lang, locale, selectedLicenseIds, selectableIds, someVisibleSelected, text],
   )
-
-  const detailCustomer = detailQuery.data?.data
   const renewLicense = renewLicenseQuery.data?.data
 
   return (
@@ -825,7 +807,6 @@ export function CustomersPage() {
             columns={columns}
             data={customerRows}
             rowKey={(row) => row.id}
-            onRowClick={(row) => setSelectedCustomerId(row.id)}
             isLoading={customersQuery.isLoading}
             pagination={{
               page: customersQuery.data?.meta.current_page ?? 1,
@@ -1290,45 +1271,6 @@ export function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={selectedCustomerId !== null} onOpenChange={(open) => !open && setSelectedCustomerId(null)}>
-        <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
-          <DialogHeader>
-            <DialogTitle>{detailCustomer?.name ?? text.detail.titleFallback}</DialogTitle>
-            <DialogDescription>{detailCustomer?.email ?? detailCustomer?.phone ?? text.detail.descriptionFallback}</DialogDescription>
-          </DialogHeader>
-          {detailCustomer ? (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-4">
-                <InfoCard label={text.detail.phone} value={detailCustomer.phone ?? '-'} />
-                <InfoCard label={text.detail.bios} value={detailCustomer.bios_id ?? '-'} />
-                <InfoCard label={text.detail.program} value={detailCustomer.program ?? '-'} />
-                <InfoCard label={text.detail.status} value={<StatusBadge status={detailCustomer.status} />} />
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold">{text.detail.activationHistory}</h3>
-                {detailCustomer.licenses.map((license) => (
-                  <div key={license.id} className="rounded-3xl border border-slate-200 p-4 dark:border-slate-800">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <p className="font-medium text-slate-950 dark:text-white">{license.program ?? text.detail.unknownProgram}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{text.detail.bios} {license.bios_id}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{text.detail.activated} {license.activated_at ? formatDate(license.activated_at, locale) : '-'}</p>
-                      </div>
-                      <div className="text-right">
-                        <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'} />
-                        <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-white">{formatCurrency(license.price, 'USD', locale)}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{text.detail.expires} {license.expires_at ? formatDate(license.expires_at, locale) : '-'}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-
       <Dialog
         open={renewLicenseId !== null}
         onOpenChange={(open) => {
@@ -1540,17 +1482,6 @@ function InfoPair({ label, value }: { label: string; value: React.ReactNode }) {
       <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
       <div className="mt-1 font-semibold text-slate-950 dark:text-white">{value}</div>
     </div>
-  )
-}
-
-function InfoCard({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-        <div className="mt-2 font-semibold">{value}</div>
-      </CardContent>
-    </Card>
   )
 }
 
