@@ -24,7 +24,7 @@ class LicenseController extends Controller
             'customer_name' => ['required', 'string', 'max:5000'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
-            'customer_phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9]+$/'],
+            'customer_phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'bios_id' => ['required', 'string', 'max:255'],
             'duration_days' => ['required', 'numeric', 'min:0.0001', 'max:36500'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],

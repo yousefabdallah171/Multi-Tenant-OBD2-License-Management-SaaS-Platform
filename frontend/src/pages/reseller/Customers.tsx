@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -74,6 +74,7 @@ export function CustomersPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const text = useMemo(() => (lang === 'ar'
     ? {
@@ -398,7 +399,7 @@ export function CustomersPage() {
         customer_name: activationForm.customer_name.trim(),
         client_name: activationForm.client_name.trim() || undefined,
         customer_email: activationForm.customer_email.trim() || undefined,
-        customer_phone: activationForm.customer_phone.trim().replace(/\D+/g, '') || undefined,
+        customer_phone: activationForm.customer_phone.trim() || undefined,
         bios_id: activationForm.bios_id.trim(),
         program_id: Number(activationForm.program_id),
         duration_days: durationDays,
@@ -742,7 +743,7 @@ export function CustomersPage() {
         title={text.title}
         description={text.description}
         actions={
-          <Button type="button" onClick={() => setActivationOpen(true)}>
+          <Button type="button" onClick={() => navigate(routePaths.reseller.customerCreate(lang))}>
             <Plus className="me-2 h-4 w-4" />
             {text.addCustomer}
           </Button>
@@ -891,7 +892,7 @@ export function CustomersPage() {
                   <Input id="customer-email" type="email" value={activationForm.customer_email} onChange={(event) => setActivationForm((current) => ({ ...current, customer_email: event.target.value }))} />
                 </FormField>
                 <FormField label={text.activationDialog.phone} htmlFor="customer-phone">
-                  <Input id="customer-phone" value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value.replace(/\D+/g, '') }))} />
+                  <Input id="customer-phone" value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: normalizePhoneInput(event.target.value) }))} />
                 </FormField>
               </div>
             ) : null}
@@ -1537,7 +1538,7 @@ function validateActivationStep(step: number, form: ActivationFormState, text: {
       return text.validation.customerEmail
     }
 
-    if (form.customer_phone.trim() && !/^\d+$/.test(form.customer_phone.trim())) {
+    if (form.customer_phone.trim() && !/^\+?\d{6,20}$/.test(form.customer_phone.trim())) {
       return 'Phone must contain digits only.'
     }
   }
@@ -1583,6 +1584,15 @@ function buildScheduledDateTime(form: ActivationFormState) {
   if (form.schedule_offset_unit === 'hours') date.setHours(date.getHours() + amount)
   if (form.schedule_offset_unit === 'days') date.setDate(date.getDate() + amount)
   return date.toISOString()
+}
+
+function normalizePhoneInput(value: string) {
+  const compact = value.replace(/[^\d+]/g, '')
+  if (compact.startsWith('+')) {
+    return `+${compact.slice(1).replace(/\+/g, '')}`
+  }
+
+  return compact.replace(/\+/g, '')
 }
 
 function getApiErrorMessage(error: unknown, fallback: string) {

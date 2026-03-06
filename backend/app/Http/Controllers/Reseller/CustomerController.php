@@ -71,13 +71,20 @@ class CustomerController extends BaseResellerController
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'client_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
         ]);
+
+        $username = Str::of((string) $validated['name'])->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+        $username = $username !== '' ? $username : 'customer_'.Str::lower(Str::random(6));
+        $email = isset($validated['email']) && is_string($validated['email']) && trim($validated['email']) !== ''
+            ? strtolower(trim($validated['email']))
+            : sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $this->currentTenantId($request), $username);
 
         $customer = User::query()->firstOrNew([
             'tenant_id' => $this->currentTenantId($request),
-            'email' => $validated['email'],
+            'email' => $email,
         ]);
 
         if ($customer->exists && ($customer->role?->value ?? (string) $customer->role) !== UserRole::CUSTOMER->value) {
@@ -88,12 +95,15 @@ class CustomerController extends BaseResellerController
 
         $customer->fill([
             'tenant_id' => $this->currentTenantId($request),
-            'name' => $validated['name'],
-            'email' => $validated['email'],
+            'name' => trim((string) ($validated['client_name'] ?? '')) !== '' ? trim((string) $validated['client_name']) : $validated['name'],
+            'client_name' => trim((string) ($validated['client_name'] ?? '')) !== '' ? trim((string) $validated['client_name']) : null,
+            'email' => $email,
             'phone' => $validated['phone'] ?? null,
             'role' => UserRole::CUSTOMER,
             'status' => 'active',
             'created_by' => $this->currentReseller($request)->id,
+            'username' => $customer->username_locked ? $customer->username : $username,
+            'username_locked' => true,
         ]);
 
         if (! $customer->exists) {

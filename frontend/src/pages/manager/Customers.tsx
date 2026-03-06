@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -71,6 +71,7 @@ export function CustomersPage() {
   const { lang } = useLanguage()
   const queryClient = useQueryClient()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [search, setSearch] = useState('')
@@ -379,7 +380,7 @@ export function CustomersPage() {
         title={t('manager.pages.customers.title')}
         description={t('manager.pages.customers.description')}
         actions={
-          <Button type="button" onClick={() => setActivationOpen(true)}>
+          <Button type="button" onClick={() => navigate(routePaths.manager.customerCreate(lang))}>
             <Plus className="me-2 h-4 w-4" />
             {t('reseller.pages.customers.addCustomer')}
           </Button>
@@ -785,6 +786,7 @@ function FormField({ label, htmlFor, children }: { label: string; htmlFor: strin
   )
 }
 
+
 function buildScheduledDateTime(form: ActivationFormState) {
   if (form.schedule_mode === 'custom') {
     return form.scheduled_date_time || undefined
@@ -810,7 +812,7 @@ function validateActivationStep(
     return t('reseller.pages.customers.validation.customerEmail')
   }
   if (step === 0 && form.customer_phone.trim() && !/^\d+$/.test(form.customer_phone.trim())) {
-    return 'Phone must contain digits only.'
+    return 'Phone must start with optional + and contain digits only.'
   }
   if (step === 1) {
     if (form.bios_id.trim().length < 5) return t('reseller.pages.customers.validation.biosId')
@@ -827,4 +829,8 @@ function validateActivationStep(
   }
   return ''
 }
+
+
+
+
 

@@ -197,7 +197,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     }
 
     const trimmedPhone = form.customer_phone.trim()
-    if (trimmedPhone !== '' && !/^\d{6,20}$/.test(trimmedPhone)) {
+    if (trimmedPhone !== '' && !/^\+?\d{6,20}$/.test(trimmedPhone)) {
       nextErrors.customer_phone = invalidPhoneMessage
     }
 
@@ -339,7 +339,12 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
   }
 
   function normalizePhoneInput(value: string): string {
-    return value.replace(/\D/g, '')
+    const compact = value.replace(/[^\d+]/g, '')
+    if (compact.startsWith('+')) {
+      return `+${compact.slice(1).replace(/\+/g, '')}`
+    }
+
+    return compact.replace(/\+/g, '')
   }
 
   return (

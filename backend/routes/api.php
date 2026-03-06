@@ -145,6 +145,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::get('/reseller-logs', [ManagerParentResellerLogController::class, 'index']);
 
         Route::get('/customers', [ManagerParentCustomerController::class, 'index']);
+        Route::post('/customers', [ManagerParentCustomerController::class, 'store']);
         Route::get('/customers/{user}', [ManagerParentCustomerController::class, 'show']);
         Route::delete('/customers/{user}', [ManagerParentCustomerController::class, 'destroy']);
         Route::get('/licenses', [ManagerParentLicenseController::class, 'index']);
@@ -203,6 +204,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::post('/username-management/{user}/reset-password', [ManagerUsernameManagementController::class, 'resetPassword']);
 
         Route::get('/customers', [ManagerCustomerController::class, 'index']);
+        Route::post('/customers', [ManagerCustomerController::class, 'store']);
         Route::get('/customers/{user}', [ManagerCustomerController::class, 'show']);
         Route::delete('/customers/{user}', [ManagerCustomerController::class, 'destroy']);
         Route::get('/licenses', [ManagerLicenseController::class, 'index']);

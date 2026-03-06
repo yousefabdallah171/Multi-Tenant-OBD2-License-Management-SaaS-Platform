@@ -10,6 +10,9 @@ use App\Models\User;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CustomerController extends BaseManagerParentController
 {
@@ -160,6 +163,63 @@ class CustomerController extends BaseManagerParentController
                 'activity' => $activity,
             ],
         ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'client_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
+        ]);
+
+        $username = Str::of((string) $validated['name'])->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+        $username = $username !== '' ? $username : 'customer_'.Str::lower(Str::random(6));
+        $email = isset($validated['email']) && is_string($validated['email']) && trim($validated['email']) !== ''
+            ? strtolower(trim($validated['email']))
+            : sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $this->currentTenantId($request), $username);
+
+        $customer = User::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where(function ($query) use ($email, $username): void {
+                $query->where('email', $email)->orWhere('username', $username);
+            })
+            ->where('role', UserRole::CUSTOMER->value)
+            ->first() ?? new User();
+
+        if ($customer->exists && ($customer->role?->value ?? (string) $customer->role) !== UserRole::CUSTOMER->value) {
+            throw ValidationException::withMessages([
+                'email' => 'The provided email belongs to a non-customer account.',
+            ]);
+        }
+
+        $clientName = trim((string) ($validated['client_name'] ?? ''));
+        $displayName = $clientName !== '' ? $clientName : $validated['name'];
+
+        $customer->fill([
+            'tenant_id' => $this->currentTenantId($request),
+            'name' => $displayName,
+            'client_name' => $clientName !== '' ? $clientName : null,
+            'email' => $email,
+            'phone' => $validated['phone'] ?? null,
+            'role' => UserRole::CUSTOMER,
+            'status' => 'active',
+            'created_by' => $this->currentManagerParent($request)->id,
+            'username' => $customer->username_locked ? $customer->username : $username,
+            'username_locked' => true,
+        ]);
+
+        if (! $customer->exists) {
+            $customer->password = Hash::make(Str::password(16));
+        }
+
+        $customer->save();
+
+        $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
+            ->with(['program:id,name', 'reseller:id,name'])]);
+
+        return response()->json(['data' => $this->serializeCustomer($customer)], 201);
     }
 
     public function destroy(Request $request, User $user): JsonResponse

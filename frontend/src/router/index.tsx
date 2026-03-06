@@ -26,6 +26,7 @@ const CustomerSoftwarePage = lazyNamed(() => import('@/pages/customer/Software')
 const ManagerActivityPage = lazyNamed(() => import('@/pages/manager/Activity'), 'ActivityPage')
 const ActivateLicensePageForManager = lazyNamed(() => import('@/pages/manager/ActivateLicense'), 'ActivateLicensePageForManager')
 const ManagerCustomersPage = lazyNamed(() => import('@/pages/manager/Customers'), 'CustomersPage')
+const ManagerCreateCustomerPage = lazyNamed(() => import('@/pages/manager/CreateCustomer'), 'CreateCustomerPageForManager')
 const ManagerCustomerDetailPage = lazyNamed(() => import('@/pages/manager/CustomerDetail'), 'CustomerDetailPage')
 const ManagerDashboardPage = lazyNamed(() => import('@/pages/manager/Dashboard'), 'DashboardPage')
 const ManagerLicensesPage = lazyNamed(() => import('@/pages/manager/Licenses'), 'LicensesPage')
@@ -46,6 +47,7 @@ const ManagerParentBiosConflictsPage = lazyNamed(() => import('@/pages/manager-p
 const ManagerParentBiosDetailsPage = lazyNamed(() => import('@/pages/manager-parent/BiosDetails'), 'BiosDetailsPage')
 const ManagerParentBiosHistoryPage = lazyNamed(() => import('@/pages/manager-parent/BiosHistory'), 'BiosHistoryPage')
 const ManagerParentCustomersPage = lazyNamed(() => import('@/pages/manager-parent/Customers'), 'CustomersPage')
+const ManagerParentCreateCustomerPage = lazyNamed(() => import('@/pages/manager-parent/CreateCustomer'), 'CreateCustomerPageForManagerParent')
 const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-parent/CustomerDetail'), 'CustomerDetailPage')
 const ManagerParentDashboardPage = lazyNamed(() => import('@/pages/manager-parent/Dashboard'), 'DashboardPage')
 const ManagerParentFinancialReportsPage = lazyNamed(() => import('@/pages/manager-parent/FinancialReports'), 'FinancialReportsPage')
@@ -81,6 +83,7 @@ const UsernameManagementPage = lazyNamed(() => import('@/pages/super-admin/Usern
 const SecurityLocksPage = lazyNamed(() => import('@/pages/super-admin/SecurityLocks'), 'SecurityLocksPage')
 
 const ResellerCustomersPage = lazyNamed(() => import('@/pages/reseller/Customers'), 'CustomersPage')
+const ResellerCreateCustomerPage = lazyNamed(() => import('@/pages/reseller/CreateCustomer'), 'CreateCustomerPageForReseller')
 const ResellerCustomerDetailPage = lazyNamed(() => import('@/pages/reseller/CustomerDetail'), 'CustomerDetailPage')
 const ResellerDashboardPage = lazyNamed(() => import('@/pages/reseller/Dashboard'), 'DashboardPage')
 const ResellerLicensesPage = lazyNamed(() => import('@/pages/reseller/Licenses'), 'LicensesPage')
@@ -157,6 +160,7 @@ export function AppRouter() {
                   <Route path="reports" element={<ManagerParentReportsPage />} />
                   <Route path="activity" element={<ManagerParentActivityPage />} />
                   <Route path="customers" element={<ManagerParentCustomersPage />} />
+                  <Route path="customers/create" element={<ManagerParentCreateCustomerPage />} />
                   <Route path="licenses" element={<ManagerParentLicensesPage />} />
                   <Route path="customers/:id" element={<ManagerParentCustomerDetailPage />} />
                   <Route path="settings" element={<ManagerParentSettingsPage />} />
@@ -170,6 +174,7 @@ export function AppRouter() {
                   <Route path="team" element={<ManagerTeamPage />} />
                   <Route path="username-management" element={<ManagerUsernameManagementPage />} />
                   <Route path="customers" element={<ManagerCustomersPage />} />
+                  <Route path="customers/create" element={<ManagerCreateCustomerPage />} />
                   <Route path="customers/:id" element={<ManagerCustomerDetailPage />} />
                   <Route path="licenses" element={<ManagerLicensesPage />} />
                   <Route path="software" element={<ManagerSoftwarePage />} />
@@ -188,6 +193,7 @@ export function AppRouter() {
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<ResellerDashboardPage />} />
                   <Route path="customers" element={<ResellerCustomersPage />} />
+                  <Route path="customers/create" element={<ResellerCreateCustomerPage />} />
                   <Route path="customers/:id" element={<ResellerCustomerDetailPage />} />
                   <Route path="licenses" element={<ResellerLicensesPage />} />
                   <Route path="software" element={<ResellerSoftwarePage />} />

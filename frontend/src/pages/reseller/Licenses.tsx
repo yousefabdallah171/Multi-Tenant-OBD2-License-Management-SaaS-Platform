@@ -432,7 +432,7 @@ export function LicensesPage() {
           <div>
             <p className="font-medium text-slate-950 dark:text-white">
               {row.customer_id ? (
-                <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customers(lang)}>
+                <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customerDetail(lang, row.customer_id)}>
                   {row.customer_name ?? '-'}
                 </Link>
               ) : (row.customer_name ?? '-')}
@@ -450,7 +450,7 @@ export function LicensesPage() {
           <div>
             <p className="font-medium">
               {row.customer_id ? (
-                <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customers(lang)}>
+                <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customerDetail(lang, row.customer_id)}>
                   {rawBiosId(row.bios_id, row.external_username)}
                 </Link>
               ) : rawBiosId(row.bios_id, row.external_username)}
