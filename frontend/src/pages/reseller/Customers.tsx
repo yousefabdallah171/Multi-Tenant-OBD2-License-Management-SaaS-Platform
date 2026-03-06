@@ -515,8 +515,6 @@ export function CustomersPage() {
     onSuccess: (response) => {
       if ((response.count ?? 0) <= 0) {
         toast.error(t('common.error', { defaultValue: 'No deletable licenses selected.' }))
-      } else if ((response.count ?? 0) < selectedLicenseIds.length) {
-        toast.success(t('common.deleted', { defaultValue: `${response.count} deleted. Active licenses were skipped.` }))
       } else {
         toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
       }

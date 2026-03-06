@@ -133,9 +133,7 @@ class LicenseController extends BaseResellerController
     {
         $resolved = $this->resolveLicense($request, $license);
         if ($resolved->status === 'active') {
-            return response()->json([
-                'message' => 'Active licenses cannot be deleted.',
-            ], 422);
+            $this->licenseService->deactivate($resolved);
         }
 
         $resolved->delete();
@@ -238,11 +236,13 @@ class LicenseController extends BaseResellerController
 
         $licenses = $this->licenseQuery($request)
             ->whereIn('id', $validated['ids'])
-            ->where('status', '!=', 'active')
             ->get();
 
         $count = $licenses->count();
         foreach ($licenses as $license) {
+            if ($license->status === 'active') {
+                $this->licenseService->deactivate($license);
+            }
             $license->delete();
         }
 

@@ -367,8 +367,6 @@ export function LicensesPage() {
     onSuccess: (response) => {
       if ((response.count ?? 0) <= 0) {
         toast.error(t('common.error', { defaultValue: 'No deletable licenses selected.' }))
-      } else if ((response.count ?? 0) < selectedIds.length) {
-        toast.success(t('common.deleted', { defaultValue: `${response.count} deleted. Active licenses were skipped.` }))
       } else {
         toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
       }
@@ -520,12 +518,10 @@ export function LicensesPage() {
                   </DropdownMenuItem>
                 </>
               )}
-              {row.status !== 'active' ? (
-                <DropdownMenuItem className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20" onClick={() => setDeleteTarget(row)}>
-                  <Trash2 className="me-2 h-4 w-4" />
-                  {t('common.delete')}
-                </DropdownMenuItem>
-              ) : null}
+              <DropdownMenuItem className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20" onClick={() => setDeleteTarget(row)}>
+                <Trash2 className="me-2 h-4 w-4" />
+                {t('common.delete')}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ),

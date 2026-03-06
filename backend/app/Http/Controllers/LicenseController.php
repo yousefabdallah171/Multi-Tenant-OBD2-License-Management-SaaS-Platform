@@ -105,9 +105,7 @@ class LicenseController extends Controller
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
         if ($resolved->status === 'active') {
-            throw ValidationException::withMessages([
-                'license' => 'Active licenses cannot be deleted.',
-            ]);
+            $this->licenseService->deactivate($resolved);
         }
 
         $resolved->delete();
@@ -225,11 +223,13 @@ class LicenseController extends Controller
 
         $licenses = $this->accessibleLicenseQuery($request)
             ->whereIn('id', $ids->all())
-            ->where('status', '!=', 'active')
             ->get();
 
         $count = $licenses->count();
         foreach ($licenses as $license) {
+            if ($license->status === 'active') {
+                $this->licenseService->deactivate($license);
+            }
             $license->delete();
         }
 

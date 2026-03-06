@@ -202,6 +202,9 @@ class CustomerController extends BaseManagerParentController
     private function serializeCustomer(User $user): array
     {
         $license = $user->customerLicenses->sortByDesc('activated_at')->first();
+        $hasActiveLicense = $user->customerLicenses->contains(
+            fn ($item) => ($item->status ?? null) === 'active'
+        );
 
         return [
             'id' => $user->id,
@@ -215,6 +218,7 @@ class CustomerController extends BaseManagerParentController
             'status' => $license?->status,
             'expiry' => $license?->expires_at?->toIso8601String(),
             'license_count' => $user->customerLicenses->count(),
+            'has_active_license' => $hasActiveLicense,
         ];
     }
 

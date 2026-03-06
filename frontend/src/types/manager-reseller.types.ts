@@ -105,6 +105,7 @@ export interface ManagerCustomerSummary {
   status: string | null
   expiry: string | null
   license_count: number
+  has_active_license?: boolean
 }
 
 export interface ManagerCustomerDetails extends ManagerCustomerSummary {
