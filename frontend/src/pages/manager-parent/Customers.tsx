@@ -90,6 +90,13 @@ export function CustomersPage() {
   const [pauseTarget, setPauseTarget] = useState<CustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<CustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CustomerSummary | null>(null)
+  const [selectedLicenseIds, setSelectedLicenseIds] = useState<number[]>([])
+  const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
+  const [bulkDuration, setBulkDuration] = useState('30')
+  const [bulkUnit, setBulkUnit] = useState<DurationUnit>('days')
+  const [bulkPrice, setBulkPrice] = useState('0')
+  const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
   const customersQuery = useQuery({
     queryKey: ['manager-parent', 'customers', page, perPage, search, status, resellerId, programId],
@@ -120,7 +127,7 @@ export function CustomersPage() {
         customer_name: activationForm.customer_name.trim(),
         client_name: activationForm.client_name.trim() || undefined,
         customer_email: activationForm.customer_email.trim() || undefined,
-        customer_phone: activationForm.customer_phone.trim() || undefined,
+        customer_phone: activationForm.customer_phone.trim().replace(/\D+/g, '') || undefined,
         bios_id: activationForm.bios_id.trim(),
         program_id: Number(activationForm.program_id),
         duration_days: durationDays,
@@ -196,7 +203,87 @@ export function CustomersPage() {
     },
   })
 
+  const bulkRenewMutation = useMutation({
+    mutationFn: () => licenseService.bulkRenew(selectedLicenseIds, { duration_days: durationToDays(Number(bulkDuration), bulkUnit), price: Number(bulkPrice) }),
+    onSuccess: () => {
+      toast.success(t('reseller.pages.licenses.toasts.bulkRenewed'))
+      setBulkRenewOpen(false)
+      setSelectedLicenseIds([])
+      invalidate(queryClient)
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+
+  const bulkDeactivateMutation = useMutation({
+    mutationFn: () => licenseService.bulkDeactivate(selectedLicenseIds),
+    onSuccess: () => {
+      toast.success(t('reseller.pages.licenses.toasts.bulkDeactivated'))
+      setBulkDeactivateOpen(false)
+      setSelectedLicenseIds([])
+      invalidate(queryClient)
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: () => licenseService.bulkDelete(selectedLicenseIds),
+    onSuccess: (response) => {
+      if ((response.count ?? 0) <= 0) {
+        toast.error(t('common.error', { defaultValue: 'No deletable licenses selected.' }))
+      } else if ((response.count ?? 0) < selectedLicenseIds.length) {
+        toast.success(t('common.deleted', { defaultValue: `${response.count} deleted. Active licenses were skipped.` }))
+      } else {
+        toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
+      }
+      setBulkDeleteOpen(false)
+      setSelectedLicenseIds([])
+      invalidate(queryClient)
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+
+  const customerRows = customersQuery.data?.data ?? []
+  const selectableIds = customerRows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
+  const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
+  const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
+
   const columns = useMemo<Array<DataTableColumn<CustomerSummary>>>(() => [
+    {
+      key: 'select',
+      label: (
+        <input
+          type="checkbox"
+          checked={allVisibleSelected}
+          ref={(element) => {
+            if (element) {
+              element.indeterminate = !allVisibleSelected && someVisibleSelected
+            }
+          }}
+          onChange={(event) => {
+            if (event.target.checked) {
+              setSelectedLicenseIds((current) => [...new Set([...current, ...selectableIds])])
+              return
+            }
+            setSelectedLicenseIds((current) => current.filter((id) => !selectableIds.includes(id)))
+          }}
+        />
+      ),
+      render: (row) => (
+        <input
+          type="checkbox"
+          disabled={!row.license_id}
+          checked={Boolean(row.license_id && selectedLicenseIds.includes(row.license_id))}
+          onChange={(event) => {
+            if (!row.license_id) return
+            if (event.target.checked) {
+              setSelectedLicenseIds((current) => [...new Set([...current, row.license_id!])])
+              return
+            }
+            setSelectedLicenseIds((current) => current.filter((id) => id !== row.license_id))
+          }}
+        />
+      ),
+    },
     {
       key: 'name',
       label: t('common.name'),
@@ -267,7 +354,7 @@ export function CustomersPage() {
         </DropdownMenu>
       ),
     },
-  ], [lang, locale, t])
+  ], [allVisibleSelected, lang, locale, selectableIds, selectedLicenseIds, someVisibleSelected, t])
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
   const durationDays = useMemo(() => {
@@ -321,7 +408,7 @@ export function CustomersPage() {
           </Card>
           <DataTable
             columns={columns}
-            data={customersQuery.data?.data ?? []}
+            data={customerRows}
             rowKey={(row) => row.id}
             isLoading={customersQuery.isLoading}
             pagination={{
@@ -336,6 +423,19 @@ export function CustomersPage() {
               setPage(1)
             }}
           />
+
+          {selectedLicenseIds.length > 0 ? (
+            <Card className="border-sky-200 bg-sky-50/70 dark:border-sky-900/40 dark:bg-sky-950/20">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <span className="text-sm text-slate-600 dark:text-slate-300">{selectedLicenseIds.length} {t('common.selected', { defaultValue: 'selected' })}</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setBulkRenewOpen(true)}>{t('reseller.pages.licenses.bulkRenew')}</Button>
+                  <Button type="button" variant="secondary" onClick={() => setBulkDeactivateOpen(true)}>{t('reseller.pages.licenses.bulkDeactivate')}</Button>
+                  <Button type="button" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>{t('common.deleteSelected', { defaultValue: 'Delete Selected' })}</Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
         </TabsContent>
       </Tabs>
 
@@ -357,7 +457,7 @@ export function CustomersPage() {
               <Input placeholder={t('reseller.pages.customers.activationDialog.customerName')} value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} />
               <Input placeholder={t('activate.username', { defaultValue: 'Username (API)' })} value={activationForm.client_name} onChange={(event) => setActivationForm((current) => ({ ...current, client_name: event.target.value }))} />
               <Input placeholder={t('reseller.pages.customers.activationDialog.customerEmail')} value={activationForm.customer_email} onChange={(event) => setActivationForm((current) => ({ ...current, customer_email: event.target.value }))} />
-              <Input placeholder={t('common.phone')} value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value }))} />
+              <Input placeholder={t('common.phone')} value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value.replace(/\D+/g, '') }))} />
               <p className="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">{t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })}</p>
             </div>
           ) : null}
@@ -597,6 +697,48 @@ export function CustomersPage() {
           }
         }}
       />
+
+      <Dialog open={bulkRenewOpen} onOpenChange={setBulkRenewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('reseller.pages.licenses.bulkRenew')}</DialogTitle>
+            <DialogDescription>{selectedLicenseIds.length} {t('common.selected', { defaultValue: 'selected' })}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Input type="number" min={1} value={bulkDuration} onChange={(event) => setBulkDuration(event.target.value)} />
+            <select value={bulkUnit} onChange={(event) => setBulkUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+              <option value="days">{t('common.days')}</option>
+              <option value="months">{t('common.months')}</option>
+              <option value="years">{t('common.years')}</option>
+            </select>
+            <Input type="number" min={0} step="0.01" value={bulkPrice} onChange={(event) => setBulkPrice(event.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setBulkRenewOpen(false)}>{t('common.cancel')}</Button>
+            <Button type="button" onClick={() => bulkRenewMutation.mutate()} disabled={bulkRenewMutation.isPending}>{t('reseller.pages.licenses.bulkRenew')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={bulkDeactivateOpen}
+        onOpenChange={setBulkDeactivateOpen}
+        title={t('reseller.pages.licenses.confirm.bulkDeactivateTitle')}
+        description={t('reseller.pages.licenses.confirm.bulkDeactivateDescription', { count: selectedLicenseIds.length })}
+        confirmLabel={t('reseller.pages.licenses.confirm.deactivateSelected')}
+        isDestructive
+        onConfirm={() => bulkDeactivateMutation.mutate()}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={t('common.bulkDelete', { defaultValue: 'Bulk Delete' })}
+        description={t('reseller.pages.licenses.confirm.bulkDeleteDescription', { count: selectedLicenseIds.length, defaultValue: 'Delete selected licenses?' })}
+        confirmLabel={t('common.deleteSelected', { defaultValue: 'Delete Selected' })}
+        isDestructive
+        onConfirm={() => bulkDeleteMutation.mutate()}
+      />
     </div>
   )
 }
@@ -653,6 +795,12 @@ function validateActivationStep(
   if (step === 0 && form.customer_name.trim().length < 2) {
     return t('reseller.pages.customers.validation.customerName')
   }
+  if (step === 0 && form.customer_email.trim() && !/\S+@\S+\.\S+/.test(form.customer_email.trim())) {
+    return t('reseller.pages.customers.validation.customerEmail')
+  }
+  if (step === 0 && form.customer_phone.trim() && !/^\d+$/.test(form.customer_phone.trim())) {
+    return 'Phone must contain digits only.'
+  }
 
   if (step === 1) {
     if (form.bios_id.trim().length < 5) {
@@ -669,6 +817,12 @@ function validateActivationStep(
     }
     if (form.mode === 'end_date' && !form.end_date) {
       return t('reseller.pages.customers.validation.duration')
+    }
+    if (form.mode === 'end_date' && form.end_date) {
+      const endAt = new Date(form.end_date).getTime()
+      if (!Number.isFinite(endAt) || endAt <= Date.now()) {
+        return t('reseller.pages.customers.validation.duration')
+      }
     }
     if (!Number.isFinite(totalPrice) || totalPrice < 0) {
       return t('reseller.pages.customers.validation.price')

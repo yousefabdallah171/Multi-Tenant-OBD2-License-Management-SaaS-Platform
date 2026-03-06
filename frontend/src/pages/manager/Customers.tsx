@@ -124,7 +124,7 @@ export function CustomersPage() {
         customer_name: activationForm.customer_name.trim(),
         client_name: activationForm.client_name.trim() || undefined,
         customer_email: activationForm.customer_email.trim() || undefined,
-        customer_phone: activationForm.customer_phone.trim() || undefined,
+        customer_phone: activationForm.customer_phone.trim().replace(/\D+/g, '') || undefined,
         bios_id: activationForm.bios_id.trim(),
         program_id: Number(activationForm.program_id),
         duration_days: durationDays,
@@ -213,7 +213,14 @@ export function CustomersPage() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: () => licenseService.bulkDelete(selectedLicenseIds),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      if ((response.count ?? 0) <= 0) {
+        toast.error(t('common.error', { defaultValue: 'No deletable licenses selected.' }))
+      } else if ((response.count ?? 0) < selectedLicenseIds.length) {
+        toast.success(t('common.deleted', { defaultValue: `${response.count} deleted. Active licenses were skipped.` }))
+      } else {
+        toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
+      }
       setBulkDeleteOpen(false)
       setSelectedLicenseIds([])
       invalidate(queryClient)
@@ -451,7 +458,7 @@ export function CustomersPage() {
               <Input placeholder={t('reseller.pages.customers.activationDialog.customerName')} value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} />
               <Input placeholder={t('activate.username', { defaultValue: 'Username (API)' })} value={activationForm.client_name} onChange={(event) => setActivationForm((current) => ({ ...current, client_name: event.target.value }))} />
               <Input placeholder={t('reseller.pages.customers.activationDialog.customerEmail')} value={activationForm.customer_email} onChange={(event) => setActivationForm((current) => ({ ...current, customer_email: event.target.value }))} />
-              <Input placeholder={t('common.phone')} value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value }))} />
+              <Input placeholder={t('common.phone')} value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value.replace(/\D+/g, '') }))} />
               <p className="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">{t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })}</p>
             </div>
           ) : null}
@@ -567,9 +574,34 @@ export function CustomersPage() {
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => (activationStep === 0 ? setActivationOpen(false) : setActivationStep((current) => current - 1))}>{activationStep === 0 ? t('common.cancel') : t('common.back')}</Button>
             {activationStep < 3 ? (
-              <Button type="button" onClick={() => setActivationStep((current) => current + 1)}>{t('common.next')}</Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const error = validateActivationStep(activationStep, activationForm, totalPrice, t)
+                  if (error) {
+                    toast.error(error)
+                    return
+                  }
+                  setActivationStep((current) => current + 1)
+                }}
+              >
+                {t('common.next')}
+              </Button>
             ) : (
-              <Button type="button" onClick={() => activateMutation.mutate()} disabled={activateMutation.isPending}>{t('common.activate')}</Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const error = validateActivationStep(activationStep, activationForm, totalPrice, t)
+                  if (error) {
+                    toast.error(error)
+                    return
+                  }
+                  activateMutation.mutate()
+                }}
+                disabled={activateMutation.isPending}
+              >
+                {t('common.activate')}
+              </Button>
             )}
           </DialogFooter>
         </DialogContent>
@@ -736,5 +768,36 @@ function buildScheduledDateTime(form: ActivationFormState) {
   if (form.schedule_offset_unit === 'hours') date.setHours(date.getHours() + amount)
   if (form.schedule_offset_unit === 'days') date.setDate(date.getDate() + amount)
   return date.toISOString()
+}
+
+function validateActivationStep(
+  step: number,
+  form: ActivationFormState,
+  totalPrice: number,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  if (step === 0 && form.customer_name.trim().length < 2) {
+    return t('reseller.pages.customers.validation.customerName')
+  }
+  if (step === 0 && form.customer_email.trim() && !/\S+@\S+\.\S+/.test(form.customer_email.trim())) {
+    return t('reseller.pages.customers.validation.customerEmail')
+  }
+  if (step === 0 && form.customer_phone.trim() && !/^\d+$/.test(form.customer_phone.trim())) {
+    return 'Phone must contain digits only.'
+  }
+  if (step === 1) {
+    if (form.bios_id.trim().length < 5) return t('reseller.pages.customers.validation.biosId')
+    if (!form.program_id) return t('reseller.pages.customers.validation.selectProgram')
+  }
+  if (step >= 2) {
+    if (form.mode === 'duration' && Number(form.duration_value) < 1) return t('reseller.pages.customers.validation.duration')
+    if (form.mode === 'end_date' && !form.end_date) return t('reseller.pages.customers.validation.duration')
+    if (form.mode === 'end_date' && form.end_date) {
+      const endAt = new Date(form.end_date).getTime()
+      if (!Number.isFinite(endAt) || endAt <= Date.now()) return t('reseller.pages.customers.validation.duration')
+    }
+    if (!Number.isFinite(totalPrice) || totalPrice < 0) return t('reseller.pages.customers.validation.price')
+  }
+  return ''
 }
 

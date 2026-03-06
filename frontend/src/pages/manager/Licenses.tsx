@@ -148,8 +148,14 @@ export function LicensesPage() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: () => licenseService.bulkDelete(selectedIds),
-    onSuccess: () => {
-      toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
+    onSuccess: (response) => {
+      if ((response.count ?? 0) <= 0) {
+        toast.error(t('common.error', { defaultValue: 'No deletable licenses selected.' }))
+      } else if ((response.count ?? 0) < selectedIds.length) {
+        toast.success(t('common.deleted', { defaultValue: String(response.count) + ' deleted. Active licenses were skipped.' }))
+      } else {
+        toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
+      }
       setBulkDeleteOpen(false)
       setSelectedIds([])
       invalidate(queryClient)
@@ -388,7 +394,7 @@ export function LicensesPage() {
       <ConfirmDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen} title={t('common.bulkDelete', { defaultValue: 'Bulk Delete' })} description={t('reseller.pages.licenses.confirm.bulkDeleteDescription', { count: selectedIds.length, defaultValue: 'Delete selected licenses?' })} confirmLabel={t('common.deleteSelected', { defaultValue: 'Delete Selected' })} isDestructive onConfirm={() => bulkDeleteMutation.mutate()} />
       <ConfirmDialog open={deactivateTarget !== null} onOpenChange={(open) => { if (!open) setDeactivateTarget(null) }} title={t('reseller.pages.licenses.confirm.deactivateTitle')} description={deactivateTarget ? t('reseller.pages.licenses.confirm.deactivateDescription', { biosId: deactivateTarget.bios_id }) : undefined} confirmLabel={t('common.deactivate')} isDestructive onConfirm={() => deactivateTarget && deactivateMutation.mutate(deactivateTarget.id)} />
       <ConfirmDialog open={pauseTarget !== null} onOpenChange={(open) => { if (!open) setPauseTarget(null) }} title={t('reseller.pages.licenses.confirm.pauseTitle')} description={pauseTarget ? t('reseller.pages.licenses.confirm.pauseDescription', { biosId: pauseTarget.bios_id }) : undefined} confirmLabel={t('common.pause')} onConfirm={() => pauseTarget && pauseMutation.mutate(pauseTarget.id)} />
-      <ConfirmDialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }} title={t('common.delete')} description={deleteTarget ? `${deleteTarget.customer_name ?? '-'} � ${deleteTarget.bios_id}` : undefined} confirmLabel={t('common.delete')} isDestructive onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} />
+      <ConfirmDialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }} title={t('common.delete')} description={deleteTarget ? `${deleteTarget.customer_name ?? '-'} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ${deleteTarget.bios_id}` : undefined} confirmLabel={t('common.delete')} isDestructive onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} />
     </div>
   )
 }

@@ -315,6 +315,13 @@ export function CustomersPage() {
   const [pauseTarget, setPauseTarget] = useState<ResellerCustomerSummary | null>(null)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
+  const [selectedLicenseIds, setSelectedLicenseIds] = useState<number[]>([])
+  const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
+  const [bulkDuration, setBulkDuration] = useState('30')
+  const [bulkUnit, setBulkUnit] = useState<DurationUnit>('days')
+  const [bulkPrice, setBulkPrice] = useState('0')
+  const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
   const customersQuery = useQuery({
     queryKey: ['reseller', 'customers', page, perPage, search, status, programFilter],
@@ -393,11 +400,14 @@ export function CustomersPage() {
         customer_name: activationForm.customer_name.trim(),
         client_name: activationForm.client_name.trim() || undefined,
         customer_email: activationForm.customer_email.trim() || undefined,
-        customer_phone: activationForm.customer_phone.trim() || undefined,
+        customer_phone: activationForm.customer_phone.trim().replace(/\D+/g, '') || undefined,
         bios_id: activationForm.bios_id.trim(),
         program_id: Number(activationForm.program_id),
         duration_days: durationDays,
         price: totalPrice,
+        is_scheduled: activationForm.is_scheduled || undefined,
+        scheduled_date_time: activationForm.is_scheduled ? buildScheduledDateTime(activationForm) : undefined,
+        scheduled_timezone: activationForm.is_scheduled ? activationForm.scheduled_timezone : undefined,
       }),
     onSuccess: () => {
       toast.success(text.toasts.activated)
@@ -472,8 +482,97 @@ export function CustomersPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
+  const bulkRenewMutation = useMutation({
+    mutationFn: () => licenseService.bulkRenew(selectedLicenseIds, { duration_days: durationToDays(Number(bulkDuration), bulkUnit), price: Number(bulkPrice) }),
+    onSuccess: () => {
+      toast.success(t('reseller.pages.licenses.toasts.bulkRenewed'))
+      setBulkRenewOpen(false)
+      setSelectedLicenseIds([])
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
+  const bulkDeactivateMutation = useMutation({
+    mutationFn: () => licenseService.bulkDeactivate(selectedLicenseIds),
+    onSuccess: () => {
+      toast.success(t('reseller.pages.licenses.toasts.bulkDeactivated'))
+      setBulkDeactivateOpen(false)
+      setSelectedLicenseIds([])
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: () => licenseService.bulkDelete(selectedLicenseIds),
+    onSuccess: (response) => {
+      if ((response.count ?? 0) <= 0) {
+        toast.error(t('common.error', { defaultValue: 'No deletable licenses selected.' }))
+      } else if ((response.count ?? 0) < selectedLicenseIds.length) {
+        toast.success(t('common.deleted', { defaultValue: `${response.count} deleted. Active licenses were skipped.` }))
+      } else {
+        toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
+      }
+      setBulkDeleteOpen(false)
+      setSelectedLicenseIds([])
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
+  const customerRows = customersQuery.data?.data ?? []
+  const selectableIds = customerRows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
+  const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
+  const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
+
   const columns = useMemo<Array<DataTableColumn<ResellerCustomerSummary>>>(
     () => [
+      {
+        key: 'select',
+        label: (
+          <input
+            type="checkbox"
+            checked={allVisibleSelected}
+            ref={(element) => {
+              if (element) {
+                element.indeterminate = !allVisibleSelected && someVisibleSelected
+              }
+            }}
+            onChange={(event) => {
+              if (event.target.checked) {
+                setSelectedLicenseIds((current) => [...new Set([...current, ...selectableIds])])
+                return
+              }
+              setSelectedLicenseIds((current) => current.filter((id) => !selectableIds.includes(id)))
+            }}
+          />
+        ),
+        render: (row) => (
+          <input
+            type="checkbox"
+            disabled={!row.license_id}
+            checked={Boolean(row.license_id && selectedLicenseIds.includes(row.license_id))}
+            onChange={(event) => {
+              if (!row.license_id) return
+              if (event.target.checked) {
+                setSelectedLicenseIds((current) => [...new Set([...current, row.license_id!])])
+                return
+              }
+              setSelectedLicenseIds((current) => current.filter((id) => id !== row.license_id))
+            }}
+          />
+        ),
+      },
       {
         key: 'customer',
         label: text.table.customer,
@@ -626,7 +725,7 @@ export function CustomersPage() {
         ),
       },
     ],
-    [locale, text],
+    [allVisibleSelected, locale, selectedLicenseIds, selectableIds, someVisibleSelected, text],
   )
 
   const detailCustomer = detailQuery.data?.data
@@ -687,9 +786,22 @@ export function CustomersPage() {
             </CardContent>
           </Card>
 
+          {selectedLicenseIds.length > 0 ? (
+            <Card className="border-sky-200 bg-sky-50/70 dark:border-sky-900/40 dark:bg-sky-950/20">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <span className="text-sm text-slate-600 dark:text-slate-300">{selectedLicenseIds.length} {t('common.selected', { defaultValue: 'selected' })}</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setBulkRenewOpen(true)}>{t('reseller.pages.licenses.bulkRenew')}</Button>
+                  <Button type="button" variant="secondary" onClick={() => setBulkDeactivateOpen(true)}>{t('reseller.pages.licenses.bulkDeactivate')}</Button>
+                  <Button type="button" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>{t('common.deleteSelected', { defaultValue: 'Delete Selected' })}</Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
           <DataTable
             columns={columns}
-            data={customersQuery.data?.data ?? []}
+            data={customerRows}
             rowKey={(row) => row.id}
             onRowClick={(row) => setSelectedCustomerId(row.id)}
             isLoading={customersQuery.isLoading}
@@ -776,7 +888,7 @@ export function CustomersPage() {
                   <Input id="customer-email" type="email" value={activationForm.customer_email} onChange={(event) => setActivationForm((current) => ({ ...current, customer_email: event.target.value }))} />
                 </FormField>
                 <FormField label={text.activationDialog.phone} htmlFor="customer-phone">
-                  <Input id="customer-phone" value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value }))} />
+                  <Input id="customer-phone" value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value.replace(/\D+/g, '') }))} />
                 </FormField>
               </div>
             ) : null}
@@ -1281,6 +1393,54 @@ export function CustomersPage() {
         }}
       />
 
+      <Dialog open={bulkRenewOpen} onOpenChange={setBulkRenewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('reseller.pages.licenses.bulkRenew')}</DialogTitle>
+            <DialogDescription>{selectedLicenseIds.length} {t('common.selected', { defaultValue: 'selected' })}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-3">
+            <FormField label={text.renewDialog.duration} htmlFor="bulk-duration">
+              <Input id="bulk-duration" type="number" min={1} value={bulkDuration} onChange={(event) => setBulkDuration(event.target.value)} />
+            </FormField>
+            <FormField label={text.renewDialog.unit} htmlFor="bulk-unit">
+              <select id="bulk-unit" value={bulkUnit} onChange={(event) => setBulkUnit(event.target.value as DurationUnit)} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                <option value="days">{text.units.days}</option>
+                <option value="months">{text.units.months}</option>
+                <option value="years">{text.units.years}</option>
+              </select>
+            </FormField>
+            <FormField label={text.renewDialog.price} htmlFor="bulk-price">
+              <Input id="bulk-price" type="number" step="0.01" min={0} value={bulkPrice} onChange={(event) => setBulkPrice(event.target.value)} />
+            </FormField>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setBulkRenewOpen(false)}>{text.renewDialog.cancel}</Button>
+            <Button type="button" onClick={() => bulkRenewMutation.mutate()} disabled={bulkRenewMutation.isPending}>{t('reseller.pages.licenses.bulkRenew')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={bulkDeactivateOpen}
+        onOpenChange={setBulkDeactivateOpen}
+        title={t('reseller.pages.licenses.confirm.bulkDeactivateTitle')}
+        description={t('reseller.pages.licenses.confirm.bulkDeactivateDescription', { count: selectedLicenseIds.length })}
+        confirmLabel={t('reseller.pages.licenses.confirm.deactivateSelected')}
+        isDestructive
+        onConfirm={() => bulkDeactivateMutation.mutate()}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={t('common.bulkDelete', { defaultValue: 'Bulk Delete' })}
+        description={t('reseller.pages.licenses.confirm.bulkDeleteDescription', { count: selectedLicenseIds.length, defaultValue: 'Delete selected licenses?' })}
+        confirmLabel={t('common.deleteSelected', { defaultValue: 'Delete Selected' })}
+        isDestructive
+        onConfirm={() => bulkDeleteMutation.mutate()}
+      />
+
       <Dialog open={editCustomerId !== null} onOpenChange={(open) => { if (!open) setEditCustomerId(null) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -1402,8 +1562,12 @@ function validateActivationStep(step: number, form: ActivationFormState, text: {
       return text.validation.nameNotBiosId
     }
 
-    if (form.customer_email.trim() && !/\S+@\S+\.\S+/.test(form.customer_email.trim())) {
+    if (!form.customer_email.trim() || !/\S+@\S+\.\S+/.test(form.customer_email.trim())) {
       return text.validation.customerEmail
+    }
+
+    if (form.customer_phone.trim() && !/^\d+$/.test(form.customer_phone.trim())) {
+      return 'Phone must contain digits only.'
     }
   }
 
@@ -1425,9 +1589,29 @@ function validateActivationStep(step: number, form: ActivationFormState, text: {
     if (form.mode === 'end_date' && !form.end_date) {
       return text.validation.duration
     }
+
+    if (form.mode === 'end_date' && form.end_date) {
+      const endAt = new Date(form.end_date).getTime()
+      if (!Number.isFinite(endAt) || endAt <= Date.now()) {
+        return text.validation.duration
+      }
+    }
   }
 
   return ''
+}
+
+function buildScheduledDateTime(form: ActivationFormState) {
+  if (form.schedule_mode === 'custom') {
+    return form.scheduled_date_time || undefined
+  }
+
+  const amount = Math.max(1, Number(form.schedule_offset_value) || 1)
+  const date = new Date()
+  if (form.schedule_offset_unit === 'minutes') date.setMinutes(date.getMinutes() + amount)
+  if (form.schedule_offset_unit === 'hours') date.setHours(date.getHours() + amount)
+  if (form.schedule_offset_unit === 'days') date.setDate(date.getDate() + amount)
+  return date.toISOString()
 }
 
 function getApiErrorMessage(error: unknown, fallback: string) {

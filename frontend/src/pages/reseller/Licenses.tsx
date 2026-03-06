@@ -364,8 +364,14 @@ export function LicensesPage() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: () => licenseService.bulkDelete(selectedIds),
-    onSuccess: () => {
-      toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
+    onSuccess: (response) => {
+      if ((response.count ?? 0) <= 0) {
+        toast.error(t('common.error', { defaultValue: 'No deletable licenses selected.' }))
+      } else if ((response.count ?? 0) < selectedIds.length) {
+        toast.success(t('common.deleted', { defaultValue: `${response.count} deleted. Active licenses were skipped.` }))
+      } else {
+        toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
+      }
       setBulkDeleteOpen(false)
       setSelectedIds([])
       invalidateLicenseQueries(queryClient)

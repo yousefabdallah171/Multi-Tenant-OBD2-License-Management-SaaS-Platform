@@ -66,7 +66,7 @@ export function DataTable<T>({
       return data
     }
 
-    return data.filter((row) => searchValue(row).toLowerCase().includes(normalizedSearch))
+    return data.filter((row) => String(searchValue(row) ?? '').toLowerCase().includes(normalizedSearch))
   }, [data, searchTerm, searchValue])
 
   const sortedData = useMemo(() => {
