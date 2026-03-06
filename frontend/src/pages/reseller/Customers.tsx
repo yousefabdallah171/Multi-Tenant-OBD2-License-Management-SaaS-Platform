@@ -596,7 +596,7 @@ export function CustomersPage() {
                 className="text-start text-sky-600 hover:underline dark:text-sky-300"
                 to={routePaths.reseller.customerDetail(lang, row.id)}
               >
-                {isLikelyBios(row.name) ? '-' : row.name}
+                {resolveResellerCustomerLabel(row)}
               </Link>
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{row.email ?? '-'}</p>
@@ -1603,5 +1603,21 @@ function getApiErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback
+}
+
+function resolveResellerCustomerLabel(row: ResellerCustomerSummary) {
+  if (row.client_name?.trim()) {
+    return row.client_name
+  }
+
+  if (row.name?.trim() && !isLikelyBios(row.name)) {
+    return row.name
+  }
+
+  if (row.username?.trim()) {
+    return row.username
+  }
+
+  return row.name || '-'
 }
 

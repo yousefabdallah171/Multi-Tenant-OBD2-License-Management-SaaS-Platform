@@ -73,7 +73,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [createLicenseNow, setCreateLicenseNow] = useState(true)
+  const [createLicenseNow, setCreateLicenseNow] = useState(false)
   const [biosId, setBiosId] = useState('')
   const [programId, setProgramId] = useState<number | ''>('')
   const [mode, setMode] = useState<'duration' | 'end_date'>('duration')
