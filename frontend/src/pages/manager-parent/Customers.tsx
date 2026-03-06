@@ -289,7 +289,11 @@ export function CustomersPage() {
       label: t('common.name'),
       sortable: true,
       sortValue: (row) => row.name,
-      render: (row) => (isLikelyBios(row.name) ? 'â€”' : row.name),
+      render: (row) => (
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, row.id)}>
+          {isLikelyBios(row.name) ? '—' : row.name}
+        </Link>
+      ),
     },
     { key: 'email', label: t('common.email'), sortable: true, sortValue: (row) => row.email ?? '', render: (row) => row.email ?? '-' },
     {
@@ -361,20 +365,18 @@ export function CustomersPage() {
     if (activationForm.mode === 'end_date' && activationForm.end_date) {
       const endDate = new Date(activationForm.end_date)
       const today = new Date()
-      return Math.max(1, Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
+      return Math.max(0, (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     }
     return durationToDays(Number(activationForm.duration_value), activationForm.duration_unit)
   }, [activationForm.duration_value, activationForm.duration_unit, activationForm.mode, activationForm.end_date])
   const expiryPreview = useMemo(() => {
     if (activationForm.mode === 'end_date' && activationForm.end_date) return activationForm.end_date
-    if (durationDays < 1) return ''
-    const now = new Date()
-    now.setDate(now.getDate() + Math.ceil(durationDays))
-    return now.toISOString()
+    if (durationDays <= 0) return ''
+    return new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString()
   }, [activationForm.mode, activationForm.end_date, durationDays])
   const autoPrice = useMemo(() => {
     const base = Number(selectedProgram?.base_price ?? 0)
-    return Math.max(0, base * Math.max(1, durationDays))
+    return Math.max(0, base * durationDays)
   }, [selectedProgram?.base_price, durationDays])
   const totalPrice = priceMode === 'auto' ? autoPrice : Number(activationForm.price || 0)
 
@@ -769,10 +771,10 @@ function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | Dura
     return 0
   }
   if (unit === 'minutes') {
-    return Math.max(1, value / 1440)
+    return value / 1440
   }
   if (unit === 'hours') {
-    return Math.max(1, value / 24)
+    return value / 24
   }
   if (unit === 'months') {
     return value * 30

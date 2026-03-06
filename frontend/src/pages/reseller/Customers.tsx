@@ -84,6 +84,7 @@ export function CustomersPage() {
         table: {
           customer: 'العميل',
           bios: 'BIOS ID',
+          phone: t('common.phone'),
           program: 'البرنامج',
           status: 'الحالة',
           price: 'السعر',
@@ -190,6 +191,7 @@ export function CustomersPage() {
         searchPlaceholder: t('reseller.pages.customers.searchPlaceholder'),
         table: {
           customer: t('common.customer'),
+          phone: t('common.phone'),
           bios: t('reseller.pages.customers.table.bios'),
           program: t('common.program'),
           status: t('common.status'),
@@ -626,6 +628,13 @@ export function CustomersPage() {
             {rawBiosId(row.bios_id, row.external_username)}
           </button>
         ) : '-',
+      },
+      {
+        key: 'phone',
+        label: text.table.phone,
+        sortable: true,
+        sortValue: (row) => row.phone ?? '',
+        render: (row) => row.phone ?? '-',
       },
       { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'status', label: text.table.status, sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
@@ -1654,6 +1663,4 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 
   return fallback
 }
-
-
 
