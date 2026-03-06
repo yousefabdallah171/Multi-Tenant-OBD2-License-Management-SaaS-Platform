@@ -250,44 +250,46 @@ export function LicensesPage() {
         key: 'actions',
         label: t('common.actions'),
         render: (row) => (
-          <div className="flex items-center gap-2">
-            <Button type="button" size="sm" variant="ghost" onClick={() => setDetailLicenseId(row.id)}>
-              <Eye className="h-4 w-4" />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" size="sm" variant="ghost"><MoreVertical className="h-4 w-4" /></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => { setRenewTargetId(row.id); setRenewPrice(String(row.price)) }}>
-                  <RotateCw className="me-2 h-4 w-4" />
-                  {t('common.renew')}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" size="sm" variant="ghost"><MoreVertical className="h-4 w-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setDetailLicenseId(row.id)}>
+                <Eye className="me-2 h-4 w-4" />
+                {t('common.view')}
+              </DropdownMenuItem>
+              {row.status === 'pending' || row.status === 'cancelled' ? (
+                <DropdownMenuItem onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
+                  <Play className="me-2 h-4 w-4" />
+                  {row.status === 'cancelled' ? t('common.reactivate') : t('common.resume')}
                 </DropdownMenuItem>
-                {row.status === 'active' ? (
-                  <DropdownMenuItem onClick={() => setPauseTarget(row)}>
-                    <Pause className="me-2 h-4 w-4" />
-                    {t('common.pause')}
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={() => { setRenewTargetId(row.id); setRenewPrice(String(row.price)) }}>
+                    <RotateCw className="me-2 h-4 w-4" />
+                    {t('common.renew')}
                   </DropdownMenuItem>
-                ) : null}
-                {row.status === 'pending' || row.status === 'cancelled' ? (
-                  <DropdownMenuItem onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
-                    <Play className="me-2 h-4 w-4" />
-                    {row.status === 'cancelled' ? t('common.reactivate') : t('common.resume')}
+                  {row.status === 'active' ? (
+                    <DropdownMenuItem onClick={() => setPauseTarget(row)}>
+                      <Pause className="me-2 h-4 w-4" />
+                      {t('common.pause')}
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
+                    <ShieldOff className="me-2 h-4 w-4" />
+                    {t('common.deactivate')}
                   </DropdownMenuItem>
-                ) : null}
-                <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
-                  <ShieldOff className="me-2 h-4 w-4" />
-                  {t('common.deactivate')}
+                </>
+              )}
+              {row.status !== 'active' ? (
+                <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
+                  <Trash2 className="me-2 h-4 w-4" />
+                  {t('common.delete')}
                 </DropdownMenuItem>
-                {row.status !== 'active' ? (
-                  <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
-                    <Trash2 className="me-2 h-4 w-4" />
-                    {t('common.delete')}
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
