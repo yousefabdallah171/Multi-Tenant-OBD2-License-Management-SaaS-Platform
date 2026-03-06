@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -21,7 +22,7 @@ import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
 import { programService } from '@/services/program.service'
-import type { DurationUnit, ManagerCustomerSummary } from '@/types/manager-reseller.types'
+import type { DurationUnit, ManagerCustomerSummary, RenewLicenseData } from '@/types/manager-reseller.types'
 import { formatUsername } from '@/utils/biosId'
 
 const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
@@ -55,8 +56,8 @@ const EMPTY_ACTIVATION_FORM: ActivationFormState = {
   program_id: '',
   duration_value: '30',
   duration_unit: 'days',
-  mode: 'duration',
-  end_date: '',
+  mode: 'end_date',
+  end_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 16),
   is_scheduled: false,
   schedule_mode: 'relative',
   schedule_offset_value: '1',
@@ -83,9 +84,6 @@ export function CustomersPage() {
   const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [renewLicenseId, setRenewLicenseId] = useState<number | null>(null)
-  const [renewDuration, setRenewDuration] = useState('30')
-  const [renewUnit, setRenewUnit] = useState<DurationUnit>('days')
-  const [renewPrice, setRenewPrice] = useState('')
   const [deactivateTarget, setDeactivateTarget] = useState<ManagerCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ManagerCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ManagerCustomerSummary | null>(null)
@@ -93,9 +91,6 @@ export function CustomersPage() {
   const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
-  const [bulkDuration, setBulkDuration] = useState('30')
-  const [bulkUnit, setBulkUnit] = useState<DurationUnit>('days')
-  const [bulkPrice, setBulkPrice] = useState('0')
 
   const customersQuery = useQuery({
     queryKey: ['manager', 'customers', page, perPage, search, status, resellerId, programId],
@@ -146,11 +141,7 @@ export function CustomersPage() {
   })
 
   const renewMutation = useMutation({
-    mutationFn: () =>
-      licenseService.renew(renewLicenseId ?? 0, {
-        duration_days: durationToDays(Number(renewDuration), renewUnit),
-        price: Number(renewPrice),
-      }),
+    mutationFn: (payload: RenewLicenseData) => licenseService.renew(renewLicenseId ?? 0, payload),
     onSuccess: () => {
       setRenewLicenseId(null)
       invalidate(queryClient)
@@ -194,7 +185,7 @@ export function CustomersPage() {
   })
 
   const bulkRenewMutation = useMutation({
-    mutationFn: () => licenseService.bulkRenew(selectedLicenseIds, { duration_days: durationToDays(Number(bulkDuration), bulkUnit), price: Number(bulkPrice) }),
+    mutationFn: (payload: RenewLicenseData) => licenseService.bulkRenew(selectedLicenseIds, payload),
     onSuccess: () => {
       setBulkRenewOpen(false)
       setSelectedLicenseIds([])
@@ -249,6 +240,8 @@ export function CustomersPage() {
   const totalPrice = priceMode === 'auto' ? autoPrice : Number(activationForm.price || 0)
 
   const rows = customersQuery.data?.data ?? []
+  const renewTarget = rows.find((row) => row.license_id === renewLicenseId) ?? null
+  const renewProgram = (programsQuery.data?.data ?? []).find((program) => program.name === renewTarget?.program)
   const selectableIds = rows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
@@ -298,7 +291,7 @@ export function CustomersPage() {
       sortValue: (row) => row.name,
       render: (row) => (
         <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.id)}>
-          {isLikelyBios(row.name) ? '—' : row.name}
+          {isLikelyBios(row.name) ? '' : row.name}
         </Link>
       ),
     },
@@ -359,9 +352,9 @@ export function CustomersPage() {
               <Pause className="me-2 h-4 w-4" />
               {t('common.pause')}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => row.license_id && resumeMutation.mutate(row.license_id)} disabled={!row.license_id || (row.status !== 'pending' && row.status !== 'cancelled')}>
+            <DropdownMenuItem onClick={() => row.status === 'cancelled' && row.license_id && resumeMutation.mutate(row.license_id)} disabled={!row.license_id || row.status !== 'cancelled'}>
               <Play className="me-2 h-4 w-4" />
-              {row.status === 'cancelled' ? t('common.reactivate') : t('common.resume')}
+              {t('common.reactivate')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
               <Trash2 className="me-2 h-4 w-4" />
@@ -631,49 +624,34 @@ export function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={renewLicenseId !== null} onOpenChange={(open) => !open && setRenewLicenseId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('common.renew')}</DialogTitle>
-            <DialogDescription>{t('reseller.pages.licenses.renewDialog.fallback')}</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 md:grid-cols-3">
-            <Input type="number" min={1} value={renewDuration} onChange={(event) => setRenewDuration(event.target.value)} />
-            <select value={renewUnit} onChange={(event) => setRenewUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-              <option value="days">{t('common.days')}</option>
-              <option value="months">{t('common.months')}</option>
-              <option value="years">{t('common.years')}</option>
-            </select>
-            <Input type="number" min={0} step="0.01" value={renewPrice} onChange={(event) => setRenewPrice(event.target.value)} />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setRenewLicenseId(null)}>{t('common.cancel')}</Button>
-            <Button type="button" onClick={() => renewMutation.mutate()} disabled={renewMutation.isPending}>{t('common.save')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RenewLicenseDialog
+        open={renewLicenseId !== null}
+        onOpenChange={(open) => !open && setRenewLicenseId(null)}
+        title={t('common.renew')}
+        description={renewTarget ? t('reseller.pages.licenses.renewDialog.description', { program: renewTarget.program ?? t('common.program'), biosId: renewTarget.bios_id ?? '-' }) : t('reseller.pages.licenses.renewDialog.fallback')}
+        confirmLabel={t('common.renew')}
+        confirmLoadingLabel={t('common.loading')}
+        cancelLabel={t('common.cancel')}
+        anchorDate={renewTarget?.expiry}
+        initialPrice={0}
+        autoPricePerDay={renewProgram?.base_price ?? 0}
+        resetKey={renewLicenseId}
+        isPending={renewMutation.isPending}
+        onSubmit={(payload) => renewMutation.mutate(payload)}
+      />
 
-      <Dialog open={bulkRenewOpen} onOpenChange={setBulkRenewOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('reseller.pages.licenses.bulkRenew')}</DialogTitle>
-            <DialogDescription>{selectedLicenseIds.length} {t('common.selected', { defaultValue: 'selected' })}</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 md:grid-cols-3">
-            <Input type="number" min={1} value={bulkDuration} onChange={(event) => setBulkDuration(event.target.value)} />
-            <select value={bulkUnit} onChange={(event) => setBulkUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-              <option value="days">{t('common.days')}</option>
-              <option value="months">{t('common.months')}</option>
-              <option value="years">{t('common.years')}</option>
-            </select>
-            <Input type="number" min={0} step="0.01" value={bulkPrice} onChange={(event) => setBulkPrice(event.target.value)} />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setBulkRenewOpen(false)}>{t('common.cancel')}</Button>
-            <Button type="button" onClick={() => bulkRenewMutation.mutate()} disabled={bulkRenewMutation.isPending}>{t('reseller.pages.licenses.bulkRenew')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RenewLicenseDialog
+        open={bulkRenewOpen}
+        onOpenChange={setBulkRenewOpen}
+        title={t('reseller.pages.licenses.bulkRenew')}
+        description={`${selectedLicenseIds.length} ${t('common.selected', { defaultValue: 'selected' })}`}
+        confirmLabel={t('reseller.pages.licenses.bulkRenew')}
+        confirmLoadingLabel={t('common.loading')}
+        cancelLabel={t('common.cancel')}
+        resetKey={selectedLicenseIds.join(',')}
+        isPending={bulkRenewMutation.isPending}
+        onSubmit={(payload) => bulkRenewMutation.mutate(payload)}
+      />
 
       <ConfirmDialog
         open={deactivateTarget !== null}

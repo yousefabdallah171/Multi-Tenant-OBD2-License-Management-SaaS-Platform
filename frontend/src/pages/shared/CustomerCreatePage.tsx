@@ -20,13 +20,19 @@ interface CustomerCreatePageProps {
   title: string
   description: string
   backPath: (lang: 'ar' | 'en') => string
-  createCustomer: (payload: { name: string; client_name?: string; email?: string; phone?: string }) => Promise<unknown>
+  createCustomer: (payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) => Promise<unknown>
 }
 
 type DurationUnit = 'minutes' | 'hours' | 'days'
 type ScheduleMode = 'after' | 'on'
 
 const MIN_DURATION_DAYS = 1 / 1440
+
+function getDefaultEndDate(days = 30) {
+  const next = new Date()
+  next.setDate(next.getDate() + days)
+  return toDateTimeLocal(next)
+}
 
 function toDateTimeLocal(value: Date) {
   const year = value.getFullYear()
@@ -73,13 +79,13 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [createLicenseNow, setCreateLicenseNow] = useState(false)
+  const [createLicenseNow, setCreateLicenseNow] = useState(true)
   const [biosId, setBiosId] = useState('')
   const [programId, setProgramId] = useState<number | ''>('')
-  const [mode, setMode] = useState<'duration' | 'end_date'>('duration')
+  const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
-  const [endDate, setEndDate] = useState('')
+  const [endDate, setEndDate] = useState(() => getDefaultEndDate())
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('after')
   const [scheduleAfterValue, setScheduleAfterValue] = useState('1')
@@ -163,10 +169,10 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     if (customerName.trim().length < 2) next.customerName = t('validation.required', { defaultValue: 'Field required' })
     if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) next.email = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
     if (phone.trim() && !/^\+?\d{6,20}$/.test(phone.trim())) next.phone = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
+    if (biosId.trim().length < 3) next.biosId = t('validation.required', { defaultValue: 'Field required' })
+    if (!programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
 
     if (createLicenseNow) {
-      if (biosId.trim().length < 3) next.biosId = t('validation.required', { defaultValue: 'Field required' })
-      if (!programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
       if (durationDays < MIN_DURATION_DAYS) next.duration = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
       if (scheduleEnabled) {
         const scheduledAt = new Date(scheduleAt).getTime()
@@ -185,6 +191,8 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       client_name: clientName.trim() || undefined,
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
+      bios_id: biosId.trim() || undefined,
+      program_id: programId ? Number(programId) : undefined,
     }),
     onSuccess: () => {
       toast.success(t('common.saved', { defaultValue: 'Saved' }))
@@ -254,34 +262,42 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
             </Field>
           </div>
 
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
+              <Input value={biosId} onChange={(event) => setBiosId(event.target.value)} />
+            </Field>
+            <Field label={t('common.program')} error={errors.programId}>
+              <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                <option value="">{t('reseller.pages.customers.activationDialog.selectProgram', { defaultValue: 'Select program' })}</option>
+                {(programsQuery.data?.data ?? []).map((program) => (
+                  <option key={program.id} value={program.id}>{program.name}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          {!createLicenseNow ? (
+            <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+              Saving now will create the customer as not active yet and keep this BIOS ID plus program saved as pending.
+            </p>
+          ) : null}
+
           <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
             <label className="flex items-center gap-3 text-sm font-medium">
               <input type="checkbox" checked={createLicenseNow} onChange={(event) => setCreateLicenseNow(event.target.checked)} />
-              {t('activate.scheduleToggleNow', { defaultValue: 'Activate license now' })}
-            </label>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
               {createLicenseNow
-                ? t('activate.reviewDescription', { defaultValue: 'Create the customer and activate the license now.' })
-                : t('common.saved', { defaultValue: 'Create customer only without activating a license.' })}
-            </p>
+                ? t('activate.scheduleToggleNow', { defaultValue: 'Create and activate license now' })
+                : 'Create customer only'}
+            </label>
+            {createLicenseNow ? (
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                {t('activate.reviewDescription', { defaultValue: 'Create the customer and activate the license now.' })}
+              </p>
+            ) : null}
           </div>
 
           {createLicenseNow ? (
             <>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
-                  <Input value={biosId} onChange={(event) => setBiosId(event.target.value)} />
-                </Field>
-                <Field label={t('common.program')} error={errors.programId}>
-                  <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                    <option value="">{t('reseller.pages.customers.activationDialog.selectProgram', { defaultValue: 'Select program' })}</option>
-                    {(programsQuery.data?.data ?? []).map((program) => (
-                      <option key={program.id} value={program.id}>{program.name}</option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <div className="flex flex-wrap items-center gap-2">
                   <Label>{t('common.duration')}</Label>
@@ -379,7 +395,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               }}
             >
               {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {createLicenseNow ? t('common.activate', { defaultValue: 'Activate' }) : t('common.save', { defaultValue: 'Save' })}
+              {createLicenseNow ? t('common.activate', { defaultValue: 'Activate' }) : 'Create customer'}
             </Button>
           </div>
         </CardContent>

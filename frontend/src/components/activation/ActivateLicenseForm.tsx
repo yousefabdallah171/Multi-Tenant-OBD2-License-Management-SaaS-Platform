@@ -37,6 +37,12 @@ interface ActivationFormErrors {
   price?: string
 }
 
+function getDefaultEndDate(days = 30): string {
+  const next = new Date()
+  next.setDate(next.getDate() + days)
+  return formatDateTimeLocalInput(next)
+}
+
 const EMPTY_FORM = {
   customer_name: '',
   client_name: '',
@@ -45,8 +51,8 @@ const EMPTY_FORM = {
   bios_id: '',
   duration_value: '30',
   duration_unit: 'days' as 'minutes' | 'hours' | 'days',
-  mode: 'duration' as 'duration' | 'end_date',
-  end_date: '',
+  mode: 'end_date' as 'duration' | 'end_date',
+  end_date: getDefaultEndDate(),
   is_scheduled: false,
   schedule_mode: 'custom' as 'relative' | 'custom',
   schedule_offset_value: '1',

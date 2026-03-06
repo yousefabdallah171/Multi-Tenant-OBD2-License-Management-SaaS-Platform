@@ -37,7 +37,7 @@ export const resellerService = {
     const { data } = await api.get<PaginatedResponse<ResellerCustomerSummary>>('/reseller/customers', { params })
     return data
   },
-  async createCustomer(payload: { name: string; client_name?: string; email?: string; phone?: string }) {
+  async createCustomer(payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: ResellerCustomerSummary }>('/reseller/customers', payload)
     return data
   },

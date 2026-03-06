@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ManagerParent;
 use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\License;
+use App\Models\Program;
 use App\Models\UserIpLog;
 use App\Models\User;
 use App\Services\LicenseService;
@@ -172,6 +173,8 @@ class CustomerController extends BaseManagerParentController
             'client_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
+            'bios_id' => ['nullable', 'string', 'min:3', 'max:255', 'required_with:program_id'],
+            'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id'],
         ]);
 
         $username = Str::of((string) $validated['name'])->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
@@ -224,6 +227,16 @@ class CustomerController extends BaseManagerParentController
 
         $customer->save();
 
+        if (! empty($validated['bios_id']) && ! empty($validated['program_id'])) {
+            $this->createPendingLicense(
+                $request,
+                $customer,
+                (string) $validated['bios_id'],
+                (int) $validated['program_id'],
+                $this->currentManagerParent($request),
+            );
+        }
+
         $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->with(['program:id,name', 'reseller:id,name'])]);
 
@@ -265,6 +278,57 @@ class CustomerController extends BaseManagerParentController
 
         return response()->json([
             'message' => 'Customer deleted successfully.',
+        ]);
+    }
+
+    private function createPendingLicense(Request $request, User $customer, string $biosId, int $programId, User $seller): void
+    {
+        $program = Program::query()
+            ->whereKey($programId)
+            ->where('status', 'active')
+            ->first();
+
+        if (! $program) {
+            throw ValidationException::withMessages([
+                'program_id' => 'The selected program is not active.',
+            ]);
+        }
+
+        $normalizedBiosId = trim($biosId);
+        if ($normalizedBiosId === '') {
+            throw ValidationException::withMessages([
+                'bios_id' => 'The BIOS ID field is required.',
+            ]);
+        }
+
+        $existingLicense = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('reseller_id', $seller->id)
+            ->where('program_id', $program->id)
+            ->where('bios_id', $normalizedBiosId)
+            ->whereIn('status', ['active', 'pending', 'suspended'])
+            ->first();
+
+        if ($existingLicense) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'A license already exists for this BIOS ID and program.',
+            ]);
+        }
+
+        License::query()->create([
+            'tenant_id' => $this->currentTenantId($request),
+            'customer_id' => $customer->id,
+            'reseller_id' => $seller->id,
+            'program_id' => $program->id,
+            'bios_id' => $normalizedBiosId,
+            'external_username' => $customer->username,
+            'external_activation_response' => 'Pending activation.',
+            'duration_days' => 0,
+            'price' => 0,
+            'activated_at' => now(),
+            'expires_at' => now(),
+            'status' => 'pending',
+            'is_scheduled' => false,
         ]);
     }
 

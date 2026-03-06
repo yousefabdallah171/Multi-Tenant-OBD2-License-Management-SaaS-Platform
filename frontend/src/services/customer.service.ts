@@ -16,7 +16,7 @@ export const customerService = {
     const { data } = await api.get<PaginatedResponse<CustomerSummary>>('/customers', { params })
     return data
   },
-  async create(payload: { name: string; client_name?: string; email?: string; phone?: string }) {
+  async create(payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: CustomerSummary }>('/customers', payload)
     return data
   },

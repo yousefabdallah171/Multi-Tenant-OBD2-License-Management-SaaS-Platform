@@ -78,7 +78,7 @@ export const managerService = {
     const { data } = await api.get<PaginatedResponse<ManagerCustomerSummary>>('/manager/customers', { params })
     return data
   },
-  async createCustomer(payload: { name: string; client_name?: string; email?: string; phone?: string }) {
+  async createCustomer(payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: ManagerCustomerSummary }>('/manager/customers', payload)
     return data
   },

@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -14,6 +16,7 @@ import { IpLocationCell } from '@/utils/countryFlag'
 export function CustomerDetailPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
@@ -28,6 +31,12 @@ export function CustomerDetailPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-start">
+        <Button type="button" variant="outline" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
+          <ArrowLeft className="me-2 h-4 w-4" />
+          {t('common.back')}
+        </Button>
+      </div>
       <PageHeader title={customer?.name ?? t('managerParent.pages.customers.customerDetails')} description={customer?.email ?? t('managerParent.pages.customers.customerDetailsDescription')} />
 
       {customer ? (

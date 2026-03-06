@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import {
@@ -17,16 +18,15 @@ import {
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
-import type { DurationUnit, LicenseSummary } from '@/types/manager-reseller.types'
+import type { LicenseSummary, RenewLicenseData } from '@/types/manager-reseller.types'
 import { rawBiosId } from '@/utils/biosId'
 
 const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
@@ -235,13 +235,7 @@ export function LicensesPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [detailLicenseId, setDetailLicenseId] = useState<number | null>(null)
   const [renewTargetId, setRenewTargetId] = useState<number | null>(null)
-  const [renewDuration, setRenewDuration] = useState('30')
-  const [renewUnit, setRenewUnit] = useState<DurationUnit>('days')
-  const [renewPrice, setRenewPrice] = useState('0')
   const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
-  const [bulkDuration, setBulkDuration] = useState('30')
-  const [bulkUnit, setBulkUnit] = useState<DurationUnit>('days')
-  const [bulkPrice, setBulkPrice] = useState('0')
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [deactivateTarget, setDeactivateTarget] = useState<LicenseSummary | null>(null)
@@ -284,11 +278,7 @@ export function LicensesPage() {
   })
 
   const renewMutation = useMutation({
-    mutationFn: () =>
-      licenseService.renew(renewTargetId ?? 0, {
-        duration_days: durationToDays(Number(renewDuration), renewUnit),
-        price: Number(renewPrice),
-      }),
+    mutationFn: (payload: RenewLicenseData) => licenseService.renew(renewTargetId ?? 0, payload),
     onSuccess: () => {
       toast.success(text.toasts.renewed)
       setRenewTargetId(null)
@@ -327,11 +317,7 @@ export function LicensesPage() {
   })
 
   const bulkRenewMutation = useMutation({
-    mutationFn: () =>
-      licenseService.bulkRenew(selectedIds, {
-        duration_days: durationToDays(Number(bulkDuration), bulkUnit),
-        price: Number(bulkPrice),
-      }),
+    mutationFn: (payload: RenewLicenseData) => licenseService.bulkRenew(selectedIds, payload),
     onSuccess: () => {
       toast.success(text.toasts.bulkRenewed)
       setBulkRenewOpen(false)
@@ -481,9 +467,12 @@ export function LicensesPage() {
                 {text.actions.view}
               </DropdownMenuItem>
               {row.status === 'pending' && (
-                <DropdownMenuItem className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20" onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
-                  <Play className="me-2 h-4 w-4" />
-                  {text.actions.resume}
+                <DropdownMenuItem
+                  className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20"
+                  onClick={() => setRenewTargetId(row.id)}
+                >
+                  <RotateCw className="me-2 h-4 w-4" />
+                  {text.actions.renew}
                 </DropdownMenuItem>
               )}
               {row.status === 'cancelled' && (
@@ -498,9 +487,6 @@ export function LicensesPage() {
                     className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20"
                     onClick={() => {
                       setRenewTargetId(row.id)
-                      setRenewDuration('30')
-                      setRenewUnit('days')
-                      setRenewPrice(String(row.price))
                     }}
                   >
                     <RotateCw className="me-2 h-4 w-4" />
@@ -681,101 +667,34 @@ export function LicensesPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={renewTargetId !== null} onOpenChange={(open) => !open && setRenewTargetId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{text.renewDialog.title}</DialogTitle>
-            <DialogDescription>{renewLicense ? text.renewDialog.description(renewLicense.program ?? text.details.program, renewLicense.bios_id) : text.renewDialog.fallback}</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Field label={text.renewDialog.duration} htmlFor="renew-duration">
-              <Input id="renew-duration" type="number" min={1} value={renewDuration} onChange={(event) => setRenewDuration(event.target.value)} />
-            </Field>
-            <Field label={text.renewDialog.unit} htmlFor="renew-unit">
-              <select
-                id="renew-unit"
-                value={renewUnit}
-                onChange={(event) => setRenewUnit(event.target.value as DurationUnit)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-              >
-                <option value="days">{text.units.days}</option>
-                <option value="months">{text.units.months}</option>
-                <option value="years">{text.units.years}</option>
-              </select>
-            </Field>
-            <Field label={text.renewDialog.price} htmlFor="renew-price">
-              <Input id="renew-price" type="number" step="0.01" min={0} value={renewPrice} onChange={(event) => setRenewPrice(event.target.value)} />
-            </Field>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setRenewTargetId(null)}>
-              {text.renewDialog.cancel}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                if (Number(renewDuration) < 1 || Number(renewPrice) < 0) {
-                  toast.error(text.errors.renew)
-                  return
-                }
+      <RenewLicenseDialog
+        open={renewTargetId !== null}
+        onOpenChange={(open) => !open && setRenewTargetId(null)}
+        title={text.renewDialog.title}
+        description={renewLicense ? text.renewDialog.description(renewLicense.program ?? text.details.program, renewLicense.bios_id) : text.renewDialog.fallback}
+        confirmLabel={text.renewDialog.renew}
+        confirmLoadingLabel={text.renewDialog.renewing}
+        cancelLabel={text.renewDialog.cancel}
+        anchorDate={renewLicense?.expires_at}
+        initialPrice={renewLicense?.price ?? 0}
+        autoPricePerDay={renewLicense && renewLicense.duration_days > 0 ? renewLicense.price / renewLicense.duration_days : 0}
+        resetKey={renewTargetId}
+        isPending={renewMutation.isPending}
+        onSubmit={(payload) => renewMutation.mutate(payload)}
+      />
 
-                renewMutation.mutate()
-              }}
-              disabled={renewMutation.isPending}
-            >
-              {renewMutation.isPending ? text.renewDialog.renewing : text.renewDialog.renew}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={bulkRenewOpen} onOpenChange={setBulkRenewOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{text.bulkRenewDialog.title}</DialogTitle>
-            <DialogDescription>{text.bulkRenewDialog.description(selectedIds.length)}</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Field label={text.renewDialog.duration} htmlFor="bulk-duration">
-              <Input id="bulk-duration" type="number" min={1} value={bulkDuration} onChange={(event) => setBulkDuration(event.target.value)} />
-            </Field>
-            <Field label={text.renewDialog.unit} htmlFor="bulk-unit">
-              <select
-                id="bulk-unit"
-                value={bulkUnit}
-                onChange={(event) => setBulkUnit(event.target.value as DurationUnit)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-              >
-                <option value="days">{text.units.days}</option>
-                <option value="months">{text.units.months}</option>
-                <option value="years">{text.units.years}</option>
-              </select>
-            </Field>
-            <Field label={text.renewDialog.price} htmlFor="bulk-price">
-              <Input id="bulk-price" type="number" step="0.01" min={0} value={bulkPrice} onChange={(event) => setBulkPrice(event.target.value)} />
-            </Field>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setBulkRenewOpen(false)}>
-              {text.renewDialog.cancel}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                if (selectedIds.length === 0 || Number(bulkDuration) < 1 || Number(bulkPrice) < 0) {
-                  toast.error(text.errors.bulkRenew)
-                  return
-                }
-
-                bulkRenewMutation.mutate()
-              }}
-              disabled={bulkRenewMutation.isPending}
-            >
-              {bulkRenewMutation.isPending ? text.renewDialog.renewing : text.bulkRenew}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RenewLicenseDialog
+        open={bulkRenewOpen}
+        onOpenChange={setBulkRenewOpen}
+        title={text.bulkRenewDialog.title}
+        description={text.bulkRenewDialog.description(selectedIds.length)}
+        confirmLabel={text.bulkRenew}
+        confirmLoadingLabel={text.renewDialog.renewing}
+        cancelLabel={text.renewDialog.cancel}
+        resetKey={selectedIds.join(',')}
+        isPending={bulkRenewMutation.isPending}
+        onSubmit={(payload) => bulkRenewMutation.mutate(payload)}
+      />
 
       <ConfirmDialog
         open={bulkDeactivateOpen}
@@ -851,15 +770,6 @@ export function LicensesPage() {
   )
 }
 
-function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-    </div>
-  )
-}
-
 function InfoCard({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <Card>
@@ -905,20 +815,6 @@ function ExpiryAlert({ count, label, licensesLabel, tone }: { count: number; lab
   )
 }
 
-function durationToDays(value: number, unit: DurationUnit) {
-  if (!Number.isFinite(value) || value <= 0) {
-    return 0
-  }
-
-  switch (unit) {
-    case 'months':
-      return value * 30
-    case 'years':
-      return value * 365
-    default:
-      return value
-  }
-}
 
 function daysUntil(date: string | null) {
   if (!date) {
