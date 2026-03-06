@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CheckSquare, Eye, MoreVertical, Pause, Play, RotateCw, ShieldOff } from 'lucide-react'
+import { AlertTriangle, Eye, MoreVertical, Pause, Play, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -233,7 +233,6 @@ export function LicensesPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
   const [selectedIds, setSelectedIds] = useState<number[]>([])
-  const [bulkAction, setBulkAction] = useState<'renew' | 'deactivate' | ''>('')
   const [detailLicenseId, setDetailLicenseId] = useState<number | null>(null)
   const [renewTargetId, setRenewTargetId] = useState<number | null>(null)
   const [renewDuration, setRenewDuration] = useState('30')
@@ -244,8 +243,10 @@ export function LicensesPage() {
   const [bulkUnit, setBulkUnit] = useState<DurationUnit>('days')
   const [bulkPrice, setBulkPrice] = useState('0')
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [deactivateTarget, setDeactivateTarget] = useState<LicenseSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<LicenseSummary | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<LicenseSummary | null>(null)
   const [programFilter, setProgramFilter] = useState<number | ''>('')
 
   const programsQuery = useQuery({
@@ -351,9 +352,31 @@ export function LicensesPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.delete(licenseId),
+    onSuccess: () => {
+      toast.success(t('common.deleted', { defaultValue: 'License deleted successfully.' }))
+      setDeleteTarget(null)
+      invalidateLicenseQueries(queryClient)
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: () => licenseService.bulkDelete(selectedIds),
+    onSuccess: () => {
+      toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
+      setBulkDeleteOpen(false)
+      setSelectedIds([])
+      invalidateLicenseQueries(queryClient)
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.errors.requestFailed)),
+  })
+
   const rows = licensesQuery.data?.data ?? []
   const visibleIds = rows.map((row) => row.id)
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id))
+  const someVisibleSelected = visibleIds.some((id) => selectedIds.includes(id))
   const expiring = expiringQuery.data?.data ?? []
   const oneDay = expiring.filter((license) => daysUntil(license.expires_at) <= 1).length
   const threeDays = expiring.filter((license) => daysUntil(license.expires_at) <= 3).length
@@ -363,7 +386,24 @@ export function LicensesPage() {
     () => [
       {
         key: 'select',
-        label: text.table.select,
+        label: (
+          <input
+            type="checkbox"
+            checked={allVisibleSelected}
+            ref={(element) => {
+              if (element) {
+                element.indeterminate = !allVisibleSelected && someVisibleSelected
+              }
+            }}
+            onChange={(event) => {
+              if (event.target.checked) {
+                setSelectedIds((current) => [...new Set([...current, ...visibleIds])])
+                return
+              }
+              setSelectedIds((current) => current.filter((id) => !visibleIds.includes(id)))
+            }}
+          />
+        ),
         render: (row) => (
           <input
             type="checkbox"
@@ -425,62 +465,67 @@ export function LicensesPage() {
         key: 'actions',
         label: text.table.actions,
         render: (row) => (
-          <div className="flex gap-2">
-            <Button type="button" size="sm" variant="ghost" onClick={() => setDetailLicenseId(row.id)}>
-              <Eye className="me-1 h-4 w-4" />
-              {text.actions.view}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" size="sm" variant="ghost">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {row.status === 'pending' && (
-                  <DropdownMenuItem onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
-                    <Play className="me-2 h-4 w-4" />
-                    {text.actions.resume}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" size="sm" variant="ghost">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20" onClick={() => setDetailLicenseId(row.id)}>
+                <Eye className="me-2 h-4 w-4" />
+                {text.actions.view}
+              </DropdownMenuItem>
+              {row.status === 'pending' && (
+                <DropdownMenuItem className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20" onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
+                  <Play className="me-2 h-4 w-4" />
+                  {text.actions.resume}
+                </DropdownMenuItem>
+              )}
+              {row.status === 'cancelled' && (
+                <DropdownMenuItem className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20" onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
+                  <Play className="me-2 h-4 w-4" />
+                  {text.actions.reactivate}
+                </DropdownMenuItem>
+              )}
+              {row.status !== 'pending' && row.status !== 'cancelled' && (
+                <>
+                  <DropdownMenuItem
+                    className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20"
+                    onClick={() => {
+                      setRenewTargetId(row.id)
+                      setRenewDuration('30')
+                      setRenewUnit('days')
+                      setRenewPrice(String(row.price))
+                    }}
+                  >
+                    <RotateCw className="me-2 h-4 w-4" />
+                    {text.actions.renew}
                   </DropdownMenuItem>
-                )}
-                {row.status === 'cancelled' && (
-                  <DropdownMenuItem onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
-                    <Play className="me-2 h-4 w-4" />
-                    {text.actions.reactivate}
+                  {row.status === 'active' && (
+                    <DropdownMenuItem className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20" onClick={() => setPauseTarget(row)}>
+                      <Pause className="me-2 h-4 w-4" />
+                      {text.actions.pause}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20" onClick={() => setDeactivateTarget(row)}>
+                    <ShieldOff className="me-2 h-4 w-4" />
+                    {text.actions.deactivate}
                   </DropdownMenuItem>
-                )}
-                {row.status !== 'pending' && row.status !== 'cancelled' && (
-                  <>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setRenewTargetId(row.id)
-                        setRenewDuration('30')
-                        setRenewUnit('days')
-                        setRenewPrice(String(row.price))
-                      }}
-                    >
-                      <RotateCw className="me-2 h-4 w-4" />
-                      {text.actions.renew}
-                    </DropdownMenuItem>
-                    {row.status === 'active' && (
-                      <DropdownMenuItem onClick={() => setPauseTarget(row)}>
-                        <Pause className="me-2 h-4 w-4" />
-                        {text.actions.pause}
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
-                      <ShieldOff className="me-2 h-4 w-4" />
-                      {text.actions.deactivate}
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                </>
+              )}
+              {row.status !== 'active' ? (
+                <DropdownMenuItem className="transition-colors duration-150 focus:bg-sky-50 dark:focus:bg-sky-950/20" onClick={() => setDeleteTarget(row)}>
+                  <Trash2 className="me-2 h-4 w-4" />
+                  {t('common.delete')}
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
-    [lang, locale, selectedIds, text],
+    [allVisibleSelected, lang, locale, selectedIds, someVisibleSelected, text, t, visibleIds, resumeMutation.isPending],
   )
 
   const detailLicense = detailQuery.data?.data
@@ -513,7 +558,10 @@ export function LicensesPage() {
         </TabsList>
         <TabsContent value={status} className="space-y-4">
           <Card>
-            <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_180px_180px_140px_120px]">
+            <CardHeader className="border-b border-sky-100 bg-gradient-to-r from-sky-100 via-cyan-50 to-blue-100 py-4 dark:border-sky-900/40 dark:from-sky-950/40 dark:via-slate-900 dark:to-sky-950/30">
+              <CardTitle className="text-base">{lang === 'ar' ? 'بحث وتصفية التراخيص' : 'Search & Filter Licenses'}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_180px]">
               <Input
                 value={search}
                 onChange={(event) => {
@@ -536,44 +584,27 @@ export function LicensesPage() {
                   <option key={program.id} value={program.id}>{program.name}</option>
                 ))}
               </select>
-              <select
-                value={bulkAction}
-                onChange={(event) => setBulkAction(event.target.value as 'renew' | 'deactivate' | '')}
-                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-              >
-                <option value="">{text.bulkActionPlaceholder}</option>
-                <option value="renew">{text.bulkRenew}</option>
-                <option value="deactivate">{text.bulkDeactivate}</option>
-              </select>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  if (!bulkAction || selectedIds.length === 0) {
-                    toast.error(text.errors.selectAction)
-                    return
-                  }
-
-                  if (bulkAction === 'renew') {
-                    setBulkRenewOpen(true)
-                    return
-                  }
-
-                  setBulkDeactivateOpen(true)
-                }}
-              >
-                {text.apply}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setSelectedIds(allVisibleSelected ? [] : visibleIds)}
-              >
-                <CheckSquare className="me-2 h-4 w-4" />
-                {allVisibleSelected ? text.clearVisible : text.selectVisible}
-              </Button>
             </CardContent>
           </Card>
+
+          {selectedIds.length > 0 ? (
+            <Card className="border-sky-200 bg-sky-50/70 dark:border-sky-900/40 dark:bg-sky-950/20">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <span className="text-sm text-slate-600 dark:text-slate-300">{selectedIds.length} {t('common.selected', { defaultValue: 'selected' })}</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setBulkRenewOpen(true)}>
+                    {text.bulkRenew}
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setBulkDeactivateOpen(true)}>
+                    {text.bulkDeactivate}
+                  </Button>
+                  <Button type="button" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+                    {t('common.deleteSelected', { defaultValue: 'Delete Selected' })}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <DataTable
             columns={columns}
@@ -755,6 +786,16 @@ export function LicensesPage() {
       />
 
       <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={t('common.bulkDelete', { defaultValue: 'Bulk Delete' })}
+        description={t('reseller.pages.licenses.confirm.bulkDeleteDescription', { count: selectedIds.length, defaultValue: 'Delete selected licenses?' })}
+        confirmLabel={t('common.deleteSelected', { defaultValue: 'Delete Selected' })}
+        isDestructive
+        onConfirm={() => bulkDeleteMutation.mutate()}
+      />
+
+      <ConfirmDialog
         open={deactivateTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -783,6 +824,24 @@ export function LicensesPage() {
         onConfirm={() => {
           if (pauseTarget) {
             pauseMutation.mutate(pauseTarget.id)
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+          }
+        }}
+        title={t('common.delete')}
+        description={deleteTarget ? `${deleteTarget.customer_name ?? '-'} • ${deleteTarget.bios_id}` : undefined}
+        confirmLabel={t('common.delete')}
+        isDestructive
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteMutation.mutate(deleteTarget.id)
           }
         }}
       />
@@ -825,9 +884,14 @@ function ExpiryAlert({ count, label, licensesLabel, tone }: { count: number; lab
     amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
     yellow: 'border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300',
   } as const
+  const accents = {
+    rose: 'border-s-4 border-s-rose-500',
+    amber: 'border-s-4 border-s-amber-500',
+    yellow: 'border-s-4 border-s-yellow-500',
+  } as const
 
   return (
-    <div className={`rounded-3xl border px-4 py-4 ${styles[tone]}`}>
+    <div className={`rounded-3xl border px-4 py-4 ${styles[tone]} ${accents[tone]}`}>
       <div className="flex items-center gap-3">
         <AlertTriangle className="h-5 w-5" />
         <div>

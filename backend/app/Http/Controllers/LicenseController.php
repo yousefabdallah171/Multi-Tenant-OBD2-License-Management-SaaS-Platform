@@ -101,6 +101,22 @@ class LicenseController extends Controller
         ]);
     }
 
+    public function destroy(Request $request, License $license): JsonResponse
+    {
+        $resolved = $this->resolveAccessibleLicense($request, $license);
+        if ($resolved->status === 'active') {
+            throw ValidationException::withMessages([
+                'license' => 'Active licenses cannot be deleted.',
+            ]);
+        }
+
+        $resolved->delete();
+
+        return response()->json([
+            'message' => 'License deleted successfully.',
+        ]);
+    }
+
     public function pause(Request $request, License $license): JsonResponse
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
@@ -187,6 +203,39 @@ class LicenseController extends Controller
         return response()->json([
             'message' => 'Selected licenses deactivated successfully.',
             'count' => $licenses->count(),
+        ]);
+    }
+
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+        ]);
+
+        $ids = collect($validated['ids'])
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->values();
+
+        if ($ids->isEmpty()) {
+            throw ValidationException::withMessages([
+                'ids' => 'At least one valid license id is required.',
+            ]);
+        }
+
+        $licenses = $this->accessibleLicenseQuery($request)
+            ->whereIn('id', $ids->all())
+            ->where('status', '!=', 'active')
+            ->get();
+
+        $count = $licenses->count();
+        foreach ($licenses as $license) {
+            $license->delete();
+        }
+
+        return response()->json([
+            'message' => 'Selected licenses deleted successfully.',
+            'count' => $count,
         ]);
     }
 

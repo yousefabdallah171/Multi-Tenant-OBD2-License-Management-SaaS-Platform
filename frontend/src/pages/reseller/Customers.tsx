@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -482,6 +482,7 @@ export function CustomersPage() {
         render: (row) => (
           <div>
             <p className="font-medium text-slate-950 dark:text-white">
+              <span className={`me-2 inline-block h-2.5 w-2.5 rounded-full ${row.status === 'active' ? 'bg-emerald-500' : row.status === 'pending' ? 'bg-amber-500' : row.status === 'cancelled' ? 'bg-rose-500' : 'bg-slate-400'}`} />
               <button
                 type="button"
                 className="text-start text-sky-600 hover:underline dark:text-sky-300"
@@ -731,9 +732,24 @@ export function CustomersPage() {
                 className={`rounded-2xl border px-4 py-3 text-sm ${index === activationStep ? 'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-400 dark:bg-sky-950/30 dark:text-sky-300' : 'border-slate-200 text-slate-500 dark:border-slate-800 dark:text-slate-400'}`}
               >
                 <div className="text-xs uppercase tracking-wide">{text.activationDialog.stepLabel} {index + 1}</div>
-                <div className="mt-1 font-semibold">{label}</div>
+                <div className="mt-1 flex items-center gap-2 font-semibold">
+                  {index === 0 ? <UserRound className="h-4 w-4" /> : null}
+                  {index === 1 ? <Cpu className="h-4 w-4" /> : null}
+                  {index === 2 ? <Clock3 className="h-4 w-4" /> : null}
+                  {index === 3 ? <CheckCircle2 className="h-4 w-4" /> : null}
+                  <span>{label}</span>
+                </div>
               </div>
             ))}
+          </div>
+          <div className="space-y-1">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all duration-300"
+                style={{ width: `${((activationStep + 1) / activationSteps.length) * 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(((activationStep + 1) / activationSteps.length) * 100)}%</p>
           </div>
 
           <div className="space-y-4">
@@ -1071,15 +1087,25 @@ export function CustomersPage() {
                   <CardHeader>
                     <CardTitle className="text-lg">{text.activationDialog.review}</CardTitle>
                   </CardHeader>
-                  <CardContent className="grid gap-4 md:grid-cols-2">
-                    <InfoPair label={text.activationDialog.customer} value={activationForm.customer_name || '-'} />
-                    <InfoPair label={text.activationDialog.email} value={activationForm.customer_email || '-'} />
-                    <InfoPair label={text.activationDialog.phone} value={activationForm.customer_phone || '-'} />
-                    <InfoPair label={text.activationDialog.biosId} value={activationForm.bios_id || '-'} />
-                    <InfoPair label={text.activationDialog.program} value={selectedProgram?.name ?? '-'} />
-                    <InfoPair label={text.activationDialog.duration} value={`${durationDays.toFixed(2)} ${text.units.days}`} />
-                    <InfoPair label={text.activationDialog.price} value={formatCurrency(totalPrice, 'USD', locale)} />
-                    <InfoPair label={text.activationDialog.expiry} value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
+                  <CardContent className="space-y-4">
+                    <div className="rounded-2xl border border-sky-200 bg-sky-50/80 p-4 dark:border-sky-900/40 dark:bg-sky-950/20">
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">{text.activationDialog.customer}</p>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <InfoPair label={text.activationDialog.customer} value={activationForm.customer_name || '-'} />
+                        <InfoPair label={text.activationDialog.email} value={activationForm.customer_email || '-'} />
+                        <InfoPair label={text.activationDialog.phone} value={activationForm.customer_phone || '-'} />
+                        <InfoPair label={text.activationDialog.biosId} value={activationForm.bios_id || '-'} />
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{text.activationDialog.program}</p>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <InfoPair label={text.activationDialog.program} value={selectedProgram?.name ?? '-'} />
+                        <InfoPair label={text.activationDialog.duration} value={`${durationDays.toFixed(2)} ${text.units.days}`} />
+                        <InfoPair label={text.activationDialog.price} value={formatCurrency(totalPrice, 'USD', locale)} />
+                        <InfoPair label={text.activationDialog.expiry} value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
                 {activationError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">{activationError}</div> : null}

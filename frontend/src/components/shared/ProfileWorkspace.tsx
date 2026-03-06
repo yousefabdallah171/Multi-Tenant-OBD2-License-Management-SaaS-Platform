@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { Bell, LockKeyhole, Mail, Phone, UserRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { RoleBadge } from '@/components/shared/RoleBadge'
@@ -57,7 +58,7 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Card>
-          <CardHeader>
+          <CardHeader className="border-b border-sky-100 bg-gradient-to-r from-sky-100 via-cyan-50 to-blue-100 py-4 dark:border-sky-900/40 dark:from-sky-950/40 dark:via-slate-900 dark:to-sky-950/30">
             <CardTitle>{t(`${translationPrefix}.accountCard`)}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -78,15 +79,30 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="profile-name">{t('common.name')}</Label>
+              <Label htmlFor="profile-name" className="inline-flex items-center gap-2">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+                  <UserRound className="h-3.5 w-3.5" />
+                </span>
+                {t('common.name')}
+              </Label>
               <Input id="profile-name" value={profileForm.name} onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="profile-email">{t('common.email')}</Label>
+              <Label htmlFor="profile-email" className="inline-flex items-center gap-2">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <Mail className="h-3.5 w-3.5" />
+                </span>
+                {t('common.email')}
+              </Label>
               <Input id="profile-email" type="email" value={profileForm.email} onChange={(event) => setProfileForm((current) => ({ ...current, email: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="profile-phone">{t('common.phone')}</Label>
+              <Label htmlFor="profile-phone" className="inline-flex items-center gap-2">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                  <Phone className="h-3.5 w-3.5" />
+                </span>
+                {t('common.phone')}
+              </Label>
               <Input id="profile-phone" value={profileForm.phone ?? ''} onChange={(event) => setProfileForm((current) => ({ ...current, phone: event.target.value }))} />
             </div>
             <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending}>
@@ -97,9 +113,14 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t(`${translationPrefix}.changePassword`)}</CardTitle>
+        <Card className="border-amber-200 bg-gradient-to-br from-amber-50/70 to-orange-100/40 dark:border-amber-900/40 dark:from-amber-950/10 dark:to-orange-950/10">
+          <CardHeader className="border-b border-amber-200/70 dark:border-amber-900/40">
+            <CardTitle className="inline-flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                <LockKeyhole className="h-4 w-4" />
+              </span>
+              {t(`${translationPrefix}.changePassword`)}
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="space-y-2">
@@ -127,7 +148,12 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
 
         <Card>
           <CardHeader>
-            <CardTitle>{t(`${translationPrefix}.preferences`)}</CardTitle>
+            <CardTitle className="inline-flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+                <Bell className="h-4 w-4" />
+              </span>
+              {t(`${translationPrefix}.preferences`)}
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">

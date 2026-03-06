@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Models\ActivityLog;
+use App\Models\License;
 use App\Models\UserIpLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class CustomerController extends BaseManagerController
 {
@@ -168,6 +170,49 @@ class CustomerController extends BaseManagerController
                 'ip_logs' => $ipLogs,
                 'activity' => $activity,
             ],
+        ]);
+    }
+
+    public function destroy(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveTeamUser($request, $user);
+        $sellerIds = $this->teamSellerIds($request);
+
+        $activeLicensesCount = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('customer_id', $customer->id)
+            ->whereIn('reseller_id', $sellerIds)
+            ->where('status', 'active')
+            ->count();
+
+        if ($activeLicensesCount > 0) {
+            return response()->json([
+                'message' => 'Cannot delete customer with active licenses. Deactivate licenses first.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $customerName = $customer->name;
+        $customerId = $customer->id;
+        $licensesCount = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('customer_id', $customer->id)
+            ->whereIn('reseller_id', $sellerIds)
+            ->count();
+
+        $customer->delete();
+
+        $this->logActivity(
+            $request,
+            'customer.delete',
+            sprintf('Deleted customer %s.', $customerName),
+            [
+                'customer_id' => $customerId,
+                'licenses_deleted' => $licensesCount,
+            ],
+        );
+
+        return response()->json([
+            'message' => 'Customer deleted successfully.',
         ]);
     }
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
+import { MoreVertical, Pause, Play, Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -11,10 +11,12 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { customerService } from '@/services/customer.service'
 import { licenseService } from '@/services/license.service'
@@ -27,23 +29,41 @@ const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as c
 
 interface ActivationFormState {
   customer_name: string
+  client_name: string
   customer_email: string
   customer_phone: string
   bios_id: string
   program_id: number | ''
   duration_value: string
-  duration_unit: DurationUnit
+  duration_unit: 'minutes' | 'hours' | 'days'
+  mode: 'duration' | 'end_date'
+  end_date: string
+  is_scheduled: boolean
+  schedule_mode: 'relative' | 'custom'
+  schedule_offset_value: string
+  schedule_offset_unit: 'minutes' | 'hours' | 'days'
+  scheduled_date_time: string
+  scheduled_timezone: string
   price: string
 }
 
 const EMPTY_ACTIVATION_FORM: ActivationFormState = {
   customer_name: '',
+  client_name: '',
   customer_email: '',
   customer_phone: '',
   bios_id: '',
   program_id: '',
   duration_value: '30',
   duration_unit: 'days',
+  mode: 'duration',
+  end_date: '',
+  is_scheduled: false,
+  schedule_mode: 'relative',
+  schedule_offset_value: '1',
+  schedule_offset_unit: 'hours',
+  scheduled_date_time: '',
+  scheduled_timezone: 'UTC',
   price: '',
 }
 
@@ -61,11 +81,14 @@ export function CustomersPage() {
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
+  const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [renewLicenseId, setRenewLicenseId] = useState<number | null>(null)
   const [renewDuration, setRenewDuration] = useState('30')
   const [renewUnit, setRenewUnit] = useState<DurationUnit>('days')
   const [renewPrice, setRenewPrice] = useState('')
   const [deactivateTarget, setDeactivateTarget] = useState<CustomerSummary | null>(null)
+  const [pauseTarget, setPauseTarget] = useState<CustomerSummary | null>(null)
+  const [resumeTarget, setResumeTarget] = useState<CustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CustomerSummary | null>(null)
 
   const customersQuery = useQuery({
@@ -95,17 +118,22 @@ export function CustomersPage() {
     mutationFn: () =>
       licenseService.activate({
         customer_name: activationForm.customer_name.trim(),
+        client_name: activationForm.client_name.trim() || undefined,
         customer_email: activationForm.customer_email.trim() || undefined,
         customer_phone: activationForm.customer_phone.trim() || undefined,
         bios_id: activationForm.bios_id.trim(),
         program_id: Number(activationForm.program_id),
-        duration_days: durationToDays(Number(activationForm.duration_value), activationForm.duration_unit),
-        price: Number(activationForm.price),
+        duration_days: durationDays,
+        price: Number(totalPrice),
+        is_scheduled: activationForm.is_scheduled || undefined,
+        scheduled_date_time: activationForm.is_scheduled ? buildScheduledDateTime(activationForm) : undefined,
+        scheduled_timezone: activationForm.is_scheduled ? activationForm.scheduled_timezone : undefined,
       }),
     onSuccess: () => {
       setActivationOpen(false)
       setActivationStep(0)
       setActivationForm(EMPTY_ACTIVATION_FORM)
+      setPriceMode('auto')
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -118,6 +146,7 @@ export function CustomersPage() {
         price: Number(renewPrice),
       }),
     onSuccess: () => {
+      toast.success(t('common.renewed'))
       setRenewLicenseId(null)
       invalidate(queryClient)
     },
@@ -127,7 +156,28 @@ export function CustomersPage() {
   const deactivateMutation = useMutation({
     mutationFn: (licenseId: number) => licenseService.deactivate(licenseId),
     onSuccess: () => {
+      toast.success(t('common.deactivated', { defaultValue: 'Deactivated successfully.' }))
       setDeactivateTarget(null)
+      invalidate(queryClient)
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+
+  const pauseMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.pause(licenseId),
+    onSuccess: () => {
+      toast.success(t('common.paused'))
+      setPauseTarget(null)
+      invalidate(queryClient)
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+
+  const resumeMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.resume(licenseId),
+    onSuccess: () => {
+      toast.success(t('common.resumed'))
+      setResumeTarget(null)
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -181,23 +231,65 @@ export function CustomersPage() {
       key: 'actions',
       label: t('common.actions'),
       render: (row) => (
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="ghost" onClick={() => setRenewLicenseId(row.license_id ?? null)} disabled={!row.license_id}>
-            <RotateCw className="me-1 h-4 w-4" />
-            {t('common.renew')}
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setDeactivateTarget(row)} disabled={!row.license_id}>
-            <ShieldOff className="me-1 h-4 w-4" />
-            {t('common.deactivate')}
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(row)}>
-            <Trash2 className="me-1 h-4 w-4" />
-            {t('common.delete')}
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" size="sm" variant="ghost">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link to={routePaths.managerParent.customerDetail(lang, row.id)}>
+                {t('common.view')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setRenewLicenseId(row.license_id ?? null)} disabled={!row.license_id}>
+              <RotateCw className="me-2 h-4 w-4" />
+              {t('common.renew')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDeactivateTarget(row)} disabled={!row.license_id}>
+              <ShieldOff className="me-2 h-4 w-4" />
+              {t('common.deactivate')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setPauseTarget(row)} disabled={!row.license_id || row.status !== 'active'}>
+              <Pause className="me-2 h-4 w-4" />
+              {t('common.pause')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setResumeTarget(row)} disabled={!row.license_id || (row.status !== 'pending' && row.status !== 'cancelled')}>
+              <Play className="me-2 h-4 w-4" />
+              {row.status === 'cancelled' ? t('common.reactivate') : t('common.resume')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
+              <Trash2 className="me-2 h-4 w-4" />
+              {t('common.delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ], [lang, locale, t])
+
+  const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
+  const durationDays = useMemo(() => {
+    if (activationForm.mode === 'end_date' && activationForm.end_date) {
+      const endDate = new Date(activationForm.end_date)
+      const today = new Date()
+      return Math.max(1, Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
+    }
+    return durationToDays(Number(activationForm.duration_value), activationForm.duration_unit)
+  }, [activationForm.duration_value, activationForm.duration_unit, activationForm.mode, activationForm.end_date])
+  const expiryPreview = useMemo(() => {
+    if (activationForm.mode === 'end_date' && activationForm.end_date) return activationForm.end_date
+    if (durationDays < 1) return ''
+    const now = new Date()
+    now.setDate(now.getDate() + Math.ceil(durationDays))
+    return now.toISOString()
+  }, [activationForm.mode, activationForm.end_date, durationDays])
+  const autoPrice = useMemo(() => {
+    const base = Number(selectedProgram?.base_price ?? 0)
+    return Math.max(0, base * Math.max(1, durationDays))
+  }, [selectedProgram?.base_price, durationDays])
+  const totalPrice = priceMode === 'auto' ? autoPrice : Number(activationForm.price || 0)
 
   return (
     <div className="space-y-6">
@@ -263,8 +355,10 @@ export function CustomersPage() {
           {activationStep === 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
               <Input placeholder={t('reseller.pages.customers.activationDialog.customerName')} value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} />
+              <Input placeholder={t('activate.username', { defaultValue: 'Username (API)' })} value={activationForm.client_name} onChange={(event) => setActivationForm((current) => ({ ...current, client_name: event.target.value }))} />
               <Input placeholder={t('reseller.pages.customers.activationDialog.customerEmail')} value={activationForm.customer_email} onChange={(event) => setActivationForm((current) => ({ ...current, customer_email: event.target.value }))} />
               <Input placeholder={t('common.phone')} value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value }))} />
+              <p className="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">{t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })}</p>
             </div>
           ) : null}
           {activationStep === 1 ? (
@@ -279,32 +373,134 @@ export function CustomersPage() {
             </div>
           ) : null}
           {activationStep === 2 ? (
-            <div className="grid gap-3 md:grid-cols-3">
-              <Input type="number" min={1} value={activationForm.duration_value} onChange={(event) => setActivationForm((current) => ({ ...current, duration_value: event.target.value }))} />
-              <select value={activationForm.duration_unit} onChange={(event) => setActivationForm((current) => ({ ...current, duration_unit: event.target.value as DurationUnit }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                <option value="days">{t('common.days')}</option>
-                <option value="months">{t('common.months')}</option>
-                <option value="years">{t('common.years')}</option>
-              </select>
-              <Input type="number" min={0} step="0.01" value={activationForm.price} onChange={(event) => setActivationForm((current) => ({ ...current, price: event.target.value }))} />
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Button type="button" size="sm" variant={activationForm.mode === 'duration' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, mode: 'duration' }))}>{t('common.duration')}</Button>
+                <Button type="button" size="sm" variant={activationForm.mode === 'end_date' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, mode: 'end_date' }))}>{t('common.endDate', { defaultValue: 'End Date' })}</Button>
+              </div>
+              {activationForm.mode === 'duration' ? (
+                <div className="grid gap-3 md:grid-cols-3">
+                  <Input type="number" min={1} value={activationForm.duration_value} onChange={(event) => setActivationForm((current) => ({ ...current, duration_value: event.target.value }))} />
+                  <select value={activationForm.duration_unit} onChange={(event) => setActivationForm((current) => ({ ...current, duration_unit: event.target.value as 'minutes' | 'hours' | 'days' }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                    <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
+                    <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
+                    <option value="days">{t('common.days')}</option>
+                  </select>
+                  <div className="flex flex-wrap gap-2">
+                    {[{ label: '1d', value: '1', unit: 'days' }, { label: '7d', value: '7', unit: 'days' }, { label: '30d', value: '30', unit: 'days' }, { label: '90d', value: '90', unit: 'days' }, { label: '1y', value: '365', unit: 'days' }].map((preset) => (
+                      <Button key={preset.label} type="button" size="sm" variant="outline" onClick={() => setActivationForm((current) => ({ ...current, duration_value: preset.value, duration_unit: preset.unit as 'minutes' | 'hours' | 'days' }))}>{preset.label}</Button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <Input type="date" value={activationForm.end_date} onChange={(event) => setActivationForm((current) => ({ ...current, end_date: event.target.value }))} />
+              )}
+
+              <div className="space-y-3 rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={activationForm.is_scheduled} onChange={(event) => setActivationForm((current) => ({ ...current, is_scheduled: event.target.checked }))} />
+                  {t('activate.scheduleToggle')}
+                </label>
+                {activationForm.is_scheduled ? (
+                  <>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'relative' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'relative' }))}>Relative</Button>
+                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'custom' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'custom' }))}>Custom</Button>
+                    </div>
+                    {activationForm.schedule_mode === 'relative' ? (
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <Input type="number" min={1} value={activationForm.schedule_offset_value} onChange={(event) => setActivationForm((current) => ({ ...current, schedule_offset_value: event.target.value }))} />
+                        <select value={activationForm.schedule_offset_unit} onChange={(event) => setActivationForm((current) => ({ ...current, schedule_offset_unit: event.target.value as 'minutes' | 'hours' | 'days' }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                          <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
+                          <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
+                          <option value="days">{t('common.days')}</option>
+                        </select>
+                        <select value={activationForm.scheduled_timezone} onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_timezone: event.target.value }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                          <option value="UTC">UTC</option>
+                          <option value="America/New_York">America/New_York</option>
+                          <option value="America/Chicago">America/Chicago</option>
+                          <option value="America/Los_Angeles">America/Los_Angeles</option>
+                          <option value="Europe/London">Europe/London</option>
+                          <option value="Europe/Paris">Europe/Paris</option>
+                          <option value="Asia/Tokyo">Asia/Tokyo</option>
+                          <option value="Asia/Dubai">Asia/Dubai</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <Input type="datetime-local" value={activationForm.scheduled_date_time} onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_date_time: event.target.value }))} />
+                        <select value={activationForm.scheduled_timezone} onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_timezone: event.target.value }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                          <option value="UTC">UTC</option>
+                          <option value="America/New_York">America/New_York</option>
+                          <option value="America/Chicago">America/Chicago</option>
+                          <option value="America/Los_Angeles">America/Los_Angeles</option>
+                          <option value="Europe/London">Europe/London</option>
+                          <option value="Europe/Paris">Europe/Paris</option>
+                          <option value="Asia/Tokyo">Asia/Tokyo</option>
+                          <option value="Asia/Dubai">Asia/Dubai</option>
+                        </select>
+                      </div>
+                    )}
+                  </>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('common.price')}</Label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant={priceMode === 'auto' ? 'default' : 'outline'} onClick={() => setPriceMode('auto')}>Auto</Button>
+                  <Button type="button" size="sm" variant={priceMode === 'manual' ? 'default' : 'outline'} onClick={() => setPriceMode('manual')}>Manual</Button>
+                </div>
+                <Input type="number" min={0} step="0.01" value={priceMode === 'auto' ? totalPrice.toFixed(2) : activationForm.price} onChange={(event) => setActivationForm((current) => ({ ...current, price: event.target.value }))} readOnly={priceMode === 'auto'} />
+              </div>
             </div>
           ) : null}
           {activationStep === 3 ? (
             <Card>
               <CardContent className="grid gap-2 p-4 md:grid-cols-2">
                 <div>{activationForm.customer_name}</div>
+                <div>{activationForm.client_name || '-'}</div>
                 <div>{activationForm.customer_email || '-'}</div>
+                <div>{activationForm.customer_phone || '-'}</div>
                 <div>{activationForm.bios_id}</div>
-                <div>{activationForm.program_id}</div>
+                <div>{selectedProgram?.name ?? '-'}</div>
+                <div>{durationDays} {t('common.days')}</div>
+                <div>{expiryPreview ? formatDate(expiryPreview, locale) : '-'}</div>
+                <div>{formatCurrency(totalPrice, 'USD', locale)}</div>
               </CardContent>
             </Card>
           ) : null}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => (activationStep === 0 ? setActivationOpen(false) : setActivationStep((current) => current - 1))}>{activationStep === 0 ? t('common.cancel') : t('common.back')}</Button>
             {activationStep < 3 ? (
-              <Button type="button" onClick={() => setActivationStep((current) => current + 1)}>{t('common.next')}</Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const error = validateActivationStep(activationStep, activationForm, totalPrice, t)
+                  if (error) {
+                    toast.error(error)
+                    return
+                  }
+                  setActivationStep((current) => current + 1)
+                }}
+              >
+                {t('common.next')}
+              </Button>
             ) : (
-              <Button type="button" onClick={() => activateMutation.mutate()} disabled={activateMutation.isPending}>{t('common.activate')}</Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const error = validateActivationStep(activationStep, activationForm, totalPrice, t)
+                  if (error) {
+                    toast.error(error)
+                    return
+                  }
+                  activateMutation.mutate()
+                }}
+                disabled={activateMutation.isPending}
+              >
+                {t('common.activate')}
+              </Button>
             )}
           </DialogFooter>
         </DialogContent>
@@ -367,13 +563,53 @@ export function CustomersPage() {
           }
         }}
       />
+
+      <ConfirmDialog
+        open={pauseTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPauseTarget(null)
+          }
+        }}
+        title={t('common.pause')}
+        description={pauseTarget?.bios_id ?? undefined}
+        confirmLabel={t('common.pause')}
+        onConfirm={() => {
+          if (pauseTarget?.license_id) {
+            pauseMutation.mutate(pauseTarget.license_id)
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        open={resumeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResumeTarget(null)
+          }
+        }}
+        title={resumeTarget?.status === 'cancelled' ? t('common.reactivate') : t('common.resume')}
+        description={resumeTarget?.bios_id ?? undefined}
+        confirmLabel={resumeTarget?.status === 'cancelled' ? t('common.reactivate') : t('common.resume')}
+        onConfirm={() => {
+          if (resumeTarget?.license_id) {
+            resumeMutation.mutate(resumeTarget.license_id)
+          }
+        }}
+      />
     </div>
   )
 }
 
-function durationToDays(value: number, unit: DurationUnit) {
+function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | DurationUnit) {
   if (!Number.isFinite(value) || value <= 0) {
     return 0
+  }
+  if (unit === 'minutes') {
+    return Math.max(1, value / 1440)
+  }
+  if (unit === 'hours') {
+    return Math.max(1, value / 24)
   }
   if (unit === 'months') {
     return value * 30
@@ -395,3 +631,50 @@ function isLikelyBios(value: string | null | undefined): boolean {
   void value
   return false
 }
+
+function buildScheduledDateTime(form: ActivationFormState) {
+  if (form.schedule_mode === 'custom') {
+    return form.scheduled_date_time || undefined
+  }
+  const amount = Math.max(1, Number(form.schedule_offset_value) || 1)
+  const date = new Date()
+  if (form.schedule_offset_unit === 'minutes') date.setMinutes(date.getMinutes() + amount)
+  if (form.schedule_offset_unit === 'hours') date.setHours(date.getHours() + amount)
+  if (form.schedule_offset_unit === 'days') date.setDate(date.getDate() + amount)
+  return date.toISOString()
+}
+
+function validateActivationStep(
+  step: number,
+  form: ActivationFormState,
+  totalPrice: number,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  if (step === 0 && form.customer_name.trim().length < 2) {
+    return t('reseller.pages.customers.validation.customerName')
+  }
+
+  if (step === 1) {
+    if (form.bios_id.trim().length < 5) {
+      return t('reseller.pages.customers.validation.biosId')
+    }
+    if (!form.program_id) {
+      return t('reseller.pages.customers.validation.selectProgram')
+    }
+  }
+
+  if (step >= 2) {
+    if (form.mode === 'duration' && Number(form.duration_value) < 1) {
+      return t('reseller.pages.customers.validation.duration')
+    }
+    if (form.mode === 'end_date' && !form.end_date) {
+      return t('reseller.pages.customers.validation.duration')
+    }
+    if (!Number.isFinite(totalPrice) || totalPrice < 0) {
+      return t('reseller.pages.customers.validation.price')
+    }
+  }
+
+  return ''
+}
+

@@ -74,10 +74,18 @@ export function DashboardPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatsCard title={t('reseller.pages.dashboard.customers')} value={stats?.customers ?? 0} icon={UserRound} color="sky" />
-        <StatsCard title={t('reseller.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
-        <StatsCard title={t('common.revenue')} value={formatCurrency(stats?.revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
-        <StatsCard title={t('reseller.pages.dashboard.monthlyActivations')} value={stats?.monthly_activations ?? 0} icon={KeyRound} color="amber" />
+        <div className="rounded-3xl bg-gradient-to-br from-sky-50 to-cyan-100/60 p-[1px] dark:from-sky-950/40 dark:to-cyan-950/20">
+          <StatsCard title={t('reseller.pages.dashboard.customers')} value={stats?.customers ?? 0} icon={UserRound} color="sky" />
+        </div>
+        <div className="rounded-3xl bg-gradient-to-br from-emerald-50 to-teal-100/60 p-[1px] dark:from-emerald-950/40 dark:to-teal-950/20">
+          <StatsCard title={t('reseller.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
+        </div>
+        <div className="rounded-3xl bg-gradient-to-br from-rose-50 to-orange-100/60 p-[1px] dark:from-rose-950/40 dark:to-orange-950/20">
+          <StatsCard title={t('common.revenue')} value={formatCurrency(stats?.revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+        </div>
+        <div className="rounded-3xl bg-gradient-to-br from-amber-50 to-yellow-100/60 p-[1px] dark:from-amber-950/40 dark:to-yellow-950/20">
+          <StatsCard title={t('reseller.pages.dashboard.monthlyActivations')} value={stats?.monthly_activations ?? 0} icon={KeyRound} color="amber" />
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -108,9 +116,12 @@ export function DashboardPage() {
               <EmptyState title={t('reseller.pages.dashboard.noActivityTitle')} description={t('reseller.pages.dashboard.noActivityDescription')} />
             ) : null}
             {recentActivity.map((entry) => (
-              <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+              <div key={entry.id} className={`rounded-2xl border p-4 ${resolveActivityStyles(entry.action).container}`}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1">
+                    <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${resolveActivityStyles(entry.action).badge}`}>
+                      {resolveActivityStyles(entry.action).icon}
+                    </span>
                     <p className="font-medium text-slate-950 dark:text-white">{entry.action}</p>
                     {entry.description ? <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description}</p> : null}
                   </div>
@@ -122,19 +133,19 @@ export function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="border-b border-sky-100 bg-gradient-to-r from-sky-100 via-cyan-50 to-blue-100 py-4 dark:border-sky-900/40 dark:from-sky-950/40 dark:via-slate-900 dark:to-sky-950/30">
             <CardTitle className="text-lg">{t('reseller.pages.dashboard.quickActions')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button type="button" className="w-full justify-between" onClick={() => navigate(routePaths.reseller.customers(lang))}>
+            <Button type="button" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.customers(lang))}>
               {t('reseller.pages.dashboard.quickActionsList.activateNewCustomer')}
               <ActionIcon className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.reseller.licenses(lang))}>
+            <Button type="button" variant="secondary" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.licenses(lang))}>
               {t('reseller.pages.dashboard.quickActionsList.manageLicenses')}
               <ActionIcon className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.reseller.reports(lang))}>
+            <Button type="button" variant="secondary" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.reports(lang))}>
               {t('reseller.pages.dashboard.quickActionsList.exportReports')}
               <ActionIcon className="h-4 w-4" />
             </Button>
@@ -143,4 +154,33 @@ export function DashboardPage() {
       </div>
     </div>
   )
+}
+
+function resolveActivityStyles(action: string) {
+  if (action.includes('activate')) {
+    return {
+      container: 'border-emerald-200 border-s-4 border-s-emerald-500 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/20',
+      badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+      icon: <ShieldCheck className="h-4 w-4" />,
+    }
+  }
+  if (action.includes('deactivate')) {
+    return {
+      container: 'border-rose-200 border-s-4 border-s-rose-500 bg-rose-50/50 dark:border-rose-900/50 dark:bg-rose-950/20',
+      badge: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
+      icon: <KeyRound className="h-4 w-4" />,
+    }
+  }
+  if (action.includes('renew')) {
+    return {
+      container: 'border-sky-200 border-s-4 border-s-sky-500 bg-sky-50/50 dark:border-sky-900/50 dark:bg-sky-950/20',
+      badge: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+      icon: <Banknote className="h-4 w-4" />,
+    }
+  }
+  return {
+    container: 'border-slate-200 border-s-4 border-s-slate-400 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-950/30',
+    badge: 'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300',
+    icon: <UserRound className="h-4 w-4" />,
+  }
 }

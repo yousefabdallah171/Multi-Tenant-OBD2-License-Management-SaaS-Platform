@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Building2, Search, UserCog, UserRound, Users as UsersIcon } from 'lucide-react'
+import { Building2, Eye, MoreVertical, Search, UserCog, UserRound, Users as UsersIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -10,6 +10,7 @@ import { StatsCard } from '@/components/shared/StatsCard'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
@@ -86,19 +87,25 @@ export function UsersPage() {
         key: 'actions',
         label: t('common.actions'),
         render: (row) => (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}
-            >
-              {row.status === 'active' ? t('common.suspend') : t('common.activate')}
-            </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(row)}>
-              {t('common.delete')}
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" size="sm" variant="ghost">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Eye className="me-2 h-4 w-4" />
+                {t('common.view')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
+                {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
+                {t('common.delete')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

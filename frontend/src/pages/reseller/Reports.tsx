@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { ExportButtons } from '@/components/shared/ExportButtons'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent } from '@/components/ui/card'
@@ -44,6 +45,7 @@ export function ReportsPage() {
   const totalActivations = useMemo(() => (activationsQuery.data?.data ?? []).reduce((sum, item) => sum + item.count, 0), [activationsQuery.data?.data])
   const avgPrice = totalActivations > 0 ? totalRevenue / totalActivations : 0
   const successRate = totalActivations > 0 ? ((statsQuery.data?.stats.active_licenses ?? 0) / totalActivations) * 100 : 0
+  const hasRange = Boolean(range.from && range.to)
 
   return (
     <div className="space-y-6">
@@ -54,7 +56,7 @@ export function ReportsPage() {
         actions={<ExportButtons onExportCsv={() => resellerService.exportCsv({ ...range, period })} onExportPdf={() => resellerService.exportPdf({ ...range, period })} />}
       />
 
-      <Card>
+      <Card className="border-sky-200/80 dark:border-sky-900/40">
         <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px]">
           <DateRangePicker value={range} onChange={setRange} />
           <select
@@ -70,40 +72,62 @@ export function ReportsPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatsCard title={t('reseller.pages.reports.totalRevenue')} value={formatCurrency(totalRevenue, 'USD', locale)} icon={Banknote} color="emerald" />
-        <StatsCard title={t('reseller.pages.reports.totalActivations')} value={totalActivations} icon={Activity} color="sky" />
-        <StatsCard title={t('reseller.pages.reports.avgPrice')} value={formatCurrency(avgPrice, 'USD', locale)} icon={Target} color="amber" />
-        <StatsCard title={t('reseller.pages.reports.successRate')} value={`${Math.max(0, Math.min(100, successRate)).toFixed(1)}%`} icon={Target} color="rose" />
+        <div className="rounded-3xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-[1px] dark:from-emerald-950/30 dark:to-emerald-900/20">
+          <StatsCard title={t('reseller.pages.reports.totalRevenue')} value={formatCurrency(totalRevenue, 'USD', locale)} icon={Banknote} color="emerald" />
+        </div>
+        <div className="rounded-3xl bg-gradient-to-br from-sky-50 to-sky-100/50 p-[1px] dark:from-sky-950/30 dark:to-sky-900/20">
+          <StatsCard title={t('reseller.pages.reports.totalActivations')} value={totalActivations} icon={Activity} color="sky" />
+        </div>
+        <div className="rounded-3xl bg-gradient-to-br from-amber-50 to-amber-100/50 p-[1px] dark:from-amber-950/30 dark:to-amber-900/20">
+          <StatsCard title={t('reseller.pages.reports.avgPrice')} value={formatCurrency(avgPrice, 'USD', locale)} icon={Target} color="amber" />
+        </div>
+        <div className="rounded-3xl bg-gradient-to-br from-rose-50 to-rose-100/50 p-[1px] dark:from-rose-950/30 dark:to-rose-900/20">
+          <StatsCard title={t('reseller.pages.reports.successRate')} value={`${Math.max(0, Math.min(100, successRate)).toFixed(1)}%`} icon={Target} color="rose" />
+        </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <LineChartWidget
-          title={t('common.revenue')}
-          data={revenueQuery.data?.data ?? []}
-          isLoading={revenueQuery.isLoading}
-          xKey="period"
-          series={[{ key: 'revenue', label: t('common.revenue') }]}
-          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
-        />
-        <BarChartWidget
-          title={t('reseller.pages.reports.activationCount')}
-          data={activationsQuery.data?.data ?? []}
-          isLoading={activationsQuery.isLoading}
-          xKey="period"
-          series={[{ key: 'count', label: t('reseller.pages.reports.activationCount') }]}
-        />
-      </div>
+      <div className="h-px bg-gradient-to-r from-transparent via-sky-300 to-transparent dark:via-sky-800" />
 
-      <BarChartWidget
-        title={t('reseller.pages.reports.topPrograms')}
-        data={programsQuery.data?.data ?? []}
-        isLoading={programsQuery.isLoading}
-        xKey="program"
-        horizontal
-        showLabels
-        series={[{ key: 'revenue', label: t('common.revenue') }]}
-        valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
-      />
+      {!hasRange ? (
+        <Card>
+          <CardContent className="p-8">
+            <EmptyState title={lang === 'ar' ? 'اختر نطاق تاريخ لعرض الرسوم' : 'Pick a date range to render charts'} description={lang === 'ar' ? 'حدد تاريخ البداية والنهاية ثم اختر الفترة الزمنية.' : 'Select start and end dates, then choose your reporting period.'} icon={Activity} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {hasRange ? (
+        <>
+          <div className="grid gap-6 xl:grid-cols-2">
+            <LineChartWidget
+              title={t('common.revenue')}
+              data={revenueQuery.data?.data ?? []}
+              isLoading={revenueQuery.isLoading}
+              xKey="period"
+              series={[{ key: 'revenue', label: t('common.revenue') }]}
+              valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+            />
+            <BarChartWidget
+              title={t('reseller.pages.reports.activationCount')}
+              data={activationsQuery.data?.data ?? []}
+              isLoading={activationsQuery.isLoading}
+              xKey="period"
+              series={[{ key: 'count', label: t('reseller.pages.reports.activationCount') }]}
+            />
+          </div>
+
+          <BarChartWidget
+            title={t('reseller.pages.reports.topPrograms')}
+            data={programsQuery.data?.data ?? []}
+            isLoading={programsQuery.isLoading}
+            xKey="program"
+            horizontal
+            showLabels
+            series={[{ key: 'revenue', label: t('common.revenue') }]}
+            valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+          />
+        </>
+      ) : null}
     </div>
   )
 }

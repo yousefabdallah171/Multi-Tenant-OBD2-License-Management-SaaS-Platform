@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Search } from 'lucide-react'
+import { MoreVertical, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { biosService } from '@/services/bios.service'
@@ -90,25 +91,29 @@ export function UsernameManagementPage() {
         key: 'actions',
         label: t('common.actions'),
         render: (row) => (
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="ghost" onClick={() => setUnlockTarget(row)} disabled={!row.username_locked}>
-              {t('superAdmin.pages.usernameManagement.unlock')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setRenameTarget(row)
-                setNewUsername(row.username ?? '')
-              }}
-            >
-              {t('superAdmin.pages.usernameManagement.changeUsername')}
-            </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => resetPasswordMutation.mutate(row.id)}>
-              {t('common.resetPassword')}
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" size="sm" variant="ghost">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setUnlockTarget(row)} disabled={!row.username_locked}>
+                {t('superAdmin.pages.usernameManagement.unlock')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setRenameTarget(row)
+                  setNewUsername(row.username ?? '')
+                }}
+              >
+                {t('superAdmin.pages.usernameManagement.changeUsername')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => resetPasswordMutation.mutate(row.id)}>
+                {t('common.resetPassword')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

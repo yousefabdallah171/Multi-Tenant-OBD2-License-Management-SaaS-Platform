@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowUpRight, PackageSearch } from 'lucide-react'
+import { Activity, ArrowUpRight, BadgeDollarSign, PackageSearch, Timer } from 'lucide-react'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StaggerGroup, StaggerItem } from '@/components/shared/PageTransition'
@@ -76,8 +76,8 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
         <StaggerGroup className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {programs.map((program) => (
             <StaggerItem key={program.id}>
-              <Card className="overflow-hidden">
-                <CardHeader className="border-b border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/40">
+              <Card className="overflow-hidden border-b-2 border-b-sky-500 border-slate-200/80 shadow-sm transition-shadow duration-200 hover:shadow-lg dark:border-slate-800">
+                <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-sky-100 via-cyan-50 to-blue-100 dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-sky-950/40">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <CardTitle className="text-lg">{program.name}</CardTitle>
@@ -92,20 +92,32 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                   <p className="min-h-16 text-sm text-slate-600 dark:text-slate-300">{program.description || t(`${translationPrefix}.noDescription`)}</p>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(`${translationPrefix}.basePrice`)}</p>
+                    <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <BadgeDollarSign className="h-3.5 w-3.5 rounded-full bg-sky-200/60 p-0.5 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" />
+                        {t(`${translationPrefix}.basePrice`)}
+                      </p>
                       <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(`${translationPrefix}.trialDays`)}</p>
+                    <div className="rounded-2xl border border-cyan-100 bg-cyan-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <Timer className="h-3.5 w-3.5 rounded-full bg-cyan-200/60 p-0.5 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300" />
+                        {t(`${translationPrefix}.trialDays`)}
+                      </p>
                       <p className="mt-1 font-semibold">{program.trial_days}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(`${translationPrefix}.licensesSold`)}</p>
+                    <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <Activity className="h-3.5 w-3.5 rounded-full bg-blue-200/60 p-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" />
+                        {t(`${translationPrefix}.licensesSold`)}
+                      </p>
                       <p className="mt-1 font-semibold">{program.licenses_sold}</p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(`${translationPrefix}.activeLicenses`)}</p>
+                    <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <Activity className="h-3.5 w-3.5 rounded-full bg-indigo-200/60 p-0.5 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" />
+                        {t(`${translationPrefix}.activeLicenses`)}
+                      </p>
                       <p className="mt-1 font-semibold">{program.active_licenses_count}</p>
                     </div>
                   </div>
@@ -118,7 +130,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                     {onActivate ? (
                       <Button
                         type="button"
-                        className="shrink-0"
+                        className="shrink-0 shadow-[0_0_0_0_rgba(14,165,233,0.5)] transition-shadow hover:shadow-[0_0_0_8px_rgba(14,165,233,0.15)]"
                         onClick={() =>
                           onActivate({
                             id: program.id,

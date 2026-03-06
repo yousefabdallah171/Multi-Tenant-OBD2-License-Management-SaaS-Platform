@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 
 export interface DataTableColumn<T> {
   key: string
-  label: string
+  label: React.ReactNode
   sortable?: boolean
   className?: string
   render: (row: T) => React.ReactNode
@@ -168,7 +168,7 @@ export function DataTable<T>({
               ? sortedData.map((row) => (
                   <tr
                     key={rowKey(row)}
-                    className={cn('transition hover:bg-slate-50/80 dark:hover:bg-slate-950/60', onRowClick ? 'cursor-pointer' : '')}
+                    className={cn('transition hover:bg-sky-50/70 dark:hover:bg-sky-950/20', onRowClick ? 'cursor-pointer' : '')}
                     onClick={() => onRowClick?.(row)}
                   >
                     {columns.map((column) => (

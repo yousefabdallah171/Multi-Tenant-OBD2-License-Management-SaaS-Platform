@@ -58,36 +58,41 @@ export function ActivityPage() {
       </Card>
 
       <div className="space-y-4">
-        {entries.map((entry) => {
-          const icon = resolveActivityIcon(entry.action)
+        {entries.map((entry, index) => {
+          const visual = resolveActivityVisual(entry.action)
 
           return (
-            <Card key={entry.id}>
-              <CardContent className="flex gap-4 p-6">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-                  {icon}
-                </div>
-                <div className="min-w-0 flex-1 space-y-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200">
-                        {entry.action}
-                      </span>
-                      {entry.description ? <p className="text-sm text-slate-600 dark:text-slate-300">{entry.description}</p> : null}
+            <div key={entry.id} className="relative">
+              {index < entries.length - 1 ? (
+                <span className="absolute start-6 top-16 h-[calc(100%-1rem)] w-px bg-slate-200 dark:bg-slate-800" />
+              ) : null}
+              <Card className={visual.cardClass}>
+                <CardContent className="flex gap-4 p-6">
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${visual.iconWrapClass}`}>
+                    {visual.icon}
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${visual.badgeClass}`}>
+                          {entry.action}
+                        </span>
+                        {entry.description ? <p className="text-sm text-slate-600 dark:text-slate-300">{entry.description}</p> : null}
+                      </div>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
                     </div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(entry.metadata ?? {}).slice(0, 5).map(([key, value]) => (
+                        <span key={key} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 transition-colors hover:bg-sky-100 hover:text-sky-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-sky-950/30 dark:hover:text-sky-300">
+                          {key}: {String(value)}
+                        </span>
+                      ))}
+                      {entry.ip_address ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs text-sky-700 transition-colors hover:bg-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-900/50">{entry.ip_address}</span> : null}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(entry.metadata ?? {}).slice(0, 5).map(([key, value]) => (
-                      <span key={key} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        {key}: {String(value)}
-                      </span>
-                    ))}
-                    {entry.ip_address ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">{entry.ip_address}</span> : null}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           )
         })}
 
@@ -133,22 +138,47 @@ export function ActivityPage() {
   )
 }
 
-function resolveActivityIcon(action: string) {
+function resolveActivityVisual(action: string) {
   if (action.includes('activate')) {
-    return <ShieldPlus className="h-5 w-5" />
+    return {
+      icon: <ShieldPlus className="h-5 w-5" />,
+      iconWrapClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+      cardClass: 'border-s-4 border-s-emerald-500',
+      badgeClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+    }
   }
 
   if (action.includes('deactivate')) {
-    return <ShieldOff className="h-5 w-5" />
+    return {
+      icon: <ShieldOff className="h-5 w-5" />,
+      iconWrapClass: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
+      cardClass: 'border-s-4 border-s-rose-500',
+      badgeClass: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
+    }
   }
 
   if (action.includes('renew')) {
-    return <Undo2 className="h-5 w-5" />
+    return {
+      icon: <Undo2 className="h-5 w-5" />,
+      iconWrapClass: 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300',
+      cardClass: 'border-s-4 border-s-sky-500',
+      badgeClass: 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300',
+    }
   }
 
   if (action.includes('login')) {
-    return <LogIn className="h-5 w-5" />
+    return {
+      icon: <LogIn className="h-5 w-5" />,
+      iconWrapClass: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+      cardClass: 'border-s-4 border-s-slate-500',
+      badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    }
   }
 
-  return <KeyRound className="h-5 w-5" />
+  return {
+    icon: <KeyRound className="h-5 w-5" />,
+    iconWrapClass: 'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300',
+    cardClass: 'border-s-4 border-s-slate-400',
+    badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300',
+  }
 }

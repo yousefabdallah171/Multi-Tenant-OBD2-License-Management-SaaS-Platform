@@ -31,25 +31,35 @@ class IpAnalyticsController extends BaseManagerParentController
         $tenantId = $this->currentTenantId($request);
         $page = (int) ($validated['page'] ?? 1);
         $perPage = (int) ($validated['per_page'] ?? 100);
+        $cacheKey = "ip-analytics:matched:{$tenantId}";
+        $matched = Cache::get($cacheKey);
+        if (! is_array($matched)) {
+            $response = $this->externalApiService->getGlobalLogs();
+            if (! ($response['success'] ?? false)) {
+                return response()->json([
+                    'data' => [],
+                    'meta' => [
+                        'page' => $page,
+                        'per_page' => $perPage,
+                        'total' => 0,
+                        'last_page' => 1,
+                        'has_next_page' => false,
+                        'next_page' => null,
+                    ],
+                    'message' => 'External API is currently unavailable.',
+                ]);
+            }
 
-        $response = $this->externalApiService->getGlobalLogs();
-        if (! ($response['success'] ?? false)) {
-            return response()->json([
-                'data' => [],
-                'meta' => [
-                    'page' => $page,
-                    'per_page' => $perPage,
-                    'total' => 0,
-                    'last_page' => 1,
-                    'has_next_page' => false,
-                    'next_page' => null,
-                ],
-                'message' => 'External API is currently unavailable.',
-            ]);
+            $parsed = $this->ipAnalyticsService->parseExternalLogs((string) ($response['data']['raw'] ?? ''));
+            $matched = $this->ipAnalyticsService->matchLogsToDatabaseRecords($parsed, $tenantId);
+            $matched = array_values(array_filter($matched, static fn (array $row): bool => ($row['program_id'] ?? null) !== null));
+            $matched = array_reverse($matched);
+            try {
+                Cache::put($cacheKey, $matched, now()->addMinutes(5));
+            } catch (\Throwable) {
+                // Skip cache failures so endpoint still works.
+            }
         }
-
-        $parsed = $this->ipAnalyticsService->parseExternalLogs((string) ($response['data']['raw'] ?? ''));
-        $matched = $this->ipAnalyticsService->matchLogsToDatabaseRecords($parsed, $tenantId);
 
         $geoByIp = $this->fetchGeoData(array_values(array_unique(array_column($matched, 'ip_address'))));
         $rows = collect($this->ipAnalyticsService->formatResponse($matched))

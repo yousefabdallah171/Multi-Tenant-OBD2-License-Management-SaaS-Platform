@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { PieChartWidget } from '@/components/charts/PieChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { Input } from '@/components/ui/input'
@@ -58,6 +59,8 @@ export function IpAnalyticsPage() {
       to: range.to || undefined,
       country: country || undefined,
     }),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   })
 
   const rows = useMemo<SoftwareIpRow[]>(() => (logsQuery.data?.data ?? []).map((row, index) => ({
@@ -152,24 +155,30 @@ export function IpAnalyticsPage() {
         </CardContent>
       </Card>
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        rowKey={(row) => row.id}
-        isLoading={logsQuery.isLoading || logsQuery.isFetching}
-        pagination={{
-          page,
-          lastPage: meta?.last_page ?? 1,
-          total,
-          perPage,
-        }}
-        onPageChange={(nextPage) => setPage(nextPage)}
-        onPageSizeChange={(size) => {
-          setPerPage(size)
-          setPage(1)
-        }}
-      />
+      {rows.length === 0 && !logsQuery.isLoading && !logsQuery.isFetching ? (
+        <EmptyState
+          title={t('ipAnalytics.emptyTitle', { defaultValue: 'No matching IP logs found' })}
+          description={t('ipAnalytics.emptyDescription', { defaultValue: 'No matching IP logs found for your tenant software.' })}
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={rows}
+          rowKey={(row) => row.id}
+          isLoading={logsQuery.isLoading || logsQuery.isFetching}
+          pagination={{
+            page,
+            lastPage: meta?.last_page ?? 1,
+            total,
+            perPage,
+          }}
+          onPageChange={(nextPage) => setPage(nextPage)}
+          onPageSizeChange={(size) => {
+            setPerPage(size)
+            setPage(1)
+          }}
+        />
+      )}
     </div>
   )
 }
-

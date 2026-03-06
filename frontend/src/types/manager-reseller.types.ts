@@ -228,6 +228,9 @@ export interface ActivateLicenseData {
   program_id: number
   duration_days: number
   price: number
+  is_scheduled?: boolean
+  scheduled_date_time?: string
+  scheduled_timezone?: string
 }
 
 export interface RenewLicenseData {

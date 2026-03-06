@@ -129,6 +129,22 @@ class LicenseController extends BaseResellerController
         ]);
     }
 
+    public function destroy(Request $request, License $license): JsonResponse
+    {
+        $resolved = $this->resolveLicense($request, $license);
+        if ($resolved->status === 'active') {
+            return response()->json([
+                'message' => 'Active licenses cannot be deleted.',
+            ], 422);
+        }
+
+        $resolved->delete();
+
+        return response()->json([
+            'message' => 'License deleted successfully.',
+        ]);
+    }
+
     public function pause(Request $request, License $license): JsonResponse
     {
         $resolved = $this->resolveLicense($request, $license);
@@ -210,6 +226,29 @@ class LicenseController extends BaseResellerController
         return response()->json([
             'message' => 'Selected licenses deactivated successfully.',
             'count' => $licenses->count(),
+        ]);
+    }
+
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $licenses = $this->licenseQuery($request)
+            ->whereIn('id', $validated['ids'])
+            ->where('status', '!=', 'active')
+            ->get();
+
+        $count = $licenses->count();
+        foreach ($licenses as $license) {
+            $license->delete();
+        }
+
+        return response()->json([
+            'message' => 'Selected licenses deleted successfully.',
+            'count' => $count,
         ]);
     }
 

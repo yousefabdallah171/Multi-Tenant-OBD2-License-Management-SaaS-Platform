@@ -204,6 +204,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
 
         Route::get('/customers', [ManagerCustomerController::class, 'index']);
         Route::get('/customers/{user}', [ManagerCustomerController::class, 'show']);
+        Route::delete('/customers/{user}', [ManagerCustomerController::class, 'destroy']);
         Route::get('/licenses', [ManagerLicenseController::class, 'index']);
         Route::get('/licenses/expiring', [ManagerLicenseController::class, 'expiring']);
         Route::get('/licenses/{license}', [ManagerLicenseController::class, 'show']);
@@ -243,6 +244,8 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::get('/licenses/{license}', [ResellerLicenseController::class, 'show']);
         Route::post('/licenses/bulk-renew', [ResellerLicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-deactivate', [ResellerLicenseController::class, 'bulkDeactivate']);
+        Route::post('/licenses/bulk-delete', [ResellerLicenseController::class, 'bulkDelete']);
+        Route::delete('/licenses/{license}', [ResellerLicenseController::class, 'destroy']);
         Route::post('/licenses/{license}/pause', [ResellerLicenseController::class, 'pause']);
         Route::post('/licenses/{license}/resume', [ResellerLicenseController::class, 'resume']);
         Route::get('/software', [ResellerSoftwareController::class, 'index']);
@@ -265,6 +268,8 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::post('/licenses/{license}/resume', [LicenseController::class, 'resume']);
         Route::post('/licenses/bulk-renew', [LicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-deactivate', [LicenseController::class, 'bulkDeactivate']);
+        Route::post('/licenses/bulk-delete', [LicenseController::class, 'bulkDelete']);
+        Route::delete('/licenses/{license}', [LicenseController::class, 'destroy']);
     });
 
     // ============================================================

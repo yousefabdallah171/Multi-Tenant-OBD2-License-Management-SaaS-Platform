@@ -42,6 +42,16 @@ export const licenseService = {
     })
     return response.data
   },
+  async bulkDelete(ids: number[]) {
+    const response = await api.post<{ message: string; count: number }>('/licenses/bulk-delete', {
+      ids,
+    })
+    return response.data
+  },
+  async delete(id: number) {
+    const response = await api.delete<{ message: string }>(`/licenses/${id}`)
+    return response.data
+  },
   async pause(id: number) {
     const response = await api.post<{ message: string; data: LicenseSummary }>(`/licenses/${id}/pause`)
     return response.data

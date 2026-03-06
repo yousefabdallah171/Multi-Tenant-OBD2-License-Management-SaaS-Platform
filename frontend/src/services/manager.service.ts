@@ -82,6 +82,10 @@ export const managerService = {
     const { data } = await api.get<{ data: ManagerCustomerDetails }>(`/manager/customers/${id}`)
     return data
   },
+  async deleteCustomer(id: number) {
+    const { data } = await api.delete<{ message: string }>(`/manager/customers/${id}`)
+    return data
+  },
   async getLicenses(params?: LicenseFilters) {
     const { data } = await api.get<PaginatedResponse<LicenseSummary>>('/manager/licenses', { params })
     return data

@@ -74,6 +74,10 @@
     "view": "عرض",
     "edit": "تعديل",
     "delete": "حذف",
+    "deleteSelected": "حذف المحدد",
+    "bulkDelete": "حذف جماعي",
+    "bulkDeleteSuccess": "تم حذف التراخيص المحددة بنجاح.",
+    "selected": "محدد",
     "search": "بحث",
     "all": "الكل",
     "active": "نشط",
@@ -102,9 +106,12 @@
     "user": "المستخدم",
     "username": "اسم المستخدم",
     "price": "السعر",
-    "duration": "المدة",
-    "unit": "الوحدة",
-    "days": "أيام",
+    "duration": "\u0627\u0644\u0645\u062f\u0629",
+    "endDate": "\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0627\u0646\u062a\u0647\u0627\u0621",
+    "unit": "\u0627\u0644\u0648\u062d\u062f\u0629",
+    "minutes": "\u062f\u0642\u0627\u0626\u0642",
+    "hours": "\u0633\u0627\u0639\u0627\u062a",
+    "days": "\u0623\u064a\u0627\u0645",
     "months": "أشهر",
     "years": "سنوات",
     "renew": "تجديد",
@@ -693,7 +700,9 @@
         "searchPlaceholder": "ابحث بعنوان IP",
         "allUsers": "كل المستخدمين",
         "allCountries": "كل الدول",
-        "allReputationScores": "كل درجات السمعة",
+        "allReputationScores": "كل تصنيفات السمعة",
+        "emptyTitle": "لا توجد سجلات IP مطابقة",
+        "emptyDescription": "لم يتم العثور على سجلات IP مطابقة لبرامج الشركة.",
         "low": "منخفضة",
         "medium": "متوسطة",
         "high": "مرتفعة"
@@ -1078,7 +1087,7 @@
           "customerEmail": "أدخل بريدًا إلكترونيًا صحيحًا للعميل.",
           "biosId": "يجب أن يكون BIOS ID مكونًا من 5 أحرف على الأقل.",
           "selectProgram": "اختر برنامجًا قبل المتابعة.",
-          "duration": "يجب أن تكون المدة 1 على الأقل.",
+          "duration": "\u0627\u0644\u0645\u062f\u0629",
           "price": "أدخل سعرًا صحيحًا.",
           "renew": "أدخل مدة وسعرًا صالحين قبل التجديد.",
           "requestFailed": "فشل تنفيذ الطلب."
@@ -1123,7 +1132,9 @@
         },
         "confirm": {
           "bulkDeactivateTitle": "إلغاء التراخيص المحددة؟",
-          "bulkDeactivateDescription": "سيؤدي هذا إلى إلغاء {{count}} من التراخيص المحددة.",
+          "bulkDeactivateDescription": "\u0633\u064a\u0624\u062f\u064a \u0647\u0630\u0627 \u0625\u0644\u0649 \u0625\u0644\u063a\u0627\u0621 {{count}} \u0645\u0646 \u0627\u0644\u062a\u0631\u0627\u062e\u064a\u0635 \u0627\u0644\u0645\u062d\u062f\u062f\u0629.",
+          "bulkDeleteTitle": "\u062d\u0630\u0641 \u0627\u0644\u062a\u0631\u0627\u062e\u064a\u0635 \u0627\u0644\u0645\u062d\u062f\u062f\u0629\u061f",
+          "bulkDeleteDescription": "\u0633\u064a\u0624\u062f\u064a \u0647\u0630\u0627 \u0625\u0644\u0649 \u062d\u0630\u0641 {{count}} \u0645\u0646 \u0627\u0644\u062a\u0631\u0627\u062e\u064a\u0635 \u0627\u0644\u0645\u062d\u062f\u062f\u0629 \u0646\u0647\u0627\u0626\u064a\u064b\u0627.",
           "deactivateTitle": "إلغاء الترخيص؟",
           "deactivateDescription": "سيؤدي هذا إلى إلغاء الترخيص الخاص بـ BIOS ID: {{biosId}}",
           "deactivateSelected": "إلغاء المحدد",
@@ -1278,12 +1289,12 @@
     "customerEmail": "البريد الإلكتروني للعميل",
     "biosId": "معرّف BIOS",
     "biosIdHint": "الرقم التسلسلي لبيوس الجهاز.",
-    "duration": "المدة",
+    "duration": "\u0627\u0644\u0645\u062f\u0629",
     "durationMode": "المدة",
     "endDateMode": "تاريخ الانتهاء",
-    "minutes": "دقائق",
-    "hours": "ساعات",
-    "days": "أيام",
+    "minutes": "\u062f\u0642\u0627\u0626\u0642",
+    "hours": "\u0633\u0627\u0639\u0627\u062a",
+    "days": "\u0623\u064a\u0627\u0645",
     "price": "السعر الإجمالي",
     "priceAuto": "يُحسب تلقائيًا",
     "priceModeAuto": "تلقائي",
@@ -1383,3 +1394,10 @@
     "empty": "لا يوجد مستخدمون متصلون"
   }
 }
+
+
+
+
+
+
+
