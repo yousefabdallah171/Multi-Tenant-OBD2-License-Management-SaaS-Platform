@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES } from '@/lib/timezones'
 import { activateLicense } from '@/services/activation.service'
 import { settingsService } from '@/services/settings.service'
@@ -96,6 +97,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
   const [form, setForm] = useState(EMPTY_FORM)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
+  const [submitError, setSubmitError] = useState('')
   const timezoneQuery = useQuery({
     queryKey: ['activation', 'server-timezone'],
     queryFn: () => settingsService.getOnlineWidgetSettings(),
@@ -270,6 +272,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         scheduled_timezone: form.is_scheduled ? form.scheduled_timezone : undefined,
       }),
     onSuccess: (data) => {
+      setSubmitError('')
       if (form.is_scheduled && form.scheduled_date_time) {
         toast.success(t('activate.scheduledSuccess', { dateTime: new Date(form.scheduled_date_time).toLocaleString() }))
       } else {
@@ -278,14 +281,8 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       onSuccess?.()
     },
     onError: (error: unknown) => {
-      const rawMessage =
-        typeof error === 'object' && error !== null && 'response' in error
-          ? (Object.values((error as { response?: { data?: { errors?: Record<string, string[]> } } }).response?.data?.errors ?? {})[0]?.[0]
-            ?? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-            ?? t('activate.errorTitle'))
-          : t('activate.errorTitle')
-
-      const normalized = String(rawMessage).toLowerCase()
+      const rawMessage = resolveApiErrorMessage(error, t('activate.errorTitle'))
+      const normalized = rawMessage.toLowerCase()
       let message = rawMessage
 
       if (normalized.includes('no external api configured') || normalized.includes('not configured for external activation')) {
@@ -296,6 +293,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         message = t('activate.biosBlacklisted')
       }
 
+      setSubmitError(message)
       toast.error(message)
     },
   })
@@ -306,6 +304,8 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     : ''
 
   function handleSubmit() {
+    setSubmitError('')
+
     if (!isExternalConfigured) {
       toast.error(t('software.noApiWarning'))
       return
@@ -355,6 +355,12 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
 
   return (
     <div className="space-y-4">
+      {submitError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+          {submitError}
+        </div>
+      ) : null}
+
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
         <span className="font-medium text-slate-900 dark:text-slate-100">{program.name}</span>
       </div>

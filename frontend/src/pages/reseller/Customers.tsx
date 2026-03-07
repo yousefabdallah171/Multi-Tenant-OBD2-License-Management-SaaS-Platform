@@ -23,7 +23,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate, isLikelyBios } from '@/lib/utils'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { canReactivateLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -31,7 +32,7 @@ import { resellerService } from '@/services/reseller.service'
 import { formatUsername, rawBiosId } from '@/utils/biosId'
 import type { RenewLicenseData, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -560,21 +561,19 @@ export function CustomersPage() {
             }}
           />
         ),
-        render: (row) => (
+        render: (row) => typeof row.license_id === 'number' ? (
           <input
             type="checkbox"
-            disabled={!row.license_id}
-            checked={Boolean(row.license_id && selectedLicenseIds.includes(row.license_id))}
-            onChange={(event) => {
-              if (!row.license_id) return
-              if (event.target.checked) {
-                setSelectedLicenseIds((current) => [...new Set([...current, row.license_id!])])
-                return
-              }
-              setSelectedLicenseIds((current) => current.filter((id) => id !== row.license_id))
-            }}
-          />
-        ),
+          checked={selectedLicenseIds.includes(row.license_id)}
+          onChange={(event) => {
+            if (event.target.checked) {
+              setSelectedLicenseIds((current) => [...new Set([...current, row.license_id!])])
+              return
+            }
+            setSelectedLicenseIds((current) => current.filter((id) => id !== row.license_id!))
+          }}
+        />
+      ) : null,
       },
       {
         key: 'customer',
@@ -618,13 +617,17 @@ export function CustomersPage() {
         render: (row) => row.phone ?? '-',
       },
       { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
-      { key: 'status', label: text.table.status, sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale) : '-') },
+      { key: 'status', label: text.table.status, sortable: true, sortValue: (row) => getLicenseDisplayStatus(row), render: (row) => <StatusBadge status={getLicenseDisplayStatus(row)} /> },
       { key: 'price', label: text.table.price, sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },
       { key: 'expiry', label: text.table.expiry, sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
       {
         key: 'actions',
         label: text.table.actions,
-        render: (row) => (
+        render: (row) => {
+          const displayStatus = getLicenseDisplayStatus(row)
+
+          return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" size="sm" variant="ghost">
@@ -648,45 +651,42 @@ export function CustomersPage() {
                 <Pencil className="me-2 h-4 w-4" />
                 {t('common.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
-                {row.status === 'pending' && (
+                {typeof row.license_id === 'number' && shouldRenewLicense(row) && (
                   <DropdownMenuItem
-                    disabled={!row.license_id}
                     onClick={(event) => {
                       event.stopPropagation()
-                      if (row.license_id) setRenewLicenseId(row.license_id)
+                      setRenewLicenseId(row.license_id!)
                     }}
                   >
                     <RotateCw className="me-2 h-4 w-4" />
                     {text.actions.renew}
                   </DropdownMenuItem>
                 )}
-                {row.status === 'cancelled' && (
+                {typeof row.license_id === 'number' && canReactivateLicense(row) && (
                   <DropdownMenuItem
-                    disabled={!row.license_id || resumeMutation.isPending}
+                    disabled={resumeMutation.isPending}
                     onClick={(event) => {
                       event.stopPropagation()
-                      if (row.license_id) resumeMutation.mutate(row.license_id)
+                      resumeMutation.mutate(row.license_id!)
                     }}
                   >
                     <Play className="me-2 h-4 w-4" />
                     {text.actions.reactivate}
                   </DropdownMenuItem>
                 )}
-                {row.status !== 'cancelled' && (
+                {typeof row.license_id === 'number' && (displayStatus === 'active' || displayStatus === 'expired') && (
                   <>
                     <DropdownMenuItem
-                      disabled={!row.license_id}
                       onClick={(event) => {
                         event.stopPropagation()
-                        setRenewLicenseId(row.license_id)
+                        setRenewLicenseId(row.license_id!)
                       }}
                     >
                       <RotateCw className="me-2 h-4 w-4" />
-                      {text.actions.renew}
+                      {displayStatus === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : text.actions.renew}
                     </DropdownMenuItem>
-                    {row.status === 'active' && (
+                    {displayStatus === 'active' && (
                       <DropdownMenuItem
-                        disabled={!row.license_id}
                         onClick={(event) => {
                           event.stopPropagation()
                           setPauseTarget(row)
@@ -696,16 +696,17 @@ export function CustomersPage() {
                         {text.actions.pause}
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem
-                      disabled={!row.license_id}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        setDeactivateTarget(row)
-                      }}
-                    >
-                      <ShieldOff className="me-2 h-4 w-4" />
-                      {text.actions.deactivate}
-                    </DropdownMenuItem>
+                    {displayStatus === 'active' ? (
+                      <DropdownMenuItem
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setDeactivateTarget(row)
+                        }}
+                      >
+                        <ShieldOff className="me-2 h-4 w-4" />
+                        {text.actions.deactivate}
+                      </DropdownMenuItem>
+                    ) : null}
                   </>
                 )}
                 <DropdownMenuItem
@@ -719,7 +720,8 @@ export function CustomersPage() {
                 </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        ),
+          )
+        },
       },
     ],
     [allVisibleSelected, lang, locale, selectedLicenseIds, selectableIds, someVisibleSelected, text],
@@ -748,7 +750,7 @@ export function CustomersPage() {
         <TabsList>
           {STATUS_OPTIONS.map((option) => (
             <TabsTrigger key={option} value={option}>
-              {text.statusOptions[option]}
+              {option === 'scheduled' ? t('common.scheduled', { defaultValue: 'Scheduled' }) : text.statusOptions[option]}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -1267,9 +1269,9 @@ export function CustomersPage() {
             setRenewLicenseId(null)
           }
         }}
-        title={text.renewDialog.title}
+        title={renewLicense?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : text.renewDialog.title}
         description={renewLicense ? text.renewDialog.descriptionWithProgram(renewLicense.program ?? text.detail.program, renewLicense.bios_id) : text.renewDialog.descriptionFallback}
-        confirmLabel={text.renewDialog.renew}
+        confirmLabel={renewLicense?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : text.renewDialog.renew}
         confirmLoadingLabel={text.renewDialog.renewing}
         cancelLabel={text.renewDialog.cancel}
         anchorDate={renewLicense?.expires_at}
@@ -1535,9 +1537,7 @@ function normalizePhoneInput(value: string) {
 
 function getApiErrorMessage(error: unknown, fallback: string) {
   if (axios.isAxiosError(error)) {
-    return (error.response?.data as { message?: string; errors?: Record<string, string[]> } | undefined)?.message
-      ?? Object.values((error.response?.data as { errors?: Record<string, string[]> } | undefined)?.errors ?? {})[0]?.[0]
-      ?? fallback
+    return resolveApiErrorMessage(error, fallback)
   }
 
   return fallback

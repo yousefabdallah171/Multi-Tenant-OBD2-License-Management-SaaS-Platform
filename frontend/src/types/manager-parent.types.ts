@@ -204,7 +204,14 @@ export interface CustomerSummary {
   reseller: string | null
   program: string | null
   status: string | null
+  activated_at?: string | null
+  start_at?: string | null
   expiry: string | null
+  scheduled_at?: string | null
+  scheduled_timezone?: string | null
+  is_scheduled?: boolean
+  paused_at?: string | null
+  pause_remaining_minutes?: number | null
   license_count: number
   has_active_license?: boolean
 }
@@ -226,7 +233,13 @@ export interface CustomerDetails extends CustomerSummary {
     duration_days?: number
     price: number
     activated_at: string | null
+    start_at?: string | null
     expires_at: string | null
+    scheduled_at?: string | null
+    scheduled_timezone?: string | null
+    is_scheduled?: boolean
+    paused_at?: string | null
+    pause_remaining_minutes?: number | null
   }>
   resellers_summary?: Array<{
     reseller_id: number | null
@@ -377,7 +390,9 @@ export interface ManagerParentApiStatus {
   status: 'online' | 'offline' | 'degraded'
   response_time_ms: number
   last_checked: string
-  external_url: string
+  external_url: string | null
+  status_code?: number
+  message?: string | null
   program_id?: number | null
   program_name?: string | null
   software_id?: number | null

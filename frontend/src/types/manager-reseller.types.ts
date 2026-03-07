@@ -103,7 +103,14 @@ export interface ManagerCustomerSummary {
   reseller_id: number | null
   program: string | null
   status: string | null
+  activated_at?: string | null
+  start_at?: string | null
   expiry: string | null
+  scheduled_at?: string | null
+  scheduled_timezone?: string | null
+  is_scheduled?: boolean
+  paused_at?: string | null
+  pause_remaining_minutes?: number | null
   license_count: number
   has_active_license?: boolean
 }
@@ -125,7 +132,13 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
     duration_days?: number
     price: number
     activated_at: string | null
+    start_at?: string | null
     expires_at: string | null
+    scheduled_at?: string | null
+    scheduled_timezone?: string | null
+    is_scheduled?: boolean
+    paused_at?: string | null
+    pause_remaining_minutes?: number | null
   }>
   resellers_summary?: Array<{
     reseller_id: number | null
@@ -169,7 +182,14 @@ export interface ResellerCustomerSummary {
   program_id: number | null
   status: 'active' | 'expired' | 'suspended' | 'cancelled' | 'pending'
   price: number
+  activated_at: string | null
+  start_at?: string | null
   expiry: string | null
+  scheduled_at?: string | null
+  scheduled_timezone?: string | null
+  is_scheduled?: boolean
+  paused_at?: string | null
+  pause_remaining_minutes?: number | null
   license_count: number
 }
 
@@ -181,7 +201,13 @@ export interface ResellerCustomerDetails extends ResellerCustomerSummary {
     status: string
     price: number
     activated_at: string | null
+    start_at?: string | null
     expires_at: string | null
+    scheduled_at?: string | null
+    scheduled_timezone?: string | null
+    is_scheduled?: boolean
+    paused_at?: string | null
+    pause_remaining_minutes?: number | null
   }>
 }
 
@@ -199,7 +225,13 @@ export interface LicenseSummary {
   duration_days: number
   price: number
   activated_at: string | null
+  start_at?: string | null
   expires_at: string | null
+  scheduled_at?: string | null
+  scheduled_timezone?: string | null
+  is_scheduled?: boolean
+  paused_at?: string | null
+  pause_remaining_minutes?: number | null
   status: 'active' | 'expired' | 'suspended' | 'cancelled' | 'pending'
 }
 

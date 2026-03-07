@@ -20,6 +20,88 @@ export function formatCurrency(value: number, currency = 'USD', locale = 'en-US'
   }).format(value)
 }
 
+export function hasFutureDate(value: string | Date | null | undefined) {
+  if (!value) {
+    return false
+  }
+
+  const parsed = new Date(value)
+  if (!Number.isFinite(parsed.getTime())) {
+    return false
+  }
+
+  return parsed.getTime() > Date.now()
+}
+
+type SchedulableLicense = {
+  status?: string | null
+  is_scheduled?: boolean | null
+  scheduled_at?: string | Date | null
+  activated_at?: string | Date | null
+  start_at?: string | Date | null
+  paused_at?: string | Date | null
+  pause_remaining_minutes?: number | null
+}
+
+export function isScheduledLicense(value: SchedulableLicense | null | undefined) {
+  if (!value) {
+    return false
+  }
+
+  return value.status === 'pending' && Boolean(value.is_scheduled)
+}
+
+export function isPausedPendingLicense(value: SchedulableLicense | null | undefined) {
+  if (!value) {
+    return false
+  }
+
+  return value.status === 'pending'
+    && !value.is_scheduled
+    && Boolean(value.paused_at)
+    && Number(value.pause_remaining_minutes ?? 0) > 0
+}
+
+export function isPlainPendingLicense(value: SchedulableLicense | null | undefined) {
+  if (!value) {
+    return false
+  }
+
+  return value.status === 'pending' && !isScheduledLicense(value) && !isPausedPendingLicense(value)
+}
+
+export function canReactivateLicense(value: SchedulableLicense | null | undefined) {
+  if (!value?.status) {
+    return false
+  }
+
+  return value.status === 'cancelled' || isPausedPendingLicense(value)
+}
+
+export function shouldRenewLicense(value: SchedulableLicense | null | undefined) {
+  if (!value?.status) {
+    return false
+  }
+
+  return value.status === 'expired' || isScheduledLicense(value) || isPlainPendingLicense(value)
+}
+
+export function getLicenseDisplayStatus<T extends SchedulableLicense>(value: T | null | undefined) {
+  if (!value?.status) {
+    return 'pending' as const
+  }
+
+  if (isScheduledLicense(value)) {
+    return 'scheduled' as const
+  }
+
+  return value.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'
+}
+
+export function getLicenseStartDate(value: SchedulableLicense | null | undefined) {
+  return value?.start_at ?? value?.scheduled_at ?? value?.activated_at ?? null
+}
+
 export function formatDuration(durationDays: number) {
   const totalMinutes = Math.round(durationDays * 24 * 60)
 

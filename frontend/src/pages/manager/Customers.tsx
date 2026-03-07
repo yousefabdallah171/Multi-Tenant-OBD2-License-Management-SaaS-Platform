@@ -17,7 +17,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate, isLikelyBios } from '@/lib/utils'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { canReactivateLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
@@ -25,7 +26,7 @@ import { programService } from '@/services/program.service'
 import type { DurationUnit, ManagerCustomerSummary, RenewLicenseData } from '@/types/manager-reseller.types'
 import { formatUsername } from '@/utils/biosId'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -137,7 +138,7 @@ export function CustomersPage() {
       setPriceMode('auto')
       invalidate(queryClient)
     },
-    onError: () => toast.error(t('common.error')),
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
   })
 
   const renewMutation = useMutation({
@@ -268,21 +269,19 @@ export function CustomersPage() {
           }}
         />
       ),
-      render: (row) => (
+      render: (row) => typeof row.license_id === 'number' ? (
         <input
           type="checkbox"
-          checked={Boolean(row.license_id && selectedLicenseIds.includes(row.license_id))}
-          disabled={!row.license_id}
+          checked={selectedLicenseIds.includes(row.license_id)}
           onChange={(event) => {
-            if (!row.license_id) return
             if (event.target.checked) {
-              setSelectedLicenseIds((current) => [...new Set([...current, row.license_id as number])])
+              setSelectedLicenseIds((current) => [...new Set([...current, row.license_id!])])
               return
             }
-            setSelectedLicenseIds((current) => current.filter((id) => id !== row.license_id))
+            setSelectedLicenseIds((current) => current.filter((id) => id !== row.license_id!))
           }}
         />
-      ),
+      ) : null,
     },
     {
       key: 'name',
@@ -320,14 +319,18 @@ export function CustomersPage() {
       key: 'status',
       label: t('common.status'),
       sortable: true,
-      sortValue: (row) => row.status ?? '',
-      render: (row) => (row.status ? <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'} /> : '-'),
+      sortValue: (row) => getLicenseDisplayStatus(row),
+      render: (row) => (row.status ? <StatusBadge status={getLicenseDisplayStatus(row)} /> : '-'),
     },
+    { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale) : '-') },
     { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
     {
       key: 'actions',
       label: t('common.actions'),
-      render: (row) => (
+      render: (row) => {
+        const displayStatus = getLicenseDisplayStatus(row)
+
+        return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" size="sm" variant="ghost">
@@ -340,29 +343,38 @@ export function CustomersPage() {
                 {t('common.view')}
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setRenewLicenseId(row.license_id ?? null)} disabled={!row.license_id}>
-              <RotateCw className="me-2 h-4 w-4" />
-              {t('common.renew')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDeactivateTarget(row)} disabled={!row.license_id}>
-              <ShieldOff className="me-2 h-4 w-4" />
-              {t('common.deactivate')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setPauseTarget(row)} disabled={!row.license_id || row.status !== 'active'}>
-              <Pause className="me-2 h-4 w-4" />
-              {t('common.pause')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => row.status === 'cancelled' && row.license_id && resumeMutation.mutate(row.license_id)} disabled={!row.license_id || row.status !== 'cancelled'}>
-              <Play className="me-2 h-4 w-4" />
-              {t('common.reactivate')}
-            </DropdownMenuItem>
+            {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) ? (
+              <DropdownMenuItem onClick={() => setRenewLicenseId(row.license_id!)}>
+                <RotateCw className="me-2 h-4 w-4" />
+                {displayStatus === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
+              </DropdownMenuItem>
+            ) : null}
+            {typeof row.license_id === 'number' && displayStatus === 'active' ? (
+              <>
+                <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
+                  <ShieldOff className="me-2 h-4 w-4" />
+                  {t('common.deactivate')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPauseTarget(row)}>
+                  <Pause className="me-2 h-4 w-4" />
+                  {t('common.pause')}
+                </DropdownMenuItem>
+              </>
+            ) : null}
+            {typeof row.license_id === 'number' && canReactivateLicense(row) ? (
+              <DropdownMenuItem onClick={() => resumeMutation.mutate(row.license_id!)}>
+                <Play className="me-2 h-4 w-4" />
+                {t('common.reactivate')}
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
               <Trash2 className="me-2 h-4 w-4" />
               {t('common.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      ),
+        )
+      },
     },
   ], [allVisibleSelected, lang, locale, selectableIds, selectedLicenseIds, someVisibleSelected, t])
 
@@ -383,7 +395,7 @@ export function CustomersPage() {
       <Tabs value={status} onValueChange={(value) => setStatus(value as (typeof STATUS_OPTIONS)[number])}>
         <TabsList>
           {STATUS_OPTIONS.map((option) => (
-            <TabsTrigger key={option} value={option}>{option === 'all' ? t('common.all') : t(`common.${option}`)}</TabsTrigger>
+            <TabsTrigger key={option} value={option}>{option === 'all' ? t('common.all') : option === 'scheduled' ? t('common.scheduled', { defaultValue: 'Scheduled' }) : t(`common.${option}`)}</TabsTrigger>
           ))}
         </TabsList>
         <TabsContent value={status} className="space-y-4">
@@ -627,9 +639,9 @@ export function CustomersPage() {
       <RenewLicenseDialog
         open={renewLicenseId !== null}
         onOpenChange={(open) => !open && setRenewLicenseId(null)}
-        title={t('common.renew')}
+        title={renewTarget?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
         description={renewTarget ? t('reseller.pages.licenses.renewDialog.description', { program: renewTarget.program ?? t('common.program'), biosId: renewTarget.bios_id ?? '-' }) : t('reseller.pages.licenses.renewDialog.fallback')}
-        confirmLabel={t('common.renew')}
+        confirmLabel={renewTarget?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
         confirmLoadingLabel={t('common.loading')}
         cancelLabel={t('common.cancel')}
         anchorDate={renewTarget?.expiry}

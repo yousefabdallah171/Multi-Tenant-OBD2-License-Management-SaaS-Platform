@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ApiLog;
 use App\Support\ExternalApiSecurity;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -30,6 +31,7 @@ class ExternalApiService
                 'data' => ['response' => $body],
                 'status_code' => $statusCode,
             ],
+            $this->fastFailOptions(),
         );
     }
 
@@ -51,6 +53,7 @@ class ExternalApiService
                 'data' => ['response' => $body],
                 'status_code' => $statusCode,
             ],
+            $this->fastFailOptions(),
         );
     }
 
@@ -72,6 +75,7 @@ class ExternalApiService
                     'status_code' => $statusCode,
                 ];
             },
+            $this->fastFailOptions(),
         );
     }
 
@@ -88,6 +92,7 @@ class ExternalApiService
                 'data' => ['count' => (int) trim($body)],
                 'status_code' => $statusCode,
             ],
+            $this->fastFailOptions(),
         );
     }
 
@@ -165,6 +170,7 @@ class ExternalApiService
     /**
      * @param array<string, mixed> $payload
      * @param \Closure(string, int): array{success: bool, data: array<string, mixed>, status_code: int} $formatter
+     * @param array{timeout?: int, retries?: int, connect_timeout?: int}|null $options
      * @return array{success: bool, data: array<string, mixed>, status_code: int}
      */
     private function sendPlainText(
@@ -173,19 +179,28 @@ class ExternalApiService
         array $payload,
         ?string $baseUrl,
         ?string $logPath,
-        \Closure $formatter
+        \Closure $formatter,
+        ?array $options = null,
     ): array {
         $startedAt = microtime(true);
         $resolvedBaseUrl = $this->resolveBaseUrl($baseUrl);
         $url = rtrim($resolvedBaseUrl, '/').'/'.ltrim($path, '/');
         $endpointForLogs = '/'.ltrim($logPath ?? $path, '/');
         $safePayload = $this->sanitizePayloadForLogs($payload);
+        $timeoutSeconds = max(1, (int) ($options['timeout'] ?? config('external-api.timeout', 10)));
+        $retryAttempts = max(1, (int) ($options['retries'] ?? config('external-api.retries', 3)));
+        $connectTimeoutSeconds = max(1, (int) ($options['connect_timeout'] ?? min($timeoutSeconds, 3)));
 
         try {
-            $response = Http::timeout((int) config('external-api.timeout', 10))
-                ->retry((int) config('external-api.retries', 3), 200)
-                ->accept('*/*')
-                ->send($method, $url);
+            $request = Http::connectTimeout($connectTimeoutSeconds)
+                ->timeout($timeoutSeconds)
+                ->accept('*/*');
+
+            if ($retryAttempts > 1) {
+                $request = $request->retry($retryAttempts, 200);
+            }
+
+            $response = $request->send($method, $url);
 
             $body = trim((string) $response->body());
             $result = $formatter($body, $response->status());
@@ -193,7 +208,7 @@ class ExternalApiService
 
             return $result;
         } catch (Throwable $exception) {
-            $body = ['message' => $exception->getMessage()];
+            $body = $this->formatExceptionPayload($exception);
             $this->logApiCall($endpointForLogs, strtoupper($method), $safePayload, $body, 503, $startedAt);
 
             return [
@@ -202,6 +217,21 @@ class ExternalApiService
                 'status_code' => 503,
             ];
         }
+    }
+
+    /**
+     * @return array{timeout: int, retries: int, connect_timeout: int}
+     */
+    private function fastFailOptions(): array
+    {
+        $configuredTimeout = max(1, (int) config('external-api.timeout', 10));
+        $timeout = min($configuredTimeout, 4);
+
+        return [
+            'timeout' => $timeout,
+            'retries' => 1,
+            'connect_timeout' => min($timeout, 2),
+        ];
     }
 
     /**
@@ -257,6 +287,31 @@ class ExternalApiService
         }
 
         return $safePayload;
+    }
+
+    /**
+     * @return array{message: string, error_type: string, raw_message?: string}
+     */
+    private function formatExceptionPayload(Throwable $exception): array
+    {
+        $rawMessage = trim($exception->getMessage());
+        $normalizedMessage = Str::lower($rawMessage);
+        $isTimeout = $exception instanceof ConnectionException
+            || Str::contains($normalizedMessage, ['curl error 28', 'timed out', 'timeout']);
+
+        if ($isTimeout) {
+            return [
+                'message' => 'The external API endpoint is not responding right now. Try again later or use a scheduled activation.',
+                'error_type' => 'timeout',
+                'raw_message' => $rawMessage,
+            ];
+        }
+
+        return [
+            'message' => 'The external API endpoint is unavailable right now. Verify the endpoint settings and try again later.',
+            'error_type' => 'unavailable',
+            'raw_message' => $rawMessage,
+        ];
     }
 
     private function logApiCall(string $endpoint, string $method, array $payload, array $responseBody, int $statusCode, float $startedAt): void

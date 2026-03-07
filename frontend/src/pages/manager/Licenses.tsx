@@ -20,15 +20,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { canReactivateLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
 import type { LicenseSummary, RenewLicenseData } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'expired', 'cancelled', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
 export function LicensesPage() {
   const { t } = useTranslation()
@@ -222,12 +223,16 @@ export function LicensesPage() {
       { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'duration', label: t('common.duration'), sortable: true, sortValue: (row) => row.duration_days, render: (row) => `${row.duration_days} ${t('common.days')}` },
       { key: 'price', label: t('common.price'), sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },
+      { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale) : '-') },
       { key: 'expires', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expires_at ?? '', render: (row) => (row.expires_at ? formatDate(row.expires_at, locale) : '-') },
-      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => getLicenseDisplayStatus(row), render: (row) => <StatusBadge status={getLicenseDisplayStatus(row)} /> },
       {
         key: 'actions',
         label: t('common.actions'),
-        render: (row) => (
+        render: (row) => {
+          const displayStatus = getLicenseDisplayStatus(row)
+
+          return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" size="sm" variant="ghost"><MoreVertical className="h-4 w-4" /></Button>
@@ -237,41 +242,44 @@ export function LicensesPage() {
                 <Eye className="me-2 h-4 w-4" />
                 {t('common.view')}
               </DropdownMenuItem>
-              {row.status === 'pending' ? (
+              {shouldRenewLicense(row) ? (
                 <DropdownMenuItem onClick={() => setRenewTargetId(row.id)}>
                   <RotateCw className="me-2 h-4 w-4" />
                   {t('common.renew')}
                 </DropdownMenuItem>
-              ) : row.status === 'cancelled' ? (
+              ) : canReactivateLicense(row) ? (
                 <DropdownMenuItem onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
                   <Play className="me-2 h-4 w-4" />
                   {t('common.reactivate')}
                 </DropdownMenuItem>
-              ) : (
+              ) : displayStatus === 'active' || displayStatus === 'expired' ? (
                 <>
                   <DropdownMenuItem onClick={() => { setRenewTargetId(row.id) }}>
                     <RotateCw className="me-2 h-4 w-4" />
-                    {t('common.renew')}
+                    {displayStatus === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
                   </DropdownMenuItem>
-                  {row.status === 'active' ? (
+                  {displayStatus === 'active' ? (
                     <DropdownMenuItem onClick={() => setPauseTarget(row)}>
                       <Pause className="me-2 h-4 w-4" />
                       {t('common.pause')}
                     </DropdownMenuItem>
                   ) : null}
-                  <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
-                    <ShieldOff className="me-2 h-4 w-4" />
-                    {t('common.deactivate')}
-                  </DropdownMenuItem>
+                  {displayStatus === 'active' ? (
+                    <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
+                      <ShieldOff className="me-2 h-4 w-4" />
+                      {t('common.deactivate')}
+                    </DropdownMenuItem>
+                  ) : null}
                 </>
-              )}
+              ) : null}
               <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
                 <Trash2 className="me-2 h-4 w-4" />
                 {t('common.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        ),
+          )
+        },
       },
     ],
     [allVisibleSelected, lang, locale, selectedIds, someVisibleSelected, t, visibleIds, resumeMutation.isPending],
@@ -290,7 +298,7 @@ export function LicensesPage() {
       <Tabs value={status} onValueChange={(value) => { setStatus(value as (typeof STATUS_OPTIONS)[number]); setPage(1); setSelectedIds([]) }}>
         <TabsList>
           {STATUS_OPTIONS.map((option) => (
-            <TabsTrigger key={option} value={option}>{option === 'all' ? t('common.all') : t(`common.${option}`)}</TabsTrigger>
+            <TabsTrigger key={option} value={option}>{option === 'all' ? t('common.all') : option === 'scheduled' ? t('common.scheduled', { defaultValue: 'Scheduled' }) : t(`common.${option}`)}</TabsTrigger>
           ))}
         </TabsList>
         <TabsContent value={status} className="space-y-4">
@@ -342,9 +350,9 @@ export function LicensesPage() {
       <RenewLicenseDialog
         open={renewTargetId !== null}
         onOpenChange={(open) => { if (!open) setRenewTargetId(null) }}
-        title={t('common.renew')}
+        title={renewTarget?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
         description={renewTarget ? t('reseller.pages.licenses.renewDialog.description', { program: renewTarget.program ?? t('common.program'), biosId: renewTarget.bios_id }) : t('reseller.pages.licenses.renewDialog.fallback')}
-        confirmLabel={t('common.renew')}
+        confirmLabel={renewTarget?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
         confirmLoadingLabel={t('common.loading')}
         cancelLabel={t('common.cancel')}
         anchorDate={renewTarget?.expires_at}
@@ -406,9 +414,7 @@ function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
 
 function getApiErrorMessage(error: unknown, fallback: string) {
   if (axios.isAxiosError(error)) {
-    return (error.response?.data as { message?: string; errors?: Record<string, string[]> } | undefined)?.message
-      ?? Object.values((error.response?.data as { errors?: Record<string, string[]> } | undefined)?.errors ?? {})[0]?.[0]
-      ?? fallback
+    return resolveApiErrorMessage(error, fallback)
   }
   return fallback
 }

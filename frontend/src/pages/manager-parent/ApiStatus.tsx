@@ -84,6 +84,11 @@ export function ApiStatusPage() {
             <span>{t('common.status')}</span>
             {status ? <StatusBadge status={status.status} /> : '-'}
           </div>
+          {status?.message ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+              {status.message}
+            </div>
+          ) : null}
           <Button type="button" onClick={() => pingMutation.mutate()} disabled={pingMutation.isPending}>
             {t('managerParent.pages.apiStatus.pingNow')}
           </Button>

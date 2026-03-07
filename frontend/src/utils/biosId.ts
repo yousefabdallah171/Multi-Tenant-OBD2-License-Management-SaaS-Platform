@@ -13,8 +13,8 @@ export function rawBiosId(biosId: string, externalUsername?: string | null): str
  * Formats a username input: lowercase, spaces/special chars → underscore,
  * trim leading/trailing underscores, collapse multiple underscores.
  */
-export function formatUsername(value: string): string {
-  return value
+export function formatUsername(value: string | null | undefined): string {
+  return String(value ?? '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')

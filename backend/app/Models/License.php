@@ -28,6 +28,8 @@ class License extends Model
         'scheduled_timezone',
         'is_scheduled',
         'activated_at_scheduled',
+        'paused_at',
+        'pause_remaining_minutes',
         'status',
     ];
 
@@ -41,6 +43,8 @@ class License extends Model
             'scheduled_at' => 'datetime',
             'is_scheduled' => 'boolean',
             'activated_at_scheduled' => 'datetime',
+            'paused_at' => 'datetime',
+            'pause_remaining_minutes' => 'integer',
         ];
     }
 

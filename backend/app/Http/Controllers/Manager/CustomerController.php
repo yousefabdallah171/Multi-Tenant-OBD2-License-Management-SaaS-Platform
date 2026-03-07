@@ -26,7 +26,7 @@ class CustomerController extends BaseManagerController
         $validated = $request->validate([
             'reseller_id' => ['nullable', 'integer'],
             'program_id' => ['nullable', 'integer'],
-            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -37,7 +37,7 @@ class CustomerController extends BaseManagerController
             ->select(['id', 'tenant_id', 'name', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
-                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'price', 'activated_at', 'expires_at'])
+                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'price', 'activated_at', 'expires_at', 'scheduled_at', 'scheduled_timezone', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
                 ->with(['program:id,name', 'reseller:id,name'])])
             ->latest();
 
@@ -65,9 +65,23 @@ class CustomerController extends BaseManagerController
         }
 
         if (! empty($validated['status'])) {
-            $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                ->whereIn('reseller_id', $sellerIds)
-                ->where('status', $validated['status']));
+            $query->whereHas('customerLicenses', function ($licenseQuery) use ($sellerIds, $validated): void {
+                $licenseQuery->whereIn('reseller_id', $sellerIds);
+
+                if ($validated['status'] === 'scheduled') {
+                    $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
+                    return;
+                }
+
+                if ($validated['status'] === 'pending') {
+                    $licenseQuery->where('status', 'pending')->where(function ($pendingQuery): void {
+                        $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                    });
+                    return;
+                }
+
+                $licenseQuery->where('status', $validated['status']);
+            });
         }
 
         $customers = $query->paginate((int) ($validated['per_page'] ?? 10));
@@ -86,7 +100,7 @@ class CustomerController extends BaseManagerController
         $customer->load([
             'customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
-                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'external_username', 'status', 'duration_days', 'price', 'activated_at', 'expires_at'])
+                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'external_username', 'status', 'duration_days', 'price', 'activated_at', 'expires_at', 'scheduled_at', 'scheduled_timezone', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
                 ->with(['program:id,name', 'reseller:id,name,email']),
             'createdBy:id,name,email',
         ]);
@@ -173,7 +187,13 @@ class CustomerController extends BaseManagerController
                     'duration_days' => (float) $license->duration_days,
                     'price' => (float) $license->price,
                     'activated_at' => $license->activated_at?->toIso8601String(),
+                    'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
                     'expires_at' => $license->expires_at?->toIso8601String(),
+                    'scheduled_at' => $license->scheduled_at?->toIso8601String(),
+                    'scheduled_timezone' => $license->scheduled_timezone,
+                    'is_scheduled' => (bool) $license->is_scheduled,
+                    'paused_at' => $license->paused_at?->toIso8601String(),
+                    'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
                 ])->values(),
                 'resellers_summary' => $sellersSummary,
                 'ip_logs' => $ipLogs,
@@ -368,7 +388,14 @@ class CustomerController extends BaseManagerController
             'reseller_id' => $license?->reseller?->id,
             'program' => $license?->program?->name,
             'status' => $license?->status,
+            'activated_at' => $license?->activated_at?->toIso8601String(),
+            'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),
+            'scheduled_at' => $license?->scheduled_at?->toIso8601String(),
+            'scheduled_timezone' => $license?->scheduled_timezone,
+            'is_scheduled' => (bool) ($license?->is_scheduled ?? false),
+            'paused_at' => $license?->paused_at?->toIso8601String(),
+            'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
         ];

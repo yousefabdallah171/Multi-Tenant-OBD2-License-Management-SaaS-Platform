@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES } from '@/lib/timezones'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -94,6 +95,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [scheduleTimezone, setScheduleTimezone] = useState('UTC')
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
+  const [submitError, setSubmitError] = useState('')
 
   const programsQuery = useQuery({
     queryKey: ['customer-create', 'programs'],
@@ -195,10 +197,15 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       program_id: programId ? Number(programId) : undefined,
     }),
     onSuccess: () => {
+      setSubmitError('')
       toast.success(t('common.saved', { defaultValue: 'Saved' }))
       navigate(backPath(lang))
     },
-    onError: (error: unknown) => toast.error(getApiErrorMessage(error, t('common.error'))),
+    onError: (error: unknown) => {
+      const message = resolveApiErrorMessage(error, t('common.error'))
+      setSubmitError(message)
+      toast.error(message)
+    },
   })
 
   const activateMutation = useMutation({
@@ -216,16 +223,13 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       scheduled_timezone: scheduleEnabled ? scheduleTimezone : undefined,
     }),
     onSuccess: () => {
+      setSubmitError('')
       toast.success(t('activate.successTitle', { defaultValue: 'Activated successfully' }))
       navigate(backPath(lang))
     },
     onError: (error: unknown) => {
-      const message =
-        typeof error === 'object' && error !== null && 'response' in error
-          ? ((error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }).response?.data?.message
-            ?? Object.values((error as { response?: { data?: { errors?: Record<string, string[]> } } }).response?.data?.errors ?? {})[0]?.[0]
-            ?? t('common.error'))
-          : t('common.error')
+      const message = resolveApiErrorMessage(error, t('common.error'))
+      setSubmitError(message)
       toast.error(message)
     },
   })
@@ -261,6 +265,12 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               <Input type="tel" value={phone} onChange={(event) => setPhone(normalizePhoneInput(event.target.value))} placeholder="+966..." />
             </Field>
           </div>
+
+          {submitError ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+              {submitError}
+            </div>
+          ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
@@ -387,6 +397,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               type="button"
               disabled={Object.keys(errors).length > 0 || isBusy}
               onClick={() => {
+                setSubmitError('')
                 if (createLicenseNow) {
                   activateMutation.mutate()
                   return
@@ -402,15 +413,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       </Card>
     </div>
   )
-}
-
-function getApiErrorMessage(error: unknown, fallback: string) {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }).response
-    return response?.data?.message ?? Object.values(response?.data?.errors ?? {})[0]?.[0] ?? fallback
-  }
-
-  return fallback
 }
 
 function Field({ label, children, hint, error }: { label: string; children: React.ReactNode; hint?: string; error?: string }) {

@@ -72,7 +72,7 @@ class LicenseService
             $apiResponse = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId, $program->external_api_base_url);
         }
 
-        $this->logBiosAccess($reseller, $biosId, $isScheduled ? 'schedule_activate' : 'activate', [
+        $this->logBiosAccess($reseller, $biosId, 'activate', [
             'program_id' => $program->id,
             'external' => $apiResponse,
             'is_scheduled' => $isScheduled,
@@ -100,11 +100,13 @@ class LicenseService
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
-                'activated_at' => $isScheduled ? null : now(),
+                'activated_at' => $isScheduled ? $scheduledAt : now(),
                 'expires_at' => $activationAnchor->copy()->addMinutes($durationMinutes),
                 'scheduled_at' => $scheduledAt,
                 'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
                 'is_scheduled' => $isScheduled,
+                'paused_at' => null,
+                'pause_remaining_minutes' => null,
                 'status' => $isScheduled ? 'pending' : 'active',
             ]);
 
@@ -157,6 +159,8 @@ class LicenseService
                 'scheduled_at' => $scheduledAt,
                 'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
                 'is_scheduled' => $isScheduled,
+                'paused_at' => null,
+                'pause_remaining_minutes' => null,
             ])->save();
 
             $this->balanceService->recordRevenue($reseller, (float) $license->price);
@@ -207,6 +211,8 @@ class LicenseService
             $license->forceFill([
                 'status' => 'cancelled',
                 'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Local-only deactivation.'),
+                'paused_at' => null,
+                'pause_remaining_minutes' => null,
             ])->save();
 
             $this->logActivity(
@@ -233,6 +239,18 @@ class LicenseService
     {
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
+        if ($license->status !== 'active') {
+            throw ValidationException::withMessages([
+                'license' => 'Only active licenses can be paused.',
+            ]);
+        }
+
+        if (! $license->expires_at || ! $license->expires_at->isFuture()) {
+            throw ValidationException::withMessages([
+                'license' => 'This license no longer has remaining time to pause.',
+            ]);
+        }
+
         $program = $license->program()->first();
         $apiKey = $program?->getDecryptedApiKey();
         $apiResponse = [
@@ -251,9 +269,16 @@ class LicenseService
         ]);
 
         return DB::transaction(function () use ($license, $reseller, $apiResponse): License {
+            $remainingMinutes = max(1, now()->diffInMinutes($license->expires_at, false));
+
             $license->forceFill([
                 'status' => 'pending',
                 'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Paused locally.'),
+                'paused_at' => now(),
+                'pause_remaining_minutes' => $remainingMinutes,
+                'scheduled_at' => null,
+                'scheduled_timezone' => null,
+                'is_scheduled' => false,
             ])->save();
 
             $this->logActivity(
@@ -274,6 +299,20 @@ class LicenseService
     {
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
+        $isPausedPending = $this->isPausedPending($license);
+
+        if ($license->status === 'pending' && ! $isPausedPending && ! $license->is_scheduled) {
+            throw ValidationException::withMessages([
+                'license' => 'This customer is pending only. Renew the license to activate it.',
+            ]);
+        }
+
+        if ($license->status === 'pending' && $license->is_scheduled) {
+            throw ValidationException::withMessages([
+                'license' => 'This license is scheduled. Edit the schedule or renew it instead of reactivating it.',
+            ]);
+        }
+
         $program = $license->program()->first();
         $apiKey = $program?->getDecryptedApiKey();
         $apiResponse = [
@@ -302,10 +341,20 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse): License {
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending): License {
+            $remainingMinutes = $isPausedPending
+                ? max(1, (int) ($license->pause_remaining_minutes ?? 0))
+                : null;
+
             $license->forceFill([
                 'status' => 'active',
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
+                'expires_at' => $remainingMinutes !== null ? now()->addMinutes($remainingMinutes) : $license->expires_at,
+                'paused_at' => null,
+                'pause_remaining_minutes' => null,
+                'scheduled_at' => null,
+                'scheduled_timezone' => null,
+                'is_scheduled' => false,
             ])->save();
 
             $this->logActivity(
@@ -371,6 +420,14 @@ class LicenseService
 
             throw ValidationException::withMessages(['customer_name' => 'This username is already registered to a different BIOS ID on this program.']);
         }
+    }
+
+    private function isPausedPending(License $license): bool
+    {
+        return $license->status === 'pending'
+            && ! $license->is_scheduled
+            && $license->paused_at !== null
+            && (int) ($license->pause_remaining_minutes ?? 0) > 0;
     }
 
     private function upsertCustomer(User $reseller, array $data, string $externalUsername): User

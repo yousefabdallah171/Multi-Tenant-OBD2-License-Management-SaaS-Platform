@@ -12,7 +12,7 @@ class LicenseController extends BaseManagerParentController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
             'search' => ['nullable', 'string'],
             'reseller_id' => ['nullable', 'integer'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -24,7 +24,15 @@ class LicenseController extends BaseManagerParentController
             ->latest('activated_at');
 
         if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
+            if ($validated['status'] === 'scheduled') {
+                $query->where('status', 'pending')->where('is_scheduled', true);
+            } elseif ($validated['status'] === 'pending') {
+                $query->where('status', 'pending')->where(function ($pendingQuery): void {
+                    $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                });
+            } else {
+                $query->where('status', $validated['status']);
+            }
         }
 
         if (! empty($validated['reseller_id'])) {
@@ -151,7 +159,13 @@ class LicenseController extends BaseManagerParentController
             'duration_days' => $license->duration_days,
             'price' => (float) $license->price,
             'activated_at' => $license->activated_at?->toIso8601String(),
+            'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),
+            'scheduled_at' => $license->scheduled_at?->toIso8601String(),
+            'scheduled_timezone' => $license->scheduled_timezone,
+            'is_scheduled' => (bool) $license->is_scheduled,
+            'paused_at' => $license->paused_at?->toIso8601String(),
+            'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'status' => $license->status,
         ];
     }

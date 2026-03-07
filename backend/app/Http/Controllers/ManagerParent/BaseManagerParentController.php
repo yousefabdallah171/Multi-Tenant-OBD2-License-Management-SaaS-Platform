@@ -17,6 +17,14 @@ abstract class BaseManagerParentController extends Controller
         return (int) $request->user()?->tenant_id;
     }
 
+    protected function currentManagerParent(Request $request): User
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return $user;
+    }
+
     protected function paginationMeta(LengthAwarePaginator $paginator): array
     {
         return [

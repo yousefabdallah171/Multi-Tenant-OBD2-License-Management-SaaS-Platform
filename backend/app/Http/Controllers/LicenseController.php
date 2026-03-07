@@ -58,6 +58,8 @@ class LicenseController extends Controller
                 'is_scheduled' => (bool) $license->is_scheduled,
                 'scheduled_at' => $license->scheduled_at?->toIso8601String(),
                 'scheduled_timezone' => $license->scheduled_timezone,
+                'paused_at' => $license->paused_at?->toIso8601String(),
+                'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             ],
         ], 201);
     }
@@ -264,10 +266,13 @@ class LicenseController extends Controller
             'duration_days' => $license->duration_days,
             'price' => (float) $license->price,
             'activated_at' => $license->activated_at?->toIso8601String(),
+            'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),
             'scheduled_at' => $license->scheduled_at?->toIso8601String(),
             'scheduled_timezone' => $license->scheduled_timezone,
             'is_scheduled' => (bool) $license->is_scheduled,
+            'paused_at' => $license->paused_at?->toIso8601String(),
+            'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'status' => $license->status,
         ];
     }

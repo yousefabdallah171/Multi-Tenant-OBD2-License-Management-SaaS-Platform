@@ -22,7 +22,7 @@ class CustomerController extends BaseResellerController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'program_id' => ['nullable', 'integer', 'min:1'],
@@ -49,9 +49,23 @@ class CustomerController extends BaseResellerController
         }
 
         if (! empty($validated['status'])) {
-            $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                ->where('reseller_id', $resellerId)
-                ->where('status', $validated['status']));
+            $query->whereHas('customerLicenses', function ($licenseQuery) use ($resellerId, $validated): void {
+                $licenseQuery->where('reseller_id', $resellerId);
+
+                if ($validated['status'] === 'scheduled') {
+                    $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
+                    return;
+                }
+
+                if ($validated['status'] === 'pending') {
+                    $licenseQuery->where('status', 'pending')->where(function ($pendingQuery): void {
+                        $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                    });
+                    return;
+                }
+
+                $licenseQuery->where('status', $validated['status']);
+            });
         }
 
         if (! empty($validated['program_id'])) {
@@ -190,11 +204,17 @@ class CustomerController extends BaseResellerController
                     'id' => $license->id,
                     'bios_id' => $license->bios_id,
                     'program' => $license->program?->name,
-                    'status' => $license->status,
-                    'price' => (float) $license->price,
-                    'activated_at' => $license->activated_at?->toIso8601String(),
-                    'expires_at' => $license->expires_at?->toIso8601String(),
-                ])->values(),
+                'status' => $license->status,
+                'price' => (float) $license->price,
+                'activated_at' => $license->activated_at?->toIso8601String(),
+                'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
+                'expires_at' => $license->expires_at?->toIso8601String(),
+                'scheduled_at' => $license->scheduled_at?->toIso8601String(),
+                'scheduled_timezone' => $license->scheduled_timezone,
+                'is_scheduled' => (bool) $license->is_scheduled,
+                'paused_at' => $license->paused_at?->toIso8601String(),
+                'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            ])->values(),
             ],
         ]);
     }
@@ -255,7 +275,14 @@ class CustomerController extends BaseResellerController
             'program_id' => $license?->program_id,
             'status' => $license?->status ?? 'pending',
             'price' => $license ? (float) $license->price : 0,
+            'activated_at' => $license?->activated_at?->toIso8601String(),
+            'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),
+            'scheduled_at' => $license?->scheduled_at?->toIso8601String(),
+            'scheduled_timezone' => $license?->scheduled_timezone,
+            'is_scheduled' => (bool) ($license?->is_scheduled ?? false),
+            'paused_at' => $license?->paused_at?->toIso8601String(),
+            'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'license_count' => $user->customerLicenses->count(),
         ];
     }
