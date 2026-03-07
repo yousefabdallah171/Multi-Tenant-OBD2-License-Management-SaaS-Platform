@@ -86,6 +86,10 @@ export const managerService = {
     const { data } = await api.get<{ data: ManagerCustomerDetails }>(`/manager/customers/${id}`)
     return data
   },
+  async updateCustomer(id: number, payload: { client_name: string; email?: string; phone?: string }) {
+    const { data } = await api.put<{ data: ManagerCustomerSummary }>(`/manager/customers/${id}`, payload)
+    return data
+  },
   async deleteCustomer(id: number) {
     const { data } = await api.delete<{ message: string }>(`/manager/customers/${id}`)
     return data

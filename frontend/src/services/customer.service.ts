@@ -24,6 +24,10 @@ export const customerService = {
     const { data } = await api.get<{ data: CustomerDetails }>(`/customers/${id}`)
     return data
   },
+  async update(id: number, payload: { client_name: string; email?: string; phone?: string }) {
+    const { data } = await api.put<{ data: CustomerSummary }>(`/customers/${id}`, payload)
+    return data
+  },
   async remove(id: number) {
     const { data } = await api.delete<{ message: string }>(`/customers/${id}`)
     return data

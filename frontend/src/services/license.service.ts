@@ -60,4 +60,8 @@ export const licenseService = {
     const response = await api.post<{ message: string; data: LicenseSummary }>(`/licenses/${id}/resume`)
     return response.data
   },
+  async retryScheduled(id: number) {
+    const response = await api.post<{ message: string; data: LicenseSummary }>(`/licenses/${id}/retry-scheduled`)
+    return response.data
+  },
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { COMMON_TIMEZONES } from '@/lib/timezones'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { activateLicense } from '@/services/activation.service'
-import { settingsService } from '@/services/settings.service'
 import { formatUsername } from '@/utils/biosId'
 
 export interface ActivationProgram {
@@ -38,13 +37,14 @@ interface ActivationFormErrors {
   price?: string
 }
 
-function getDefaultEndDate(days = 30): string {
+function getDefaultEndDate(timeZone: string, days = 30): string {
   const next = new Date()
   next.setDate(next.getDate() + days)
-  return formatDateTimeLocalInput(next)
+  return formatDateTimeLocalInTimezone(next, timeZone)
 }
 
-const EMPTY_FORM = {
+function createEmptyForm(defaultTimezone: string) {
+  return {
   customer_name: '',
   client_name: '',
   customer_email: '',
@@ -53,27 +53,18 @@ const EMPTY_FORM = {
   duration_value: '30',
   duration_unit: 'days' as 'minutes' | 'hours' | 'days',
   mode: 'end_date' as 'duration' | 'end_date',
-  end_date: getDefaultEndDate(),
+  end_date: getDefaultEndDate(defaultTimezone),
   is_scheduled: false,
   schedule_mode: 'custom' as 'relative' | 'custom',
   schedule_offset_value: '1',
   schedule_offset_unit: 'hours' as 'minutes' | 'hours' | 'days',
   scheduled_date_time: '',
-  scheduled_timezone: 'UTC',
+  scheduled_timezone: defaultTimezone,
+}
 }
 const MAX_PRICE = 99_999_999.99
 const MAX_DURATION_DAYS = 36_500
 const MIN_DURATION_DAYS = 1 / 1440
-
-function formatDateTimeLocalInput(value: Date): string {
-  const year = value.getFullYear()
-  const month = String(value.getMonth() + 1).padStart(2, '0')
-  const day = String(value.getDate()).padStart(2, '0')
-  const hours = String(value.getHours()).padStart(2, '0')
-  const minutes = String(value.getMinutes()).padStart(2, '0')
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`
-}
 
 function computeRelativeScheduleDate(value: number, unit: 'minutes' | 'hours' | 'days'): Date {
   const next = new Date()
@@ -94,15 +85,11 @@ function computeRelativeScheduleDate(value: number, unit: 'minutes' | 'hours' | 
 
 export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLicenseFormProps) {
   const { t } = useTranslation()
-  const [form, setForm] = useState(EMPTY_FORM)
+  const displayTimezone = useMemo(() => resolveDisplayTimezone(), [])
+  const [form, setForm] = useState(() => createEmptyForm(displayTimezone))
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
   const [submitError, setSubmitError] = useState('')
-  const timezoneQuery = useQuery({
-    queryKey: ['activation', 'server-timezone'],
-    queryFn: () => settingsService.getOnlineWidgetSettings(),
-    staleTime: 5 * 60 * 1000,
-  })
   const requiredMessage = t('validation.required', { defaultValue: 'Field required' })
   const invalidEmailMessage = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
   const invalidPhoneMessage = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
@@ -115,7 +102,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         return 0
       }
 
-      const endDate = new Date(form.end_date).getTime()
+      const endDate = zonedDateTimeInputToUtcDate(form.end_date, displayTimezone)?.getTime() ?? Number.NaN
       const now = Date.now()
       const diffMs = endDate - now
       if (diffMs <= 0) {
@@ -163,17 +150,6 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
   }, [autoPrice, priceInput, priceMode])
 
   useEffect(() => {
-    const serverTimezone = timezoneQuery.data?.data.server_timezone
-    if (!serverTimezone) {
-      return
-    }
-
-    if (form.scheduled_timezone === 'UTC') {
-      setForm((current) => ({ ...current, scheduled_timezone: serverTimezone }))
-    }
-  }, [form.scheduled_timezone, timezoneQuery.data?.data.server_timezone])
-
-  useEffect(() => {
     if (!form.is_scheduled || form.schedule_mode !== 'relative') {
       return
     }
@@ -186,9 +162,9 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     const scheduledAt = computeRelativeScheduleDate(value, form.schedule_offset_unit)
     setForm((current) => ({
       ...current,
-      scheduled_date_time: formatDateTimeLocalInput(scheduledAt),
+      scheduled_date_time: formatDateTimeLocalInTimezone(scheduledAt, current.scheduled_timezone),
     }))
-  }, [form.is_scheduled, form.schedule_mode, form.schedule_offset_unit, form.schedule_offset_value])
+  }, [form.is_scheduled, form.schedule_mode, form.schedule_offset_unit, form.schedule_offset_value, form.scheduled_timezone])
 
   const errors = useMemo<ActivationFormErrors>(() => {
     const nextErrors: ActivationFormErrors = {}
@@ -236,7 +212,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       if (!form.scheduled_date_time) {
         nextErrors.scheduled_date_time = requiredMessage
       } else {
-        const scheduledAt = new Date(form.scheduled_date_time).getTime()
+        const scheduledAt = zonedDateTimeInputToUtcDate(form.scheduled_date_time, form.scheduled_timezone)?.getTime() ?? Number.NaN
         if (!Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
           nextErrors.scheduled_date_time = invalidNumberMessage
         }
@@ -300,7 +276,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
 
   const isExternalConfigured = program.has_external_api !== false
   const schedulePreview = form.is_scheduled && form.scheduled_date_time
-    ? `${new Date(form.scheduled_date_time).toLocaleString()} ${form.scheduled_timezone}`
+    ? `${form.scheduled_date_time.replace('T', ' ')} ${form.scheduled_timezone}`
     : ''
 
   function handleSubmit() {
@@ -490,7 +466,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
                   schedule_mode: 'relative',
                   schedule_offset_value: current.schedule_offset_value || '1',
                   schedule_offset_unit: current.schedule_offset_unit || 'hours',
-                  scheduled_date_time: current.scheduled_date_time || formatDateTimeLocalInput(defaultScheduledAt),
+                  scheduled_date_time: current.scheduled_date_time || formatDateTimeLocalInTimezone(defaultScheduledAt, current.scheduled_timezone),
                 }
               }
 

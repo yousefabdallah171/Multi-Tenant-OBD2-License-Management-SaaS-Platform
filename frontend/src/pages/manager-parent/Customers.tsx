@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -18,7 +19,8 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { canReactivateLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
+import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { customerService } from '@/services/customer.service'
 import { licenseService } from '@/services/license.service'
@@ -29,6 +31,7 @@ import type { DurationUnit, RenewLicenseData } from '@/types/manager-reseller.ty
 import { formatUsername } from '@/utils/biosId'
 
 const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
+const DEFAULT_TIMEZONE = resolveDisplayTimezone()
 
 interface ActivationFormState {
   customer_name: string
@@ -60,13 +63,13 @@ const EMPTY_ACTIVATION_FORM: ActivationFormState = {
   duration_value: '30',
   duration_unit: 'days',
   mode: 'end_date',
-  end_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 16),
+  end_date: formatDateTimeLocalInTimezone(new Date(Date.now() + 30 * 86400000), DEFAULT_TIMEZONE),
   is_scheduled: false,
   schedule_mode: 'relative',
   schedule_offset_value: '1',
   schedule_offset_unit: 'hours',
   scheduled_date_time: '',
-  scheduled_timezone: 'UTC',
+  scheduled_timezone: DEFAULT_TIMEZONE,
   price: '',
 }
 
@@ -87,6 +90,7 @@ export function CustomersPage() {
   const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [renewLicenseId, setRenewLicenseId] = useState<number | null>(null)
+  const [editTarget, setEditTarget] = useState<CustomerSummary | null>(null)
   const [deactivateTarget, setDeactivateTarget] = useState<CustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<CustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<CustomerSummary | null>(null)
@@ -154,6 +158,17 @@ export function CustomersPage() {
     onError: () => toast.error(t('common.error')),
   })
 
+  const editMutation = useMutation({
+    mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
+      customerService.update(editTarget?.id ?? 0, payload),
+    onSuccess: () => {
+      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      setEditTarget(null)
+      invalidate(queryClient)
+    },
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
+  })
+
   const deactivateMutation = useMutation({
     mutationFn: (licenseId: number) => licenseService.deactivate(licenseId),
     onSuccess: () => {
@@ -179,6 +194,15 @@ export function CustomersPage() {
     onSuccess: () => {
       toast.success(t('common.resumed'))
       setResumeTarget(null)
+      invalidate(queryClient)
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+
+  const retryScheduledMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.retryScheduled(licenseId),
+    onSuccess: () => {
+      toast.success(t('common.retrySuccess', { defaultValue: 'Scheduled activation retried successfully.' }))
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -317,6 +341,12 @@ export function CustomersPage() {
       label: t('common.actions'),
       render: (row) => {
         const displayStatus = getLicenseDisplayStatus(row)
+        const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+        const renewActionLabel = displayStatus === 'active'
+          ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+          : isScheduleEditable
+            ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+            : t('common.renew')
 
         return (
         <DropdownMenu>
@@ -331,10 +361,20 @@ export function CustomersPage() {
                 {t('common.view')}
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setEditTarget(row)}>
+              <Pencil className="me-2 h-4 w-4" />
+              {t('common.edit', { defaultValue: 'Edit' })}
+            </DropdownMenuItem>
             {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) ? (
               <DropdownMenuItem onClick={() => setRenewLicenseId(row.license_id!)}>
                 <RotateCw className="me-2 h-4 w-4" />
-                {displayStatus === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
+                {renewActionLabel}
+              </DropdownMenuItem>
+            ) : null}
+            {typeof row.license_id === 'number' && canRetryScheduledLicense(row) ? (
+              <DropdownMenuItem onClick={() => retryScheduledMutation.mutate(row.license_id!)} disabled={retryScheduledMutation.isPending}>
+                <Play className="me-2 h-4 w-4" />
+                {t('common.retryNow', { defaultValue: 'Retry Now' })}
               </DropdownMenuItem>
             ) : null}
             {typeof row.license_id === 'number' && displayStatus === 'active' ? (
@@ -364,7 +404,7 @@ export function CustomersPage() {
         )
       },
     },
-  ], [allVisibleSelected, lang, locale, selectableIds, selectedLicenseIds, someVisibleSelected, t])
+  ], [allVisibleSelected, lang, locale, selectableIds, selectedLicenseIds, someVisibleSelected, t, retryScheduledMutation.isPending])
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
   const durationDays = useMemo(() => {
@@ -545,28 +585,18 @@ export function CustomersPage() {
                           <option value="days">{t('common.days')}</option>
                         </select>
                         <select value={activationForm.scheduled_timezone} onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_timezone: event.target.value }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                          <option value="UTC">UTC</option>
-                          <option value="America/New_York">America/New_York</option>
-                          <option value="America/Chicago">America/Chicago</option>
-                          <option value="America/Los_Angeles">America/Los_Angeles</option>
-                          <option value="Europe/London">Europe/London</option>
-                          <option value="Europe/Paris">Europe/Paris</option>
-                          <option value="Asia/Tokyo">Asia/Tokyo</option>
-                          <option value="Asia/Dubai">Asia/Dubai</option>
+                          {COMMON_TIMEZONES.map((item) => (
+                            <option key={item.value} value={item.value}>{item.label}</option>
+                          ))}
                         </select>
                       </div>
                     ) : (
                       <div className="grid gap-3 md:grid-cols-2">
                         <Input type="datetime-local" value={activationForm.scheduled_date_time} onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_date_time: event.target.value }))} />
                         <select value={activationForm.scheduled_timezone} onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_timezone: event.target.value }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                          <option value="UTC">UTC</option>
-                          <option value="America/New_York">America/New_York</option>
-                          <option value="America/Chicago">America/Chicago</option>
-                          <option value="America/Los_Angeles">America/Los_Angeles</option>
-                          <option value="Europe/London">Europe/London</option>
-                          <option value="Europe/Paris">Europe/Paris</option>
-                          <option value="Asia/Tokyo">Asia/Tokyo</option>
-                          <option value="Asia/Dubai">Asia/Dubai</option>
+                          {COMMON_TIMEZONES.map((item) => (
+                            <option key={item.value} value={item.value}>{item.label}</option>
+                          ))}
                         </select>
                       </div>
                     )}
@@ -638,17 +668,48 @@ export function CustomersPage() {
       <RenewLicenseDialog
         open={renewLicenseId !== null}
         onOpenChange={(open) => !open && setRenewLicenseId(null)}
-        title={renewTarget?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
+        title={renewTarget
+          ? getLicenseDisplayStatus(renewTarget) === 'active'
+            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+            : getLicenseDisplayStatus(renewTarget) === 'scheduled' || getLicenseDisplayStatus(renewTarget) === 'scheduled_failed'
+              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+              : t('common.renew')
+          : t('common.renew')}
         description={renewTarget ? t('reseller.pages.licenses.renewDialog.description', { program: renewTarget.program ?? t('common.program'), biosId: renewTarget.bios_id ?? '-' }) : t('reseller.pages.licenses.renewDialog.fallback')}
-        confirmLabel={renewTarget?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
+        confirmLabel={renewTarget
+          ? getLicenseDisplayStatus(renewTarget) === 'active'
+            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+            : getLicenseDisplayStatus(renewTarget) === 'scheduled' || getLicenseDisplayStatus(renewTarget) === 'scheduled_failed'
+              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+              : t('common.renew')
+          : t('common.renew')}
         confirmLoadingLabel={t('common.loading')}
         cancelLabel={t('common.cancel')}
         anchorDate={renewTarget?.expiry}
+        initialScheduledAt={renewTarget?.scheduled_at}
+        initialScheduledTimezone={renewTarget?.scheduled_timezone}
+        initialExpiresAt={renewTarget?.expiry}
         initialPrice={0}
         autoPricePerDay={renewProgram?.base_price ?? 0}
         resetKey={renewLicenseId}
         isPending={renewMutation.isPending}
         onSubmit={(payload) => renewMutation.mutate(payload)}
+      />
+
+      <EditCustomerDialog
+        open={editTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditTarget(null)
+          }
+        }}
+        title={t('common.edit', { defaultValue: 'Edit Customer' })}
+        description="Update the customer name, email, or phone."
+        initialClientName={editTarget?.name ?? ''}
+        initialEmail={editTarget?.email}
+        initialPhone={editTarget?.phone}
+        isPending={editMutation.isPending}
+        onSubmit={(payload) => editMutation.mutate(payload)}
       />
 
       <ConfirmDialog

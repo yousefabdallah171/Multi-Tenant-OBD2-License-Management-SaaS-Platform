@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -24,7 +25,8 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { canReactivateLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
+import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -33,6 +35,7 @@ import { formatUsername, rawBiosId } from '@/utils/biosId'
 import type { RenewLicenseData, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
 const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
+const DEFAULT_TIMEZONE = resolveDisplayTimezone()
 
 interface ActivationFormState {
   customer_name: string
@@ -63,13 +66,13 @@ const EMPTY_ACTIVATION_FORM: ActivationFormState = {
   duration_value: '30',
   duration_unit: 'days',
   mode: 'end_date',
-  end_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 16),
+  end_date: formatDateTimeLocalInTimezone(new Date(Date.now() + 30 * 86400000), DEFAULT_TIMEZONE),
   is_scheduled: false,
   schedule_mode: 'relative',
   schedule_offset_value: '1',
   schedule_offset_unit: 'hours',
   scheduled_date_time: '',
-  scheduled_timezone: 'UTC',
+  scheduled_timezone: DEFAULT_TIMEZONE,
 }
 
 export function CustomersPage() {
@@ -307,8 +310,7 @@ export function CustomersPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
   const [programFilter, setProgramFilter] = useState<number | ''>('')
-  const [editCustomerId, setEditCustomerId] = useState<number | null>(null)
-  const [editClientName, setEditClientName] = useState('')
+  const [editTarget, setEditTarget] = useState<ResellerCustomerSummary | null>(null)
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
@@ -381,11 +383,11 @@ export function CustomersPage() {
   }, [durationDays])
 
   const editMutation = useMutation({
-    mutationFn: () =>
-      resellerService.updateCustomer(editCustomerId ?? 0, { client_name: editClientName.trim() }),
+    mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
+      resellerService.updateCustomer(editTarget?.id ?? 0, payload),
     onSuccess: () => {
       toast.success(t('common.saved', { defaultValue: 'Saved' }))
-      setEditCustomerId(null)
+      setEditTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] })
     },
     onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
@@ -467,6 +469,18 @@ export function CustomersPage() {
     mutationFn: (licenseId: number) => licenseService.resume(licenseId),
     onSuccess: () => {
       toast.success(text.toasts.resumed)
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
+  const retryScheduledMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.retryScheduled(licenseId),
+    onSuccess: () => {
+      toast.success(t('common.retrySuccess', { defaultValue: 'Scheduled activation retried successfully.' }))
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
         queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
@@ -626,6 +640,12 @@ export function CustomersPage() {
         label: text.table.actions,
         render: (row) => {
           const displayStatus = getLicenseDisplayStatus(row)
+          const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+          const renewActionLabel = displayStatus === 'active'
+            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+            : isScheduleEditable
+              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+              : text.actions.renew
 
           return (
           <DropdownMenu>
@@ -644,14 +664,13 @@ export function CustomersPage() {
               <DropdownMenuItem
                 onClick={(event) => {
                   event.stopPropagation()
-                  setEditCustomerId(row.id)
-                  setEditClientName(row.client_name ?? row.name ?? '')
+                  setEditTarget(row)
                 }}
               >
                 <Pencil className="me-2 h-4 w-4" />
                 {t('common.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
-                {typeof row.license_id === 'number' && shouldRenewLicense(row) && (
+                {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) && (
                   <DropdownMenuItem
                     onClick={(event) => {
                       event.stopPropagation()
@@ -659,7 +678,19 @@ export function CustomersPage() {
                     }}
                   >
                     <RotateCw className="me-2 h-4 w-4" />
-                    {text.actions.renew}
+                    {renewActionLabel}
+                  </DropdownMenuItem>
+                )}
+                {typeof row.license_id === 'number' && canRetryScheduledLicense(row) && (
+                  <DropdownMenuItem
+                    disabled={retryScheduledMutation.isPending}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      retryScheduledMutation.mutate(row.license_id!)
+                    }}
+                  >
+                    <Play className="me-2 h-4 w-4" />
+                    {t('common.retryNow', { defaultValue: 'Retry Now' })}
                   </DropdownMenuItem>
                 )}
                 {typeof row.license_id === 'number' && canReactivateLicense(row) && (
@@ -674,39 +705,26 @@ export function CustomersPage() {
                     {text.actions.reactivate}
                   </DropdownMenuItem>
                 )}
-                {typeof row.license_id === 'number' && (displayStatus === 'active' || displayStatus === 'expired') && (
+                {typeof row.license_id === 'number' && displayStatus === 'active' && (
                   <>
                     <DropdownMenuItem
                       onClick={(event) => {
                         event.stopPropagation()
-                        setRenewLicenseId(row.license_id!)
+                        setPauseTarget(row)
                       }}
                     >
-                      <RotateCw className="me-2 h-4 w-4" />
-                      {displayStatus === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : text.actions.renew}
+                      <Pause className="me-2 h-4 w-4" />
+                      {text.actions.pause}
                     </DropdownMenuItem>
-                    {displayStatus === 'active' && (
-                      <DropdownMenuItem
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          setPauseTarget(row)
-                        }}
-                      >
-                        <Pause className="me-2 h-4 w-4" />
-                        {text.actions.pause}
-                      </DropdownMenuItem>
-                    )}
-                    {displayStatus === 'active' ? (
-                      <DropdownMenuItem
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          setDeactivateTarget(row)
-                        }}
-                      >
-                        <ShieldOff className="me-2 h-4 w-4" />
-                        {text.actions.deactivate}
-                      </DropdownMenuItem>
-                    ) : null}
+                    <DropdownMenuItem
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setDeactivateTarget(row)
+                      }}
+                    >
+                      <ShieldOff className="me-2 h-4 w-4" />
+                      {text.actions.deactivate}
+                    </DropdownMenuItem>
                   </>
                 )}
                 <DropdownMenuItem
@@ -724,7 +742,7 @@ export function CustomersPage() {
         },
       },
     ],
-    [allVisibleSelected, lang, locale, selectedLicenseIds, selectableIds, someVisibleSelected, text],
+    [allVisibleSelected, lang, locale, selectedLicenseIds, selectableIds, someVisibleSelected, text, retryScheduledMutation.isPending, t],
   )
   return (
     <div className="space-y-6">
@@ -1088,14 +1106,9 @@ export function CustomersPage() {
                               onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_timezone: event.target.value }))}
                               className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                             >
-                              <option value="UTC">UTC</option>
-                              <option value="America/New_York">America/New_York</option>
-                              <option value="America/Chicago">America/Chicago</option>
-                              <option value="America/Los_Angeles">America/Los_Angeles</option>
-                              <option value="Europe/London">Europe/London</option>
-                              <option value="Europe/Paris">Europe/Paris</option>
-                              <option value="Asia/Tokyo">Asia/Tokyo</option>
-                              <option value="Asia/Dubai">Asia/Dubai</option>
+                              {COMMON_TIMEZONES.map((item) => (
+                                <option key={item.value} value={item.value}>{item.label}</option>
+                              ))}
                             </select>
                           </FormField>
                         </div>
@@ -1116,14 +1129,9 @@ export function CustomersPage() {
                               onChange={(event) => setActivationForm((current) => ({ ...current, scheduled_timezone: event.target.value }))}
                               className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                             >
-                              <option value="UTC">UTC</option>
-                              <option value="America/New_York">America/New_York</option>
-                              <option value="America/Chicago">America/Chicago</option>
-                              <option value="America/Los_Angeles">America/Los_Angeles</option>
-                              <option value="Europe/London">Europe/London</option>
-                              <option value="Europe/Paris">Europe/Paris</option>
-                              <option value="Asia/Tokyo">Asia/Tokyo</option>
-                              <option value="Asia/Dubai">Asia/Dubai</option>
+                              {COMMON_TIMEZONES.map((item) => (
+                                <option key={item.value} value={item.value}>{item.label}</option>
+                              ))}
                             </select>
                           </FormField>
                         </div>
@@ -1269,12 +1277,27 @@ export function CustomersPage() {
             setRenewLicenseId(null)
           }
         }}
-        title={renewLicense?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : text.renewDialog.title}
+        title={renewLicense
+          ? getLicenseDisplayStatus(renewLicense) === 'active'
+            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+            : getLicenseDisplayStatus(renewLicense) === 'scheduled' || getLicenseDisplayStatus(renewLicense) === 'scheduled_failed'
+              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+              : text.renewDialog.title
+          : text.renewDialog.title}
         description={renewLicense ? text.renewDialog.descriptionWithProgram(renewLicense.program ?? text.detail.program, renewLicense.bios_id) : text.renewDialog.descriptionFallback}
-        confirmLabel={renewLicense?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : text.renewDialog.renew}
+        confirmLabel={renewLicense
+          ? getLicenseDisplayStatus(renewLicense) === 'active'
+            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+            : getLicenseDisplayStatus(renewLicense) === 'scheduled' || getLicenseDisplayStatus(renewLicense) === 'scheduled_failed'
+              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+              : text.renewDialog.renew
+          : text.renewDialog.renew}
         confirmLoadingLabel={text.renewDialog.renewing}
         cancelLabel={text.renewDialog.cancel}
         anchorDate={renewLicense?.expires_at}
+        initialScheduledAt={renewLicense?.scheduled_at}
+        initialScheduledTimezone={renewLicense?.scheduled_timezone}
+        initialExpiresAt={renewLicense?.expires_at}
         initialPrice={renewLicense?.price ?? 0}
         autoPricePerDay={renewProgram?.base_price ?? (renewLicense && renewLicense.duration_days > 0 ? renewLicense.price / renewLicense.duration_days : 0)}
         resetKey={renewLicenseId}
@@ -1364,39 +1387,21 @@ export function CustomersPage() {
         onConfirm={() => bulkDeleteMutation.mutate()}
       />
 
-      <Dialog open={editCustomerId !== null} onOpenChange={(open) => { if (!open) setEditCustomerId(null) }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{lang === 'ar' ? 'تعديل اسم العميل' : 'Edit Client Name'}</DialogTitle>
-            <DialogDescription>{lang === 'ar' ? 'عدّل الاسم الظاهر لهذا العميل.' : 'Update the display name for this customer.'}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <FormField label={lang === 'ar' ? 'الاسم الظاهر' : 'Client Display Name'} htmlFor="edit-client-name">
-              <Input
-                id="edit-client-name"
-                value={editClientName}
-                onChange={(event) => setEditClientName(event.target.value)}
-                autoFocus
-              />
-            </FormField>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setEditCustomerId(null)}>
-              {lang === 'ar' ? 'إلغاء' : 'Cancel'}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                if (editClientName.trim().length < 1) return
-                editMutation.mutate()
-              }}
-              disabled={editMutation.isPending || editClientName.trim().length < 1}
-            >
-              {editMutation.isPending ? (lang === 'ar' ? 'جارٍ الحفظ...' : 'Saving...') : (lang === 'ar' ? 'حفظ' : 'Save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditCustomerDialog
+        open={editTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditTarget(null)
+          }
+        }}
+        title={t('common.edit', { defaultValue: 'Edit Customer' })}
+        description="Update the customer name, email, or phone."
+        initialClientName={editTarget?.client_name ?? editTarget?.name ?? editTarget?.username ?? ''}
+        initialEmail={editTarget?.email}
+        initialPhone={editTarget?.phone}
+        isPending={editMutation.isPending}
+        onSubmit={(payload) => editMutation.mutate(payload)}
+      />
     </div>
   )
 

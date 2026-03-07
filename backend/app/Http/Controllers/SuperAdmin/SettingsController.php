@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Support\SystemSettingsStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SettingsController extends BaseSuperAdminController
 {
@@ -26,7 +27,7 @@ class SettingsController extends BaseSuperAdminController
             'general.platform_name' => ['sometimes', 'string', 'max:255'],
             'general.default_trial_days' => ['sometimes', 'integer', 'min:0', 'max:365'],
             'general.maintenance_mode' => ['sometimes', 'boolean'],
-            'general.server_timezone' => ['sometimes', 'string', 'max:64'],
+            'general.server_timezone' => ['sometimes', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
             'api' => ['sometimes', 'array'],
             'api.url' => ['sometimes', 'url'],
             'api.key' => ['sometimes', 'string'],

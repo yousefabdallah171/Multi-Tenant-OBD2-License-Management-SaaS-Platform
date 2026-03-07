@@ -3,7 +3,7 @@ import type { ApiMessageResponse } from '@/types/api.types'
 import type { User } from '@/types/user.types'
 
 export const profileService = {
-  async updateProfile(payload: Pick<User, 'name' | 'email' | 'phone'>) {
+  async updateProfile(payload: Pick<User, 'name' | 'email' | 'phone' | 'timezone'>) {
     const { data } = await api.put<{ message: string; user: User }>('/auth/profile', payload)
     return data
   },

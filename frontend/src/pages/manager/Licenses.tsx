@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { canReactivateLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, shouldRenewLicense } from '@/lib/utils'
+import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
@@ -103,6 +103,15 @@ export function LicensesPage() {
     mutationFn: (licenseId: number) => licenseService.resume(licenseId),
     onSuccess: () => {
       toast.success(t('common.resumeSuccess'))
+      invalidate(queryClient)
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
+  })
+
+  const retryScheduledMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.retryScheduled(licenseId),
+    onSuccess: () => {
+      toast.success(t('common.retrySuccess', { defaultValue: 'Scheduled activation retried successfully.' }))
       invalidate(queryClient)
     },
     onError: (error) => toast.error(getApiErrorMessage(error, t('common.error'))),
@@ -231,6 +240,12 @@ export function LicensesPage() {
         label: t('common.actions'),
         render: (row) => {
           const displayStatus = getLicenseDisplayStatus(row)
+          const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+          const renewActionLabel = displayStatus === 'active'
+            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+            : isScheduleEditable
+              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+              : t('common.renew')
 
           return (
           <DropdownMenu>
@@ -242,34 +257,34 @@ export function LicensesPage() {
                 <Eye className="me-2 h-4 w-4" />
                 {t('common.view')}
               </DropdownMenuItem>
-              {shouldRenewLicense(row) ? (
+              {displayStatus === 'active' || shouldRenewLicense(row) ? (
                 <DropdownMenuItem onClick={() => setRenewTargetId(row.id)}>
                   <RotateCw className="me-2 h-4 w-4" />
-                  {t('common.renew')}
+                  {renewActionLabel}
                 </DropdownMenuItem>
-              ) : canReactivateLicense(row) ? (
+              ) : null}
+              {canRetryScheduledLicense(row) ? (
+                <DropdownMenuItem onClick={() => retryScheduledMutation.mutate(row.id)} disabled={retryScheduledMutation.isPending}>
+                  <Play className="me-2 h-4 w-4" />
+                  {t('common.retryNow', { defaultValue: 'Retry Now' })}
+                </DropdownMenuItem>
+              ) : null}
+              {canReactivateLicense(row) ? (
                 <DropdownMenuItem onClick={() => resumeMutation.mutate(row.id)} disabled={resumeMutation.isPending}>
                   <Play className="me-2 h-4 w-4" />
                   {t('common.reactivate')}
                 </DropdownMenuItem>
-              ) : displayStatus === 'active' || displayStatus === 'expired' ? (
+              ) : null}
+              {displayStatus === 'active' ? (
                 <>
-                  <DropdownMenuItem onClick={() => { setRenewTargetId(row.id) }}>
-                    <RotateCw className="me-2 h-4 w-4" />
-                    {displayStatus === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
+                  <DropdownMenuItem onClick={() => setPauseTarget(row)}>
+                    <Pause className="me-2 h-4 w-4" />
+                    {t('common.pause')}
                   </DropdownMenuItem>
-                  {displayStatus === 'active' ? (
-                    <DropdownMenuItem onClick={() => setPauseTarget(row)}>
-                      <Pause className="me-2 h-4 w-4" />
-                      {t('common.pause')}
-                    </DropdownMenuItem>
-                  ) : null}
-                  {displayStatus === 'active' ? (
-                    <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
-                      <ShieldOff className="me-2 h-4 w-4" />
-                      {t('common.deactivate')}
-                    </DropdownMenuItem>
-                  ) : null}
+                  <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
+                    <ShieldOff className="me-2 h-4 w-4" />
+                    {t('common.deactivate')}
+                  </DropdownMenuItem>
                 </>
               ) : null}
               <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
@@ -282,7 +297,7 @@ export function LicensesPage() {
         },
       },
     ],
-    [allVisibleSelected, lang, locale, selectedIds, someVisibleSelected, t, visibleIds, resumeMutation.isPending],
+    [allVisibleSelected, lang, locale, selectedIds, someVisibleSelected, t, visibleIds, resumeMutation.isPending, retryScheduledMutation.isPending],
   )
 
   return (
@@ -350,12 +365,27 @@ export function LicensesPage() {
       <RenewLicenseDialog
         open={renewTargetId !== null}
         onOpenChange={(open) => { if (!open) setRenewTargetId(null) }}
-        title={renewTarget?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
+        title={renewTarget
+          ? getLicenseDisplayStatus(renewTarget) === 'active'
+            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+            : getLicenseDisplayStatus(renewTarget) === 'scheduled' || getLicenseDisplayStatus(renewTarget) === 'scheduled_failed'
+              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+              : t('common.renew')
+          : t('common.renew')}
         description={renewTarget ? t('reseller.pages.licenses.renewDialog.description', { program: renewTarget.program ?? t('common.program'), biosId: renewTarget.bios_id }) : t('reseller.pages.licenses.renewDialog.fallback')}
-        confirmLabel={renewTarget?.status === 'active' ? t('common.increaseDuration', { defaultValue: 'Increase Duration' }) : t('common.renew')}
+        confirmLabel={renewTarget
+          ? getLicenseDisplayStatus(renewTarget) === 'active'
+            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+            : getLicenseDisplayStatus(renewTarget) === 'scheduled' || getLicenseDisplayStatus(renewTarget) === 'scheduled_failed'
+              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+              : t('common.renew')
+          : t('common.renew')}
         confirmLoadingLabel={t('common.loading')}
         cancelLabel={t('common.cancel')}
         anchorDate={renewTarget?.expires_at}
+        initialScheduledAt={renewTarget?.scheduled_at}
+        initialScheduledTimezone={renewTarget?.scheduled_timezone}
+        initialExpiresAt={renewTarget?.expires_at}
         initialPrice={renewTarget?.price ?? 0}
         autoPricePerDay={renewTarget && renewTarget.duration_days > 0 ? renewTarget.price / renewTarget.duration_days : 0}
         resetKey={renewTargetId}

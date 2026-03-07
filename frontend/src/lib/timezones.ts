@@ -1,25 +1,196 @@
+import { useAuthStore } from '@/stores/authStore'
+
 export interface TimezoneOption {
   label: string
   value: string
 }
 
-export const COMMON_TIMEZONES: TimezoneOption[] = [
-  { label: 'UTC', value: 'UTC' },
-  { label: 'UTC+1', value: 'UTC+1' },
-  { label: 'UTC+2', value: 'UTC+2' },
-  { label: 'UTC+3', value: 'UTC+3' },
-  { label: 'UTC+4', value: 'UTC+4' },
-  { label: 'UTC+5', value: 'UTC+5' },
-  { label: 'UTC+6', value: 'UTC+6' },
-  { label: 'UTC+7', value: 'UTC+7' },
-  { label: 'UTC+8', value: 'UTC+8' },
-  { label: 'UTC-1', value: 'UTC-1' },
-  { label: 'UTC-2', value: 'UTC-2' },
-  { label: 'UTC-3', value: 'UTC-3' },
-  { label: 'UTC-4', value: 'UTC-4' },
-  { label: 'UTC-5', value: 'UTC-5' },
-  { label: 'UTC-6', value: 'UTC-6' },
-  { label: 'UTC-7', value: 'UTC-7' },
-  { label: 'UTC-8', value: 'UTC-8' },
+type DateParts = {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+}
+
+const FALLBACK_TIMEZONES = [
+  'UTC',
+  'Africa/Cairo',
+  'Africa/Johannesburg',
+  'Asia/Riyadh',
+  'Asia/Dubai',
+  'Asia/Kolkata',
+  'Asia/Singapore',
+  'Asia/Tokyo',
+  'Europe/Berlin',
+  'Europe/London',
+  'Europe/Paris',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'Australia/Sydney',
 ]
 
+const partsFormatterCache = new Map<string, Intl.DateTimeFormat>()
+
+function getPartsFormatter(timeZone: string) {
+  const cached = partsFormatterCache.get(timeZone)
+  if (cached) {
+    return cached
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
+
+  partsFormatterCache.set(timeZone, formatter)
+  return formatter
+}
+
+function toMinuteStamp(parts: DateParts) {
+  return Math.round(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute) / 60000)
+}
+
+function parseDateTimeLocalInput(value: string): DateParts | null {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/)
+  if (!match) {
+    return null
+  }
+
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+    hour: Number(match[4]),
+    minute: Number(match[5]),
+  }
+}
+
+function unique(values: string[]) {
+  return [...new Set(values)]
+}
+
+export function isValidIanaTimezone(value: string | null | undefined): value is string {
+  if (!value) {
+    return false
+  }
+
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(new Date())
+    return true
+  } catch {
+    return false
+  }
+}
+
+function getSupportedTimezones() {
+  const intlWithSupportedValues = Intl as typeof Intl & {
+    supportedValuesOf?: (key: string) => string[]
+  }
+
+  const dynamic = typeof intlWithSupportedValues.supportedValuesOf === 'function'
+    ? intlWithSupportedValues.supportedValuesOf('timeZone')
+    : []
+
+  return unique(['UTC', ...dynamic, ...FALLBACK_TIMEZONES]).filter((value) => isValidIanaTimezone(value))
+}
+
+function formatTimezoneLabel(value: string) {
+  if (value === 'UTC') {
+    return 'UTC'
+  }
+
+  return value.replace(/_/g, ' ')
+}
+
+export const COMMON_TIMEZONES: TimezoneOption[] = getSupportedTimezones().map((value) => ({
+  value,
+  label: formatTimezoneLabel(value),
+}))
+
+export function resolveBrowserTimezone(): string {
+  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return isValidIanaTimezone(browserTimezone) ? browserTimezone : 'UTC'
+}
+
+export function resolveDisplayTimezone(preferred?: string | null): string {
+  if (isValidIanaTimezone(preferred)) {
+    return preferred
+  }
+
+  const storedTimezone = useAuthStore.getState().user?.timezone
+  if (isValidIanaTimezone(storedTimezone)) {
+    return storedTimezone
+  }
+
+  return resolveBrowserTimezone()
+}
+
+export function getZonedDateParts(value: Date | string, timeZone: string): DateParts | null {
+  const date = typeof value === 'string' ? new Date(value) : value
+  if (!Number.isFinite(date.getTime()) || !isValidIanaTimezone(timeZone)) {
+    return null
+  }
+
+  const formatter = getPartsFormatter(timeZone)
+  const parts = formatter.formatToParts(date)
+
+  const year = Number(parts.find((part) => part.type === 'year')?.value)
+  const month = Number(parts.find((part) => part.type === 'month')?.value)
+  const day = Number(parts.find((part) => part.type === 'day')?.value)
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value)
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value)
+
+  if ([year, month, day, hour, minute].some((part) => !Number.isFinite(part))) {
+    return null
+  }
+
+  return { year, month, day, hour, minute }
+}
+
+export function formatDateTimeLocalInTimezone(value: Date | string, timeZone: string) {
+  const parts = getZonedDateParts(value, timeZone)
+  if (!parts) {
+    return ''
+  }
+
+  const month = String(parts.month).padStart(2, '0')
+  const day = String(parts.day).padStart(2, '0')
+  const hour = String(parts.hour).padStart(2, '0')
+  const minute = String(parts.minute).padStart(2, '0')
+
+  return `${parts.year}-${month}-${day}T${hour}:${minute}`
+}
+
+export function zonedDateTimeInputToUtcDate(value: string, timeZone: string) {
+  const desired = parseDateTimeLocalInput(value)
+  if (!desired || !isValidIanaTimezone(timeZone)) {
+    return null
+  }
+
+  let utcMs = Date.UTC(desired.year, desired.month - 1, desired.day, desired.hour, desired.minute)
+
+  for (let index = 0; index < 4; index += 1) {
+    const actual = getZonedDateParts(new Date(utcMs), timeZone)
+    if (!actual) {
+      return null
+    }
+
+    const diffMinutes = toMinuteStamp(desired) - toMinuteStamp(actual)
+    if (diffMinutes === 0) {
+      break
+    }
+
+    utcMs += diffMinutes * 60000
+  }
+
+  const resolved = new Date(utcMs)
+  return Number.isFinite(resolved.getTime()) ? resolved : null
+}

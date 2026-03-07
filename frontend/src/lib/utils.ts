@@ -1,14 +1,16 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { resolveDisplayTimezone } from '@/lib/timezones'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDate(value: string | Date, locale = 'en-US') {
+export function formatDate(value: string | Date, locale = 'en-US', timeZone = resolveDisplayTimezone()) {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone,
   }).format(new Date(value))
 }
 
@@ -37,6 +39,9 @@ type SchedulableLicense = {
   status?: string | null
   is_scheduled?: boolean | null
   scheduled_at?: string | Date | null
+  scheduled_failed_at?: string | Date | null
+  scheduled_last_attempt_at?: string | Date | null
+  scheduled_failure_message?: string | null
   activated_at?: string | Date | null
   start_at?: string | Date | null
   paused_at?: string | Date | null
@@ -48,7 +53,15 @@ export function isScheduledLicense(value: SchedulableLicense | null | undefined)
     return false
   }
 
-  return value.status === 'pending' && Boolean(value.is_scheduled)
+  return value.status === 'pending' && Boolean(value.is_scheduled) && !value.scheduled_failed_at
+}
+
+export function isScheduledFailedLicense(value: SchedulableLicense | null | undefined) {
+  if (!value) {
+    return false
+  }
+
+  return value.status === 'pending' && Boolean(value.is_scheduled) && Boolean(value.scheduled_failed_at)
 }
 
 export function isPausedPendingLicense(value: SchedulableLicense | null | undefined) {
@@ -83,12 +96,20 @@ export function shouldRenewLicense(value: SchedulableLicense | null | undefined)
     return false
   }
 
-  return value.status === 'expired' || isScheduledLicense(value) || isPlainPendingLicense(value)
+  return value.status === 'expired' || isScheduledLicense(value) || isScheduledFailedLicense(value) || isPlainPendingLicense(value)
+}
+
+export function canRetryScheduledLicense(value: SchedulableLicense | null | undefined) {
+  return isScheduledFailedLicense(value)
 }
 
 export function getLicenseDisplayStatus<T extends SchedulableLicense>(value: T | null | undefined) {
   if (!value?.status) {
     return 'pending' as const
+  }
+
+  if (isScheduledFailedLicense(value)) {
+    return 'scheduled_failed' as const
   }
 
   if (isScheduledLicense(value)) {

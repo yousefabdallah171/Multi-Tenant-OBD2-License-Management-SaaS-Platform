@@ -104,6 +104,9 @@ class LicenseService
                 'expires_at' => $activationAnchor->copy()->addMinutes($durationMinutes),
                 'scheduled_at' => $scheduledAt,
                 'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
+                'scheduled_last_attempt_at' => null,
+                'scheduled_failed_at' => null,
+                'scheduled_failure_message' => null,
                 'is_scheduled' => $isScheduled,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
@@ -150,14 +153,26 @@ class LicenseService
             $isScheduled = (bool) ($data['is_scheduled'] ?? false);
             $scheduledTimezone = $this->normalizeTimezone((string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC')));
             $scheduledAt = $isScheduled ? Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc() : null;
+            $expiresAt = ($scheduledAt?->copy() ?? $anchor->copy())->addMinutes($durationMinutes);
+            $activatedAt = $license->activated_at;
+
+            if ($isScheduled && $scheduledAt !== null) {
+                $activatedAt = $scheduledAt->copy();
+            } elseif (! $isScheduled && (! $license->expires_at || ! $license->expires_at->isFuture() || $license->status !== 'active')) {
+                $activatedAt = now();
+            }
 
             $license->forceFill([
                 'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
-                'expires_at' => ($scheduledAt ?? $anchor)->addMinutes($durationMinutes),
+                'activated_at' => $activatedAt,
+                'expires_at' => $expiresAt,
                 'status' => $isScheduled ? 'pending' : 'active',
                 'scheduled_at' => $scheduledAt,
                 'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
+                'scheduled_last_attempt_at' => null,
+                'scheduled_failed_at' => null,
+                'scheduled_failure_message' => null,
                 'is_scheduled' => $isScheduled,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
@@ -211,6 +226,9 @@ class LicenseService
             $license->forceFill([
                 'status' => 'cancelled',
                 'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Local-only deactivation.'),
+                'scheduled_last_attempt_at' => null,
+                'scheduled_failed_at' => null,
+                'scheduled_failure_message' => null,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
             ])->save();
@@ -278,6 +296,9 @@ class LicenseService
                 'pause_remaining_minutes' => $remainingMinutes,
                 'scheduled_at' => null,
                 'scheduled_timezone' => null,
+                'scheduled_last_attempt_at' => null,
+                'scheduled_failed_at' => null,
+                'scheduled_failure_message' => null,
                 'is_scheduled' => false,
             ])->save();
 
@@ -354,6 +375,9 @@ class LicenseService
                 'pause_remaining_minutes' => null,
                 'scheduled_at' => null,
                 'scheduled_timezone' => null,
+                'scheduled_last_attempt_at' => null,
+                'scheduled_failed_at' => null,
+                'scheduled_failure_message' => null,
                 'is_scheduled' => false,
             ])->save();
 
@@ -369,6 +393,108 @@ class LicenseService
 
             return $license;
         });
+    }
+
+    /**
+     * @return array{success: bool, license: License, message: string|null}
+     */
+    public function executeScheduledActivation(License $license): array
+    {
+        $license->loadMissing(['program', 'reseller']);
+        $attemptedAt = now();
+        $reseller = $license->reseller;
+
+        if (! $license->is_scheduled || $license->status !== 'pending' || $license->scheduled_at === null) {
+            return [
+                'success' => false,
+                'license' => $license,
+                'message' => 'Only pending scheduled licenses can be executed.',
+            ];
+        }
+
+        if (! $reseller) {
+            return $this->markScheduledActivationFailure($license, 'The scheduled activation does not have a valid reseller owner.', $attemptedAt);
+        }
+
+        $program = $license->program;
+        $apiKey = $program?->getDecryptedApiKey();
+
+        if ($apiKey === null) {
+            return $this->markScheduledActivationFailure($license, 'This program is not configured for external activation.', $attemptedAt, $reseller);
+        }
+
+        $apiResponse = $this->externalApiService->activateUser(
+            $apiKey,
+            (string) ($license->external_username ?: $license->bios_id),
+            (string) $license->bios_id,
+            $program?->external_api_base_url,
+        );
+
+        if (! ($apiResponse['success'] ?? false)) {
+            return $this->markScheduledActivationFailure(
+                $license,
+                $this->extractExternalMessage($apiResponse, 'The scheduled activation request was rejected by the external service.'),
+                $attemptedAt,
+                $reseller,
+            );
+        }
+
+        $durationMinutes = (int) max(1, round(((float) $license->duration_days) * 1440));
+
+        $activatedLicense = DB::transaction(function () use ($attemptedAt, $apiResponse, $durationMinutes, $license, $program, $reseller): License {
+            $license->forceFill([
+                'status' => 'active',
+                'activated_at' => $attemptedAt,
+                'activated_at_scheduled' => $attemptedAt,
+                'expires_at' => $attemptedAt->copy()->addMinutes($durationMinutes),
+                'is_scheduled' => false,
+                'scheduled_at' => null,
+                'scheduled_timezone' => null,
+                'scheduled_last_attempt_at' => $attemptedAt,
+                'scheduled_failed_at' => null,
+                'scheduled_failure_message' => null,
+                'external_activation_response' => (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
+            ])->save();
+
+            $this->logActivity(
+                $reseller,
+                'license.scheduled_activation_executed',
+                sprintf('Scheduled activation executed for license %d.', $license->id),
+                [
+                    'license_id' => $license->id,
+                    'program_id' => $program?->id,
+                    'executed_at' => $attemptedAt->toIso8601String(),
+                ],
+            );
+
+            $license->load(['customer', 'program', 'reseller']);
+            event(new LicenseActivated($license));
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+
+            return $license;
+        });
+
+        return [
+            'success' => true,
+            'license' => $activatedLicense,
+            'message' => null,
+        ];
+    }
+
+    public function retryScheduledActivation(License $license): License
+    {
+        $actor = $this->currentActor();
+        $this->resolveReseller($actor, $license->reseller);
+
+        $result = $this->executeScheduledActivation($license);
+
+        if (! $result['success']) {
+            throw ValidationException::withMessages([
+                'license' => $result['message'] ?? 'The scheduled activation could not be retried.',
+            ]);
+        }
+
+        return $result['license'];
     }
 
     private function assertBiosAvailable(User $reseller, Program $program, string $biosId, string $externalUsername): void
@@ -588,21 +714,43 @@ class LicenseService
             return $trimmed;
         }
 
-        if (preg_match('/^UTC([+-])(\d{1,2})(?::?(\d{2}))?$/i', $trimmed, $matches)) {
-            $hours = str_pad((string) min(23, (int) $matches[2]), 2, '0', STR_PAD_LEFT);
-            $minutes = str_pad((string) min(59, (int) ($matches[3] ?? 0)), 2, '0', STR_PAD_LEFT);
-
-            return sprintf('%s%s:%s', $matches[1], $hours, $minutes);
-        }
-
-        if (preg_match('/^([+-])(\d{1,2})(?::?(\d{2}))$/', $trimmed, $matches)) {
-            $hours = str_pad((string) min(23, (int) $matches[2]), 2, '0', STR_PAD_LEFT);
-            $minutes = str_pad((string) min(59, (int) $matches[3]), 2, '0', STR_PAD_LEFT);
-
-            return sprintf('%s%s:%s', $matches[1], $hours, $minutes);
-        }
-
         return (string) config('app.timezone', 'UTC');
+    }
+
+    /**
+     * @return array{success: false, license: License, message: string}
+     */
+    private function markScheduledActivationFailure(License $license, string $message, Carbon $attemptedAt, ?User $reseller = null): array
+    {
+        $cleanMessage = Str::limit(trim($message), 1000, '...');
+
+        DB::transaction(function () use ($attemptedAt, $cleanMessage, $license, $reseller): void {
+            $license->forceFill([
+                'scheduled_last_attempt_at' => $attemptedAt,
+                'scheduled_failed_at' => $attemptedAt,
+                'scheduled_failure_message' => $cleanMessage,
+            ])->save();
+
+            if ($reseller) {
+                $this->logActivity(
+                    $reseller,
+                    'license.scheduled_activation_failed',
+                    sprintf('Scheduled activation failed for license %d.', $license->id),
+                    [
+                        'license_id' => $license->id,
+                        'failed_at' => $attemptedAt->toIso8601String(),
+                        'message' => $cleanMessage,
+                    ],
+                );
+                $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+            }
+        });
+
+        return [
+            'success' => false,
+            'license' => $license->fresh(['customer', 'program', 'reseller']),
+            'message' => $cleanMessage,
+        ];
     }
 
     private function logActivity(User $user, string $action, string $description, array $metadata = []): void

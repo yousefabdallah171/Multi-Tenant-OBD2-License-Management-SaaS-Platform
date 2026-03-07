@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Services\LicenseService;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class LicenseController extends Controller
@@ -30,7 +31,7 @@ class LicenseController extends Controller
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'is_scheduled' => ['nullable', 'boolean'],
             'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
-            'scheduled_timezone' => ['nullable', 'string', 'max:64'],
+            'scheduled_timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
         ]);
 
         $license = $this->licenseService->activate($validated);
@@ -58,6 +59,9 @@ class LicenseController extends Controller
                 'is_scheduled' => (bool) $license->is_scheduled,
                 'scheduled_at' => $license->scheduled_at?->toIso8601String(),
                 'scheduled_timezone' => $license->scheduled_timezone,
+                'scheduled_last_attempt_at' => $license->scheduled_last_attempt_at?->toIso8601String(),
+                'scheduled_failed_at' => $license->scheduled_failed_at?->toIso8601String(),
+                'scheduled_failure_message' => $license->scheduled_failure_message,
                 'paused_at' => $license->paused_at?->toIso8601String(),
                 'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             ],
@@ -80,7 +84,7 @@ class LicenseController extends Controller
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'is_scheduled' => ['nullable', 'boolean'],
             'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
-            'scheduled_timezone' => ['nullable', 'string', 'max:64'],
+            'scheduled_timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
         ]);
 
         $resolved = $this->resolveAccessibleLicense($request, $license);
@@ -136,6 +140,17 @@ class LicenseController extends Controller
         return response()->json([
             'message' => 'License resumed successfully.',
             'data' => $this->serializeLicense($resumed),
+        ]);
+    }
+
+    public function retryScheduled(Request $request, License $license): JsonResponse
+    {
+        $resolved = $this->resolveAccessibleLicense($request, $license);
+        $retried = $this->licenseService->retryScheduledActivation($resolved);
+
+        return response()->json([
+            'message' => 'Scheduled activation retried successfully.',
+            'data' => $this->serializeLicense($retried),
         ]);
     }
 
@@ -271,6 +286,9 @@ class LicenseController extends Controller
             'scheduled_at' => $license->scheduled_at?->toIso8601String(),
             'scheduled_timezone' => $license->scheduled_timezone,
             'is_scheduled' => (bool) $license->is_scheduled,
+            'scheduled_last_attempt_at' => $license->scheduled_last_attempt_at?->toIso8601String(),
+            'scheduled_failed_at' => $license->scheduled_failed_at?->toIso8601String(),
+            'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'status' => $license->status,

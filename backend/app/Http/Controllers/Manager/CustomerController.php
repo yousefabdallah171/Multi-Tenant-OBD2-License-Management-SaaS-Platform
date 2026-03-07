@@ -37,7 +37,7 @@ class CustomerController extends BaseManagerController
             ->select(['id', 'tenant_id', 'name', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
-                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'price', 'activated_at', 'expires_at', 'scheduled_at', 'scheduled_timezone', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
+                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'price', 'activated_at', 'expires_at', 'scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
                 ->with(['program:id,name', 'reseller:id,name'])])
             ->latest();
 
@@ -100,7 +100,7 @@ class CustomerController extends BaseManagerController
         $customer->load([
             'customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
-                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'external_username', 'status', 'duration_days', 'price', 'activated_at', 'expires_at', 'scheduled_at', 'scheduled_timezone', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
+                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'external_username', 'status', 'duration_days', 'price', 'activated_at', 'expires_at', 'scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
                 ->with(['program:id,name', 'reseller:id,name,email']),
             'createdBy:id,name,email',
         ]);
@@ -192,6 +192,9 @@ class CustomerController extends BaseManagerController
                     'scheduled_at' => $license->scheduled_at?->toIso8601String(),
                     'scheduled_timezone' => $license->scheduled_timezone,
                     'is_scheduled' => (bool) $license->is_scheduled,
+                    'scheduled_last_attempt_at' => $license->scheduled_last_attempt_at?->toIso8601String(),
+                    'scheduled_failed_at' => $license->scheduled_failed_at?->toIso8601String(),
+                    'scheduled_failure_message' => $license->scheduled_failure_message,
                     'paused_at' => $license->paused_at?->toIso8601String(),
                     'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
                 ])->values(),
@@ -278,6 +281,37 @@ class CustomerController extends BaseManagerController
             ->with(['program:id,name', 'reseller:id,name'])]);
 
         return response()->json(['data' => $this->serializeCustomer($customer)], 201);
+    }
+
+    public function update(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveTeamUser($request, $user);
+
+        $validated = $request->validate([
+            'client_name' => ['required', 'string', 'min:1', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
+        ]);
+
+        $email = $this->resolveCustomerEmail($customer, $validated['email'] ?? null, $this->currentTenantId($request));
+        $this->ensureEmailAvailable($customer, $email);
+
+        $customer->fill([
+            'client_name' => $validated['client_name'],
+            'name' => $validated['client_name'],
+            'email' => $email,
+            'phone' => $validated['phone'] ?? null,
+        ])->save();
+
+        $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
+            ->whereIn('reseller_id', $this->teamSellerIds($request))
+            ->with(['program:id,name', 'reseller:id,name'])]);
+
+        $this->logActivity($request, 'customer.updated', sprintf('Updated customer %d.', $customer->id), [
+            'customer_id' => $customer->id,
+        ]);
+
+        return response()->json(['data' => $this->serializeCustomer($customer)]);
     }
 
     public function destroy(Request $request, User $user): JsonResponse
@@ -394,6 +428,9 @@ class CustomerController extends BaseManagerController
             'scheduled_at' => $license?->scheduled_at?->toIso8601String(),
             'scheduled_timezone' => $license?->scheduled_timezone,
             'is_scheduled' => (bool) ($license?->is_scheduled ?? false),
+            'scheduled_last_attempt_at' => $license?->scheduled_last_attempt_at?->toIso8601String(),
+            'scheduled_failed_at' => $license?->scheduled_failed_at?->toIso8601String(),
+            'scheduled_failure_message' => $license?->scheduled_failure_message,
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'license_count' => $user->customerLicenses->count(),
@@ -408,5 +445,46 @@ class CustomerController extends BaseManagerController
         }
 
         return str_ends_with($email, '@obd2sw.local') ? null : $email;
+    }
+
+    private function resolveCustomerEmail(User $customer, ?string $email, int $tenantId): string
+    {
+        $normalized = is_string($email) ? strtolower(trim($email)) : '';
+        if ($normalized !== '') {
+            return $normalized;
+        }
+
+        $currentEmail = (string) ($customer->email ?? '');
+        if ($currentEmail !== '' && str_ends_with($currentEmail, '@obd2sw.local')) {
+            return $currentEmail;
+        }
+
+        return sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $tenantId, (string) ($customer->username ?: 'customer-'.$customer->id));
+    }
+
+    private function ensureEmailAvailable(User $customer, string $email): void
+    {
+        if ($customer->email === $email) {
+            return;
+        }
+
+        $existing = User::query()
+            ->where('email', $email)
+            ->whereKeyNot($customer->id)
+            ->first();
+
+        if (! $existing) {
+            return;
+        }
+
+        if (($existing->role?->value ?? (string) $existing->role) !== UserRole::CUSTOMER->value) {
+            throw ValidationException::withMessages([
+                'email' => 'The provided email belongs to a non-customer account.',
+            ]);
+        }
+
+        throw ValidationException::withMessages([
+            'email' => 'The provided email is already in use.',
+        ]);
     }
 }

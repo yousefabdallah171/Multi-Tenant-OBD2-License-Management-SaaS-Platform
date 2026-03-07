@@ -108,6 +108,9 @@ export interface ManagerCustomerSummary {
   expiry: string | null
   scheduled_at?: string | null
   scheduled_timezone?: string | null
+  scheduled_last_attempt_at?: string | null
+  scheduled_failed_at?: string | null
+  scheduled_failure_message?: string | null
   is_scheduled?: boolean
   paused_at?: string | null
   pause_remaining_minutes?: number | null
@@ -136,6 +139,9 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
     expires_at: string | null
     scheduled_at?: string | null
     scheduled_timezone?: string | null
+    scheduled_last_attempt_at?: string | null
+    scheduled_failed_at?: string | null
+    scheduled_failure_message?: string | null
     is_scheduled?: boolean
     paused_at?: string | null
     pause_remaining_minutes?: number | null
@@ -187,6 +193,9 @@ export interface ResellerCustomerSummary {
   expiry: string | null
   scheduled_at?: string | null
   scheduled_timezone?: string | null
+  scheduled_last_attempt_at?: string | null
+  scheduled_failed_at?: string | null
+  scheduled_failure_message?: string | null
   is_scheduled?: boolean
   paused_at?: string | null
   pause_remaining_minutes?: number | null
@@ -205,6 +214,9 @@ export interface ResellerCustomerDetails extends ResellerCustomerSummary {
     expires_at: string | null
     scheduled_at?: string | null
     scheduled_timezone?: string | null
+    scheduled_last_attempt_at?: string | null
+    scheduled_failed_at?: string | null
+    scheduled_failure_message?: string | null
     is_scheduled?: boolean
     paused_at?: string | null
     pause_remaining_minutes?: number | null
@@ -229,6 +241,9 @@ export interface LicenseSummary {
   expires_at: string | null
   scheduled_at?: string | null
   scheduled_timezone?: string | null
+  scheduled_last_attempt_at?: string | null
+  scheduled_failed_at?: string | null
+  scheduled_failure_message?: string | null
   is_scheduled?: boolean
   paused_at?: string | null
   pause_remaining_minutes?: number | null

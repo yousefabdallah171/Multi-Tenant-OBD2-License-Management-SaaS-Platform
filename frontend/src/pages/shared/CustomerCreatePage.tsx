@@ -9,12 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { COMMON_TIMEZONES } from '@/lib/timezones'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { activateLicense } from '@/services/activation.service'
 import { programService } from '@/services/program.service'
-import { settingsService } from '@/services/settings.service'
 import { formatUsername } from '@/utils/biosId'
 
 interface CustomerCreatePageProps {
@@ -29,20 +28,10 @@ type ScheduleMode = 'after' | 'on'
 
 const MIN_DURATION_DAYS = 1 / 1440
 
-function getDefaultEndDate(days = 30) {
+function getDefaultEndDate(timeZone: string, days = 30) {
   const next = new Date()
   next.setDate(next.getDate() + days)
-  return toDateTimeLocal(next)
-}
-
-function toDateTimeLocal(value: Date) {
-  const year = value.getFullYear()
-  const month = String(value.getMonth() + 1).padStart(2, '0')
-  const day = String(value.getDate()).padStart(2, '0')
-  const hours = String(value.getHours()).padStart(2, '0')
-  const minutes = String(value.getMinutes()).padStart(2, '0')
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`
+  return formatDateTimeLocalInTimezone(next, timeZone)
 }
 
 function normalizePhoneInput(value: string) {
@@ -76,23 +65,24 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const displayTimezone = useMemo(() => resolveDisplayTimezone(), [])
   const [customerName, setCustomerName] = useState('')
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [createLicenseNow, setCreateLicenseNow] = useState(true)
+  const [createLicenseNow, setCreateLicenseNow] = useState(false)
   const [biosId, setBiosId] = useState('')
   const [programId, setProgramId] = useState<number | ''>('')
   const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
-  const [endDate, setEndDate] = useState(() => getDefaultEndDate())
+  const [endDate, setEndDate] = useState(() => getDefaultEndDate(displayTimezone))
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('after')
   const [scheduleAfterValue, setScheduleAfterValue] = useState('1')
   const [scheduleAfterUnit, setScheduleAfterUnit] = useState<DurationUnit>('hours')
   const [scheduleAt, setScheduleAt] = useState('')
-  const [scheduleTimezone, setScheduleTimezone] = useState('UTC')
+  const [scheduleTimezone, setScheduleTimezone] = useState(displayTimezone)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
   const [submitError, setSubmitError] = useState('')
@@ -101,19 +91,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     queryKey: ['customer-create', 'programs'],
     queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
   })
-
-  const timezoneQuery = useQuery({
-    queryKey: ['customer-create', 'timezone'],
-    queryFn: () => settingsService.getOnlineWidgetSettings(),
-    staleTime: 300000,
-  })
-
-  useEffect(() => {
-    const serverTimezone = timezoneQuery.data?.data.server_timezone
-    if (serverTimezone && scheduleTimezone === 'UTC') {
-      setScheduleTimezone(serverTimezone)
-    }
-  }, [scheduleTimezone, timezoneQuery.data?.data.server_timezone])
 
   useEffect(() => {
     if (!scheduleEnabled || scheduleMode !== 'after') {
@@ -125,8 +102,8 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       return
     }
 
-    setScheduleAt(toDateTimeLocal(buildRelativeSchedule(value, scheduleAfterUnit)))
-  }, [scheduleAfterUnit, scheduleAfterValue, scheduleEnabled, scheduleMode])
+    setScheduleAt(formatDateTimeLocalInTimezone(buildRelativeSchedule(value, scheduleAfterUnit), scheduleTimezone))
+  }, [scheduleAfterUnit, scheduleAfterValue, scheduleEnabled, scheduleMode, scheduleTimezone])
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === programId)
 
@@ -137,7 +114,9 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
     if (mode === 'end_date') {
       if (!endDate) return 0
-      const diff = new Date(endDate).getTime() - Date.now()
+      const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, displayTimezone)
+      if (!zonedEndDate) return 0
+      const diff = zonedEndDate.getTime() - Date.now()
       return diff > 0 ? diff / 86400000 : 0
     }
 
@@ -163,8 +142,12 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
   const expiryPreview = useMemo(() => {
     if (!createLicenseNow || durationDays <= 0) return ''
+    if (mode === 'end_date') {
+      const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, displayTimezone)
+      return zonedEndDate ? zonedEndDate.toISOString() : ''
+    }
     return new Date(Date.now() + durationDays * 86400000).toISOString()
-  }, [createLicenseNow, durationDays])
+  }, [createLicenseNow, displayTimezone, durationDays, endDate, mode])
 
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
@@ -177,7 +160,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     if (createLicenseNow) {
       if (durationDays < MIN_DURATION_DAYS) next.duration = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
       if (scheduleEnabled) {
-        const scheduledAt = new Date(scheduleAt).getTime()
+        const scheduledAt = zonedDateTimeInputToUtcDate(scheduleAt, scheduleTimezone)?.getTime() ?? Number.NaN
         if (!scheduleAt || !Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
           next.scheduleAt = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
         }
@@ -185,7 +168,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }
 
     return next
-  }, [biosId, createLicenseNow, customerName, durationDays, email, phone, programId, scheduleAt, scheduleEnabled, t])
+  }, [biosId, createLicenseNow, customerName, durationDays, email, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, t])
 
   const createOnlyMutation = useMutation({
     mutationFn: () => createCustomer({

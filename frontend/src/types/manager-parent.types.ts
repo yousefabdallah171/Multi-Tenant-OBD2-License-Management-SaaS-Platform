@@ -209,6 +209,9 @@ export interface CustomerSummary {
   expiry: string | null
   scheduled_at?: string | null
   scheduled_timezone?: string | null
+  scheduled_last_attempt_at?: string | null
+  scheduled_failed_at?: string | null
+  scheduled_failure_message?: string | null
   is_scheduled?: boolean
   paused_at?: string | null
   pause_remaining_minutes?: number | null
@@ -237,6 +240,9 @@ export interface CustomerDetails extends CustomerSummary {
     expires_at: string | null
     scheduled_at?: string | null
     scheduled_timezone?: string | null
+    scheduled_last_attempt_at?: string | null
+    scheduled_failed_at?: string | null
+    scheduled_failure_message?: string | null
     is_scheduled?: boolean
     paused_at?: string | null
     pause_remaining_minutes?: number | null

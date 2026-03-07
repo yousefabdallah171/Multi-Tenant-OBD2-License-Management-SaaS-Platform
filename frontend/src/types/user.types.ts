@@ -17,6 +17,7 @@ export interface User {
   username: string | null
   email: string
   phone: string | null
+  timezone?: string | null
   role: UserRole
   status: UserStatus
   created_by: number | null

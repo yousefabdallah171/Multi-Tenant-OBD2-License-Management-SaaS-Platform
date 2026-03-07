@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
-import { COMMON_TIMEZONES } from '@/lib/timezones'
+import { COMMON_TIMEZONES, resolveDisplayTimezone } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 import { settingsService } from '@/services/settings.service'
 import type { SystemSettings } from '@/types/super-admin.types'
@@ -23,6 +23,7 @@ export function SettingsPage() {
     name: user?.name ?? '',
     email: user?.email ?? '',
     phone: user?.phone ?? '',
+    timezone: resolveDisplayTimezone(user?.timezone),
   })
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
@@ -229,6 +230,21 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="profile-phone">{t('common.phone')}</Label>
                   <Input id="profile-phone" type="tel" value={profileForm.phone ?? ''} onChange={(event) => setProfileForm((current) => ({ ...current, phone: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profile-timezone">{t('common.timezone', { defaultValue: 'Timezone' })}</Label>
+                  <select
+                    id="profile-timezone"
+                    value={profileForm.timezone ?? 'UTC'}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, timezone: event.target.value }))}
+                    className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                  >
+                    {COMMON_TIMEZONES.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending}>
                   {profileMutation.isPending ? t('common.saving') : t('superAdmin.pages.settings.saveProfile')}

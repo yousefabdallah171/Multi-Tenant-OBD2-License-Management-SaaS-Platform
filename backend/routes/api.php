@@ -146,6 +146,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
 
         Route::get('/customers', [ManagerParentCustomerController::class, 'index']);
         Route::post('/customers', [ManagerParentCustomerController::class, 'store']);
+        Route::put('/customers/{user}', [ManagerParentCustomerController::class, 'update']);
         Route::get('/customers/{user}', [ManagerParentCustomerController::class, 'show']);
         Route::delete('/customers/{user}', [ManagerParentCustomerController::class, 'destroy']);
         Route::get('/licenses', [ManagerParentLicenseController::class, 'index']);
@@ -205,6 +206,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
 
         Route::get('/customers', [ManagerCustomerController::class, 'index']);
         Route::post('/customers', [ManagerCustomerController::class, 'store']);
+        Route::put('/customers/{user}', [ManagerCustomerController::class, 'update']);
         Route::get('/customers/{user}', [ManagerCustomerController::class, 'show']);
         Route::delete('/customers/{user}', [ManagerCustomerController::class, 'destroy']);
         Route::get('/licenses', [ManagerLicenseController::class, 'index']);
@@ -269,6 +271,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::post('/licenses/{license}/deactivate', [LicenseController::class, 'deactivate']);
         Route::post('/licenses/{license}/pause', [LicenseController::class, 'pause']);
         Route::post('/licenses/{license}/resume', [LicenseController::class, 'resume']);
+        Route::post('/licenses/{license}/retry-scheduled', [LicenseController::class, 'retryScheduled']);
         Route::post('/licenses/bulk-renew', [LicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-deactivate', [LicenseController::class, 'bulkDeactivate']);
         Route::post('/licenses/bulk-delete', [LicenseController::class, 'bulkDelete']);

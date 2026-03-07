@@ -168,11 +168,18 @@ class CustomerController extends BaseResellerController
 
         $validated = $request->validate([
             'client_name' => ['required', 'string', 'min:1', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
         ]);
+
+        $email = $this->resolveCustomerEmail($customer, $validated['email'] ?? null, $this->currentTenantId($request));
+        $this->ensureEmailAvailable($customer, $email);
 
         $customer->fill([
             'client_name' => $validated['client_name'],
             'name' => $validated['client_name'],
+            'email' => $email,
+            'phone' => $validated['phone'] ?? null,
         ])->save();
 
         $this->logActivity($request, 'customer.updated', sprintf('Updated client name for customer %d.', $customer->id), [
@@ -212,6 +219,9 @@ class CustomerController extends BaseResellerController
                 'scheduled_at' => $license->scheduled_at?->toIso8601String(),
                 'scheduled_timezone' => $license->scheduled_timezone,
                 'is_scheduled' => (bool) $license->is_scheduled,
+                'scheduled_last_attempt_at' => $license->scheduled_last_attempt_at?->toIso8601String(),
+                'scheduled_failed_at' => $license->scheduled_failed_at?->toIso8601String(),
+                'scheduled_failure_message' => $license->scheduled_failure_message,
                 'paused_at' => $license->paused_at?->toIso8601String(),
                 'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             ])->values(),
@@ -281,6 +291,9 @@ class CustomerController extends BaseResellerController
             'scheduled_at' => $license?->scheduled_at?->toIso8601String(),
             'scheduled_timezone' => $license?->scheduled_timezone,
             'is_scheduled' => (bool) ($license?->is_scheduled ?? false),
+            'scheduled_last_attempt_at' => $license?->scheduled_last_attempt_at?->toIso8601String(),
+            'scheduled_failed_at' => $license?->scheduled_failed_at?->toIso8601String(),
+            'scheduled_failure_message' => $license?->scheduled_failure_message,
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'license_count' => $user->customerLicenses->count(),
@@ -294,6 +307,47 @@ class CustomerController extends BaseResellerController
         }
 
         return str_ends_with($email, '@obd2sw.local') ? null : $email;
+    }
+
+    private function resolveCustomerEmail(User $customer, ?string $email, int $tenantId): string
+    {
+        $normalized = is_string($email) ? strtolower(trim($email)) : '';
+        if ($normalized !== '') {
+            return $normalized;
+        }
+
+        $currentEmail = (string) ($customer->email ?? '');
+        if ($currentEmail !== '' && str_ends_with($currentEmail, '@obd2sw.local')) {
+            return $currentEmail;
+        }
+
+        return sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $tenantId, (string) ($customer->username ?: 'customer-'.$customer->id));
+    }
+
+    private function ensureEmailAvailable(User $customer, string $email): void
+    {
+        if ($customer->email === $email) {
+            return;
+        }
+
+        $existing = User::query()
+            ->where('email', $email)
+            ->whereKeyNot($customer->id)
+            ->first();
+
+        if (! $existing) {
+            return;
+        }
+
+        if (($existing->role?->value ?? (string) $existing->role) !== UserRole::CUSTOMER->value) {
+            throw ValidationException::withMessages([
+                'email' => 'The provided email belongs to a non-customer account.',
+            ]);
+        }
+
+        throw ValidationException::withMessages([
+            'email' => 'The provided email is already in use.',
+        ]);
     }
 
     private function createPendingLicense(Request $request, User $customer, string $biosId, int $programId, User $seller): void
