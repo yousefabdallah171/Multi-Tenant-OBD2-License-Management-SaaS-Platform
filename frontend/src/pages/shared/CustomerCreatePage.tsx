@@ -28,9 +28,15 @@ type ScheduleMode = 'after' | 'on'
 
 const MIN_DURATION_DAYS = 1 / 1440
 
-function getDefaultEndDate(timeZone: string, days = 30) {
+function getDefaultEndDate(timeZone: string, days = 1) {
   const next = new Date()
   next.setDate(next.getDate() + days)
+  return formatDateTimeLocalInTimezone(next, timeZone)
+}
+
+function getDefaultScheduleDate(timeZone: string) {
+  const next = new Date()
+  next.setHours(next.getHours() + 1)
   return formatDateTimeLocalInTimezone(next, timeZone)
 }
 
@@ -78,10 +84,10 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
   const [endDate, setEndDate] = useState(() => getDefaultEndDate(displayTimezone))
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
-  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('after')
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('on')
   const [scheduleAfterValue, setScheduleAfterValue] = useState('1')
   const [scheduleAfterUnit, setScheduleAfterUnit] = useState<DurationUnit>('hours')
-  const [scheduleAt, setScheduleAt] = useState('')
+  const [scheduleAt, setScheduleAt] = useState(() => getDefaultScheduleDate(displayTimezone))
   const [scheduleTimezone, setScheduleTimezone] = useState(displayTimezone)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
@@ -107,6 +113,14 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === programId)
 
+  const effectiveStartDate = useMemo(() => {
+    if (!createLicenseNow || !scheduleEnabled) {
+      return new Date()
+    }
+
+    return zonedDateTimeInputToUtcDate(scheduleAt, scheduleTimezone) ?? new Date()
+  }, [createLicenseNow, scheduleAt, scheduleEnabled, scheduleTimezone])
+
   const durationDays = useMemo(() => {
     if (!createLicenseNow) {
       return 0
@@ -116,12 +130,12 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       if (!endDate) return 0
       const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, displayTimezone)
       if (!zonedEndDate) return 0
-      const diff = zonedEndDate.getTime() - Date.now()
+      const diff = zonedEndDate.getTime() - effectiveStartDate.getTime()
       return diff > 0 ? diff / 86400000 : 0
     }
 
     return durationToDays(Number(durationValue), durationUnit)
-  }, [createLicenseNow, durationUnit, durationValue, endDate, mode])
+  }, [createLicenseNow, displayTimezone, durationUnit, durationValue, effectiveStartDate, endDate, mode])
 
   const autoPrice = useMemo(() => {
     if (!selectedProgram || !createLicenseNow) return 0
@@ -146,8 +160,37 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, displayTimezone)
       return zonedEndDate ? zonedEndDate.toISOString() : ''
     }
-    return new Date(Date.now() + durationDays * 86400000).toISOString()
-  }, [createLicenseNow, displayTimezone, durationDays, endDate, mode])
+    return new Date(effectiveStartDate.getTime() + durationDays * 86400000).toISOString()
+  }, [createLicenseNow, displayTimezone, durationDays, effectiveStartDate, endDate, mode])
+
+  const startSummary = useMemo(() => {
+    if (!createLicenseNow) {
+      return ''
+    }
+
+    if (!scheduleEnabled) {
+      return t('activate.startingNow', { defaultValue: 'Starting now' })
+    }
+
+    const scheduledDate = zonedDateTimeInputToUtcDate(scheduleAt, scheduleTimezone)
+    if (!scheduledDate) {
+      return t('activate.startingFromPending', { defaultValue: 'Starting from the selected date' })
+    }
+
+    return `${t('activate.startingFrom', { defaultValue: 'Starting from' })}: ${formatDate(scheduledDate.toISOString(), lang === 'ar' ? 'ar-EG' : 'en-US')} (${scheduleTimezone})`
+  }, [createLicenseNow, lang, scheduleAt, scheduleEnabled, scheduleTimezone, t])
+
+  const endSummary = useMemo(() => {
+    if (!createLicenseNow) {
+      return ''
+    }
+
+    if (!expiryPreview) {
+      return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
+    }
+
+    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(expiryPreview, lang === 'ar' ? 'ar-EG' : 'en-US')}`
+  }, [createLicenseNow, expiryPreview, lang, t])
 
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
@@ -185,7 +228,9 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       navigate(backPath(lang))
     },
     onError: (error: unknown) => {
-      const message = resolveApiErrorMessage(error, t('common.error'))
+      const rawMessage = resolveApiErrorMessage(error, t('common.error'))
+      const normalized = rawMessage.toLowerCase()
+      const message = normalized.includes('blacklisted') ? t('activate.biosBlacklisted') : rawMessage
       setSubmitError(message)
       toast.error(message)
     },
@@ -211,7 +256,9 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       navigate(backPath(lang))
     },
     onError: (error: unknown) => {
-      const message = resolveApiErrorMessage(error, t('common.error'))
+      const rawMessage = resolveApiErrorMessage(error, t('common.error'))
+      const normalized = rawMessage.toLowerCase()
+      const message = normalized.includes('blacklisted') ? t('activate.biosBlacklisted') : rawMessage
       setSubmitError(message)
       toast.error(message)
     },
@@ -304,6 +351,63 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
           {createLicenseNow ? (
             <>
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                    {t('activate.startingLabel', { defaultValue: 'Starting' })}
+                  </p>
+                  <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{startSummary}</p>
+                </div>
+                <label className="flex items-center gap-3 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={scheduleEnabled}
+                    onChange={(event) => {
+                      const checked = event.target.checked
+                      setScheduleEnabled(checked)
+                      if (checked) {
+                        setScheduleMode('on')
+                        setScheduleAt((current) => current || getDefaultScheduleDate(scheduleTimezone))
+                      }
+                    }}
+                  />
+                  {t('activate.scheduleToggle', { defaultValue: 'Schedule activation for later' })}
+                </label>
+                {scheduleEnabled ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant={scheduleMode === 'on' ? 'default' : 'outline'} onClick={() => setScheduleMode('on')}>{t('activate.scheduleModeCustom', { defaultValue: 'Custom Date' })}</Button>
+                      <Button type="button" size="sm" variant={scheduleMode === 'after' ? 'default' : 'outline'} onClick={() => setScheduleMode('after')}>{t('activate.scheduleModeRelative', { defaultValue: 'After' })}</Button>
+                    </div>
+                    {scheduleMode === 'after' ? (
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <Input value={scheduleAfterValue} onChange={(event) => setScheduleAfterValue(event.target.value.replace(/[^\d.]/g, ''))} />
+                        <select value={scheduleAfterUnit} onChange={(event) => setScheduleAfterUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                          <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
+                          <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
+                          <option value="days">{t('common.days')}</option>
+                        </select>
+                        <Input type="datetime-local" value={scheduleAt} readOnly />
+                      </div>
+                    ) : (
+                      <Input type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                    )}
+                    <select value={scheduleTimezone} onChange={(event) => setScheduleTimezone(event.target.value)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                      {COMMON_TIMEZONES.map((timezone) => (
+                        <option key={timezone.value} value={timezone.value}>{timezone.label}</option>
+                      ))}
+                    </select>
+                    {errors.scheduleAt ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                    {t('activate.endingLabel', { defaultValue: 'Ending' })}
+                  </p>
+                  <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{endSummary}</p>
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Label>{t('common.duration')}</Label>
                   <Button type="button" size="sm" variant={mode === 'duration' ? 'default' : 'outline'} onClick={() => setMode('duration')}>{t('activate.durationMode', { defaultValue: 'Duration' })}</Button>
@@ -331,40 +435,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                     <Input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
                   </Field>
                 )}
-              </div>
-
-              <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-                <label className="flex items-center gap-3 text-sm font-medium">
-                  <input type="checkbox" checked={scheduleEnabled} onChange={(event) => setScheduleEnabled(event.target.checked)} />
-                  {t('activate.scheduleToggle', { defaultValue: 'Schedule activation for later' })}
-                </label>
-                {scheduleEnabled ? (
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="button" size="sm" variant={scheduleMode === 'after' ? 'default' : 'outline'} onClick={() => setScheduleMode('after')}>{t('activate.scheduleModeRelative', { defaultValue: 'After' })}</Button>
-                      <Button type="button" size="sm" variant={scheduleMode === 'on' ? 'default' : 'outline'} onClick={() => setScheduleMode('on')}>{t('activate.scheduleModeCustom', { defaultValue: 'On date' })}</Button>
-                    </div>
-                    {scheduleMode === 'after' ? (
-                      <div className="grid gap-3 md:grid-cols-3">
-                        <Input value={scheduleAfterValue} onChange={(event) => setScheduleAfterValue(event.target.value.replace(/[^\d.]/g, ''))} />
-                        <select value={scheduleAfterUnit} onChange={(event) => setScheduleAfterUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                          <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
-                          <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
-                          <option value="days">{t('common.days')}</option>
-                        </select>
-                        <Input type="datetime-local" value={scheduleAt} readOnly />
-                      </div>
-                    ) : (
-                      <Input type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
-                    )}
-                    <select value={scheduleTimezone} onChange={(event) => setScheduleTimezone(event.target.value)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                      {COMMON_TIMEZONES.map((timezone) => (
-                        <option key={timezone.value} value={timezone.value}>{timezone.label}</option>
-                      ))}
-                    </select>
-                    {errors.scheduleAt ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
-                  </div>
-                ) : null}
               </div>
 
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">

@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
@@ -12,9 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
-import { managerParentService } from '@/services/manager-parent.service'
-import { routePaths } from '@/router/routes'
-import type { BiosConflictFilters, BiosConflictItem } from '@/types/manager-parent.types'
+import { biosService, type BiosConflictParams } from '@/services/bios.service'
+import type { BiosConflictItem } from '@/types/super-admin.types'
 
 function StatusPill({ status, label }: { status: BiosConflictItem['status']; label: string }) {
   const base = 'inline-flex rounded-full px-3 py-1 text-xs font-semibold'
@@ -30,14 +28,14 @@ export function BiosConflictsPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(15)
-  const [status, setStatus] = useState<BiosConflictFilters['status']>('')
+  const [status, setStatus] = useState<BiosConflictParams['status']>('')
   const [conflictType, setConflictType] = useState('')
   const [dateRange, setDateRange] = useState({ from: '', to: '' })
   const [selectedConflict, setSelectedConflict] = useState<BiosConflictItem | null>(null)
   const [resolveTarget, setResolveTarget] = useState<BiosConflictItem | null>(null)
   const [resolutionNotes, setResolutionNotes] = useState('')
 
-  const params: BiosConflictFilters = useMemo(
+  const params: BiosConflictParams = useMemo(
     () => ({
       page,
       per_page: perPage,
@@ -50,70 +48,62 @@ export function BiosConflictsPage() {
   )
 
   const conflictsQuery = useQuery({
-    queryKey: ['manager-parent', 'bios-conflicts', params],
-    queryFn: () => managerParentService.getBiosConflicts(params),
+    queryKey: ['super-admin', 'bios-conflicts', params],
+    queryFn: () => biosService.getConflicts(params),
   })
 
   const resolveMutation = useMutation({
-    mutationFn: ({ id, notes }: { id: number; notes: string }) => managerParentService.resolveBiosConflict(id, { resolution_notes: notes }),
+    mutationFn: ({ id, notes }: { id: number; notes: string }) => biosService.resolveConflict(id, { resolution_notes: notes }),
     onSuccess: () => {
-      toast.success(t('managerParent.pages.biosConflicts.resolveSuccess'))
+      toast.success(t('superAdmin.pages.biosConflicts.resolveSuccess'))
       setResolveTarget(null)
       setResolutionNotes('')
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'bios-conflicts'] })
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'bios-conflicts'] })
     },
   })
 
   const columns: Array<DataTableColumn<BiosConflictItem>> = [
     {
       key: 'bios',
-      label: t('managerParent.pages.biosConflicts.columns.biosId'),
+      label: t('superAdmin.pages.biosConflicts.columns.biosId'),
       sortable: true,
       sortValue: (row) => row.bios_id,
-      render: (row) => (
-        <div>
-          <code>{row.bios_id}</code>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            @{row.affected_customers[0]?.username ?? '-'}
-          </p>
-        </div>
-      ),
+      render: (row) => <code>{row.bios_id}</code>,
+    },
+    {
+      key: 'tenant',
+      label: t('common.tenant'),
+      sortable: true,
+      sortValue: (row) => row.tenant_name ?? '',
+      render: (row) => row.tenant_name ?? '-',
     },
     {
       key: 'type',
-      label: t('managerParent.pages.biosConflicts.columns.conflictType'),
+      label: t('superAdmin.pages.biosConflicts.columns.conflictType'),
       sortable: true,
       sortValue: (row) => row.conflict_type,
-      render: (row) => t(`managerParent.pages.biosConflicts.types.${row.conflict_type}`, { defaultValue: row.conflict_type }),
+      render: (row) => t(`superAdmin.pages.biosConflicts.types.${row.conflict_type}`, { defaultValue: row.conflict_type }),
     },
     {
       key: 'customers',
-      label: t('managerParent.pages.biosConflicts.columns.affectedCustomers'),
+      label: t('superAdmin.pages.biosConflicts.columns.affectedCustomers'),
       render: (row) => (row.affected_customers.length > 0
-        ? (
-            <div className="flex flex-wrap gap-2">
-              {row.affected_customers.map((customer) => (
-                customer.id
-                  ? <Link key={`${row.id}-${customer.id}`} className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, customer.id)}>{customer.name}</Link>
-                  : <span key={`${row.id}-${customer.name}`} className="text-slate-500 dark:text-slate-400">{customer.name}</span>
-              ))}
-            </div>
-          )
-        : t('managerParent.pages.biosConflicts.noCustomers')),
+        ? row.affected_customers.map((customer) => customer.name).join(', ')
+        : t('superAdmin.pages.biosConflicts.noCustomers')),
     },
     {
       key: 'date',
-      label: t('managerParent.pages.biosConflicts.columns.dateDetected'),
+      label: t('superAdmin.pages.biosConflicts.columns.dateDetected'),
       sortable: true,
       sortValue: (row) => row.created_at ?? '',
       render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-'),
     },
     {
       key: 'status',
-      label: t('managerParent.pages.biosConflicts.columns.status'),
+      label: t('superAdmin.pages.biosConflicts.columns.status'),
       sortable: true,
       sortValue: (row) => row.status,
-      render: (row) => <StatusPill status={row.status} label={t(`managerParent.pages.biosConflicts.status.${row.status}`)} />,
+      render: (row) => <StatusPill status={row.status} label={t(`superAdmin.pages.biosConflicts.status.${row.status}`)} />,
     },
     {
       key: 'actions',
@@ -125,7 +115,7 @@ export function BiosConflictsPage() {
           </Button>
           {!row.resolved ? (
             <Button type="button" size="sm" variant="outline" onClick={() => setResolveTarget(row)}>
-              {t('managerParent.pages.biosConflicts.resolve')}
+              {t('superAdmin.pages.biosConflicts.resolve')}
             </Button>
           ) : null}
         </div>
@@ -136,8 +126,8 @@ export function BiosConflictsPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-3xl font-semibold">{t('managerParent.pages.biosConflicts.title')}</h2>
-        <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.biosConflicts.description')}</p>
+        <h2 className="text-3xl font-semibold">{t('superAdmin.pages.biosConflicts.title')}</h2>
+        <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.biosConflicts.description')}</p>
       </div>
 
       <Card>
@@ -147,10 +137,10 @@ export function BiosConflictsPage() {
               {t('common.all')}
             </Button>
             <Button type="button" size="sm" variant={status === 'open' ? 'default' : 'secondary'} onClick={() => setStatus('open')}>
-              {t('managerParent.pages.biosConflicts.status.open')}
+              {t('superAdmin.pages.biosConflicts.status.open')}
             </Button>
             <Button type="button" size="sm" variant={status === 'resolved' ? 'default' : 'secondary'} onClick={() => setStatus('resolved')}>
-              {t('managerParent.pages.biosConflicts.status.resolved')}
+              {t('superAdmin.pages.biosConflicts.status.resolved')}
             </Button>
           </div>
           <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
@@ -162,10 +152,10 @@ export function BiosConflictsPage() {
               }}
               className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
             >
-              <option value="">{t('managerParent.pages.biosConflicts.allTypes')}</option>
-              <option value="duplicate_activation">{t('managerParent.pages.biosConflicts.types.duplicate_activation')}</option>
-              <option value="username_bios_mismatch">{t('managerParent.pages.biosConflicts.types.username_bios_mismatch')}</option>
-              <option value="blacklisted_bios">{t('managerParent.pages.biosConflicts.types.blacklisted_bios')}</option>
+              <option value="">{t('superAdmin.pages.biosConflicts.allTypes')}</option>
+              <option value="duplicate_activation">{t('superAdmin.pages.biosConflicts.types.duplicate_activation')}</option>
+              <option value="username_bios_mismatch">{t('superAdmin.pages.biosConflicts.types.username_bios_mismatch')}</option>
+              <option value="blacklisted_bios">{t('superAdmin.pages.biosConflicts.types.blacklisted_bios')}</option>
             </select>
             <DateRangePicker
               value={dateRange}
@@ -183,7 +173,7 @@ export function BiosConflictsPage() {
         data={conflictsQuery.data?.data ?? []}
         rowKey={(row) => row.id}
         isLoading={conflictsQuery.isLoading}
-        emptyMessage={t('managerParent.pages.biosConflicts.emptyTitle')}
+        emptyMessage={t('superAdmin.pages.biosConflicts.emptyTitle')}
         pagination={{
           page: conflictsQuery.data?.meta.current_page ?? 1,
           lastPage: conflictsQuery.data?.meta.last_page ?? 1,
@@ -200,24 +190,26 @@ export function BiosConflictsPage() {
       <Dialog open={selectedConflict !== null} onOpenChange={(open) => !open && setSelectedConflict(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('managerParent.pages.biosConflicts.detailsTitle')}</DialogTitle>
-            <DialogDescription>{t('managerParent.pages.biosConflicts.detailsDescription')}</DialogDescription>
+            <DialogTitle>{t('superAdmin.pages.biosConflicts.detailsTitle')}</DialogTitle>
+            <DialogDescription>{t('superAdmin.pages.biosConflicts.detailsDescription')}</DialogDescription>
           </DialogHeader>
           {selectedConflict ? (
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-2">
-                <span className="text-slate-500 dark:text-slate-400">{t('managerParent.pages.biosConflicts.columns.biosId')}</span>
+                <span className="text-slate-500 dark:text-slate-400">{t('superAdmin.pages.biosConflicts.columns.biosId')}</span>
                 <code>{selectedConflict.bios_id}</code>
-                <span className="text-slate-500 dark:text-slate-400">{t('managerParent.pages.biosConflicts.columns.conflictType')}</span>
-                <span>{t(`managerParent.pages.biosConflicts.types.${selectedConflict.conflict_type}`, { defaultValue: selectedConflict.conflict_type })}</span>
+                <span className="text-slate-500 dark:text-slate-400">{t('common.tenant')}</span>
+                <span>{selectedConflict.tenant_name ?? '-'}</span>
+                <span className="text-slate-500 dark:text-slate-400">{t('superAdmin.pages.biosConflicts.columns.conflictType')}</span>
+                <span>{t(`superAdmin.pages.biosConflicts.types.${selectedConflict.conflict_type}`, { defaultValue: selectedConflict.conflict_type })}</span>
                 <span className="text-slate-500 dark:text-slate-400">{t('common.program')}</span>
                 <span>{selectedConflict.program_name ?? '-'}</span>
                 <span className="text-slate-500 dark:text-slate-400">{t('common.user')}</span>
                 <span>{selectedConflict.attempted_by_name ?? '-'}</span>
               </div>
               <div>
-                <p className="mb-1 text-slate-500 dark:text-slate-400">{t('managerParent.pages.biosConflicts.columns.affectedCustomers')}</p>
-                <p>{selectedConflict.affected_customers.length > 0 ? selectedConflict.affected_customers.map((customer) => customer.name).join(', ') : t('managerParent.pages.biosConflicts.noCustomers')}</p>
+                <p className="mb-1 text-slate-500 dark:text-slate-400">{t('superAdmin.pages.biosConflicts.columns.affectedCustomers')}</p>
+                <p>{selectedConflict.affected_customers.length > 0 ? selectedConflict.affected_customers.map((customer) => customer.name).join(', ') : t('superAdmin.pages.biosConflicts.noCustomers')}</p>
               </div>
             </div>
           ) : null}
@@ -232,16 +224,16 @@ export function BiosConflictsPage() {
             setResolutionNotes('')
           }
         }}
-        title={t('managerParent.pages.biosConflicts.resolveTitle')}
-        description={resolveTarget ? t('managerParent.pages.biosConflicts.resolveDescription', { biosId: resolveTarget.bios_id }) : undefined}
-        confirmLabel={t('managerParent.pages.biosConflicts.resolve')}
+        title={t('superAdmin.pages.biosConflicts.resolveTitle')}
+        description={resolveTarget ? t('superAdmin.pages.biosConflicts.resolveDescription', { biosId: resolveTarget.bios_id }) : undefined}
+        confirmLabel={t('superAdmin.pages.biosConflicts.resolve')}
         onConfirm={() => {
           if (!resolveTarget) {
             return
           }
 
           if (!resolutionNotes.trim()) {
-            toast.error(t('managerParent.pages.biosConflicts.notesRequired'))
+            toast.error(t('superAdmin.pages.biosConflicts.notesRequired'))
             return
           }
 
@@ -249,7 +241,7 @@ export function BiosConflictsPage() {
         }}
       >
         <div className="space-y-2">
-          <p className="text-sm text-slate-600 dark:text-slate-300">{t('managerParent.pages.biosConflicts.notesLabel')}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{t('superAdmin.pages.biosConflicts.notesLabel')}</p>
           <Textarea value={resolutionNotes} onChange={(event) => setResolutionNotes(event.target.value)} />
         </div>
       </ConfirmDialog>

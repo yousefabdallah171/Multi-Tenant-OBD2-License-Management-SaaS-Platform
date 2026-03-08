@@ -22,7 +22,37 @@ class BiosDetailsService
         $this->applyTenantScope($query, $tenantId);
         $licenses = $query->orderBy('activated_at')->get();
 
-        abort_if($licenses->isEmpty(), 404, 'BIOS not found.');
+        $blacklist = $this->getBlacklistStatus($biosId, $tenantId);
+
+        if ($licenses->isEmpty()) {
+            $lastAccessLog = $this->biosAccessLogsQuery($biosId, $tenantId)->latest()->first();
+            $lastConflict = $this->biosConflictsQuery($biosId, $tenantId)->latest()->first();
+
+            abort_if(! $lastAccessLog && ! $lastConflict && ! $blacklist, 404, 'BIOS not found.');
+
+            $lastActivity = collect([
+                $lastAccessLog?->created_at?->toIso8601String(),
+                $lastConflict?->created_at?->toIso8601String(),
+                $blacklist['date'] ?? null,
+            ])->filter()->sortDesc()->first();
+
+            [$username, $originalBiosId] = $this->splitBiosId($biosId);
+
+            return [
+                'bios_id' => $biosId,
+                'original_bios_id' => $originalBiosId,
+                'username' => $username,
+                'customer' => null,
+                'reseller' => null,
+                'status' => ($blacklist['is_blacklisted'] ?? false) ? 'blacklisted' : ($lastAccessLog?->metadata['status'] ?? $lastAccessLog?->action),
+                'first_activation' => null,
+                'last_activity' => $lastActivity,
+                'total_activations' => 0,
+                'total_licenses' => 0,
+                'avg_days_between_purchases' => 0,
+                'blacklist' => $blacklist,
+            ];
+        }
 
         $first = $licenses->first();
         $last = $licenses->sortByDesc('activated_at')->first();
@@ -58,7 +88,7 @@ class BiosDetailsService
             'total_activations' => $licenses->count(),
             'total_licenses' => $licenses->count(),
             'avg_days_between_purchases' => empty($intervals) ? 0 : (int) round(array_sum($intervals) / count($intervals)),
-            'blacklist' => $this->getBlacklistStatus($biosId, $tenantId),
+            'blacklist' => $blacklist,
         ];
     }
 
@@ -148,19 +178,43 @@ class BiosDetailsService
             'created_at' => $log->created_at?->toIso8601String(),
         ]);
 
-        $conflictsQuery = BiosConflict::query()->where('bios_id', $biosId)->latest()->limit(100);
-        if ($tenantId !== null) {
-            $conflictsQuery->where('tenant_id', $tenantId);
-        }
-        $conflicts = $conflictsQuery->get()->map(fn (BiosConflict $conflict): array => [
+        $accessLogs = $this->biosAccessLogsQuery($biosId, $tenantId)
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->map(fn (BiosAccessLog $log): array => [
+                'id' => 'access-'.$log->id,
+                'action' => 'bios.'.$log->action,
+                'description' => (string) ($log->metadata['description'] ?? sprintf('BIOS %s action %s.', $log->bios_id, $log->action)),
+                'created_at' => $log->created_at?->toIso8601String(),
+            ]);
+
+        $conflicts = $this->biosConflictsQuery($biosId, $tenantId)
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->map(fn (BiosConflict $conflict): array => [
             'id' => $conflict->id,
             'action' => 'bios.conflict',
             'description' => sprintf('Conflict type: %s', $conflict->conflict_type),
             'created_at' => $conflict->created_at?->toIso8601String(),
         ]);
 
+        $blacklistEvents = $this->biosBlacklistQuery($biosId, $tenantId)
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(fn (BiosBlacklist $entry): array => [
+                'id' => 'blacklist-'.$entry->id,
+                'action' => 'bios.blacklist',
+                'description' => $entry->reason !== '' ? $entry->reason : 'BIOS added to blacklist.',
+                'created_at' => $entry->created_at?->toIso8601String(),
+            ]);
+
         return $activities
+            ->concat($accessLogs)
             ->concat($conflicts)
+            ->concat($blacklistEvents)
             ->sortByDesc(fn (array $row): string => (string) ($row['created_at'] ?? Carbon::now()->toIso8601String()))
             ->values()
             ->all();
@@ -168,7 +222,7 @@ class BiosDetailsService
 
     public function searchBiosIds(string $query, ?int $tenantId = null): array
     {
-        $biosQuery = License::query()
+        $licenseIds = License::query()
             ->select('bios_id')
             ->distinct()
             ->where('bios_id', 'like', '%'.$query.'%')
@@ -176,22 +230,49 @@ class BiosDetailsService
             ->limit(20);
 
         if ($tenantId !== null) {
-            $biosQuery->where('tenant_id', $tenantId);
+            $licenseIds->where('tenant_id', $tenantId);
         }
 
-        return $biosQuery->pluck('bios_id')->values()->all();
+        $blacklistIds = $this->biosBlacklistQuery(null, $tenantId)
+            ->select('bios_id')
+            ->distinct()
+            ->where('bios_id', 'like', '%'.$query.'%')
+            ->orderByDesc('id')
+            ->limit(20)
+            ->pluck('bios_id');
+
+        $accessLogIds = $this->biosAccessLogsQuery(null, $tenantId)
+            ->select('bios_id')
+            ->distinct()
+            ->where('bios_id', 'like', '%'.$query.'%')
+            ->orderByDesc('id')
+            ->limit(20)
+            ->pluck('bios_id');
+
+        $conflictIds = $this->biosConflictsQuery(null, $tenantId)
+            ->select('bios_id')
+            ->distinct()
+            ->where('bios_id', 'like', '%'.$query.'%')
+            ->orderByDesc('id')
+            ->limit(20)
+            ->pluck('bios_id');
+
+        return $licenseIds->pluck('bios_id')
+            ->concat($blacklistIds)
+            ->concat($accessLogIds)
+            ->concat($conflictIds)
+            ->filter()
+            ->unique()
+            ->values()
+            ->take(20)
+            ->all();
     }
 
     public function getBlacklistStatus(string $biosId, ?int $tenantId = null): ?array
     {
-        $query = BiosBlacklist::query()
-            ->where('bios_id', $biosId)
+        $query = $this->biosBlacklistQuery($biosId, $tenantId)
             ->where('status', 'active')
             ->latest('created_at');
-
-        if ($tenantId !== null) {
-            $query->where('tenant_id', $tenantId);
-        }
 
         $row = $query->first();
         if (! $row) {
@@ -204,6 +285,53 @@ class BiosDetailsService
             'blacklisted_by' => $row->created_by,
             'date' => $row->created_at?->toIso8601String(),
         ];
+    }
+
+    private function biosBlacklistQuery(?string $biosId = null, ?int $tenantId = null): Builder
+    {
+        $query = BiosBlacklist::query()->withoutGlobalScope('tenant');
+
+        if ($biosId !== null) {
+            $query->where('bios_id', $biosId);
+        }
+
+        if ($tenantId !== null) {
+            $query->where(function (Builder $inner) use ($tenantId): void {
+                $inner->where('tenant_id', $tenantId)->orWhereNull('tenant_id');
+            });
+        }
+
+        return $query;
+    }
+
+    private function biosAccessLogsQuery(?string $biosId = null, ?int $tenantId = null): Builder
+    {
+        $query = BiosAccessLog::query();
+
+        if ($biosId !== null) {
+            $query->where('bios_id', $biosId);
+        }
+
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        return $query;
+    }
+
+    private function biosConflictsQuery(?string $biosId = null, ?int $tenantId = null): Builder
+    {
+        $query = BiosConflict::query();
+
+        if ($biosId !== null) {
+            $query->where('bios_id', $biosId);
+        }
+
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        return $query;
     }
 
     /**
@@ -232,4 +360,3 @@ class BiosDetailsService
         return [$username, $original];
     }
 }
-

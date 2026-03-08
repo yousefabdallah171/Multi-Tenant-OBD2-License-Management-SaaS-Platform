@@ -111,16 +111,41 @@ export interface ProgramLog {
   customer_id?: number | null
 }
 
-export interface ProgramLogLicenseInfo {
-  license_id: number
-  bios_id: string
-  external_username: string
+export interface ProgramLogUserOption {
+  id: number
+  name: string
+  role: string
+}
+
+export interface ProgramUserLogEntry {
+  id: number
+  action: string
+  actor: {
+    id: number
+    name: string
+    role: string
+  } | null
+  license_id: number | null
   customer_id: number | null
   customer_name: string | null
   customer_username: string | null
-  reseller_id: number | null
-  reseller_name: string | null
-  reseller_email: string | null
+  bios_id: string
+  external_username: string
+  program_id: number
+  program_name: string
+  price: number | null
+  license_status: string | null
+  created_at: string | null
+}
+
+export interface ProgramLogSummary {
+  total_entries: number
+  activations: number
+  scheduled: number
+  executed: number
+  renewals: number
+  deactivations: number
+  failures: number
 }
 
 export interface ProgramStats {

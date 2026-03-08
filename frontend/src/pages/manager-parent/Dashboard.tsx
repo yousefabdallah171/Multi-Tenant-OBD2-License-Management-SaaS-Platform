@@ -146,7 +146,7 @@ export function DashboardPage() {
               <Button type="button" variant="secondary" className="justify-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
                 {t('managerParent.pages.dashboard.actions.reviewCustomers')}
               </Button>
-              <Button type="button" variant="secondary" className="justify-start" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
+              <Button type="button" variant="secondary" className="justify-start" onClick={() => navigate(routePaths.managerParent.financialReports(lang))}>
                 {t('managerParent.pages.dashboard.actions.openReports')}
               </Button>
             </div>

@@ -197,8 +197,8 @@
       "users": "Users",
       "adminManagement": "Admin Mgmt",
       "biosBlacklist": "BIOS Blacklist",
-      "biosHistory": "BIOS History",
       "biosDetails": "BIOS Details",
+      "biosConflicts": "BIOS Conflicts",
       "usernameManagement": "Username Mgmt",
       "securityLocks": "Security Locks",
       "financialReports": "Financial",
@@ -353,15 +353,46 @@
         "biosId": "BIOS ID",
         "add": "Add BIOS",
         "remove": "Remove",
-        "viewHistory": "View history",
+        "viewHistory": "Open details",
         "import": "Import CSV",
         "export": "Export CSV",
         "addTitle": "Add to blacklist",
-        "formDescription": "Capture the BIOS ID and the reason for blocking it.",
+        "formDescription": "Capture the BIOS ID and an optional reason for blocking it.",
         "trendTitle": "BIOS Blacklist Trend",
         "trendDescription": "Monthly additions and removals across the global blacklist.",
         "additions": "Additions",
         "removals": "Removals"
+      },
+      "biosConflicts": {
+        "title": "BIOS Conflicts",
+        "description": "Review BIOS conflict events across all tenants and resolve open incidents.",
+        "allTypes": "All conflict types",
+        "emptyTitle": "No BIOS conflicts found",
+        "noCustomers": "No linked customers",
+        "resolve": "Mark as resolved",
+        "resolveTitle": "Resolve BIOS conflict",
+        "resolveDescription": "Add a resolution note for BIOS {{biosId}}.",
+        "resolveSuccess": "BIOS conflict resolved successfully.",
+        "notesLabel": "Resolution notes",
+        "notesRequired": "Resolution notes are required.",
+        "detailsTitle": "Conflict details",
+        "detailsDescription": "Review the full conflict information.",
+        "columns": {
+          "biosId": "BIOS ID",
+          "conflictType": "Conflict Type",
+          "affectedCustomers": "Affected Customers",
+          "dateDetected": "Date Detected",
+          "status": "Status"
+        },
+        "status": {
+          "open": "Open",
+          "resolved": "Resolved"
+        },
+        "types": {
+          "duplicate_activation": "Duplicate Activation",
+          "username_bios_mismatch": "Username / BIOS Mismatch",
+          "blacklisted_bios": "Blacklisted BIOS"
+        }
       },
       "biosHistory": {
         "title": "BIOS History",
@@ -413,16 +444,15 @@
       "resellerPricing": "Reseller Pricing",
       "softwareManagement": "Software Management",
       "biosBlacklist": "BIOS Blacklist",
-      "biosHistory": "BIOS History",
       "biosDetails": "BIOS Details",
       "biosConflicts": "BIOS Conflicts",
       "ipAnalytics": "IP Analytics",
       "logs": "Platform Logs",
-      "programLogs": "Program Logs",
+      "programLogs": "User Logs",
       "resellerLogs": "Reseller Logs",
       "apiStatus": "API Status",
       "usernameManagement": "Username Management",
-      "financialReports": "Financial Reports",
+      "financialReports": "Reports",
       "reports": "Reports",
       "logsGroup": "Logs",
       "activity": "Activity",
@@ -477,8 +507,8 @@
         "failure": "Failure"
       },
       "financialReports": {
-        "title": "Financial Reports",
-        "description": "Review tenant revenue, reseller balances, activation volume, and export the current financial view.",
+        "title": "Reports",
+        "description": "Review tenant revenue, reseller balances, activation quality, retention, and export the current reporting view.",
         "totalTenantRevenue": "Total Tenant Revenue",
         "totalActivations": "Total Activations",
         "activeLicenses": "Active Licenses",
@@ -544,13 +574,13 @@
         "saveSuccess": "BIOS added to blacklist.",
         "removeSuccess": "Blacklist entry removed.",
         "biosId": "BIOS ID",
-        "history": "History",
+        "history": "Open details",
         "remove": "Remove",
         "add": "Add to Blacklist",
         "searchPlaceholder": "Search BIOS ID",
         "addTitle": "Add to Blacklist",
-        "formDescription": "Store a BIOS identifier and a required reason for the tenant blacklist.",
-        "validationRequired": "BIOS ID and reason are required."
+        "formDescription": "Store a BIOS identifier and an optional reason for the tenant blacklist.",
+        "validationRequired": "BIOS ID is required."
       },
       "biosHistory": {
         "title": "BIOS History",
@@ -756,8 +786,8 @@
         },
         "types": {
           "duplicate_activation": "Duplicate Activation",
-          "bios_mismatch": "BIOS Mismatch",
-          "multi_tenant_conflict": "Multi-Tenant Conflict"
+          "username_bios_mismatch": "Username / BIOS Mismatch",
+          "blacklisted_bios": "Blacklisted BIOS"
         }
       },
       "profile": {
@@ -1284,20 +1314,25 @@
     "addUserUrlExample": "Add-user test: /apiuseradd/[KEY]/john_doe/ABC123XYZ"
   },
   "programLogs": {
-    "title": "Program Logs",
-    "description": "Inspect external software logs for the selected program. Each program uses its own configured software ID, base URL, and logs endpoint.",
+    "title": "User Logs",
+    "description": "Review dashboard-driven user actions for the selected program and keep the external login feed available as a secondary view.",
     "selectProgram": "Select a program to view logs",
-    "dynamicHint": "This page reads the selected program's external logs dynamically using its configured Software ID and logs endpoint.",
-    "activationEvents": "Activation Events",
-    "loginEvents": "Login Events",
-    "eventAdded": "Added",
-    "eventDeleted": "Deleted",
+    "dynamicHint": "Filters below scope the selected program only.",
+    "userActions": "User Actions",
+    "loginEvents": "External Login Events",
     "noLogs": "No logs available for this program.",
     "autoRefresh": "Auto-refresh (30s)",
     "exportCsv": "Export CSV",
-    "activatedBy": "Activated By",
-    "viaDashboard": "via Dashboard",
-    "externalUnknown": "External (unknown)"
+    "allUsers": "All users",
+    "allActions": "All actions",
+    "actionScheduled": "Scheduled",
+    "actionExecuted": "Executed",
+    "actionFailed": "Failed",
+    "externalUnavailable": "The external API is offline right now. User actions still come from the platform log, but external login events may be stale or empty.",
+    "localLocation": "Localhost / Local",
+    "localNetwork": "Local",
+    "loadingLocation": "Loading...",
+    "unknownLocation": "Unknown"
   },
   "ipAnalytics": {
     "columns": {

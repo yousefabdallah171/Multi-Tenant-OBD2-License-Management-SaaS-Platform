@@ -1,5 +1,5 @@
 import { api } from '@/services/api'
-import type { BiosBlacklistEntry, BiosHistoryEvent, ManagedUser, PaginationMeta } from '@/types/super-admin.types'
+import type { BiosBlacklistEntry, BiosConflictItem, BiosHistoryEvent, ManagedUser, PaginationMeta } from '@/types/super-admin.types'
 import { downloadFile } from '@/utils/download'
 
 export interface BiosBlacklistParams {
@@ -15,6 +15,15 @@ export interface BiosHistoryParams {
   bios_id?: string
   tenant_id?: number | ''
   action?: string
+  from?: string
+  to?: string
+}
+
+export interface BiosConflictParams {
+  page?: number
+  per_page?: number
+  status?: '' | 'open' | 'resolved'
+  conflict_type?: string
   from?: string
   to?: string
 }
@@ -57,6 +66,14 @@ export const biosService = {
   },
   async getHistoryById(biosId: string) {
     const { data } = await api.get<{ data: { bios_id: string; events: BiosHistoryEvent[] } }>(`/super-admin/bios-history/${biosId}`)
+    return data
+  },
+  async getConflicts(params?: BiosConflictParams) {
+    const { data } = await api.get<{ data: BiosConflictItem[]; meta: PaginationMeta }>('/super-admin/bios-conflicts', { params })
+    return data
+  },
+  async resolveConflict(id: number, payload: { resolution_notes: string }) {
+    const { data } = await api.put<{ data: BiosConflictItem }>(`/super-admin/bios-conflicts/${id}/resolve`, payload)
     return data
   },
   async getUsernameManagement(params: { page?: number; per_page?: number; tenant_id?: number | ''; role?: string; locked?: boolean | ''; search?: string }) {

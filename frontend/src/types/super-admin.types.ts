@@ -138,6 +138,20 @@ export interface BiosHistoryEvent {
   occurred_at: string
 }
 
+export interface BiosConflictItem {
+  id: number
+  bios_id: string
+  tenant_name?: string | null
+  conflict_type: string
+  attempted_by_name: string | null
+  program_name: string | null
+  affected_customers: Array<{ id: number | null; name: string; username?: string | null }>
+  status: 'open' | 'resolved'
+  resolved: boolean
+  created_at: string | null
+  updated_at: string | null
+}
+
 export interface FinancialReportPayload {
   summary: {
     total_platform_revenue: number

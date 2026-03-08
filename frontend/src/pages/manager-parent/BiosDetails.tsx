@@ -185,7 +185,7 @@ export function BiosDetailsPage() {
           <TabsContent value="blacklist">
             <Card>
               <CardContent className="p-4 text-sm text-slate-600 dark:text-slate-300">
-                {overviewQuery.data?.blacklist?.is_blacklisted ? overviewQuery.data.blacklist.reason : t('biosDetails.notBlacklisted')}
+                {overviewQuery.data?.blacklist?.is_blacklisted ? (overviewQuery.data.blacklist.reason || t('activate.biosBlacklisted')) : t('biosDetails.notBlacklisted')}
               </CardContent>
             </Card>
           </TabsContent>
@@ -194,4 +194,3 @@ export function BiosDetailsPage() {
     </div>
   )
 }
-

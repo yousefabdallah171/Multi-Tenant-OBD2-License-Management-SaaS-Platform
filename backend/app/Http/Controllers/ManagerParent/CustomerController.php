@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ManagerParent;
 
 use App\Enums\UserRole;
 use App\Models\ActivityLog;
+use App\Models\BiosBlacklist;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\UserIpLog;
@@ -352,6 +353,12 @@ class CustomerController extends BaseManagerParentController
         if ($normalizedBiosId === '') {
             throw ValidationException::withMessages([
                 'bios_id' => 'The BIOS ID field is required.',
+            ]);
+        }
+
+        if (BiosBlacklist::blocksBios($normalizedBiosId, $this->currentTenantId($request))) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'This BIOS ID is blacklisted.',
             ]);
         }
 

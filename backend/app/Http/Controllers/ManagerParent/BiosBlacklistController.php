@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ManagerParent;
 use App\Models\BiosBlacklist;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class BiosBlacklistController extends BaseManagerParentController
 {
@@ -43,17 +44,26 @@ class BiosBlacklistController extends BaseManagerParentController
     {
         $validated = $request->validate([
             'bios_id' => ['required', 'string', 'max:255'],
-            'reason' => ['required', 'string'],
+            'reason' => ['nullable', 'string'],
         ]);
+
+        $biosId = trim((string) $validated['bios_id']);
+        $reason = trim((string) ($validated['reason'] ?? ''));
+
+        if ($biosId === '') {
+            throw ValidationException::withMessages([
+                'bios_id' => 'The BIOS ID field is required.',
+            ]);
+        }
 
         $entry = BiosBlacklist::query()->updateOrCreate(
             [
                 'tenant_id' => $this->currentTenantId($request),
-                'bios_id' => $validated['bios_id'],
+                'bios_id' => $biosId,
             ],
             [
                 'added_by' => $request->user()?->id,
-                'reason' => $validated['reason'],
+                'reason' => $reason,
                 'status' => 'active',
             ],
         );

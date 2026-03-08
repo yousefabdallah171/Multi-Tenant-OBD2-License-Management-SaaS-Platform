@@ -47,6 +47,7 @@ use App\Http\Controllers\Reseller\ReportController as ResellerReportController;
 use App\Http\Controllers\Reseller\SoftwareController as ResellerSoftwareController;
 use App\Http\Controllers\SuperAdmin\ApiStatusController;
 use App\Http\Controllers\SuperAdmin\BiosBlacklistController as SuperAdminBiosBlacklistController;
+use App\Http\Controllers\SuperAdmin\BiosConflictController as SuperAdminBiosConflictController;
 use App\Http\Controllers\SuperAdmin\BiosHistoryController;
 use App\Http\Controllers\SuperAdmin\BiosDetailsController as SuperAdminBiosDetailsController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
@@ -320,6 +321,8 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::post('/bios-blacklist/import', [SuperAdminBiosBlacklistController::class, 'import']);
         Route::get('/bios-blacklist/export', [SuperAdminBiosBlacklistController::class, 'export']);
         Route::post('/bios-blacklist/{biosBlacklist}/remove', [SuperAdminBiosBlacklistController::class, 'remove']);
+        Route::get('/bios-conflicts', [SuperAdminBiosConflictController::class, 'index']);
+        Route::put('/bios-conflicts/{id}/resolve', [SuperAdminBiosConflictController::class, 'resolve']);
 
         Route::get('/bios-history', [BiosHistoryController::class, 'index']);
         Route::get('/bios-history/{biosId}', [BiosHistoryController::class, 'show']);

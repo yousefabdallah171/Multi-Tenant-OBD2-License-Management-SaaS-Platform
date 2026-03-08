@@ -242,6 +242,36 @@ export function RenewLicenseDialog({
     return next
   }, [displayTimezone, durationDays, effectiveAnchorDate, endDate, mode, scheduleAt, scheduleEnabled, scheduleTimezone, t, totalPrice])
 
+  const startSummary = useMemo(() => {
+    if (!scheduleEnabled) {
+      return t('activate.startingNow', { defaultValue: 'Starting now' })
+    }
+
+    const scheduledDate = zonedDateTimeInputToUtcDate(scheduleAt, scheduleTimezone)
+    if (!scheduledDate) {
+      return t('activate.startingFromPending', { defaultValue: 'Starting from the selected date' })
+    }
+
+    return `${t('activate.startingFrom', { defaultValue: 'Starting from' })}: ${scheduledDate.toLocaleString()} (${scheduleTimezone})`
+  }, [scheduleAt, scheduleEnabled, scheduleTimezone, t])
+
+  const endSummary = useMemo(() => {
+    if (mode === 'end_date') {
+      const endDateUtc = zonedDateTimeInputToUtcDate(endDate, displayTimezone)
+      if (!endDateUtc) {
+        return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
+      }
+
+      return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${endDateUtc.toLocaleString()}`
+    }
+
+    if (durationDays <= 0) {
+      return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
+    }
+
+    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${new Date(effectiveAnchorDate.getTime() + durationDays * 86400000).toLocaleString()}`
+  }, [displayTimezone, durationDays, effectiveAnchorDate, endDate, mode, t])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -252,6 +282,67 @@ export function RenewLicenseDialog({
 
         <div className="space-y-4">
           <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                {t('activate.startingLabel', { defaultValue: 'Starting' })}
+              </p>
+              <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{startSummary}</p>
+            </div>
+            <label className="flex items-center gap-3 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={scheduleEnabled}
+                onChange={(event) => {
+                  const checked = event.target.checked
+                  setScheduleEnabled(checked)
+                  if (checked) {
+                    setScheduleMode('on')
+                    setScheduleAt((current) => current || defaultScheduleDate(scheduleTimezone, anchorDate))
+                  }
+                }}
+              />
+              {t('activate.scheduleToggle', { defaultValue: 'Schedule activation for later' })}
+            </label>
+            {scheduleEnabled ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant={scheduleMode === 'on' ? 'default' : 'outline'} onClick={() => setScheduleMode('on')}>
+                    {t('activate.scheduleModeCustom', { defaultValue: 'Custom Date' })}
+                  </Button>
+                  <Button type="button" size="sm" variant={scheduleMode === 'after' ? 'default' : 'outline'} onClick={() => setScheduleMode('after')}>
+                    {t('activate.scheduleModeRelative', { defaultValue: 'After' })}
+                  </Button>
+                </div>
+                {scheduleMode === 'after' ? (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Input value={scheduleAfterValue} onChange={(event) => setScheduleAfterValue(event.target.value.replace(/[^\d.]/g, ''))} />
+                    <select value={scheduleAfterUnit} onChange={(event) => setScheduleAfterUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                      <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
+                      <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
+                      <option value="days">{t('common.days')}</option>
+                    </select>
+                    <Input type="datetime-local" value={scheduleAt} readOnly />
+                  </div>
+                ) : (
+                  <Input type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+                )}
+                <select value={scheduleTimezone} onChange={(event) => setScheduleTimezone(event.target.value)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                  {COMMON_TIMEZONES.map((item) => (
+                    <option key={item.value} value={item.value}>{item.label}</option>
+                  ))}
+                </select>
+                {errors.scheduleAt ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                {t('activate.endingLabel', { defaultValue: 'Ending' })}
+              </p>
+              <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{endSummary}</p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <Label>{t('common.duration')}</Label>
               <Button type="button" size="sm" variant={mode === 'duration' ? 'default' : 'outline'} onClick={() => setMode('duration')}>
@@ -286,55 +377,6 @@ export function RenewLicenseDialog({
                 <Input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
               </Field>
             )}
-          </div>
-
-          <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-            <label className="flex items-center gap-3 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={scheduleEnabled}
-                onChange={(event) => {
-                  const checked = event.target.checked
-                  setScheduleEnabled(checked)
-                  if (checked) {
-                    setScheduleMode('on')
-                    setScheduleAt((current) => current || defaultScheduleDate(scheduleTimezone, anchorDate))
-                  }
-                }}
-              />
-              {t('activate.scheduleToggle', { defaultValue: 'Schedule activation for later' })}
-            </label>
-            {scheduleEnabled ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant={scheduleMode === 'after' ? 'default' : 'outline'} onClick={() => setScheduleMode('after')}>
-                    {t('activate.scheduleModeRelative', { defaultValue: 'After' })}
-                  </Button>
-                  <Button type="button" size="sm" variant={scheduleMode === 'on' ? 'default' : 'outline'} onClick={() => setScheduleMode('on')}>
-                    {t('activate.scheduleModeCustom', { defaultValue: 'On date' })}
-                  </Button>
-                </div>
-                {scheduleMode === 'after' ? (
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <Input value={scheduleAfterValue} onChange={(event) => setScheduleAfterValue(event.target.value.replace(/[^\d.]/g, ''))} />
-                    <select value={scheduleAfterUnit} onChange={(event) => setScheduleAfterUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                      <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
-                      <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
-                      <option value="days">{t('common.days')}</option>
-                    </select>
-                    <Input type="datetime-local" value={scheduleAt} readOnly />
-                  </div>
-                ) : (
-                  <Input type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
-                )}
-                <select value={scheduleTimezone} onChange={(event) => setScheduleTimezone(event.target.value)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                  {COMMON_TIMEZONES.map((item) => (
-                    <option key={item.value} value={item.value}>{item.label}</option>
-                  ))}
-                </select>
-                {errors.scheduleAt ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
-              </div>
-            ) : null}
           </div>
 
           <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">

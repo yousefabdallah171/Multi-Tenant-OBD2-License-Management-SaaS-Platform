@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AccessDeniedPage } from '@/pages/errors/AccessDenied'
 import { NotFoundPage } from '@/pages/errors/NotFound'
 import { ServerErrorPage } from '@/pages/errors/ServerError'
+import { DEFAULT_LANGUAGE } from '@/lib/constants'
 import { GuestRoute, ProtectedRoute, RoleGuard } from '@/router/guards'
 import { LanguageLayout } from '@/router/LanguageLayout'
 
@@ -45,7 +46,6 @@ const ManagerParentApiStatusPage = lazyNamed(() => import('@/pages/manager-paren
 const ManagerParentBiosBlacklistPage = lazyNamed(() => import('@/pages/manager-parent/BiosBlacklist'), 'BiosBlacklistPage')
 const ManagerParentBiosConflictsPage = lazyNamed(() => import('@/pages/manager-parent/BiosConflicts'), 'BiosConflictsPage')
 const ManagerParentBiosDetailsPage = lazyNamed(() => import('@/pages/manager-parent/BiosDetails'), 'BiosDetailsPage')
-const ManagerParentBiosHistoryPage = lazyNamed(() => import('@/pages/manager-parent/BiosHistory'), 'BiosHistoryPage')
 const ManagerParentCustomersPage = lazyNamed(() => import('@/pages/manager-parent/Customers'), 'CustomersPage')
 const ManagerParentCreateCustomerPage = lazyNamed(() => import('@/pages/manager-parent/CreateCustomer'), 'CreateCustomerPageForManagerParent')
 const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-parent/CustomerDetail'), 'CustomerDetailPage')
@@ -53,11 +53,9 @@ const ManagerParentDashboardPage = lazyNamed(() => import('@/pages/manager-paren
 const ManagerParentFinancialReportsPage = lazyNamed(() => import('@/pages/manager-parent/FinancialReports'), 'FinancialReportsPage')
 const ManagerParentIpAnalyticsPage = lazyNamed(() => import('@/pages/manager-parent/IpAnalytics'), 'IpAnalyticsPage')
 const ManagerParentLicensesPage = lazyNamed(() => import('@/pages/manager-parent/Licenses'), 'LicensesPage')
-const ManagerParentLogsPage = lazyNamed(() => import('@/pages/manager-parent/Logs'), 'LogsPage')
 const ManagerParentProfilePage = lazyNamed(() => import('@/pages/manager-parent/Profile'), 'ProfilePage')
 const ManagerParentProgramLogsPage = lazyNamed(() => import('@/pages/manager-parent/ProgramLogs'), 'ProgramLogsPage')
 const ManagerParentResellerLogsPage = lazyNamed(() => import('@/pages/manager-parent/ResellerLogs'), 'ResellerLogsPage')
-const ManagerParentReportsPage = lazyNamed(() => import('@/pages/manager-parent/Reports'), 'ReportsPage')
 const ResellerPricingPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPricing'), 'ResellerPricingPage')
 const ManagerParentSettingsPage = lazyNamed(() => import('@/pages/manager-parent/Settings'), 'SettingsPage')
 const ManagerParentSoftwarePage = lazyNamed(() => import('@/pages/manager-parent/Software'), 'SoftwarePage')
@@ -68,8 +66,8 @@ const ManagerParentUsernameManagementPage = lazyNamed(() => import('@/pages/mana
 
 const ApiStatusPage = lazyNamed(() => import('@/pages/super-admin/ApiStatus'), 'ApiStatusPage')
 const BiosBlacklistPage = lazyNamed(() => import('@/pages/super-admin/BiosBlacklist'), 'BiosBlacklistPage')
+const SuperAdminBiosConflictsPage = lazyNamed(() => import('@/pages/super-admin/BiosConflicts'), 'BiosConflictsPage')
 const SuperAdminBiosDetailsPage = lazyNamed(() => import('@/pages/super-admin/BiosDetails'), 'BiosDetailsPage')
-const BiosHistoryPage = lazyNamed(() => import('@/pages/super-admin/BiosHistory'), 'BiosHistoryPage')
 const DashboardPage = lazyNamed(() => import('@/pages/super-admin/Dashboard'), 'DashboardPage')
 const FinancialReportsPage = lazyNamed(() => import('@/pages/super-admin/FinancialReports'), 'FinancialReportsPage')
 const LogsPage = lazyNamed(() => import('@/pages/super-admin/Logs'), 'LogsPage')
@@ -104,7 +102,7 @@ export function AppRouter() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        <Route path="/" element={<Navigate to="/ar/login" replace />} />
+        <Route path="/" element={<Navigate to={`/${DEFAULT_LANGUAGE}/login`} replace />} />
         <Route path="/:lang" element={<LanguageLayout />}>
           <Route index element={<Navigate to="login" replace />} />
           <Route path="not-found" element={<NotFoundPage />} />
@@ -123,8 +121,9 @@ export function AppRouter() {
                   <Route path="users" element={<UsersPage />} />
                   <Route path="admin-management" element={<AdminManagementPage />} />
                   <Route path="bios-blacklist" element={<BiosBlacklistPage />} />
-                  <Route path="bios-history" element={<BiosHistoryPage />} />
+                  <Route path="bios-history" element={<Navigate to="../bios-conflicts" replace />} />
                   <Route path="bios-details" element={<SuperAdminBiosDetailsPage />} />
+                  <Route path="bios-conflicts" element={<SuperAdminBiosConflictsPage />} />
                   <Route path="username-management" element={<UsernameManagementPage />} />
                   <Route path="security-locks" element={<SecurityLocksPage />} />
                   <Route path="financial-reports" element={<FinancialReportsPage />} />
@@ -147,17 +146,17 @@ export function AppRouter() {
                   <Route path="software-management/:id/edit" element={<ManagerParentProgramFormPage />} />
                   <Route path="software-management/:id/activate" element={<ActivateLicensePageForManagerParent />} />
                   <Route path="bios-blacklist" element={<ManagerParentBiosBlacklistPage />} />
-                  <Route path="bios-history" element={<ManagerParentBiosHistoryPage />} />
+                  <Route path="bios-history" element={<Navigate to="../bios-conflicts" replace />} />
                   <Route path="bios-details" element={<ManagerParentBiosDetailsPage />} />
                   <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
                   <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />
-                  <Route path="logs" element={<ManagerParentLogsPage />} />
+                  <Route path="logs" element={<Navigate to="../activity" replace />} />
                   <Route path="program-logs" element={<ManagerParentProgramLogsPage />} />
                   <Route path="reseller-logs" element={<ManagerParentResellerLogsPage />} />
                   <Route path="api-status" element={<ManagerParentApiStatusPage />} />
                   <Route path="username-management" element={<ManagerParentUsernameManagementPage />} />
                   <Route path="financial-reports" element={<ManagerParentFinancialReportsPage />} />
-                  <Route path="reports" element={<ManagerParentReportsPage />} />
+                  <Route path="reports" element={<Navigate to="../financial-reports" replace />} />
                   <Route path="activity" element={<ManagerParentActivityPage />} />
                   <Route path="customers" element={<ManagerParentCustomersPage />} />
                   <Route path="customers/create" element={<ManagerParentCreateCustomerPage />} />
@@ -216,7 +215,7 @@ export function AppRouter() {
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>
-        <Route path="*" element={<Navigate to="/ar/not-found" replace />} />
+        <Route path="*" element={<Navigate to={`/${DEFAULT_LANGUAGE}/not-found`} replace />} />
       </Routes>
     </Suspense>
   )

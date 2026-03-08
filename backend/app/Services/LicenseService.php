@@ -125,6 +125,8 @@ class LicenseService
                     'license_id' => $license->id,
                     'customer_id' => $customer->id,
                     'program_id' => $program->id,
+                    'bios_id' => $biosId,
+                    'external_username' => $externalUsername,
                     'price' => (float) $license->price,
                     'is_scheduled' => $isScheduled,
                 ],
@@ -189,6 +191,10 @@ class LicenseService
                 sprintf('Renewed license %d for BIOS %s.', $license->id, $license->bios_id),
                 [
                     'license_id' => $license->id,
+                    'customer_id' => $license->customer_id,
+                    'program_id' => $license->program_id,
+                    'bios_id' => $license->bios_id,
+                    'external_username' => $license->external_username,
                     'duration_days' => $durationDays,
                     'price' => (float) $license->price,
                 ],
@@ -243,6 +249,10 @@ class LicenseService
                 sprintf('Deactivated license %d for BIOS %s.', $license->id, $license->bios_id),
                 [
                     'license_id' => $license->id,
+                    'customer_id' => $license->customer_id,
+                    'program_id' => $license->program_id,
+                    'bios_id' => $license->bios_id,
+                    'external_username' => $license->external_username,
                 ],
             );
 
@@ -310,7 +320,13 @@ class LicenseService
                 $reseller,
                 'license.paused',
                 sprintf('Paused license %d for BIOS %s.', $license->id, $license->bios_id),
-                ['license_id' => $license->id],
+                [
+                    'license_id' => $license->id,
+                    'customer_id' => $license->customer_id,
+                    'program_id' => $license->program_id,
+                    'bios_id' => $license->bios_id,
+                    'external_username' => $license->external_username,
+                ],
             );
 
             $license->load(['customer', 'program', 'reseller']);
@@ -389,7 +405,13 @@ class LicenseService
                 $reseller,
                 'license.resumed',
                 sprintf('Resumed license %d for BIOS %s.', $license->id, $license->bios_id),
-                ['license_id' => $license->id],
+                [
+                    'license_id' => $license->id,
+                    'customer_id' => $license->customer_id,
+                    'program_id' => $license->program_id,
+                    'bios_id' => $license->bios_id,
+                    'external_username' => $license->external_username,
+                ],
             );
 
             $license->load(['customer', 'program', 'reseller']);
@@ -466,7 +488,10 @@ class LicenseService
                 sprintf('Scheduled activation executed for license %d.', $license->id),
                 [
                     'license_id' => $license->id,
+                    'customer_id' => $license->customer_id,
                     'program_id' => $program?->id,
+                    'bios_id' => $license->bios_id,
+                    'external_username' => $license->external_username,
                     'executed_at' => $attemptedAt->toIso8601String(),
                 ],
             );
@@ -538,8 +563,22 @@ class LicenseService
 
     private function assertBiosAvailable(User $reseller, Program $program, string $biosId, string $externalUsername): void
     {
-        if (BiosBlacklist::query()->where('bios_id', $biosId)->where('status', 'active')->exists()) {
-            $this->logBiosAccess($reseller, $biosId, 'blocked', ['reason' => 'blacklisted', 'program_id' => $program->id]);
+        if (BiosBlacklist::blocksBios($biosId, $reseller->tenant_id)) {
+            BiosConflict::query()->create([
+                'bios_id' => $biosId,
+                'attempted_by' => $reseller->id,
+                'tenant_id' => $reseller->tenant_id,
+                'program_id' => $program->id,
+                'conflict_type' => 'blacklisted_bios',
+                'resolved' => false,
+            ]);
+
+            $this->logBiosAccess($reseller, $biosId, 'blacklist', [
+                'reason' => 'blacklisted',
+                'status' => 'blocked',
+                'description' => sprintf('Blocked activation for blacklisted BIOS %s.', $biosId),
+                'program_id' => $program->id,
+            ]);
 
             throw ValidationException::withMessages(['bios_id' => 'This BIOS ID is blacklisted.']);
         }
@@ -777,6 +816,10 @@ class LicenseService
                     sprintf('Scheduled activation failed for license %d.', $license->id),
                     [
                         'license_id' => $license->id,
+                        'customer_id' => $license->customer_id,
+                        'program_id' => $license->program_id,
+                        'bios_id' => $license->bios_id,
+                        'external_username' => $license->external_username,
                         'failed_at' => $attemptedAt->toIso8601String(),
                         'message' => $cleanMessage,
                     ],

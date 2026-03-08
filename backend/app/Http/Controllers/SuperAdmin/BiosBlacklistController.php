@@ -8,6 +8,7 @@ use App\Models\BiosBlacklist;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BiosBlacklistController extends BaseSuperAdminController
@@ -65,14 +66,23 @@ class BiosBlacklistController extends BaseSuperAdminController
     {
         $validated = $request->validate([
             'bios_id' => ['required', 'string', 'max:255'],
-            'reason' => ['required', 'string'],
+            'reason' => ['nullable', 'string'],
         ]);
 
+        $biosId = trim((string) $validated['bios_id']);
+        $reason = trim((string) ($validated['reason'] ?? ''));
+
+        if ($biosId === '') {
+            throw ValidationException::withMessages([
+                'bios_id' => 'The BIOS ID field is required.',
+            ]);
+        }
+
         $entry = BiosBlacklist::query()->updateOrCreate(
-            ['tenant_id' => null, 'bios_id' => $validated['bios_id']],
+            ['tenant_id' => null, 'bios_id' => $biosId],
             [
                 'added_by' => $request->user()?->id,
-                'reason' => $validated['reason'],
+                'reason' => $reason,
                 'status' => 'active',
             ],
         );

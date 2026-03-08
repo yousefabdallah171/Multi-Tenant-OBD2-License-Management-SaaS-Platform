@@ -86,6 +86,7 @@ export const routePaths = {
     biosBlacklist: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-blacklist`,
     biosHistory: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-history`,
     biosDetails: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-details`,
+    biosConflicts: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-conflicts`,
     usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/username-management`,
     securityLocks: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/security-locks`,
     financialReports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/financial-reports`,

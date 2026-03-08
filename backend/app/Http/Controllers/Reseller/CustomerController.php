@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Reseller;
 
 use App\Enums\UserRole;
+use App\Models\BiosBlacklist;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
@@ -367,6 +368,12 @@ class CustomerController extends BaseResellerController
         if ($normalizedBiosId === '') {
             throw ValidationException::withMessages([
                 'bios_id' => 'The BIOS ID field is required.',
+            ]);
+        }
+
+        if (BiosBlacklist::blocksBios($normalizedBiosId, $this->currentTenantId($request))) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'This BIOS ID is blacklisted.',
             ]);
         }
 

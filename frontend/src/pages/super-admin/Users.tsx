@@ -119,9 +119,10 @@ export function UsersPage() {
         <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.users.description')}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
         <StatsCard title={t('roles.super_admin')} value={usersQuery.data?.role_counts.super_admin ?? 0} icon={UserCog} color="rose" />
         <StatsCard title={t('roles.manager_parent')} value={usersQuery.data?.role_counts.manager_parent ?? 0} icon={Building2} color="sky" />
+        <StatsCard title={t('roles.manager')} value={usersQuery.data?.role_counts.manager ?? 0} icon={UsersIcon} color="sky" />
         <StatsCard title={t('roles.reseller')} value={usersQuery.data?.role_counts.reseller ?? 0} icon={UsersIcon} color="emerald" />
         <StatsCard title={t('roles.customer')} value={usersQuery.data?.role_counts.customer ?? 0} icon={UserRound} color="amber" />
       </div>

@@ -3,9 +3,10 @@ import { toast } from 'sonner'
 import type { SupportedLanguage } from '@/hooks/useLanguage'
 import i18n from '@/i18n'
 import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY } from '@/lib/constants'
-import { routePaths } from '@/router/routes'
+import { getDashboardPath, routePaths } from '@/router/routes'
 import { useAuthStore } from '@/stores/authStore'
 import type { DashboardStats, HealthResponse } from '@/types/api.types'
+import type { User } from '@/types/user.types'
 
 function resolveApiBaseUrl() {
   const configuredBaseUrl = (globalThis as { __VITE_API_URL__?: string }).__VITE_API_URL__
@@ -52,6 +53,25 @@ function resolveCurrentLanguage(): SupportedLanguage {
   return document.documentElement.lang === 'ar' ? 'ar' : DEFAULT_LANGUAGE
 }
 
+async function fetchCurrentUserSnapshot(): Promise<User | null> {
+  const token = useAuthStore.getState().token
+  if (!token) {
+    return null
+  }
+
+  const { data } = await axios.get<{ user: User | null }>('/auth/me', {
+    baseURL: resolveApiBaseUrl(),
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'Accept-Language': resolveCurrentLanguage(),
+    },
+  })
+
+  return data.user ?? null
+}
+
 api.interceptors.request.use((config) => {
   config.baseURL ??= resolveApiBaseUrl()
 
@@ -69,7 +89,7 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error?.response?.status
     const requestUrl = String(error?.config?.url ?? '')
     const isAuthLoginRequest = /\/auth\/login(?:\?.*)?$/.test(requestUrl)
@@ -83,6 +103,32 @@ api.interceptors.response.use(
     }
 
     if (status === 403 && typeof window !== 'undefined' && !window.location.pathname.includes('/access-denied')) {
+      const isMeRequest = /\/auth\/me(?:\?.*)?$/.test(requestUrl)
+
+      if (!isMeRequest && useAuthStore.getState().token) {
+        try {
+          const previousUser = useAuthStore.getState().user
+          const currentUser = await fetchCurrentUserSnapshot()
+
+          if (currentUser) {
+            useAuthStore.getState().setUser(currentUser)
+
+            if (!previousUser || previousUser.role !== currentUser.role || previousUser.status !== currentUser.status) {
+              if (currentUser.status !== 'active') {
+                useAuthStore.getState().clearSession()
+                window.location.assign(routePaths.login(resolveCurrentLanguage()))
+                return Promise.reject(error)
+              }
+
+              window.location.assign(getDashboardPath(currentUser.role, resolveCurrentLanguage()))
+              return Promise.reject(error)
+            }
+          }
+        } catch {
+          // Fall through to the access denied route when the session cannot be refreshed.
+        }
+      }
+
       window.location.assign(routePaths.errors.accessDenied(resolveCurrentLanguage()))
     }
 

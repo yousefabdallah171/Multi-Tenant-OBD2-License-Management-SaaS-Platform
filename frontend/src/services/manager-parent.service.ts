@@ -13,8 +13,10 @@ import type {
   ManagerParentDashboardStats,
   ManagerParentLogEntry,
   PaginatedResponse,
-  ProgramLogLicenseInfo,
   ProgramLog,
+  ProgramLogSummary,
+  ProgramLogUserOption,
+  ProgramUserLogEntry,
   ProgramSummary,
   SellerLogEntry,
   SellerLogSummary,
@@ -156,8 +158,8 @@ export const managerParentService = {
     const { data } = await api.get<{ data: TeamMemberDetail }>(`/team/${id}`)
     return data
   },
-  async getProgramLogs(programId: number, params?: { page?: number; per_page?: number }): Promise<{ raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]>; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }> {
-    const { data } = await api.get<{ data: { raw: string; rows?: ProgramLog[]; licenses?: Record<string, ProgramLogLicenseInfo[]>; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } } }>(`/manager-parent/programs/${programId}/logs`, { params })
+  async getProgramLogs(programId: number, params?: { page?: number; per_page?: number; seller_id?: number | ''; action?: string }): Promise<{ raw: string; rows?: ProgramLog[]; user_rows?: ProgramUserLogEntry[]; users?: ProgramLogUserOption[]; summary?: ProgramLogSummary; external_available?: boolean; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }> {
+    const { data } = await api.get<{ data: { raw: string; rows?: ProgramLog[]; user_rows?: ProgramUserLogEntry[]; users?: ProgramLogUserOption[]; summary?: ProgramLogSummary; external_available?: boolean; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } } }>(`/manager-parent/programs/${programId}/logs`, { params })
     return data.data
   },
   async getSellerLogs(params?: { page?: number; per_page?: number; seller_id?: number | ''; action?: string; from?: string; to?: string }) {

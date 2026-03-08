@@ -130,11 +130,10 @@ export function BiosDetailsPage() {
             <Card><CardContent className="space-y-2 p-4">{(activityQuery.data ?? []).map((item) => <div key={`${item.id}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">{item.action}</div>)}</CardContent></Card>
           </TabsContent>
           <TabsContent value="blacklist">
-            <Card><CardContent className="p-4 text-sm text-slate-600 dark:text-slate-300">{overviewQuery.data?.blacklist?.is_blacklisted ? overviewQuery.data.blacklist.reason : t('biosDetails.notBlacklisted')}</CardContent></Card>
+            <Card><CardContent className="p-4 text-sm text-slate-600 dark:text-slate-300">{overviewQuery.data?.blacklist?.is_blacklisted ? (overviewQuery.data.blacklist.reason || t('activate.biosBlacklisted')) : t('biosDetails.notBlacklisted')}</CardContent></Card>
           </TabsContent>
         </Tabs>
       ) : null}
     </div>
   )
 }
-

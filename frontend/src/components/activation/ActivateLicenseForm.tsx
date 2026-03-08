@@ -37,9 +37,15 @@ interface ActivationFormErrors {
   price?: string
 }
 
-function getDefaultEndDate(timeZone: string, days = 30): string {
+function getDefaultEndDate(timeZone: string, days = 1): string {
   const next = new Date()
   next.setDate(next.getDate() + days)
+  return formatDateTimeLocalInTimezone(next, timeZone)
+}
+
+function getDefaultScheduleDate(timeZone: string): string {
+  const next = new Date()
+  next.setHours(next.getHours() + 1)
   return formatDateTimeLocalInTimezone(next, timeZone)
 }
 
@@ -58,7 +64,7 @@ function createEmptyForm(defaultTimezone: string) {
   schedule_mode: 'custom' as 'relative' | 'custom',
   schedule_offset_value: '1',
   schedule_offset_unit: 'hours' as 'minutes' | 'hours' | 'days',
-  scheduled_date_time: '',
+  scheduled_date_time: getDefaultScheduleDate(defaultTimezone),
   scheduled_timezone: defaultTimezone,
 }
 }
@@ -96,6 +102,14 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
   const invalidNumberMessage = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
   const maxPriceMessage = t('validation.maxPrice', { defaultValue: 'Price is too high' })
 
+  const effectiveStartDate = useMemo(() => {
+    if (!form.is_scheduled) {
+      return new Date()
+    }
+
+    return zonedDateTimeInputToUtcDate(form.scheduled_date_time, form.scheduled_timezone) ?? new Date()
+  }, [form.is_scheduled, form.scheduled_date_time, form.scheduled_timezone])
+
   const durationDays = useMemo(() => {
     if (form.mode === 'end_date') {
       if (!form.end_date) {
@@ -103,8 +117,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       }
 
       const endDate = zonedDateTimeInputToUtcDate(form.end_date, displayTimezone)?.getTime() ?? Number.NaN
-      const now = Date.now()
-      const diffMs = endDate - now
+      const diffMs = endDate - effectiveStartDate.getTime()
       if (diffMs <= 0) {
         return 0
       }
@@ -126,7 +139,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     }
 
     return value
-  }, [form.duration_unit, form.duration_value, form.end_date, form.mode])
+  }, [displayTimezone, effectiveStartDate, form.duration_unit, form.duration_value, form.end_date, form.mode])
 
   const autoPrice = useMemo(() => Number((Math.max(durationDays, 0) * program.price_per_day).toFixed(2)), [durationDays, program.price_per_day])
 
@@ -279,6 +292,36 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     ? `${form.scheduled_date_time.replace('T', ' ')} ${form.scheduled_timezone}`
     : ''
 
+  const startSummary = useMemo(() => {
+    if (!form.is_scheduled) {
+      return t('activate.startingNow', { defaultValue: 'Starting now' })
+    }
+
+    const scheduledAt = zonedDateTimeInputToUtcDate(form.scheduled_date_time, form.scheduled_timezone)
+    if (!scheduledAt) {
+      return t('activate.startingFromPending', { defaultValue: 'Starting from the selected date' })
+    }
+
+    return `${t('activate.startingFrom', { defaultValue: 'Starting from' })}: ${scheduledAt.toLocaleString()} (${form.scheduled_timezone})`
+  }, [form.is_scheduled, form.scheduled_date_time, form.scheduled_timezone, t])
+
+  const endSummary = useMemo(() => {
+    if (form.mode === 'end_date') {
+      const endDate = zonedDateTimeInputToUtcDate(form.end_date, displayTimezone)
+      if (!endDate) {
+        return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
+      }
+
+      return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${endDate.toLocaleString()}`
+    }
+
+    if (durationDays <= 0) {
+      return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
+    }
+
+    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${new Date(effectiveStartDate.getTime() + durationDays * 86400000).toLocaleString()}`
+  }, [displayTimezone, durationDays, effectiveStartDate, form.end_date, form.mode, t])
+
   function handleSubmit() {
     setSubmitError('')
 
@@ -392,81 +435,26 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.biosIdHint')}</p>
         {errors.bios_id ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.bios_id}</p> : null}
       </div>
-      <div className="space-y-2">
-        <Label>{t('activate.duration')}</Label>
-        <div className="flex gap-2">
-          <Button type="button" size="sm" variant={form.mode === 'duration' ? 'default' : 'outline'} onClick={() => setForm((current) => ({ ...current, mode: 'duration' }))}>
-            {t('activate.durationMode')}
-          </Button>
-          <Button type="button" size="sm" variant={form.mode === 'end_date' ? 'default' : 'outline'} onClick={() => setForm((current) => ({ ...current, mode: 'end_date' }))}>
-            {t('activate.endDateMode')}
-          </Button>
-        </div>
-        {form.mode === 'duration' ? (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                id="activate-duration"
-                type="text"
-                inputMode="decimal"
-                value={form.duration_value}
-                onChange={(event) => setForm((current) => ({ ...current, duration_value: normalizeDecimalInput(event.target.value) }))}
-              />
-              <select
-                value={form.duration_unit}
-                onChange={(event) => setForm((current) => ({ ...current, duration_unit: event.target.value as 'minutes' | 'hours' | 'days' }))}
-                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-              >
-                <option value="minutes">{t('activate.minutes')}</option>
-                <option value="hours">{t('activate.hours')}</option>
-                <option value="days">{t('activate.days')}</option>
-              </select>
-            </div>
-            {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: '30 min', value: '30', unit: 'minutes' as const },
-                { label: '1 hr', value: '1', unit: 'hours' as const },
-                { label: '6 hr', value: '6', unit: 'hours' as const },
-                { label: '1 day', value: '1', unit: 'days' as const },
-                { label: '7 days', value: '7', unit: 'days' as const },
-                { label: '30 days', value: '30', unit: 'days' as const },
-                { label: '90 days', value: '90', unit: 'days' as const },
-              ].map((quick) => (
-                <Button
-                  key={quick.label}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setForm((current) => ({ ...current, mode: 'duration', duration_value: quick.value, duration_unit: quick.unit }))}
-                >
-                  {quick.label}
-                </Button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <Input type="datetime-local" value={form.end_date} onChange={(event) => setForm((current) => ({ ...current, end_date: event.target.value }))} />
-            {errors.end_date ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.end_date}</p> : null}
-          </>
-        )}
-      </div>
       <div className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+            {t('activate.startingLabel', { defaultValue: 'Starting' })}
+          </p>
+          <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{startSummary}</p>
+        </div>
         <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
           <input
             type="checkbox"
             checked={form.is_scheduled}
             onChange={(event) => setForm((current) => {
               if (event.target.checked) {
-                const defaultScheduledAt = computeRelativeScheduleDate(1, 'hours')
                 return {
                   ...current,
                   is_scheduled: true,
-                  schedule_mode: 'relative',
+                  schedule_mode: 'custom',
                   schedule_offset_value: current.schedule_offset_value || '1',
                   schedule_offset_unit: current.schedule_offset_unit || 'hours',
-                  scheduled_date_time: current.scheduled_date_time || formatDateTimeLocalInTimezone(defaultScheduledAt, current.scheduled_timezone),
+                  scheduled_date_time: current.scheduled_date_time || getDefaultScheduleDate(current.scheduled_timezone),
                 }
               }
 
@@ -481,18 +469,18 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
               <Button
                 type="button"
                 size="sm"
-                variant={form.schedule_mode === 'relative' ? 'default' : 'outline'}
-                onClick={() => setForm((current) => ({ ...current, schedule_mode: 'relative' }))}
+                variant={form.schedule_mode === 'custom' ? 'default' : 'outline'}
+                onClick={() => setForm((current) => ({ ...current, schedule_mode: 'custom' }))}
               >
-                {t('activate.durationMode')}
+                {t('activate.scheduleModeCustom', { defaultValue: 'Custom Date' })}
               </Button>
               <Button
                 type="button"
                 size="sm"
-                variant={form.schedule_mode === 'custom' ? 'default' : 'outline'}
-                onClick={() => setForm((current) => ({ ...current, schedule_mode: 'custom' }))}
+                variant={form.schedule_mode === 'relative' ? 'default' : 'outline'}
+                onClick={() => setForm((current) => ({ ...current, schedule_mode: 'relative' }))}
               >
-                {t('activate.endDateMode')}
+                {t('activate.scheduleModeRelative', { defaultValue: 'After' })}
               </Button>
             </div>
             {form.schedule_mode === 'relative' ? (
@@ -561,6 +549,72 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
             ) : null}
           </div>
         ) : null}
+      </div>
+      <div className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+            {t('activate.endingLabel', { defaultValue: 'Ending' })}
+          </p>
+          <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{endSummary}</p>
+        </div>
+        <Label>{t('activate.duration')}</Label>
+        <div className="flex gap-2">
+          <Button type="button" size="sm" variant={form.mode === 'duration' ? 'default' : 'outline'} onClick={() => setForm((current) => ({ ...current, mode: 'duration' }))}>
+            {t('activate.durationMode')}
+          </Button>
+          <Button type="button" size="sm" variant={form.mode === 'end_date' ? 'default' : 'outline'} onClick={() => setForm((current) => ({ ...current, mode: 'end_date' }))}>
+            {t('activate.endDateMode')}
+          </Button>
+        </div>
+        {form.mode === 'duration' ? (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                id="activate-duration"
+                type="text"
+                inputMode="decimal"
+                value={form.duration_value}
+                onChange={(event) => setForm((current) => ({ ...current, duration_value: normalizeDecimalInput(event.target.value) }))}
+              />
+              <select
+                value={form.duration_unit}
+                onChange={(event) => setForm((current) => ({ ...current, duration_unit: event.target.value as 'minutes' | 'hours' | 'days' }))}
+                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="minutes">{t('activate.minutes')}</option>
+                <option value="hours">{t('activate.hours')}</option>
+                <option value="days">{t('activate.days')}</option>
+              </select>
+            </div>
+            {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: '30 min', value: '30', unit: 'minutes' as const },
+                { label: '1 hr', value: '1', unit: 'hours' as const },
+                { label: '6 hr', value: '6', unit: 'hours' as const },
+                { label: '1 day', value: '1', unit: 'days' as const },
+                { label: '7 days', value: '7', unit: 'days' as const },
+                { label: '30 days', value: '30', unit: 'days' as const },
+                { label: '90 days', value: '90', unit: 'days' as const },
+              ].map((quick) => (
+                <Button
+                  key={quick.label}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setForm((current) => ({ ...current, mode: 'duration', duration_value: quick.value, duration_unit: quick.unit }))}
+                >
+                  {quick.label}
+                </Button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <Input type="datetime-local" value={form.end_date} onChange={(event) => setForm((current) => ({ ...current, end_date: event.target.value }))} />
+            {errors.end_date ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.end_date}</p> : null}
+          </>
+        )}
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between">

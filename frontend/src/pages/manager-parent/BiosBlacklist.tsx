@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { tenantBiosService } from '@/services/tenant-bios.service'
@@ -31,6 +32,7 @@ export function BiosBlacklistPage() {
   const [status, setStatus] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState({ bios_id: '', reason: '' })
+  const [submitError, setSubmitError] = useState('')
 
   const blacklistQuery = useQuery({
     queryKey: ['manager-parent', 'bios-blacklist', page, perPage, search, status],
@@ -38,12 +40,21 @@ export function BiosBlacklistPage() {
   })
 
   const addMutation = useMutation({
-    mutationFn: () => tenantBiosService.addToBlacklist(form),
+    mutationFn: () => tenantBiosService.addToBlacklist({
+      bios_id: form.bios_id.trim(),
+      reason: form.reason.trim(),
+    }),
     onSuccess: () => {
+      setSubmitError('')
       toast.success(t('managerParent.pages.biosBlacklist.saveSuccess'))
       setFormOpen(false)
       setForm({ bios_id: '', reason: '' })
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'bios-blacklist'] })
+    },
+    onError: (error: unknown) => {
+      const message = resolveApiErrorMessage(error, t('common.error'))
+      setSubmitError(message)
+      toast.error(message)
     },
   })
 
@@ -59,7 +70,7 @@ export function BiosBlacklistPage() {
     () => [
       { key: 'bios', label: t('managerParent.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
       { key: 'addedBy', label: t('common.addedBy'), sortable: true, sortValue: (row) => row.added_by ?? '', render: (row) => row.added_by ?? '-' },
-      { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.reason, render: (row) => row.reason },
+      { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.reason, render: (row) => row.reason || '-' },
       { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
       { key: 'createdAt', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
       {
@@ -67,7 +78,7 @@ export function BiosBlacklistPage() {
         label: t('common.actions'),
         render: (row) => (
           <div className="flex gap-2">
-            <Button type="button" size="sm" variant="ghost" onClick={() => navigate(`${routePaths.managerParent.biosHistory(lang)}?bios=${encodeURIComponent(row.bios_id)}`)}>
+            <Button type="button" size="sm" variant="ghost" onClick={() => navigate(`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`)}>
               {t('managerParent.pages.biosBlacklist.history')}
             </Button>
             <Button type="button" size="sm" variant="ghost" disabled={row.status === 'removed'} onClick={() => removeMutation.mutate(row.id)}>
@@ -79,6 +90,16 @@ export function BiosBlacklistPage() {
     ],
     [lang, locale, navigate, removeMutation, t],
   )
+
+  const formErrors = useMemo(() => {
+    const next: { bios_id?: string } = {}
+
+    if (!form.bios_id.trim()) {
+      next.bios_id = t('validation.required', { defaultValue: 'Field required' })
+    }
+
+    return next
+  }, [form.bios_id, t])
 
   return (
     <div className="space-y-6">
@@ -137,16 +158,31 @@ export function BiosBlacklistPage() {
         }}
       />
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open)
+          if (!open) {
+            setSubmitError('')
+            setForm({ bios_id: '', reason: '' })
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('managerParent.pages.biosBlacklist.addTitle')}</DialogTitle>
             <DialogDescription>{t('managerParent.pages.biosBlacklist.formDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {submitError ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                {submitError}
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="blacklist-bios-id">{t('managerParent.pages.biosBlacklist.biosId')}</Label>
               <Input id="blacklist-bios-id" value={form.bios_id} onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))} />
+              {formErrors.bios_id ? <p className="text-xs text-rose-600 dark:text-rose-400">{formErrors.bios_id}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="blacklist-reason">{t('common.reason')}</Label>
@@ -160,8 +196,10 @@ export function BiosBlacklistPage() {
             <Button
               type="button"
               onClick={() => {
-                if (!form.bios_id.trim() || !form.reason.trim()) {
-                  toast.error(t('managerParent.pages.biosBlacklist.validationRequired'))
+                setSubmitError('')
+
+                if (formErrors.bios_id) {
+                  toast.error(formErrors.bios_id ?? t('managerParent.pages.biosBlacklist.validationRequired'))
                   return
                 }
 
