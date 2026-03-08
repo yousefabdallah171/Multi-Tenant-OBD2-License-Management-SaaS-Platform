@@ -70,7 +70,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [createLicenseNow, setCreateLicenseNow] = useState(false)
+  const [createLicenseNow, setCreateLicenseNow] = useState(true)
   const [biosId, setBiosId] = useState('')
   const [programId, setProgramId] = useState<number | ''>('')
   const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
@@ -269,24 +269,36 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
             </Field>
           </div>
 
-          {!createLicenseNow ? (
-            <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
-              Saving now will create the customer as not active yet and keep this BIOS ID plus program saved as pending.
-            </p>
-          ) : null}
-
           <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-            <label className="flex items-center gap-3 text-sm font-medium">
-              <input type="checkbox" checked={createLicenseNow} onChange={(event) => setCreateLicenseNow(event.target.checked)} />
+            <div className="grid gap-3 md:grid-cols-2">
+              <Button
+                type="button"
+                variant={createLicenseNow ? 'default' : 'outline'}
+                className="justify-start"
+                onClick={() => setCreateLicenseNow(true)}
+              >
+                {t('activate.scheduleToggleNow', { defaultValue: 'Create and activate license now' })}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className={createLicenseNow
+                  ? 'justify-start border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/20 dark:text-rose-300 dark:hover:bg-rose-950/30'
+                  : 'justify-start border-rose-500 bg-rose-600 text-white hover:bg-rose-700 hover:text-white dark:border-rose-500 dark:bg-rose-600 dark:text-white dark:hover:bg-rose-700'}
+                onClick={() => setCreateLicenseNow(false)}
+              >
+                Create customer only
+              </Button>
+            </div>
+            <p className={`mt-3 rounded-2xl px-4 py-3 text-xs ${
+              createLicenseNow
+                ? 'border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                : 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300'
+            }`}>
               {createLicenseNow
-                ? t('activate.scheduleToggleNow', { defaultValue: 'Create and activate license now' })
-                : 'Create customer only'}
-            </label>
-            {createLicenseNow ? (
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                {t('activate.reviewDescription', { defaultValue: 'Create the customer and activate the license now.' })}
-              </p>
-            ) : null}
+                ? t('activate.reviewDescription', { defaultValue: 'Create the customer and activate the license now.' })
+                : 'Saving now will create the customer as not active yet and keep this BIOS ID plus program saved as pending.'}
+            </p>
           </div>
 
           {createLicenseNow ? (

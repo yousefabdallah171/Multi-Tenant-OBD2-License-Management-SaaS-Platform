@@ -100,7 +100,7 @@ class LicenseService
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
-                'activated_at' => $isScheduled ? $scheduledAt : now(),
+                'activated_at' => $isScheduled ? null : now(),
                 'expires_at' => $activationAnchor->copy()->addMinutes($durationMinutes),
                 'scheduled_at' => $scheduledAt,
                 'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
@@ -108,6 +108,7 @@ class LicenseService
                 'scheduled_failed_at' => null,
                 'scheduled_failure_message' => null,
                 'is_scheduled' => $isScheduled,
+                'activated_at_scheduled' => null,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
                 'status' => $isScheduled ? 'pending' : 'active',
@@ -156,9 +157,11 @@ class LicenseService
             $expiresAt = ($scheduledAt?->copy() ?? $anchor->copy())->addMinutes($durationMinutes);
             $activatedAt = $license->activated_at;
 
-            if ($isScheduled && $scheduledAt !== null) {
-                $activatedAt = $scheduledAt->copy();
-            } elseif (! $isScheduled && (! $license->expires_at || ! $license->expires_at->isFuture() || $license->status !== 'active')) {
+            if ($isScheduled) {
+                if ($license->status !== 'active' || ! $license->activated_at) {
+                    $activatedAt = null;
+                }
+            } elseif (! $license->expires_at || ! $license->expires_at->isFuture() || $license->status !== 'active') {
                 $activatedAt = now();
             }
 
@@ -174,6 +177,7 @@ class LicenseService
                 'scheduled_failed_at' => null,
                 'scheduled_failure_message' => null,
                 'is_scheduled' => $isScheduled,
+                'activated_at_scheduled' => $isScheduled ? null : $license->activated_at_scheduled,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
             ])->save();
@@ -478,6 +482,41 @@ class LicenseService
             'success' => true,
             'license' => $activatedLicense,
             'message' => null,
+        ];
+    }
+
+    /**
+     * @return array{processed: int, failed: int}
+     */
+    public function processDueScheduledActivations(int $limit = 200): array
+    {
+        $licenses = License::query()
+            ->with(['program:id,external_api_key_encrypted,external_api_base_url', 'reseller:id,tenant_id'])
+            ->where('is_scheduled', true)
+            ->where('status', 'pending')
+            ->whereNotNull('scheduled_at')
+            ->whereNull('scheduled_failed_at')
+            ->where('scheduled_at', '<=', now())
+            ->limit($limit)
+            ->get();
+
+        $processed = 0;
+        $failed = 0;
+
+        foreach ($licenses as $license) {
+            $result = $this->executeScheduledActivation($license);
+
+            if (! $result['success']) {
+                $failed++;
+                continue;
+            }
+
+            $processed++;
+        }
+
+        return [
+            'processed' => $processed,
+            'failed' => $failed,
         ];
     }
 

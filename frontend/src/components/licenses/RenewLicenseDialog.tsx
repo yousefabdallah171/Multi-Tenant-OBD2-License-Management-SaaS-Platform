@@ -47,7 +47,15 @@ function resolveAnchorDate(anchorDate?: string | null) {
 
 function defaultEndDate(timeZone: string, anchorDate?: string | null) {
   const anchor = resolveAnchorDate(anchorDate)
-  anchor.setDate(anchor.getDate() + 30)
+  anchor.setDate(anchor.getDate() + 1)
+  return formatDateTimeLocalInTimezone(anchor, timeZone)
+}
+
+function defaultScheduleDate(timeZone: string, anchorDate?: string | null) {
+  const anchor = resolveAnchorDate(anchorDate)
+  if (anchor.getTime() <= Date.now()) {
+    anchor.setHours(anchor.getHours() + 1)
+  }
   return formatDateTimeLocalInTimezone(anchor, timeZone)
 }
 
@@ -59,9 +67,20 @@ function resolveDateTimeLocal(value: string | null | undefined, timeZone: string
   return formatDateTimeLocalInTimezone(value, timeZone)
 }
 
-function resolveInitialEndDate(timeZone: string, anchorDate?: string | null, initialExpiresAt?: string | null) {
-  const next = resolveDateTimeLocal(initialExpiresAt, timeZone)
-  return next || defaultEndDate(timeZone, anchorDate)
+function resolveInitialEndDate(
+  timeZone: string,
+  anchorDate?: string | null,
+  initialExpiresAt?: string | null,
+  initialScheduledAt?: string | null,
+) {
+  if (initialScheduledAt) {
+    const scheduledExpiry = resolveDateTimeLocal(initialExpiresAt, timeZone)
+    if (scheduledExpiry) {
+      return scheduledExpiry
+    }
+  }
+
+  return defaultEndDate(timeZone, anchorDate)
 }
 
 function durationToDays(value: number, unit: DurationUnit) {
@@ -105,12 +124,15 @@ export function RenewLicenseDialog({
   const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
-  const [endDate, setEndDate] = useState(() => resolveInitialEndDate(displayTimezone, anchorDate, initialExpiresAt))
+  const [endDate, setEndDate] = useState(() => resolveInitialEndDate(displayTimezone, anchorDate, initialExpiresAt, initialScheduledAt))
   const [scheduleEnabled, setScheduleEnabled] = useState(Boolean(initialScheduledAt))
-  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('after')
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('on')
   const [scheduleAfterValue, setScheduleAfterValue] = useState('1')
   const [scheduleAfterUnit, setScheduleAfterUnit] = useState<DurationUnit>('hours')
-  const [scheduleAt, setScheduleAt] = useState(() => resolveDateTimeLocal(initialScheduledAt, initialScheduledTimezone ?? displayTimezone))
+  const [scheduleAt, setScheduleAt] = useState(() => {
+    const nextScheduleTimezone = initialScheduledTimezone ?? displayTimezone
+    return resolveDateTimeLocal(initialScheduledAt, nextScheduleTimezone) || defaultScheduleDate(nextScheduleTimezone, anchorDate)
+  })
   const [scheduleTimezone, setScheduleTimezone] = useState(initialScheduledTimezone ?? displayTimezone)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>(autoPricePerDay > 0 ? 'auto' : 'manual')
   const [priceInput, setPriceInput] = useState(initialPrice > 0 ? initialPrice.toFixed(2) : '0.00')
@@ -124,12 +146,12 @@ export function RenewLicenseDialog({
     setDurationValue('30')
     setDurationUnit('days')
     const nextScheduleTimezone = initialScheduledTimezone ?? displayTimezone
-    setEndDate(resolveInitialEndDate(displayTimezone, anchorDate, initialExpiresAt))
+    setEndDate(resolveInitialEndDate(displayTimezone, anchorDate, initialExpiresAt, initialScheduledAt))
     setScheduleEnabled(Boolean(initialScheduledAt))
-    setScheduleMode(initialScheduledAt ? 'on' : 'after')
+    setScheduleMode('on')
     setScheduleAfterValue('1')
     setScheduleAfterUnit('hours')
-    setScheduleAt(resolveDateTimeLocal(initialScheduledAt, nextScheduleTimezone))
+    setScheduleAt(resolveDateTimeLocal(initialScheduledAt, nextScheduleTimezone) || defaultScheduleDate(nextScheduleTimezone, anchorDate))
     setScheduleTimezone(nextScheduleTimezone)
     setPriceMode(autoPricePerDay > 0 ? 'auto' : 'manual')
     setPriceInput(initialPrice > 0 ? initialPrice.toFixed(2) : '0.00')
@@ -186,10 +208,20 @@ export function RenewLicenseDialog({
 
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
+    const scheduledStartDate = scheduleEnabled && scheduleAt
+      ? zonedDateTimeInputToUtcDate(scheduleAt, scheduleTimezone)
+      : null
+    const effectiveStartDate = scheduledStartDate ?? effectiveAnchorDate
 
-      if (mode === 'end_date') {
-      if (!endDate) next.endDate = t('validation.required', { defaultValue: 'Field required' })
-      if (durationDays < MIN_DURATION_DAYS) next.endDate = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
+    if (mode === 'end_date') {
+      const endDateUtc = endDate ? zonedDateTimeInputToUtcDate(endDate, displayTimezone) : null
+      if (!endDate) {
+        next.endDate = t('validation.required', { defaultValue: 'Field required' })
+      } else if (!endDateUtc || endDateUtc.getTime() <= effectiveStartDate.getTime()) {
+        next.endDate = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
+      } else if (durationDays < MIN_DURATION_DAYS) {
+        next.endDate = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
+      }
     }
 
     if (mode === 'duration' && durationDays < MIN_DURATION_DAYS) {
@@ -197,7 +229,7 @@ export function RenewLicenseDialog({
     }
 
     if (scheduleEnabled) {
-      const scheduledAt = zonedDateTimeInputToUtcDate(scheduleAt, scheduleTimezone)?.getTime() ?? Number.NaN
+      const scheduledAt = scheduledStartDate?.getTime() ?? Number.NaN
       if (!scheduleAt || !Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
         next.scheduleAt = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
       }
@@ -208,7 +240,7 @@ export function RenewLicenseDialog({
     }
 
     return next
-  }, [displayTimezone, durationDays, endDate, mode, priceMode, scheduleAt, scheduleEnabled, scheduleTimezone, t, totalPrice])
+  }, [displayTimezone, durationDays, effectiveAnchorDate, endDate, mode, scheduleAt, scheduleEnabled, scheduleTimezone, t, totalPrice])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -258,7 +290,18 @@ export function RenewLicenseDialog({
 
           <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
             <label className="flex items-center gap-3 text-sm font-medium">
-              <input type="checkbox" checked={scheduleEnabled} onChange={(event) => setScheduleEnabled(event.target.checked)} />
+              <input
+                type="checkbox"
+                checked={scheduleEnabled}
+                onChange={(event) => {
+                  const checked = event.target.checked
+                  setScheduleEnabled(checked)
+                  if (checked) {
+                    setScheduleMode('on')
+                    setScheduleAt((current) => current || defaultScheduleDate(scheduleTimezone, anchorDate))
+                  }
+                }}
+              />
               {t('activate.scheduleToggle', { defaultValue: 'Schedule activation for later' })}
             </label>
             {scheduleEnabled ? (

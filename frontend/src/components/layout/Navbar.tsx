@@ -2,7 +2,7 @@ import { Download, Globe, LogOut, Menu, MoonStar, SunMedium } from 'lucide-react
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -80,6 +80,17 @@ export function Navbar() {
             {isDark ? <SunMedium className="h-4 w-4 sm:me-2" /> : <MoonStar className="h-4 w-4 sm:me-2" />}
             <span className="hidden sm:inline">{isDark ? t('common.lightMode') : t('common.darkMode')}</span>
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 px-0 sm:h-9 sm:w-auto sm:px-3"
+            onClick={switchLanguage}
+            aria-label={t('common.switchLanguage')}
+          >
+            <Globe className="h-4 w-4 sm:me-2" />
+            <span className="hidden sm:inline">{lang === 'ar' ? 'EN' : 'AR'}</span>
+          </Button>
           {canInstall ? (
             <Button
               type="button"
@@ -118,12 +129,7 @@ export function Navbar() {
                   <div className="font-semibold text-slate-950 dark:text-white">{user.name}</div>
                   <div className="text-xs text-slate-500 dark:text-slate-400">{user.email}</div>
                 </div>
-                <DropdownMenuItem className="mt-3" onClick={switchLanguage}>
-                  <Globe className="me-2 h-4 w-4" />
-                  {lang === 'ar' ? 'English' : 'العربية'}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="my-2" />
-                <DropdownMenuItem className="p-0 focus:bg-transparent dark:focus:bg-transparent">
+                <DropdownMenuItem className="mt-3 p-0 focus:bg-transparent dark:focus:bg-transparent">
                   <Button type="button" variant="ghost" className="w-full justify-start" onClick={() => void logout()}>
                     <LogOut className="me-2 h-4 w-4" />
                     {t('auth.logout')}
@@ -137,3 +143,5 @@ export function Navbar() {
     </header>
   )
 }
+
+

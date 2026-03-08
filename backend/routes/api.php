@@ -57,6 +57,7 @@ use App\Http\Controllers\SuperAdmin\SecurityController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
+use App\Http\Middleware\ProcessDueScheduledLicenses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -72,7 +73,7 @@ Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login']);
 });
 
-Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_seen', 'track.online'])->group(function (): void {
+Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_seen', 'track.online', ProcessDueScheduledLicenses::class])->group(function (): void {
     Route::prefix('auth')->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
