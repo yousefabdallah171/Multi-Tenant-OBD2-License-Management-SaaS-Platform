@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import type { RenewLicenseData } from '@/types/manager-reseller.types'
 
@@ -121,6 +122,7 @@ export function RenewLicenseDialog({
 }: RenewLicenseDialogProps) {
   const { t } = useTranslation()
   const displayTimezone = useMemo(() => resolveDisplayTimezone(), [])
+  const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
@@ -363,9 +365,9 @@ export function RenewLicenseDialog({
                     <option value="days">{t('common.days')}</option>
                   </select>
                   <div className="flex flex-wrap gap-2">
-                    {[['30 min', '30', 'minutes'], ['1 hr', '1', 'hours'], ['6 hr', '6', 'hours'], ['1 day', '1', 'days'], ['7 days', '7', 'days'], ['30 days', '30', 'days'], ['90 days', '90', 'days']].map(([label, value, unit]) => (
-                      <Button key={label} type="button" size="sm" variant="outline" onClick={() => { setMode('duration'); setDurationValue(value); setDurationUnit(unit as DurationUnit) }}>
-                        {label}
+                    {durationPresets.map((preset) => (
+                      <Button key={preset.label} type="button" size="sm" variant="outline" onClick={() => { setMode('duration'); setDurationValue(preset.value); setDurationUnit(preset.unit) }}>
+                        {preset.label}
                       </Button>
                     ))}
                   </div>

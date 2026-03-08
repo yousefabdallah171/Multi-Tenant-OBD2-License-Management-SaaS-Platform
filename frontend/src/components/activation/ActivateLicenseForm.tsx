@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { activateLicense } from '@/services/activation.service'
@@ -92,6 +93,7 @@ function computeRelativeScheduleDate(value: number, unit: 'minutes' | 'hours' | 
 export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLicenseFormProps) {
   const { t } = useTranslation()
   const displayTimezone = useMemo(() => resolveDisplayTimezone(), [])
+  const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [form, setForm] = useState(() => createEmptyForm(displayTimezone))
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
@@ -588,15 +590,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
             </div>
             {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
             <div className="flex flex-wrap gap-2">
-              {[
-                { label: '30 min', value: '30', unit: 'minutes' as const },
-                { label: '1 hr', value: '1', unit: 'hours' as const },
-                { label: '6 hr', value: '6', unit: 'hours' as const },
-                { label: '1 day', value: '1', unit: 'days' as const },
-                { label: '7 days', value: '7', unit: 'days' as const },
-                { label: '30 days', value: '30', unit: 'days' as const },
-                { label: '90 days', value: '90', unit: 'days' as const },
-              ].map((quick) => (
+              {durationPresets.map((quick) => (
                 <Button
                   key={quick.label}
                   type="button"

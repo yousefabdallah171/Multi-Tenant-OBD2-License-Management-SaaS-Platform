@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
+import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
 import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
@@ -81,6 +82,7 @@ export function CustomersPage() {
   const { lang } = useLanguage()
   const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const text = useMemo(() => (lang === 'ar'
     ? {
         eyebrow: 'موزع',
@@ -997,15 +999,7 @@ export function CustomersPage() {
                       <div className="space-y-2">
                         <Label className="text-xs text-slate-600 dark:text-slate-400">{t('activate.quickPresets', { defaultValue: 'Quick Presets' })}</Label>
                         <div className="grid grid-cols-4 gap-2">
-                          {[
-                            { label: '30 min', value: '30', unit: 'minutes' },
-                            { label: '1 hr', value: '1', unit: 'hours' },
-                            { label: '6 hr', value: '6', unit: 'hours' },
-                            { label: '1 day', value: '1', unit: 'days' },
-                            { label: '7 days', value: '7', unit: 'days' },
-                            { label: '30 days', value: '30', unit: 'days' },
-                            { label: '90 days', value: '90', unit: 'days' },
-                          ].map((preset) => (
+                          {durationPresets.map((preset) => (
                             <Button
                               key={`${preset.value}-${preset.unit}`}
                               type="button"

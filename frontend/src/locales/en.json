@@ -545,6 +545,7 @@
       "customers": {
         "title": "Customers",
         "description": "Read-only customer directory with tenant-scoped filters for reseller, program, status, and BIOS search.",
+        "createDescription": "Create a customer profile or activate a license from the manager parent workspace.",
         "searchPlaceholder": "Search by customer, email, or BIOS ID",
         "allResellers": "All resellers",
         "allPrograms": "All programs",
@@ -556,7 +557,8 @@
         "unknownReseller": "Unknown reseller",
         "biosLine": "BIOS {{biosId}}",
         "activatedBy": "Activated by {{reseller}}",
-        "expiresLabel": "Expires {{date}}"
+        "expiresLabel": "Expires {{date}}",
+        "addCustomer": "Add Customer"
       },
       "activity": {
         "title": "Activity",
@@ -1011,6 +1013,7 @@
       "customers": {
         "title": "Customers",
         "description": "Review all customers across your reseller team with read-only filters for reseller, program, status, and BIOS search.",
+        "createDescription": "Create a customer profile or activate a license from the manager workspace.",
         "searchPlaceholder": "Search by customer, email, or BIOS ID",
         "allResellers": "All resellers",
         "allPrograms": "All programs",
@@ -1020,7 +1023,8 @@
         "licenseHistory": "License History",
         "unknownProgram": "Unknown program",
         "unknownReseller": "Unknown reseller",
-        "expires": "Expires"
+        "expires": "Expires",
+        "addCustomer": "Add Customer"
       },
       "licenses": {
         "title": "Licenses",
@@ -1065,6 +1069,7 @@
       "customers": {
         "title": "Customers",
         "description": "Create and activate customers, then manage renewals and deactivations from your personal reseller workspace.",
+        "createDescription": "Create a customer profile or activate a license from the reseller workspace.",
         "addCustomer": "Add Customer",
         "searchPlaceholder": "Search by name, email, or BIOS ID",
         "table": {
@@ -1382,7 +1387,26 @@
     "selectDateTime": "Select date and time",
     "selectTimezone": "Select timezone",
     "preview": "License will activate on {{dateTime}}",
-    "scheduledSuccess": "License scheduled successfully. Will activate on {{dateTime}}."
+    "scheduledSuccess": "License scheduled successfully. Will activate on {{dateTime}}.",
+    "startingNow": "Starting now",
+    "startingFromPending": "Starting from the selected date",
+    "startingFrom": "Starting from",
+    "endingDatePending": "Ending date will be calculated after you choose the duration.",
+    "endingDate": "Ending date",
+    "startingLabel": "Starting",
+    "endingLabel": "Ending",
+    "scheduleToggleNow": "Create and activate license now",
+    "reviewDescription": "Create the customer and activate the license now.",
+    "createCustomerOnly": "Create customer only",
+    "createCustomerOnlyHint": "Saving now will create the customer as not active yet and keep this BIOS ID plus program saved as pending.",
+    "createCustomerSubmit": "Create customer",
+    "quickPreset30Min": "30 min",
+    "quickPreset1Hour": "1 hr",
+    "quickPreset6Hours": "6 hr",
+    "quickPreset1Day": "1 day",
+    "quickPreset7Days": "7 days",
+    "quickPreset30Days": "30 days",
+    "quickPreset90Days": "90 days"
   },
   "customerPortal": {
     "layout": {

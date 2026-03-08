@@ -1,12 +1,15 @@
 import { CustomerCreatePage } from '@/pages/shared/CustomerCreatePage'
 import { routePaths } from '@/router/routes'
 import { resellerService } from '@/services/reseller.service'
+import { useTranslation } from 'react-i18next'
 
 export function CreateCustomerPageForReseller() {
+  const { t } = useTranslation()
+
   return (
     <CustomerCreatePage
-      title="Add Customer"
-      description="Create a customer profile or activate a license from the reseller workspace."
+      title={t('reseller.pages.customers.addCustomer')}
+      description={t('reseller.pages.customers.createDescription')}
       backPath={routePaths.reseller.customers}
       createCustomer={resellerService.createCustomer}
     />

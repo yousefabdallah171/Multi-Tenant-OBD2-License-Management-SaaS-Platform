@@ -205,7 +205,8 @@
       "apiStatus": "حالة API",
       "settings": "الإعدادات",
       "profile": "الملف الشخصي",
-      "biosConflicts": "??????? BIOS"
+      "biosConflicts": "تعارضات BIOS",
+      "biosDetails": "تفاصيل BIOS"
     },
     "cards": {
       "totalTenants": "إجمالي الشركاء",
@@ -352,11 +353,11 @@
         "biosId": "معرّف BIOS",
         "add": "إضافة BIOS",
         "remove": "إزالة",
-        "viewHistory": "??? ????????",
+        "viewHistory": "فتح التفاصيل",
         "import": "استيراد CSV",
         "export": "تصدير CSV",
         "addTitle": "إضافة إلى القائمة السوداء",
-        "formDescription": "???? ????? BIOS ?? ??? ??????? ?????.",
+        "formDescription": "أدخل BIOS ID وسبباً اختيارياً لحظره.",
         "trendTitle": "اتجاه القائمة السوداء لـ BIOS",
         "trendDescription": "الإضافات والإزالات الشهرية في القائمة السوداء العامة.",
         "additions": "الإضافات",
@@ -400,34 +401,34 @@
         "resellerBalancesDescription": "أعلى أرصدة الموزعين عبر الشركاء."
       },
       "biosConflicts": {
-        "title": "??????? BIOS",
-        "description": "???? ????? ????? BIOS ??? ???? ??????? ??? ??? ??????? ????????.",
-        "allTypes": "?? ????? ???????",
-        "emptyTitle": "?? ???? ??????? BIOS",
-        "noCustomers": "?? ???? ????? ???????",
-        "resolve": "?? ???????",
-        "resolveTitle": "?? ????? BIOS",
-        "resolveDescription": "??? ?????? ?? ?????? BIOS {{biosId}}.",
-        "resolveSuccess": "?? ?? ????? BIOS ?????.",
-        "notesLabel": "??????? ????",
-        "notesRequired": "??????? ???? ??????.",
-        "detailsTitle": "?????? ???????",
-        "detailsDescription": "???? ??????? ??????? ?????.",
+        "title": "تعارضات BIOS",
+        "description": "راجع أحداث تعارض BIOS عبر جميع الشركاء وقم بحل الحالات المفتوحة.",
+        "allTypes": "كل أنواع التعارض",
+        "emptyTitle": "لم يتم العثور على تعارضات BIOS",
+        "noCustomers": "لا يوجد عملاء مرتبطون",
+        "resolve": "تعيين كمحلول",
+        "resolveTitle": "حل تعارض BIOS",
+        "resolveDescription": "أضف ملاحظة حل لـ BIOS {{biosId}}.",
+        "resolveSuccess": "تم حل تعارض BIOS بنجاح.",
+        "notesLabel": "ملاحظات الحل",
+        "notesRequired": "ملاحظات الحل مطلوبة.",
+        "detailsTitle": "تفاصيل التعارض",
+        "detailsDescription": "راجع معلومات التعارض الكاملة.",
         "columns": {
-          "biosId": "????? BIOS",
-          "conflictType": "??? ???????",
-          "affectedCustomers": "??????? ?????????",
-          "dateDetected": "????? ????????",
-          "status": "??????"
+          "biosId": "BIOS ID",
+          "conflictType": "نوع التعارض",
+          "affectedCustomers": "العملاء المتأثرون",
+          "dateDetected": "تاريخ الاكتشاف",
+          "status": "الحالة"
         },
         "status": {
-          "open": "?????",
-          "resolved": "?????"
+          "open": "مفتوح",
+          "resolved": "تم الحل"
         },
         "types": {
-          "duplicate_activation": "????? ????",
-          "username_bios_mismatch": "??? ????? ??? ???????? ?? BIOS",
-          "blacklisted_bios": "BIOS ????? ?? ??????? ???????"
+          "duplicate_activation": "تفعيل مكرر",
+          "username_bios_mismatch": "عدم تطابق اسم المستخدم / BIOS",
+          "blacklisted_bios": "BIOS مدرج في القائمة السوداء"
         }
       }
     }
@@ -446,10 +447,10 @@
       "biosConflicts": "تعارضات BIOS",
       "ipAnalytics": "تحليلات IP",
       "logs": "سجلات المنصة",
-      "programLogs": "????? ??????????",
+      "programLogs": "سجلات المستخدمين",
       "apiStatus": "حالة API",
       "usernameManagement": "إدارة اسم المستخدم",
-      "financialReports": "????????",
+      "financialReports": "التقارير",
       "reports": "التقارير",
       "activity": "النشاط",
       "customers": "العملاء",
@@ -457,7 +458,9 @@
       "profile": "الملف الشخصي",
       "software": "البرامج",
       "licenses": "التراخيص",
-      "logsGroup": "السجلات"
+      "logsGroup": "السجلات",
+      "biosDetails": "تفاصيل BIOS",
+      "resellerLogs": "سجلات الموزعين"
     },
     "pages": {
       "dashboard": {
@@ -504,8 +507,8 @@
         "failure": "فشل"
       },
       "financialReports": {
-        "title": "????????",
-        "description": "???? ??????? ???????? ?????? ???????? ????? ??????? ????????? ????? ??? ???????? ??????.",
+        "title": "التقارير",
+        "description": "راجع إيرادات الشريك وأرصدة الموزعين وجودة التفعيل والاحتفاظ وصدّر العرض الحالي للتقارير.",
         "totalTenantRevenue": "إجمالي إيراد الشريك",
         "totalActivations": "إجمالي التفعيلات",
         "activeLicenses": "التراخيص النشطة",
@@ -545,6 +548,7 @@
       "customers": {
         "title": "العملاء",
         "description": "دليل عملاء للعرض فقط مع فلاتر على مستوى الشريك للموزع والبرنامج والحالة ومعرّف BIOS.",
+        "createDescription": "أنشئ ملف عميل أو فعّل ترخيصاً من مساحة عمل المدير الرئيسي.",
         "searchPlaceholder": "ابحث بالعميل أو البريد الإلكتروني أو معرّف BIOS",
         "allResellers": "كل الموزعين",
         "allPrograms": "كل البرامج",
@@ -556,7 +560,8 @@
         "unknownReseller": "موزع غير معروف",
         "biosLine": "BIOS {{biosId}}",
         "activatedBy": "تم التفعيل بواسطة {{reseller}}",
-        "expiresLabel": "ينتهي {{date}}"
+        "expiresLabel": "ينتهي {{date}}",
+        "addCustomer": "إضافة عميل"
       },
       "activity": {
         "title": "النشاط",
@@ -574,13 +579,13 @@
         "saveSuccess": "تمت إضافة BIOS إلى القائمة السوداء.",
         "removeSuccess": "تمت إزالة سجل من القائمة السوداء.",
         "biosId": "معرّف BIOS",
-        "history": "??? ????????",
+        "history": "فتح التفاصيل",
         "remove": "إزالة",
         "add": "إضافة إلى القائمة السوداء",
         "searchPlaceholder": "ابحث بمعرّف BIOS",
         "addTitle": "إضافة إلى القائمة السوداء",
-        "formDescription": "???? ????? BIOS ?? ??? ??????? ??????? ??????? ?????? ???????.",
-        "validationRequired": "????? BIOS ?????."
+        "formDescription": "احفظ معرّف BIOS وسبباً اختيارياً ضمن القائمة السوداء الخاصة بالشريك.",
+        "validationRequired": "معرّف BIOS مطلوب."
       },
       "biosHistory": {
         "title": "سجل BIOS",
@@ -805,13 +810,23 @@
           "duplicate_activation": "تفعيل مكرر",
           "bios_mismatch": "عدم تطابق BIOS",
           "multi_tenant_conflict": "تعارض متعدد بين الشركاء",
-          "username_bios_mismatch": "??? ????? ??? ???????? ?? BIOS",
-          "blacklisted_bios": "BIOS ????? ?? ??????? ???????"
+          "username_bios_mismatch": "عدم تطابق اسم المستخدم / BIOS",
+          "blacklisted_bios": "BIOS مدرج في القائمة السوداء"
         }
       },
       "software": {
         "title": "كتالوج البرامج",
-        "description": "تصفح جميع البرامج المتاحة للتفعيل في نطاق عملك."
+        "description": "تصفح جميع البرامج المتاحة للتفعيل في نطاق عملك.",
+        "activeLicenses": "التراخيص النشطة",
+        "basePrice": "السعر الأساسي",
+        "emptyDescription": "عدّل عبارة البحث للعثور على البرامج المتاحة.",
+        "emptyTitle": "لا توجد برامج",
+        "licensesSold": "التراخيص المباعة",
+        "noDescription": "لا يوجد وصف متاح.",
+        "openDownload": "فتح رابط التحميل",
+        "searchPlaceholder": "ابحث باسم البرنامج",
+        "trialDays": "أيام التجربة",
+        "version": "الإصدار"
       },
       "licenses": {
         "title": "التراخيص",
@@ -834,7 +849,8 @@
       "activity": "النشاط",
       "profile": "الملف الشخصي",
       "softwareManagement": "إدارة البرامج",
-      "licenses": "التراخيص"
+      "licenses": "التراخيص",
+      "resellerLogs": "سجلات الموزعين"
     },
     "pages": {
       "dashboard": {
@@ -962,6 +978,7 @@
       "customers": {
         "title": "العملاء",
         "description": "راجع جميع العملاء عبر فريق الموزعين لديك باستخدام فلاتر للموزع والبرنامج والحالة ومعرّف BIOS للعرض فقط.",
+        "createDescription": "أنشئ ملف عميل أو فعّل ترخيصاً من مساحة عمل المدير.",
         "searchPlaceholder": "ابحث بالعميل أو البريد الإلكتروني أو معرّف BIOS",
         "allResellers": "كل الموزعين",
         "allPrograms": "كل البرامج",
@@ -971,7 +988,8 @@
         "licenseHistory": "سجل التراخيص",
         "unknownProgram": "برنامج غير معروف",
         "unknownReseller": "موزع غير معروف",
-        "expires": "ينتهي"
+        "expires": "ينتهي",
+        "addCustomer": "إضافة عميل"
       },
       "softwareManagement": {
         "title": "إدارة البرامج",
@@ -1056,6 +1074,7 @@
       "customers": {
         "title": "العملاء",
         "description": "أنشئ العملاء وفعّلهم ثم أدر عمليات التجديد والإلغاء من مساحة عملك الشخصية كموزع.",
+        "createDescription": "أنشئ ملف عميل أو فعّل ترخيصاً من مساحة عمل الموزع.",
         "addCustomer": "إضافة عميل",
         "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني أو BIOS ID",
         "table": {
@@ -1291,40 +1310,53 @@
     "apiNotConfigured": "لا يوجد مفتاح API",
     "noApiWarning": "هذا البرنامج لا يحتوي على API خارجي. التفعيل سيفشل.",
     "apiKeyUrlHint": "يُستخدم كالتالي: /apiuseradd/[KEY]/username/bios",
-    "softwareIdUrlHint": "يُستخدم كالتالي: /apilogs/[ID] و /apiusers/[ID]"
+    "softwareIdUrlHint": "يُستخدم كالتالي: /apilogs/[ID] و /apiusers/[ID]",
+    "addUserUrlExample": "مثال إضافة مستخدم: /apiuseradd/[KEY]/john_doe/ABC123XYZ",
+    "apiBaseUrlHint": "استخدم النطاق الأساسي فقط بدون مسار: http://72.60.69.185",
+    "externalApiBaseUrl": "الرابط الأساسي لـ API الخارجي",
+    "externalApiBaseUrlPlaceholder": "مثال: http://72.60.69.185",
+    "externalApiBaseUrlReplacePlaceholder": "اتركه فارغاً للإبقاء على الرابط الأساسي الحالي",
+    "externalApiBaseUrlRequired": "الرابط الأساسي لـ API الخارجي مطلوب للبرامج الجديدة.",
+    "externalApiKeyPlaceholder": "مثال: L9H2F7Q8XK6M4A",
+    "externalLogsEndpoint": "مسار سجلات API الخارجي",
+    "externalLogsEndpointPlaceholder": "مثال: apilogs",
+    "externalSoftwareIdPlaceholder": "مثال: 8",
+    "logsEndpointHint": "مسار السجلات فقط: apilogs. سيصبح الطلب الكامل /apilogs/[ID]."
   },
   "programLogs": {
-    "title": "????? ??????????",
-    "selectProgram": "???? ???????? ???? ???????",
+    "title": "سجلات المستخدمين",
+    "selectProgram": "اختر برنامجاً لعرض السجلات",
     "activationEvents": "أحداث التفعيل",
-    "loginEvents": "??? ?????? ???????",
+    "loginEvents": "أحداث تسجيل الدخول الخارجية",
     "eventAdded": "مضاف",
     "eventDeleted": "محذوف",
-    "noLogs": "?? ???? ????? ???? ????????.",
-    "autoRefresh": "????? ?????? (30 ?????)",
-    "exportCsv": "????? CSV",
+    "noLogs": "لا توجد سجلات متاحة لهذا البرنامج.",
+    "autoRefresh": "تحديث تلقائي (30ث)",
+    "exportCsv": "تصدير CSV",
     "activatedBy": "تم التفعيل بواسطة",
     "viaDashboard": "عبر لوحة التحكم",
     "externalUnknown": "خارجي (غير معروف)",
-    "description": "???? ??????? ?????????? ??????? ?? ???? ?????? ???????? ?????? ?? ??????? ??? ??? ????? ?????? ??????? ???? ?????.",
-    "dynamicHint": "?????? ??????? ????? ??? ???????? ?????? ???.",
-    "userActions": "??????? ??????????",
-    "allUsers": "?? ??????????",
-    "allActions": "?? ?????????",
-    "actionScheduled": "?????",
-    "actionExecuted": "?? ???????",
-    "actionFailed": "???",
-    "externalUnavailable": "????? API ???????? ??? ????? ????. ??????? ?????????? ?? ???? ???? ?? ??? ??????? ??? ??? ????? ?????? ??????? ?? ???? ?????? ?? ??????.",
-    "localLocation": "???? / ?????? ????",
-    "localNetwork": "????",
-    "loadingLocation": "???? ???????...",
-    "unknownLocation": "??? ?????"
+    "description": "راجع إجراءات المستخدمين القادمة من لوحة التحكم للبرنامج المحدد مع إبقاء موجز تسجيل الدخول الخارجي كعرض ثانوي.",
+    "dynamicHint": "الفلاتر أدناه تخص البرنامج المحدد فقط.",
+    "userActions": "إجراءات المستخدمين",
+    "allUsers": "كل المستخدمين",
+    "allActions": "كل الإجراءات",
+    "actionScheduled": "مجدول",
+    "actionExecuted": "تم التنفيذ",
+    "actionFailed": "فشل",
+    "externalUnavailable": "واجهة API الخارجية غير متاحة حالياً. لا تزال إجراءات المستخدمين تأتي من سجل المنصة، لكن أحداث تسجيل الدخول الخارجية قد تكون قديمة أو فارغة.",
+    "localLocation": "محلي / جهاز محلي",
+    "localNetwork": "محلي",
+    "loadingLocation": "جارٍ التحميل...",
+    "unknownLocation": "غير معروف"
   },
   "ipAnalytics": {
     "columns": {
       "country": "الدولة",
       "location": "الموقع",
-      "biosId": "معرف البيوس"
+      "biosId": "معرف البيوس",
+      "program": "البرنامج",
+      "externalId": "المعرّف الخارجي"
     },
     "vpnProxy": "VPN/Proxy"
   },
@@ -1361,7 +1393,31 @@
     "offsetValue": "قيمة الإزاحة",
     "offsetUnit": "وحدة الإزاحة",
     "timezone": "المنطقة الزمنية",
-    "scheduledDateTime": "تاريخ ووقت الجدولة"
+    "scheduledDateTime": "تاريخ ووقت الجدولة",
+    "biosConcatenationHint": "سيتم تسجيل معرّف BIOS الخاص بك كالتالي: {{value}}",
+    "preview": "سيتم تفعيل الترخيص في {{dateTime}}",
+    "scheduledSuccess": "تمت جدولة الترخيص بنجاح. سيتم تفعيله في {{dateTime}}.",
+    "selectDateTime": "اختر التاريخ والوقت",
+    "selectTimezone": "اختر المنطقة الزمنية",
+    "startingNow": "يبدأ الآن",
+    "startingFromPending": "سيبدأ من التاريخ المحدد",
+    "startingFrom": "يبدأ من",
+    "endingDatePending": "سيتم حساب تاريخ الانتهاء بعد اختيار المدة.",
+    "endingDate": "تاريخ الانتهاء",
+    "startingLabel": "البداية",
+    "endingLabel": "الانتهاء",
+    "scheduleToggleNow": "إنشاء العميل وتفعيل الترخيص الآن",
+    "reviewDescription": "أنشئ العميل وفعّل الترخيص الآن.",
+    "createCustomerOnly": "إنشاء العميل فقط",
+    "createCustomerOnlyHint": "سيؤدي الحفظ الآن إلى إنشاء العميل كغير نشط حالياً مع حفظ BIOS ID والبرنامج بحالة معلّقة.",
+    "createCustomerSubmit": "إنشاء العميل",
+    "quickPreset30Min": "30 دقيقة",
+    "quickPreset1Hour": "1 ساعة",
+    "quickPreset6Hours": "6 ساعات",
+    "quickPreset1Day": "1 يوم",
+    "quickPreset7Days": "7 أيام",
+    "quickPreset30Days": "30 يوماً",
+    "quickPreset90Days": "90 يوماً"
   },
   "customerPortal": {
     "layout": {
@@ -1446,6 +1502,34 @@
   "onlineWidget": {
     "title": "متصل الآن",
     "collapsed": "{{count}} متصل",
-    "empty": "لا يوجد مستخدمون متصلون"
+    "empty": "لا يوجد مستخدمون متصلون",
+    "lastSeen": "آخر ظهور",
+    "role": "الدور"
+  },
+  "biosDetails": {
+    "title": "تفاصيل BIOS ID",
+    "search": "ابحث عن BIOS ID",
+    "overview": "نظرة عامة",
+    "licenses": "سجل التراخيص",
+    "resellers": "الموزعون",
+    "ips": "تحليلات IP",
+    "activity": "سجل النشاط",
+    "blacklist": "حالة القائمة السوداء",
+    "originalBios": "BIOS الأصلي",
+    "username": "اسم المستخدم",
+    "status": "الحالة",
+    "firstActivation": "أول تفعيل",
+    "lastActivity": "آخر نشاط",
+    "totalActivations": "إجمالي التفعيلات",
+    "avgDaysBetween": "متوسط الأيام بين عمليات الشراء",
+    "customer": "العميل",
+    "notBlacklisted": "غير مدرج في القائمة السوداء",
+    "reseller": "الموزع"
+  },
+  "settings": {
+    "error": "فشل حفظ الإعدادات",
+    "saved": "تم تحديث الإعدادات بنجاح",
+    "serverTimezone": "المنطقة الزمنية للخادم",
+    "timezonePurpose": "حدد المنطقة الزمنية لكل عروض لوحة التحكم والمهام المجدولة."
   }
 }

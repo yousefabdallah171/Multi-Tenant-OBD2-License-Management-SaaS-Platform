@@ -427,7 +427,7 @@ export function CustomersPage() {
         actions={
           <Button type="button" onClick={() => navigate(routePaths.manager.customerCreate(lang))}>
             <Plus className="me-2 h-4 w-4" />
-            {t('reseller.pages.customers.addCustomer')}
+            {t('manager.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}
           </Button>
         }
       />

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -72,6 +73,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const { lang } = useLanguage()
   const navigate = useNavigate()
   const displayTimezone = useMemo(() => resolveDisplayTimezone(), [])
+  const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [customerName, setCustomerName] = useState('')
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
@@ -334,7 +336,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                   : 'justify-start border-rose-500 bg-rose-600 text-white hover:bg-rose-700 hover:text-white dark:border-rose-500 dark:bg-rose-600 dark:text-white dark:hover:bg-rose-700'}
                 onClick={() => setCreateLicenseNow(false)}
               >
-                Create customer only
+                {t('activate.createCustomerOnly', { defaultValue: 'Create customer only' })}
               </Button>
             </div>
             <p className={`mt-3 rounded-2xl px-4 py-3 text-xs ${
@@ -344,7 +346,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
             }`}>
               {createLicenseNow
                 ? t('activate.reviewDescription', { defaultValue: 'Create the customer and activate the license now.' })
-                : 'Saving now will create the customer as not active yet and keep this BIOS ID plus program saved as pending.'}
+                : t('activate.createCustomerOnlyHint', { defaultValue: 'Saving now will create the customer as not active yet and keep this BIOS ID plus program saved as pending.' })}
             </p>
           </div>
 
@@ -423,8 +425,8 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                         <option value="days">{t('common.days')}</option>
                       </select>
                       <div className="flex flex-wrap gap-2">
-                        {[['30 min', '30', 'minutes'], ['1 hr', '1', 'hours'], ['6 hr', '6', 'hours'], ['1 day', '1', 'days'], ['7 days', '7', 'days'], ['30 days', '30', 'days'], ['90 days', '90', 'days']].map(([label, value, unit]) => (
-                          <Button key={label} type="button" size="sm" variant="outline" onClick={() => { setMode('duration'); setDurationValue(value); setDurationUnit(unit as DurationUnit) }}>{label}</Button>
+                        {durationPresets.map((preset) => (
+                          <Button key={preset.label} type="button" size="sm" variant="outline" onClick={() => { setMode('duration'); setDurationValue(preset.value); setDurationUnit(preset.unit as DurationUnit) }}>{preset.label}</Button>
                         ))}
                       </div>
                     </div>
@@ -471,7 +473,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               }}
             >
               {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {createLicenseNow ? t('common.activate', { defaultValue: 'Activate' }) : 'Create customer'}
+              {createLicenseNow ? t('common.activate', { defaultValue: 'Activate' }) : t('activate.createCustomerSubmit', { defaultValue: 'Create customer' })}
             </Button>
           </div>
         </CardContent>

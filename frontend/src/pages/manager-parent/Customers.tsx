@@ -428,7 +428,7 @@ export function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('managerParent.pages.customers.title')} description={t('managerParent.pages.customers.description')} actions={<Button type="button" onClick={() => navigate(routePaths.managerParent.customerCreate(lang))}><Plus className="me-2 h-4 w-4" />{t('reseller.pages.customers.addCustomer')}</Button>} />
+      <PageHeader title={t('managerParent.pages.customers.title')} description={t('managerParent.pages.customers.description')} actions={<Button type="button" onClick={() => navigate(routePaths.managerParent.customerCreate(lang))}><Plus className="me-2 h-4 w-4" />{t('managerParent.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}</Button>} />
 
       <Tabs value={status} onValueChange={(value) => setStatus(value as (typeof STATUS_OPTIONS)[number])}>
         <TabsList>
