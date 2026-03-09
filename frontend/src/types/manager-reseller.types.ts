@@ -49,9 +49,11 @@ export interface RoleActivityEntry {
 export interface ManagerTeamReseller {
   id: number
   name: string
+  username: string | null
   email: string
   phone: string | null
   status: 'active' | 'suspended' | 'inactive'
+  username_locked: boolean
   customers_count: number
   active_licenses_count: number
   revenue: number

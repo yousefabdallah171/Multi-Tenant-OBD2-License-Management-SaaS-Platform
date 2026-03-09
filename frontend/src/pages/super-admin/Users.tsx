@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Building2, Eye, MoreVertical, Search, UserCog, UserRound, Users as UsersIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
@@ -14,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { tenantService } from '@/services/tenant.service'
 import { userService } from '@/services/user.service'
 import type { ManagedUser } from '@/types/super-admin.types'
@@ -30,6 +32,7 @@ export function UsersPage() {
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [role, setRole] = useState('')
@@ -87,14 +90,15 @@ export function UsersPage() {
         key: 'actions',
         label: t('common.actions'),
         render: (row) => (
-          <DropdownMenu>
+          <div onClick={(event) => event.stopPropagation()}>
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" size="sm" variant="ghost">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.userDetail(lang, row.id))}>
                 <Eye className="me-2 h-4 w-4" />
                 {t('common.view')}
               </DropdownMenuItem>
@@ -105,11 +109,12 @@ export function UsersPage() {
                 {t('common.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         ),
       },
     ],
-    [locale, statusMutation, t],
+    [lang, locale, navigate, statusMutation, t],
   )
 
   return (
@@ -199,6 +204,7 @@ export function UsersPage() {
           columns={columns}
           data={usersQuery.data?.data ?? []}
           rowKey={(row) => row.id}
+          onRowClick={(row) => navigate(routePaths.superAdmin.userDetail(lang, row.id))}
           pagination={{
             page: usersQuery.data?.meta.current_page ?? 1,
             lastPage: usersQuery.data?.meta.last_page ?? 1,

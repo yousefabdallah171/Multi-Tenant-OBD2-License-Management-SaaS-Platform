@@ -45,7 +45,7 @@ export function DashboardPage() {
             <Button type="button" variant="secondary" onClick={() => navigate(routePaths.manager.team(lang))}>
               {t('manager.pages.dashboard.actions.team')}
             </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.manager.usernameManagement(lang))}>
+            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.manager.team(lang))}>
               {t('manager.pages.dashboard.actions.usernameManagement')}
             </Button>
             <Button type="button" onClick={() => navigate(routePaths.manager.reports(lang))}>
@@ -119,7 +119,7 @@ export function DashboardPage() {
               {t('manager.pages.dashboard.quickActions.customerOverview')}
               <ActionIcon className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.manager.usernameManagement(lang))}>
+            <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.manager.team(lang))}>
               {t('manager.pages.dashboard.quickActions.unlockUsernames')}
               <KeyRound className="h-4 w-4" />
             </Button>

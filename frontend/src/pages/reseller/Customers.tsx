@@ -345,6 +345,11 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
   })
 
+  const expiringQuery = useQuery({
+    queryKey: ['reseller', 'licenses', 'expiring'],
+    queryFn: () => licenseService.getExpiring(7),
+  })
+
   const renewLicenseQuery = useQuery({
     queryKey: ['reseller', 'customers', 'renew-license', renewLicenseId],
     queryFn: () => licenseService.getById(renewLicenseId ?? 0),
@@ -551,6 +556,10 @@ export function CustomersPage() {
   })
 
   const customerRows = customersQuery.data?.data ?? []
+  const expiring = expiringQuery.data?.data ?? []
+  const oneDay = expiring.filter((license) => daysUntil(license.expires_at) <= 1).length
+  const threeDays = expiring.filter((license) => daysUntil(license.expires_at) <= 3).length
+  const sevenDays = expiring.length
   const selectableIds = customerRows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
@@ -759,6 +768,12 @@ export function CustomersPage() {
           </Button>
         }
       />
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <ExpiryAlert count={oneDay} label={t('reseller.pages.licenses.expiryLabels.day1')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="rose" />
+        <ExpiryAlert count={threeDays} label={t('reseller.pages.licenses.expiryLabels.day3')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="amber" />
+        <ExpiryAlert count={sevenDays} label={t('reseller.pages.licenses.expiryLabels.day7')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="yellow" />
+      </div>
 
       <Tabs
         value={status}
@@ -1558,3 +1573,28 @@ function resolveResellerCustomerLabel(row: ResellerCustomerSummary) {
   return row.name || '-'
 }
 
+
+function ExpiryAlert({ count, label, licensesLabel, tone }: { count: number; label: string; licensesLabel: string; tone: 'rose' | 'amber' | 'yellow' }) {
+  const styles = {
+    rose: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300',
+    amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
+    yellow: 'border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300',
+  }
+
+  return (
+    <Card className={styles[tone]}>
+      <CardContent className="space-y-1 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
+        <p className="text-3xl font-semibold">{count}</p>
+        <p className="text-sm opacity-80">{licensesLabel}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function daysUntil(value?: string | null) {
+  if (!value) return Number.POSITIVE_INFINITY
+  const expiry = new Date(value).getTime()
+  if (!Number.isFinite(expiry)) return Number.POSITIVE_INFINITY
+  return Math.ceil((expiry - Date.now()) / 86400000)
+}

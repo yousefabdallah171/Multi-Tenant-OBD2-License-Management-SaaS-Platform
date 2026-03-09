@@ -1,10 +1,12 @@
 # Manager Parent
 
+Last updated: 2026-03-09
+
 - Account: `parent@obd2sw.com`
 - Scope: Tenant
 - Tenant: `Test Tenant`
 - Default landing page: `/:lang/dashboard`
-- Visible navigation routes: 21
+- Visible navigation routes: 18 main entries plus detail/workflow routes
 
 ## Pages shown
 
@@ -12,26 +14,24 @@
 2. `/:lang/team-management`
 3. `/:lang/reseller-pricing`
 4. `/:lang/software`
-5. `/:lang/licenses`
+5. `/:lang/customers`
 6. `/:lang/program-logs`
 7. `/:lang/software-management`
 8. `/:lang/bios-blacklist`
 9. `/:lang/bios-history`
 10. `/:lang/bios-conflicts`
 11. `/:lang/ip-analytics`
-12. `/:lang/username-management`
-13. `/:lang/financial-reports`
-14. `/:lang/reports`
-15. `/:lang/customers`
-16. `/:lang/activity`
-17. `/:lang/logs`
-18. `/:lang/reseller-logs`
-19. `/:lang/api-status`
-20. `/:lang/settings`
-21. `/:lang/profile`
+12. `/:lang/reports`
+13. `/:lang/activity`
+14. `/:lang/logs`
+15. `/:lang/reseller-logs`
+16. `/:lang/api-status`
+17. `/:lang/settings`
+18. `/:lang/profile`
 
 Additional workflow/detail routes:
 
+- `/:lang/team-management/:id`
 - `/:lang/software-management/create`
 - `/:lang/software-management/:id/edit`
 - `/:lang/software-management/:id/activate`
@@ -72,7 +72,7 @@ Additional workflow/detail routes:
 - Unlock usernames, change usernames, and reset passwords for tenant users
 - Edit tenant settings
 - Edit own profile and password
-- Review manager/reseller drill-down history from Team Management
+- Review manager/reseller full-page detail from Team Management
 
 ## Cannot do
 

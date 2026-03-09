@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Enums\UserRole;
+use App\Models\ActivityLog;
+use App\Models\License;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -70,6 +72,71 @@ class UserController extends BaseSuperAdminController
         ]);
     }
 
+    public function show(User $user): JsonResponse
+    {
+        $member = $user->load('tenant');
+        $stats = $this->memberStats($member);
+
+        $recentLicensesQuery = License::query()
+            ->with(['customer:id,name,email', 'program:id,name'])
+            ->when($member->tenant_id, fn ($query) => $query->where('tenant_id', $member->tenant_id));
+
+        if (($member->role?->value ?? (string) $member->role) === UserRole::CUSTOMER->value) {
+            $recentLicensesQuery->where('customer_id', $member->id);
+        } else {
+            $recentLicensesQuery->where('reseller_id', $member->id);
+        }
+
+        $recentLicenses = $recentLicensesQuery
+            ->latest('activated_at')
+            ->limit(10)
+            ->get()
+            ->map(fn (License $license): array => [
+                'id' => $license->id,
+                'customer' => $license->customer ? [
+                    'id' => $license->customer->id,
+                    'name' => $license->customer->name,
+                    'email' => $license->customer->email,
+                ] : null,
+                'program' => $license->program?->name,
+                'bios_id' => $license->bios_id,
+                'status' => $license->status,
+                'price' => (float) $license->price,
+                'expires_at' => $license->expires_at?->toIso8601String(),
+            ])
+            ->values();
+
+        $recentActivity = ActivityLog::query()
+            ->when($member->tenant_id, fn ($query) => $query->where('tenant_id', $member->tenant_id))
+            ->where(function ($query) use ($member): void {
+                $query->where('user_id', $member->id)
+                    ->orWhere('metadata->customer_id', $member->id)
+                    ->orWhere('metadata->target_user_id', $member->id);
+            })
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn (ActivityLog $activity): array => [
+                'id' => $activity->id,
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'metadata' => $activity->metadata ?? [],
+                'created_at' => $activity->created_at?->toIso8601String(),
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => [
+                ...$this->serializeUser($member),
+                'customers_count' => $stats['customers'],
+                'active_licenses_count' => $stats['active_licenses'],
+                'revenue' => $stats['revenue'],
+                'recent_licenses' => $recentLicenses,
+                'recent_activity' => $recentActivity,
+            ],
+        ]);
+    }
+
     public function destroy(Request $request, User $user): JsonResponse
     {
         if ($request->user()?->is($user)) {
@@ -106,6 +173,32 @@ class UserController extends BaseSuperAdminController
             ] : null,
             'username_locked' => $user->username_locked,
             'created_at' => $user->created_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @return array{customers:int,active_licenses:int,revenue:float}
+     */
+    private function memberStats(User $user): array
+    {
+        $query = License::query()->when($user->tenant_id, fn ($builder) => $builder->where('tenant_id', $user->tenant_id));
+
+        if (($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value) {
+            $licenses = $query->where('customer_id', $user->id)->get();
+
+            return [
+                'customers' => 0,
+                'active_licenses' => $licenses->where('status', 'active')->count(),
+                'revenue' => round((float) $licenses->sum('price'), 2),
+            ];
+        }
+
+        $licenses = $query->where('reseller_id', $user->id)->get();
+
+        return [
+            'customers' => $licenses->pluck('customer_id')->filter()->unique()->count(),
+            'active_licenses' => $licenses->where('status', 'active')->count(),
+            'revenue' => round((float) $licenses->sum('price'), 2),
         ];
     }
 }

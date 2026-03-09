@@ -13,6 +13,7 @@ use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -37,7 +38,7 @@ class CustomerController extends BaseManagerParentController
             ->where('role', UserRole::CUSTOMER->value)
             ->select(['id', 'tenant_id', 'name', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
-                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'activated_at', 'expires_at', 'price', 'scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
+                ->select($this->licenseListColumns())
                 ->with(['program:id,name', 'reseller:id,name'])])
             ->latest();
 
@@ -60,6 +61,16 @@ class CustomerController extends BaseManagerParentController
 
         if (! empty($validated['status'])) {
             $query->whereHas('customerLicenses', function ($licenseQuery) use ($validated): void {
+                if (! $this->supportsScheduledLicenses()) {
+                    if ($validated['status'] === 'scheduled') {
+                        $licenseQuery->whereRaw('1 = 0');
+                        return;
+                    }
+
+                    $licenseQuery->where('status', $validated['status'] === 'pending' ? 'pending' : $validated['status']);
+                    return;
+                }
+
                 if ($validated['status'] === 'scheduled') {
                     $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
                     return;
@@ -91,7 +102,7 @@ class CustomerController extends BaseManagerParentController
 
         $user->load([
             'customerLicenses' => fn ($licenseQuery) => $licenseQuery
-                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'external_username', 'status', 'duration_days', 'price', 'activated_at', 'expires_at', 'scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
+                ->select($this->licenseDetailColumns())
                 ->with(['program:id,name', 'reseller:id,name,email']),
             'createdBy:id,name,email',
         ]);
@@ -389,8 +400,71 @@ class CustomerController extends BaseManagerParentController
             'activated_at' => now(),
             'expires_at' => now(),
             'status' => 'pending',
-            'is_scheduled' => false,
+            ...($this->supportsScheduledLicenses() ? ['is_scheduled' => false] : []),
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function licenseListColumns(): array
+    {
+        return [
+            'id',
+            'tenant_id',
+            'customer_id',
+            'reseller_id',
+            'program_id',
+            'bios_id',
+            'status',
+            'activated_at',
+            'expires_at',
+            'price',
+            ...$this->optionalScheduledColumns(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function licenseDetailColumns(): array
+    {
+        return [
+            'id',
+            'tenant_id',
+            'customer_id',
+            'reseller_id',
+            'program_id',
+            'bios_id',
+            'external_username',
+            'status',
+            'duration_days',
+            'price',
+            'activated_at',
+            'expires_at',
+            ...$this->optionalScheduledColumns(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function optionalScheduledColumns(): array
+    {
+        $columns = [];
+
+        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'] as $column) {
+            if (Schema::hasColumn('licenses', $column)) {
+                $columns[] = $column;
+            }
+        }
+
+        return $columns;
+    }
+
+    private function supportsScheduledLicenses(): bool
+    {
+        return Schema::hasColumn('licenses', 'is_scheduled');
     }
 
     private function serializeCustomer(User $user): array

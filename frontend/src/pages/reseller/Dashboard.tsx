@@ -63,7 +63,7 @@ export function DashboardPage() {
             <Button type="button" variant="secondary" onClick={() => navigate(routePaths.reseller.customers(lang))}>
               {t('reseller.pages.dashboard.actions.customers')}
             </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.reseller.licenses(lang))}>
+            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.reseller.customers(lang))}>
               {t('reseller.pages.dashboard.actions.licenses')}
             </Button>
             <Button type="button" onClick={() => navigate(routePaths.reseller.reports(lang))}>
@@ -141,7 +141,7 @@ export function DashboardPage() {
               {t('reseller.pages.dashboard.quickActionsList.activateNewCustomer')}
               <ActionIcon className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="secondary" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.licenses(lang))}>
+            <Button type="button" variant="secondary" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.customers(lang))}>
               {t('reseller.pages.dashboard.quickActionsList.manageLicenses')}
               <ActionIcon className="h-4 w-4" />
             </Button>
@@ -184,3 +184,4 @@ function resolveActivityStyles(action: string) {
     icon: <UserRound className="h-4 w-4" />,
   }
 }
+

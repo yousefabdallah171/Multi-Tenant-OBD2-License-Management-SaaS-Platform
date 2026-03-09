@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,9 @@ export function SettingsPage() {
     password: '',
     password_confirmation: '',
   })
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const settingsQuery = useQuery({
     queryKey: ['super-admin', 'settings'],
@@ -59,6 +63,9 @@ export function SettingsPage() {
     onSuccess: () => {
       toast.success(t('superAdmin.pages.profile.passwordSaved'))
       setPasswordForm({ current_password: '', password: '', password_confirmation: '' })
+      setShowCurrentPassword(false)
+      setShowNewPassword(false)
+      setShowConfirmPassword(false)
     },
   })
 
@@ -256,30 +263,51 @@ export function SettingsPage() {
               <CardContent className="grid gap-4 p-6">
                 <div className="space-y-2">
                   <Label htmlFor="profile-current-password">{t('superAdmin.pages.profile.currentPassword')}</Label>
-                  <Input
-                    id="profile-current-password"
-                    type="password"
-                    value={passwordForm.current_password}
-                    onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="profile-current-password"
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      value={passwordForm.current_password}
+                      onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))}
+                      className="pe-12"
+                    />
+                    <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowCurrentPassword((current) => !current)}>
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">{showCurrentPassword ? t('common.hide') : t('common.show')}</span>
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-new-password">{t('superAdmin.pages.profile.newPassword')}</Label>
-                  <Input
-                    id="profile-new-password"
-                    type="password"
-                    value={passwordForm.password}
-                    onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="profile-new-password"
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={passwordForm.password}
+                      onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))}
+                      className="pe-12"
+                    />
+                    <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowNewPassword((current) => !current)}>
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">{showNewPassword ? t('common.hide') : t('common.show')}</span>
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-confirm-password">{t('superAdmin.pages.profile.confirmPassword')}</Label>
-                  <Input
-                    id="profile-confirm-password"
-                    type="password"
-                    value={passwordForm.password_confirmation}
-                    onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="profile-confirm-password"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={passwordForm.password_confirmation}
+                      onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
+                      className="pe-12"
+                    />
+                    <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowConfirmPassword((current) => !current)}>
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">{showConfirmPassword ? t('common.hide') : t('common.show')}</span>
+                    </Button>
+                  </div>
                 </div>
                 <Button type="button" onClick={() => passwordMutation.mutate()} disabled={passwordMutation.isPending}>
                   {passwordMutation.isPending ? t('common.saving') : t('superAdmin.pages.settings.savePassword')}

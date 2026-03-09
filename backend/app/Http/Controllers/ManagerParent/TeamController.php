@@ -219,10 +219,12 @@ class TeamController extends BaseManagerParentController
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'username' => $user->username,
             'email' => $user->email,
             'phone' => $user->phone,
             'role' => $user->role?->value ?? (string) $user->role,
             'status' => $user->status,
+            'username_locked' => $user->username_locked,
             'customers_count' => $stats['customers'],
             'active_licenses_count' => $stats['active_licenses'],
             'revenue' => $stats['revenue'],

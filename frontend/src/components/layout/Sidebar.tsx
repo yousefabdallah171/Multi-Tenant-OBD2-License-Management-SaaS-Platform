@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, Download, FileText, History, KeyRound, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users, Wallet } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, Download, FileText, History, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users, Wallet } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -23,19 +23,13 @@ interface NavItem {
 const superAdminItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.superAdmin.dashboard, translationKey: 'superAdmin.nav.dashboard' },
   { key: 'tenants', icon: Building2, href: routePaths.superAdmin.tenants, translationKey: 'superAdmin.nav.tenants' },
-  { key: 'users', icon: Users, href: routePaths.superAdmin.users, translationKey: 'superAdmin.nav.users' },
-  { key: 'adminManagement', icon: Users, href: routePaths.superAdmin.adminManagement, translationKey: 'superAdmin.nav.adminManagement' },
-  { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },
-  { key: 'biosDetails', icon: History, href: routePaths.superAdmin.biosDetails, translationKey: 'superAdmin.nav.biosDetails' },
-  { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.superAdmin.biosConflicts, translationKey: 'superAdmin.nav.biosConflicts' },
-  { key: 'usernameManagement', icon: KeyRound, href: routePaths.superAdmin.usernameManagement, translationKey: 'superAdmin.nav.usernameManagement' },
+  { key: 'adminManagementGroup', icon: Users, href: routePaths.superAdmin.adminManagement, translationKey: 'superAdmin.nav.adminManagement' },
+  { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },
   { key: 'securityLocks', icon: ShieldBan, href: routePaths.superAdmin.securityLocks, translationKey: 'superAdmin.nav.securityLocks' },
-  { key: 'financialReports', icon: BarChart3, href: routePaths.superAdmin.financialReports, translationKey: 'superAdmin.nav.financialReports' },
   { key: 'reports', icon: BarChart3, href: routePaths.superAdmin.reports, translationKey: 'superAdmin.nav.reports' },
   { key: 'logs', icon: ScrollText, href: routePaths.superAdmin.logs, translationKey: 'superAdmin.nav.logs' },
   { key: 'apiStatus', icon: Activity, href: routePaths.superAdmin.apiStatus, translationKey: 'superAdmin.nav.apiStatus' },
-  { key: 'settings', icon: Settings, href: routePaths.superAdmin.settings, translationKey: 'superAdmin.nav.settings' },
-  { key: 'profile', icon: User, href: routePaths.superAdmin.profile, translationKey: 'superAdmin.nav.profile' },
+  { key: 'settingsGroup', icon: Settings, href: routePaths.superAdmin.settings, translationKey: 'superAdmin.nav.settings' },
 ]
 
 const managerParentItems: NavItem[] = [
@@ -43,27 +37,20 @@ const managerParentItems: NavItem[] = [
   { key: 'teamManagement', icon: Users, href: routePaths.managerParent.teamManagement, translationKey: 'managerParent.nav.teamManagement' },
   { key: 'resellerPricing', icon: Wallet, href: routePaths.managerParent.resellerPricing, translationKey: 'managerParent.nav.resellerPricing' },
   { key: 'software', icon: Package, href: routePaths.managerParent.software, translationKey: 'managerParent.nav.software' },
-  { key: 'licenses', icon: KeyRound, href: routePaths.managerParent.licenses, translationKey: 'managerParent.nav.licenses' },
   { key: 'programLogs', icon: FileText, href: routePaths.managerParent.programLogs, translationKey: 'managerParent.nav.programLogs' },
   { key: 'softwareManagement', icon: Package, href: routePaths.managerParent.softwareManagement, translationKey: 'managerParent.nav.softwareManagement' },
-  { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
-  { key: 'biosDetails', icon: History, href: routePaths.managerParent.biosDetails, translationKey: 'managerParent.nav.biosDetails' },
-  { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.managerParent.biosConflicts, translationKey: 'managerParent.nav.biosConflicts' },
+  { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, translationKey: 'managerParent.nav.ipAnalytics' },
-  { key: 'usernameManagement', icon: KeyRound, href: routePaths.managerParent.usernameManagement, translationKey: 'managerParent.nav.usernameManagement' },
-  { key: 'financialReports', icon: BarChart3, href: routePaths.managerParent.financialReports, translationKey: 'managerParent.nav.financialReports' },
+  { key: 'reports', icon: BarChart3, href: routePaths.managerParent.reports, translationKey: 'managerParent.nav.financialReports' },
   { key: 'customers', icon: Users, href: routePaths.managerParent.customers, translationKey: 'managerParent.nav.customers' },
   { key: 'logsGroup', icon: FileText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logsGroup' },
-  { key: 'settings', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
-  { key: 'profile', icon: User, href: routePaths.managerParent.profile, translationKey: 'managerParent.nav.profile' },
+  { key: 'settingsGroup', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
 ]
 
 const managerItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.manager.dashboard, translationKey: 'manager.nav.dashboard' },
   { key: 'team', icon: Users, href: routePaths.manager.team, translationKey: 'manager.nav.team' },
-  { key: 'usernameManagement', icon: KeyRound, href: routePaths.manager.usernameManagement, translationKey: 'manager.nav.usernameManagement' },
   { key: 'customers', icon: UserRound, href: routePaths.manager.customers, translationKey: 'manager.nav.customers' },
-  { key: 'licenses', icon: KeyRound, href: routePaths.manager.licenses, translationKey: 'manager.nav.licenses' },
   { key: 'software', icon: Package, href: routePaths.manager.software, translationKey: 'manager.nav.software' },
   { key: 'softwareManagement', icon: PackagePlus, href: routePaths.manager.softwareManagement, translationKey: 'manager.nav.softwareManagement' },
   { key: 'reports', icon: BarChart3, href: routePaths.manager.reports, translationKey: 'manager.nav.reports' },
@@ -75,7 +62,6 @@ const managerItems: NavItem[] = [
 const resellerItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.reseller.dashboard, translationKey: 'reseller.nav.dashboard' },
   { key: 'customers', icon: Users, href: routePaths.reseller.customers, translationKey: 'reseller.nav.customers' },
-  { key: 'licenses', icon: KeyRound, href: routePaths.reseller.licenses, translationKey: 'reseller.nav.licenses' },
   { key: 'software', icon: Package, href: routePaths.reseller.software, translationKey: 'reseller.nav.software' },
   { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, translationKey: 'reseller.nav.reports' },
   { key: 'profile', icon: User, href: routePaths.reseller.profile, translationKey: 'reseller.nav.profile' },
@@ -101,6 +87,26 @@ export function Sidebar() {
     routePaths.managerParent.resellerLogs(lang),
     routePaths.managerParent.apiStatus(lang),
   ]), [lang])
+  const settingsChildPaths = useMemo(() => ([
+    routePaths.superAdmin.settings(lang),
+    routePaths.superAdmin.profile(lang),
+    routePaths.managerParent.settings(lang),
+    routePaths.managerParent.profile(lang),
+  ]), [lang])
+  const managerParentBiosPaths = useMemo(() => ([
+    routePaths.managerParent.biosBlacklist(lang),
+    routePaths.managerParent.biosDetails(lang),
+    routePaths.managerParent.biosConflicts(lang),
+  ]), [lang])
+  const superAdminAdminManagementPaths = useMemo(() => ([
+    routePaths.superAdmin.adminManagement(lang),
+    routePaths.superAdmin.users(lang),
+  ]), [lang])
+  const superAdminBiosPaths = useMemo(() => ([
+    routePaths.superAdmin.biosBlacklist(lang),
+    routePaths.superAdmin.biosDetails(lang),
+    routePaths.superAdmin.biosConflicts(lang),
+  ]), [lang])
   const isIos = useMemo(() => {
     if (typeof navigator === 'undefined') {
       return false
@@ -110,12 +116,46 @@ export function Sidebar() {
   }, [])
   const shouldExpandLogs = user?.role === 'manager_parent' && logsChildPaths.some((path) => location.pathname.startsWith(path))
   const [logsOpen, setLogsOpen] = useState(shouldExpandLogs)
+  const shouldExpandSettings =
+    (user?.role === 'super_admin' || user?.role === 'manager_parent') &&
+    settingsChildPaths.some((path) => location.pathname.startsWith(path))
+  const [settingsOpen, setSettingsOpen] = useState(shouldExpandSettings)
+  const shouldExpandManagerParentBios = user?.role === 'manager_parent' && managerParentBiosPaths.some((path) => location.pathname.startsWith(path))
+  const [managerParentBiosOpen, setManagerParentBiosOpen] = useState(shouldExpandManagerParentBios)
+  const shouldExpandSuperAdminAdminManagement = user?.role === 'super_admin' && superAdminAdminManagementPaths.some((path) => location.pathname.startsWith(path))
+  const [superAdminAdminManagementOpen, setSuperAdminAdminManagementOpen] = useState(shouldExpandSuperAdminAdminManagement)
+  const shouldExpandSuperAdminBios = user?.role === 'super_admin' && superAdminBiosPaths.some((path) => location.pathname.startsWith(path))
+  const [superAdminBiosOpen, setSuperAdminBiosOpen] = useState(shouldExpandSuperAdminBios)
 
   useEffect(() => {
     if (shouldExpandLogs) {
       setLogsOpen(true)
     }
   }, [shouldExpandLogs])
+
+  useEffect(() => {
+    if (shouldExpandSettings) {
+      setSettingsOpen(true)
+    }
+  }, [shouldExpandSettings])
+
+  useEffect(() => {
+    if (shouldExpandManagerParentBios) {
+      setManagerParentBiosOpen(true)
+    }
+  }, [shouldExpandManagerParentBios])
+
+  useEffect(() => {
+    if (shouldExpandSuperAdminAdminManagement) {
+      setSuperAdminAdminManagementOpen(true)
+    }
+  }, [shouldExpandSuperAdminAdminManagement])
+
+  useEffect(() => {
+    if (shouldExpandSuperAdminBios) {
+      setSuperAdminBiosOpen(true)
+    }
+  }, [shouldExpandSuperAdminBios])
 
   const items =
     user?.role === 'super_admin'
@@ -134,6 +174,28 @@ export function Sidebar() {
     { key: 'activity', icon: ScrollText, href: routePaths.managerParent.activity, translationKey: 'managerParent.nav.activity' },
     { key: 'resellerLogs', icon: ScrollText, href: routePaths.managerParent.resellerLogs, translationKey: 'managerParent.nav.resellerLogs' },
     { key: 'apiStatus', icon: Activity, href: routePaths.managerParent.apiStatus, translationKey: 'managerParent.nav.apiStatus' },
+  ]
+  const managerParentBiosChildren: NavItem[] = [
+    { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
+    { key: 'biosDetails', icon: History, href: routePaths.managerParent.biosDetails, translationKey: 'managerParent.nav.biosDetails' },
+    { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.managerParent.biosConflicts, translationKey: 'managerParent.nav.biosConflicts' },
+  ]
+  const superAdminSettingsChildren: NavItem[] = [
+    { key: 'settings', icon: Settings, href: routePaths.superAdmin.settings, translationKey: 'superAdmin.nav.settings' },
+    { key: 'profile', icon: User, href: routePaths.superAdmin.profile, translationKey: 'superAdmin.nav.profile' },
+  ]
+  const superAdminAdminManagementChildren: NavItem[] = [
+    { key: 'adminManagement', icon: Users, href: routePaths.superAdmin.adminManagement, translationKey: 'superAdmin.nav.adminManagement' },
+    { key: 'users', icon: Users, href: routePaths.superAdmin.users, translationKey: 'superAdmin.nav.users' },
+  ]
+  const superAdminBiosChildren: NavItem[] = [
+    { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },
+    { key: 'biosDetails', icon: History, href: routePaths.superAdmin.biosDetails, translationKey: 'superAdmin.nav.biosDetails' },
+    { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.superAdmin.biosConflicts, translationKey: 'superAdmin.nav.biosConflicts' },
+  ]
+  const managerParentSettingsChildren: NavItem[] = [
+    { key: 'settings', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
+    { key: 'profile', icon: User, href: routePaths.managerParent.profile, translationKey: 'managerParent.nav.profile' },
   ]
 
   const prefetchNavData = (key: string) => {
@@ -203,6 +265,203 @@ export function Sidebar() {
                 <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', logsOpen && 'rotate-180', collapsed && 'lg:hidden')} />
               </button>
               {logsOpen ? managerParentLogsChildren.map((child) => {
+                const ChildIcon = child.icon
+                const childLabel = t(child.translationKey)
+
+                return (
+                  <NavLink
+                    key={child.key}
+                    to={child.href(lang)}
+                    className={({ isActive }) =>
+                      cn(
+                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
+                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                      )
+                    }
+                    onClick={() => {
+                      if (window.innerWidth < 1024) {
+                        setCollapsed(true)
+                      }
+                    }}
+                    onMouseEnter={() => prefetchNavData(child.key)}
+                  >
+                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <span>{childLabel}</span>
+                  </NavLink>
+                )
+              }) : null}
+            </div>
+          )
+        }
+
+        if (user?.role === 'manager_parent' && item.key === 'biosBlacklistGroup') {
+          const Icon = item.icon
+          const label = t(item.translationKey)
+
+          return (
+            <div key={item.key} className="space-y-1">
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition',
+                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  collapsed && 'justify-center lg:px-0',
+                )}
+                onClick={() => setManagerParentBiosOpen((prev) => !prev)}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
+                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', managerParentBiosOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+              </button>
+              {managerParentBiosOpen ? managerParentBiosChildren.map((child) => {
+                const ChildIcon = child.icon
+                const childLabel = t(child.translationKey)
+
+                return (
+                  <NavLink
+                    key={child.key}
+                    to={child.href(lang)}
+                    className={({ isActive }) =>
+                      cn(
+                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
+                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                      )
+                    }
+                    onClick={() => {
+                      if (window.innerWidth < 1024) {
+                        setCollapsed(true)
+                      }
+                    }}
+                    onMouseEnter={() => prefetchNavData(child.key)}
+                  >
+                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <span>{childLabel}</span>
+                  </NavLink>
+                )
+              }) : null}
+            </div>
+          )
+        }
+
+        if ((user?.role === 'super_admin' || user?.role === 'manager_parent') && item.key === 'settingsGroup') {
+          const Icon = item.icon
+          const label = t(item.translationKey)
+          const settingsChildren = user.role === 'super_admin' ? superAdminSettingsChildren : managerParentSettingsChildren
+
+          return (
+            <div key={item.key} className="space-y-1">
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition',
+                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  collapsed && 'justify-center lg:px-0',
+                )}
+                onClick={() => setSettingsOpen((prev) => !prev)}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
+                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', settingsOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+              </button>
+              {settingsOpen ? settingsChildren.map((child) => {
+                const ChildIcon = child.icon
+                const childLabel = t(child.translationKey)
+
+                return (
+                  <NavLink
+                    key={child.key}
+                    to={child.href(lang)}
+                    className={({ isActive }) =>
+                      cn(
+                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
+                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                      )
+                    }
+                    onClick={() => {
+                      if (window.innerWidth < 1024) {
+                        setCollapsed(true)
+                      }
+                    }}
+                    onMouseEnter={() => prefetchNavData(child.key)}
+                  >
+                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <span>{childLabel}</span>
+                  </NavLink>
+                )
+              }) : null}
+            </div>
+          )
+        }
+
+        if (user?.role === 'super_admin' && item.key === 'adminManagementGroup') {
+          const Icon = item.icon
+          const label = t(item.translationKey)
+
+          return (
+            <div key={item.key} className="space-y-1">
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition',
+                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  collapsed && 'justify-center lg:px-0',
+                )}
+                onClick={() => setSuperAdminAdminManagementOpen((prev) => !prev)}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
+                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', superAdminAdminManagementOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+              </button>
+              {superAdminAdminManagementOpen ? superAdminAdminManagementChildren.map((child) => {
+                const ChildIcon = child.icon
+                const childLabel = t(child.translationKey)
+
+                return (
+                  <NavLink
+                    key={child.key}
+                    to={child.href(lang)}
+                    className={({ isActive }) =>
+                      cn(
+                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
+                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                      )
+                    }
+                    onClick={() => {
+                      if (window.innerWidth < 1024) {
+                        setCollapsed(true)
+                      }
+                    }}
+                    onMouseEnter={() => prefetchNavData(child.key)}
+                  >
+                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <span>{childLabel}</span>
+                  </NavLink>
+                )
+              }) : null}
+            </div>
+          )
+        }
+
+        if (user?.role === 'super_admin' && item.key === 'biosBlacklistGroup') {
+          const Icon = item.icon
+          const label = t(item.translationKey)
+
+          return (
+            <div key={item.key} className="space-y-1">
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition',
+                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  collapsed && 'justify-center lg:px-0',
+                )}
+                onClick={() => setSuperAdminBiosOpen((prev) => !prev)}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
+                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', superAdminBiosOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+              </button>
+              {superAdminBiosOpen ? superAdminBiosChildren.map((child) => {
                 const ChildIcon = child.icon
                 const childLabel = t(child.translationKey)
 
@@ -328,3 +587,5 @@ export function Sidebar() {
     </>
   )
 }
+
+

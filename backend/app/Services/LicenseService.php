@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -515,6 +516,20 @@ class LicenseService
      */
     public function processDueScheduledActivations(int $limit = 200): array
     {
+        if (! Schema::hasColumns('licenses', ['is_scheduled', 'scheduled_at', 'scheduled_failed_at'])) {
+            return [
+                'processed' => 0,
+                'failed' => 0,
+            ];
+        }
+
+        if (! Schema::hasColumns('programs', ['external_api_key_encrypted', 'external_api_base_url'])) {
+            return [
+                'processed' => 0,
+                'failed' => 0,
+            ];
+        }
+
         $licenses = License::query()
             ->with(['program:id,external_api_key_encrypted,external_api_base_url', 'reseller:id,tenant_id'])
             ->where('is_scheduled', true)

@@ -40,10 +40,12 @@ export interface ChartPoint {
 export interface TeamMemberSummary {
   id: number
   name: string
+  username: string | null
   email: string
   phone: string | null
   role: 'manager' | 'reseller'
   status: 'active' | 'suspended' | 'inactive'
+  username_locked: boolean
   customers_count: number
   active_licenses_count: number
   revenue: number

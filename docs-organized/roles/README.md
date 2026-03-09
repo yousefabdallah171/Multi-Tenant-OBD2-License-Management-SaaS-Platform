@@ -1,5 +1,7 @@
 # Role Files
 
+Last updated: 2026-03-09
+
 This folder contains one Markdown file per role:
 
 - `SUPER-ADMIN.md`
@@ -11,4 +13,9 @@ This folder contains one Markdown file per role:
 The full combined reference is:
 
 - `../ROLE-PERMISSIONS-AND-DASHBOARD-PAGES.md`
+
+Recent alignment updates:
+- duplicate username-management pages were consolidated into canonical team/admin pages
+- duplicate license pages were consolidated into canonical customer pages
+- duplicate report pages were consolidated into canonical report pages
 

@@ -1,5 +1,5 @@
 import { api } from '@/services/api'
-import type { ManagedUser, PaginationMeta } from '@/types/super-admin.types'
+import type { ManagedUser, ManagedUserDetail, PaginationMeta } from '@/types/super-admin.types'
 
 export interface AdminListParams {
   page?: number
@@ -27,6 +27,10 @@ export const adminService = {
   },
   async create(payload: AdminPayload) {
     const { data } = await api.post<{ data: ManagedUser }>('/super-admin/admin-management', payload)
+    return data
+  },
+  async getOne(id: number) {
+    const { data } = await api.get<{ data: ManagedUserDetail }>(`/super-admin/admin-management/${id}`)
     return data
   },
   async update(id: number, payload: Partial<AdminPayload>) {

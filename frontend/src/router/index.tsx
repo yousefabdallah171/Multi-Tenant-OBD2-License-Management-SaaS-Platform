@@ -30,7 +30,6 @@ const ManagerCustomersPage = lazyNamed(() => import('@/pages/manager/Customers')
 const ManagerCreateCustomerPage = lazyNamed(() => import('@/pages/manager/CreateCustomer'), 'CreateCustomerPageForManager')
 const ManagerCustomerDetailPage = lazyNamed(() => import('@/pages/manager/CustomerDetail'), 'CustomerDetailPage')
 const ManagerDashboardPage = lazyNamed(() => import('@/pages/manager/Dashboard'), 'DashboardPage')
-const ManagerLicensesPage = lazyNamed(() => import('@/pages/manager/Licenses'), 'LicensesPage')
 const ManagerProfilePage = lazyNamed(() => import('@/pages/manager/Profile'), 'ProfilePage')
 const ManagerReportsPage = lazyNamed(() => import('@/pages/manager/Reports'), 'ReportsPage')
 const ManagerResellerLogsPage = lazyNamed(() => import('@/pages/manager/ResellerLogs'), 'ResellerLogsPage')
@@ -38,7 +37,6 @@ const ManagerSoftwarePage = lazyNamed(() => import('@/pages/manager/Software'), 
 const ManagerSoftwareManagementPage = lazyNamed(() => import('@/pages/manager/SoftwareManagement'), 'SoftwareManagementPage')
 const ManagerProgramFormPage = lazyNamed(() => import('@/pages/manager/ProgramForm'), 'ProgramFormPage')
 const ManagerTeamPage = lazyNamed(() => import('@/pages/manager/Team'), 'TeamPage')
-const ManagerUsernameManagementPage = lazyNamed(() => import('@/pages/manager/UsernameManagement'), 'UsernameManagementPage')
 
 const ManagerParentActivityPage = lazyNamed(() => import('@/pages/manager-parent/Activity'), 'ActivityPage')
 const ActivateLicensePageForManagerParent = lazyNamed(() => import('@/pages/manager-parent/ActivateLicense'), 'ActivateLicensePageForManagerParent')
@@ -52,7 +50,6 @@ const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-
 const ManagerParentDashboardPage = lazyNamed(() => import('@/pages/manager-parent/Dashboard'), 'DashboardPage')
 const ManagerParentFinancialReportsPage = lazyNamed(() => import('@/pages/manager-parent/FinancialReports'), 'FinancialReportsPage')
 const ManagerParentIpAnalyticsPage = lazyNamed(() => import('@/pages/manager-parent/IpAnalytics'), 'IpAnalyticsPage')
-const ManagerParentLicensesPage = lazyNamed(() => import('@/pages/manager-parent/Licenses'), 'LicensesPage')
 const ManagerParentProfilePage = lazyNamed(() => import('@/pages/manager-parent/Profile'), 'ProfilePage')
 const ManagerParentProgramLogsPage = lazyNamed(() => import('@/pages/manager-parent/ProgramLogs'), 'ProgramLogsPage')
 const ManagerParentResellerLogsPage = lazyNamed(() => import('@/pages/manager-parent/ResellerLogs'), 'ResellerLogsPage')
@@ -62,29 +59,27 @@ const ManagerParentSoftwarePage = lazyNamed(() => import('@/pages/manager-parent
 const SoftwareManagementPage = lazyNamed(() => import('@/pages/manager-parent/SoftwareManagement'), 'SoftwareManagementPage')
 const ManagerParentProgramFormPage = lazyNamed(() => import('@/pages/manager-parent/ProgramForm'), 'ProgramFormPage')
 const TeamManagementPage = lazyNamed(() => import('@/pages/manager-parent/TeamManagement'), 'TeamManagementPage')
-const ManagerParentUsernameManagementPage = lazyNamed(() => import('@/pages/manager-parent/UsernameManagement'), 'UsernameManagementPage')
+const TeamMemberDetailPage = lazyNamed(() => import('@/pages/manager-parent/TeamMemberDetail'), 'TeamMemberDetailPage')
 
 const ApiStatusPage = lazyNamed(() => import('@/pages/super-admin/ApiStatus'), 'ApiStatusPage')
 const BiosBlacklistPage = lazyNamed(() => import('@/pages/super-admin/BiosBlacklist'), 'BiosBlacklistPage')
 const SuperAdminBiosConflictsPage = lazyNamed(() => import('@/pages/super-admin/BiosConflicts'), 'BiosConflictsPage')
 const SuperAdminBiosDetailsPage = lazyNamed(() => import('@/pages/super-admin/BiosDetails'), 'BiosDetailsPage')
 const DashboardPage = lazyNamed(() => import('@/pages/super-admin/Dashboard'), 'DashboardPage')
-const FinancialReportsPage = lazyNamed(() => import('@/pages/super-admin/FinancialReports'), 'FinancialReportsPage')
 const LogsPage = lazyNamed(() => import('@/pages/super-admin/Logs'), 'LogsPage')
 const ReportsPage = lazyNamed(() => import('@/pages/super-admin/Reports'), 'ReportsPage')
 const SettingsPage = lazyNamed(() => import('@/pages/super-admin/Settings'), 'SettingsPage')
 const TenantsPage = lazyNamed(() => import('@/pages/super-admin/Tenants'), 'TenantsPage')
 const UsersPage = lazyNamed(() => import('@/pages/super-admin/Users'), 'UsersPage')
+const UserDetailPage = lazyNamed(() => import('@/pages/super-admin/UserDetail'), 'UserDetailPage')
 const AdminManagementPage = lazyNamed(() => import('@/pages/super-admin/AdminManagement'), 'AdminManagementPage')
 const SuperAdminProfilePage = lazyNamed(() => import('@/pages/super-admin/Profile'), 'ProfilePage')
-const UsernameManagementPage = lazyNamed(() => import('@/pages/super-admin/UsernameManagement'), 'UsernameManagementPage')
 const SecurityLocksPage = lazyNamed(() => import('@/pages/super-admin/SecurityLocks'), 'SecurityLocksPage')
 
 const ResellerCustomersPage = lazyNamed(() => import('@/pages/reseller/Customers'), 'CustomersPage')
 const ResellerCreateCustomerPage = lazyNamed(() => import('@/pages/reseller/CreateCustomer'), 'CreateCustomerPageForReseller')
 const ResellerCustomerDetailPage = lazyNamed(() => import('@/pages/reseller/CustomerDetail'), 'CustomerDetailPage')
 const ResellerDashboardPage = lazyNamed(() => import('@/pages/reseller/Dashboard'), 'DashboardPage')
-const ResellerLicensesPage = lazyNamed(() => import('@/pages/reseller/Licenses'), 'LicensesPage')
 const ActivateLicensePageForReseller = lazyNamed(() => import('@/pages/reseller/ActivateLicense'), 'ActivateLicensePageForReseller')
 const ResellerProfilePage = lazyNamed(() => import('@/pages/reseller/Profile'), 'ProfilePage')
 const ResellerReportsPage = lazyNamed(() => import('@/pages/reseller/Reports'), 'ReportsPage')
@@ -119,14 +114,15 @@ export function AppRouter() {
                   <Route path="dashboard" element={<DashboardPage />} />
                   <Route path="tenants" element={<TenantsPage />} />
                   <Route path="users" element={<UsersPage />} />
+                  <Route path="users/:id" element={<UserDetailPage />} />
                   <Route path="admin-management" element={<AdminManagementPage />} />
                   <Route path="bios-blacklist" element={<BiosBlacklistPage />} />
                   <Route path="bios-history" element={<Navigate to="../bios-conflicts" replace />} />
                   <Route path="bios-details" element={<SuperAdminBiosDetailsPage />} />
                   <Route path="bios-conflicts" element={<SuperAdminBiosConflictsPage />} />
-                  <Route path="username-management" element={<UsernameManagementPage />} />
+                  <Route path="username-management" element={<Navigate to="../admin-management" replace />} />
                   <Route path="security-locks" element={<SecurityLocksPage />} />
-                  <Route path="financial-reports" element={<FinancialReportsPage />} />
+                  <Route path="financial-reports" element={<Navigate to="../reports" replace />} />
                   <Route path="reports" element={<ReportsPage />} />
                   <Route path="logs" element={<LogsPage />} />
                   <Route path="api-status" element={<ApiStatusPage />} />
@@ -139,6 +135,7 @@ export function AppRouter() {
                 <Route element={<DashboardLayout />}>
                   <Route path="dashboard" element={<ManagerParentDashboardPage />} />
                   <Route path="team-management" element={<TeamManagementPage />} />
+                  <Route path="team-management/:id" element={<TeamMemberDetailPage />} />
                   <Route path="reseller-pricing" element={<ResellerPricingPage />} />
                   <Route path="software" element={<ManagerParentSoftwarePage />} />
                   <Route path="software-management" element={<SoftwareManagementPage />} />
@@ -154,13 +151,13 @@ export function AppRouter() {
                   <Route path="program-logs" element={<ManagerParentProgramLogsPage />} />
                   <Route path="reseller-logs" element={<ManagerParentResellerLogsPage />} />
                   <Route path="api-status" element={<ManagerParentApiStatusPage />} />
-                  <Route path="username-management" element={<ManagerParentUsernameManagementPage />} />
-                  <Route path="financial-reports" element={<ManagerParentFinancialReportsPage />} />
-                  <Route path="reports" element={<Navigate to="../financial-reports" replace />} />
+                  <Route path="username-management" element={<Navigate to="../team-management" replace />} />
+                  <Route path="financial-reports" element={<Navigate to="../reports" replace />} />
+                  <Route path="reports" element={<ManagerParentFinancialReportsPage />} />
                   <Route path="activity" element={<ManagerParentActivityPage />} />
                   <Route path="customers" element={<ManagerParentCustomersPage />} />
                   <Route path="customers/create" element={<ManagerParentCreateCustomerPage />} />
-                  <Route path="licenses" element={<ManagerParentLicensesPage />} />
+                  <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="customers/:id" element={<ManagerParentCustomerDetailPage />} />
                   <Route path="settings" element={<ManagerParentSettingsPage />} />
                   <Route path="profile" element={<ManagerParentProfilePage />} />
@@ -171,11 +168,11 @@ export function AppRouter() {
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<ManagerDashboardPage />} />
                   <Route path="team" element={<ManagerTeamPage />} />
-                  <Route path="username-management" element={<ManagerUsernameManagementPage />} />
+                  <Route path="username-management" element={<Navigate to="../team" replace />} />
                   <Route path="customers" element={<ManagerCustomersPage />} />
                   <Route path="customers/create" element={<ManagerCreateCustomerPage />} />
                   <Route path="customers/:id" element={<ManagerCustomerDetailPage />} />
-                  <Route path="licenses" element={<ManagerLicensesPage />} />
+                  <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="software" element={<ManagerSoftwarePage />} />
                   <Route path="software/:id/activate" element={<ActivateLicensePageForManager />} />
                   <Route path="software-management" element={<ManagerSoftwareManagementPage />} />
@@ -194,7 +191,7 @@ export function AppRouter() {
                   <Route path="customers" element={<ResellerCustomersPage />} />
                   <Route path="customers/create" element={<ResellerCreateCustomerPage />} />
                   <Route path="customers/:id" element={<ResellerCustomerDetailPage />} />
-                  <Route path="licenses" element={<ResellerLicensesPage />} />
+                  <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="software" element={<ResellerSoftwarePage />} />
                   <Route path="software/:id/activate" element={<ActivateLicensePageForReseller />} />
                   <Route path="reports" element={<ResellerReportsPage />} />
@@ -220,3 +217,5 @@ export function AppRouter() {
     </Suspense>
   )
 }
+
+

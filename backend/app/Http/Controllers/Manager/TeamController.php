@@ -102,9 +102,11 @@ class TeamController extends BaseManagerController
         return [
             'id' => $reseller->id,
             'name' => $reseller->name,
+            'username' => $reseller->username,
             'email' => $reseller->email,
             'phone' => $reseller->phone,
             'status' => $reseller->status,
+            'username_locked' => $reseller->username_locked,
             'customers_count' => $licenses->pluck('customer_id')->filter()->unique()->count(),
             'active_licenses_count' => $licenses->where('status', 'active')->count(),
             'revenue' => round((float) $licenses->sum('price'), 2),

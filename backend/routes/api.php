@@ -303,9 +303,11 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::apiResource('tenants', SuperAdminTenantController::class);
 
         Route::get('/users', [SuperAdminUserController::class, 'index']);
+        Route::get('/users/{user}', [SuperAdminUserController::class, 'show']);
         Route::put('/users/{user}/status', [SuperAdminUserController::class, 'updateStatus']);
         Route::delete('/users/{user}', [SuperAdminUserController::class, 'destroy']);
         Route::get('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'index']);
+        Route::get('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'show']);
         Route::post('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'store']);
         Route::put('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'update']);
         Route::delete('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'destroy']);

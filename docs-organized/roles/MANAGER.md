@@ -1,24 +1,24 @@
 # Manager
 
+Last updated: 2026-03-09
+
 - Account: `manager@obd2sw.com`
 - Scope: Team
 - Tenant: `Test Tenant`
 - Default landing page: `/:lang/manager/dashboard`
-- Visible navigation routes: 11
+- Visible navigation routes: 9 main entries plus detail/workflow routes
 
 ## Pages shown
 
 1. `/:lang/manager/dashboard`
 2. `/:lang/manager/team`
-3. `/:lang/manager/username-management`
-4. `/:lang/manager/customers`
-5. `/:lang/manager/licenses`
-6. `/:lang/manager/software`
-7. `/:lang/manager/software-management`
-8. `/:lang/manager/reports`
-9. `/:lang/manager/activity`
-10. `/:lang/manager/reseller-logs`
-11. `/:lang/manager/profile`
+3. `/:lang/manager/customers`
+4. `/:lang/manager/software`
+5. `/:lang/manager/software-management`
+6. `/:lang/manager/reports`
+7. `/:lang/manager/activity`
+8. `/:lang/manager/reseller-logs`
+9. `/:lang/manager/profile`
 
 Additional workflow/detail routes:
 
@@ -41,7 +41,7 @@ Additional workflow/detail routes:
 
 - View assigned resellers
 - View reseller details
-- View reseller recent licenses and activity in the Team drawer
+- View reseller recent licenses and activity from the Team page
 - View team customers
 - Open customer detail/history views from licenses and customer listings
 - View team licenses with renew/deactivate workflow

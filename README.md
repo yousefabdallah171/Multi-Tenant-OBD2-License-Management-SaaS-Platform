@@ -48,8 +48,8 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 | Field | Value |
 |-------|-------|
 | **Version** | 1.0.0 |
-| **Status** | Phase 12 UX Editing + seller tracking + pause/resume licensing complete (deployment hardening pending) |
-| **Last Updated** | 2026-03-05 |
+| **Status** | Phase 15 UX consolidation, role-page cleanup, and schema-compatibility fixes in progress |
+| **Last Updated** | 2026-03-09 |
 | **Scale** | Multi-tenant SaaS, 4 active dashboard roles, queued exports, tenant-scoped external API workflows |
 | **Budget** | $30 |
 | **Timeline** | 15 Days (Day 0 - Day 14) |
@@ -83,7 +83,29 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | PHASE-09-Deployment | :red_circle: Not Started | Day 12-13 |
 | PHASE-10-Documentation | :red_circle: Not Started | Day 14 |
 
-### Latest Implemented Features (2026-03-05)
+### Latest Implemented Features (2026-03-09)
+
+**Route Consolidation & Detail UX**
+- Merged duplicate report pages into single canonical report pages for Super Admin and Manager Parent.
+- Merged duplicate license pages into the customer pages for Manager Parent, Manager, and Reseller.
+- Replaced duplicate username-management pages with canonical team/admin-management pages.
+- Added full-page detail routes for Manager Parent team members and Super Admin users.
+
+**Password & Profile UX**
+- Manual reset-password flows now accept typed passwords.
+- Added show/hide password toggles to create/reset/profile password forms.
+
+**Sidebar Information Architecture**
+- Grouped related sidebar entries into submenus for Super Admin and Manager Parent:
+  - Admin Management + Users
+  - BIOS Blacklist + BIOS Details + BIOS Conflicts
+  - Settings + Profile
+
+**Customer Page Stability**
+- Fixed authenticated customer pages failing on older local schemas missing scheduled-license columns.
+- Added schema-safe guards to scheduled-license processing and customer list queries.
+
+### Previously Implemented Features (2026-03-05)
 
 **Pause/Resume & Reactivate Licensing (New)**
 - Added `pause` and `resume` actions for resellers to temporarily pause active licenses
@@ -290,13 +312,11 @@ const canManageUsers = useHasPermission('manage_users');
 |-------|------|-------------|
 | `/:lang/super-admin/dashboard` | Dashboard | 5 stats cards + 3 charts + activity feed |
 | `/:lang/super-admin/tenants` | Tenant Management | CRUD + stats per tenant |
-| `/:lang/super-admin/users` | All Users | Cross-tenant user table + IP info |
+| `/:lang/super-admin/users` | All Users | Cross-tenant user table + full-page user detail |
 | `/:lang/super-admin/admin-management` | Admin Management | Manage admin-level accounts |
-| `/:lang/super-admin/reports` | Reports | Cross-tenant analytics + export |
-| `/:lang/super-admin/financial-reports` | Financial Reports | Revenue breakdown all tenants |
+| `/:lang/super-admin/reports` | Reports | Canonical reports page (financial merged) |
 | `/:lang/super-admin/bios-blacklist` | BIOS Blacklist | Global BIOS blacklist CRUD |
 | `/:lang/super-admin/bios-history` | BIOS History | Full history all tenants |
-| `/:lang/super-admin/username-management` | Username Management | Unlock and rename usernames |
 | `/:lang/super-admin/security-locks` | Security Locks | Locked-account and blocked-IP review |
 | `/:lang/super-admin/logs` | System Logs | All activity + API logs |
 | `/:lang/super-admin/api-status` | API Health | External API monitor |
@@ -309,12 +329,12 @@ const canManageUsers = useHasPermission('manage_users');
 |-------|------|-------------|
 | `/:lang/dashboard` | Dashboard | Tenant stats overview |
 | `/:lang/team-management` | Team Management | Add Managers/Resellers |
+| `/:lang/team-management/:id` | Team Member Detail | Full-page team-member detail |
 | `/:lang/reseller-pricing` | Reseller Pricing | Pricing tiers & commissions |
 | `/:lang/software` | Software | Tenant software catalog |
-| `/:lang/licenses` | Licenses | Tenant license management + bulk actions |
+| `/:lang/customers` | Customers | Canonical tenant customer/license view |
 | `/:lang/program-logs` | Program Logs | External activation/login events per program |
 | `/:lang/software-management` | Software Management | Programs + Download Links CRUD |
-| `/:lang/financial-reports` | Financial Reports | Tenant-level revenue |
 | `/:lang/bios-blacklist` | BIOS Blacklist | Tenant-level blacklist |
 | `/:lang/bios-history` | BIOS History | Tenant activation history |
 | `/:lang/bios-conflicts` | BIOS Conflicts | Conflict history + resolution |
@@ -322,10 +342,8 @@ const canManageUsers = useHasPermission('manage_users');
 | `/:lang/logs` | Logs | Tenant API/operation logs |
 | `/:lang/reseller-logs` | Reseller Logs | Seller activity + revenue tracking |
 | `/:lang/api-status` | API Status | Tenant view for API health |
-| `/:lang/username-management` | Username Management | Tenant user credentials |
-| `/:lang/reports` | Reports | Tenant revenue & analytics |
+| `/:lang/reports` | Reports | Canonical tenant reports page (financial merged) |
 | `/:lang/activity` | Activity Log | Tenant-wide audit log |
-| `/:lang/customers` | Customers | Aggregated customer view |
 | `/:lang/settings` | Settings | Tenant configuration |
 | `/:lang/profile` | Profile | Profile management |
 
@@ -336,10 +354,8 @@ Additional workflow/detail routes also exist for program create/edit/activate an
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/manager/dashboard` | Dashboard | Personal + team stats |
-| `/:lang/manager/team` | Team | Manage resellers only |
-| `/:lang/manager/username-management` | Username Management | Team credentials only |
-| `/:lang/manager/customers` | Customers | Team customer overview |
-| `/:lang/manager/licenses` | Licenses | Team license management + bulk actions |
+| `/:lang/manager/team` | Team | Canonical team page for reseller/team credential operations |
+| `/:lang/manager/customers` | Customers | Canonical team customer/license view |
 | `/:lang/manager/software` | Software | Available programs (read-only) |
 | `/:lang/manager/software-management` | Software Management | Team-scoped CRUD + activation popup |
 | `/:lang/manager/reports` | Reports | Personal/team reports |
@@ -354,8 +370,7 @@ Additional workflow/detail routes also exist for customer detail pages and progr
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/reseller/dashboard` | Dashboard | Personal stats + balance |
-| `/:lang/reseller/customers` | Customers | BIOS activation wizard |
-| `/:lang/reseller/licenses` | Licenses | License management |
+| `/:lang/reseller/customers` | Customers | Canonical customer/license page with BIOS activation wizard |
 | `/:lang/reseller/software` | Software Catalog | Read-only list + Activate modal |
 | `/:lang/reseller/reports` | Reports | Personal sales reports |
  

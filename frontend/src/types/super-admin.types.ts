@@ -66,6 +66,32 @@ export interface ManagedUser {
   created_at: string | null
 }
 
+export interface ManagedUserDetail extends ManagedUser {
+  customers_count: number
+  active_licenses_count: number
+  revenue: number
+  recent_licenses: Array<{
+    id: number
+    customer: {
+      id: number
+      name: string
+      email: string | null
+    } | null
+    program: string | null
+    bios_id: string
+    status: string
+    price: number
+    expires_at: string | null
+  }>
+  recent_activity: Array<{
+    id: number
+    action: string
+    description: string | null
+    metadata: Record<string, unknown>
+    created_at: string | null
+  }>
+}
+
 export interface RoleCounts {
   super_admin: number
   manager_parent: number

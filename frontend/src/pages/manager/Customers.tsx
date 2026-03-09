@@ -120,6 +120,11 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
+  const expiringQuery = useQuery({
+    queryKey: ['manager', 'licenses', 'expiring'],
+    queryFn: () => managerService.getLicensesExpiring(),
+  })
+
   const activateMutation = useMutation({
     mutationFn: () =>
       licenseService.activate({
@@ -265,6 +270,7 @@ export function CustomersPage() {
   const totalPrice = priceMode === 'auto' ? autoPrice : Number(activationForm.price || 0)
 
   const rows = customersQuery.data?.data ?? []
+  const expiring = expiringQuery.data?.data ?? { day1: 0, day3: 0, day7: 0 }
   const renewTarget = rows.find((row) => row.license_id === renewLicenseId) ?? null
   const renewProgram = (programsQuery.data?.data ?? []).find((program) => program.name === renewTarget?.program)
   const selectableIds = rows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
@@ -431,6 +437,12 @@ export function CustomersPage() {
           </Button>
         }
       />
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <ExpiryAlert label={t('reseller.pages.licenses.expiryLabels.day1')} value={expiring.day1} tone="rose" />
+        <ExpiryAlert label={t('reseller.pages.licenses.expiryLabels.day3')} value={expiring.day3} tone="amber" />
+        <ExpiryAlert label={t('reseller.pages.licenses.expiryLabels.day7')} value={expiring.day7} tone="yellow" />
+      </div>
 
       <Tabs value={status} onValueChange={(value) => setStatus(value as (typeof STATUS_OPTIONS)[number])}>
         <TabsList>
@@ -884,4 +896,22 @@ function validateActivationStep(
 
 
 
+
+
+function ExpiryAlert({ label, value, tone }: { label: string; value: number; tone: 'rose' | 'amber' | 'yellow' }) {
+  const styles = {
+    rose: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300',
+    amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
+    yellow: 'border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300',
+  }
+
+  return (
+    <Card className={styles[tone]}>
+      <CardContent className="space-y-1 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
+        <p className="text-3xl font-semibold">{value}</p>
+      </CardContent>
+    </Card>
+  )
+}
 
