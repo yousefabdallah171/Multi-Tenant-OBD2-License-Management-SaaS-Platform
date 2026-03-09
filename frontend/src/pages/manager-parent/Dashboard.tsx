@@ -140,9 +140,6 @@ export function DashboardPage() {
               <Button type="button" className="justify-start" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
                 {t('managerParent.pages.dashboard.actions.inviteTeamMember')}
               </Button>
-              <Button type="button" variant="secondary" className="justify-start" onClick={() => navigate(routePaths.managerParent.resellerPricing(lang))}>
-                {t('managerParent.pages.dashboard.actions.updateResellerPricing')}
-              </Button>
               <Button type="button" variant="secondary" className="justify-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
                 {t('managerParent.pages.dashboard.actions.reviewCustomers')}
               </Button>

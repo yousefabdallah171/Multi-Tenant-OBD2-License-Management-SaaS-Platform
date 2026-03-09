@@ -82,7 +82,7 @@
     "all": "الكل",
     "active": "نشط",
     "expired": "منتهي",
-    "suspended": "معلق",
+    "suspended": "????",
     "cancelled": "ملغي",
     "pause": "إيقاف",
     "resume": "استئناف",
@@ -130,7 +130,7 @@
     "csv": "CSV",
     "pdf": "PDF",
     "activate": "تفعيل",
-    "suspend": "تعليق",
+    "suspend": "?????",
     "createdAt": "تاريخ الإنشاء",
     "role": "الدور",
     "tenant": "الشريك",
@@ -334,7 +334,7 @@
         "statusUpdated": "تم تحديث حالة المشرف بنجاح.",
         "deleteSuccess": "تم حذف المشرف بنجاح.",
         "resetSuccess": "تم إنشاء كلمة مرور مؤقتة",
-        "bulkSuspendSuccess": "تم تعليق المشرفين المحددين بنجاح.",
+        "bulkSuspendSuccess": "?? ????? ???????? ???????? ?????.",
         "bulkDeleteSuccess": "تم حذف المشرفين المحددين بنجاح.",
         "add": "إضافة مشرف",
         "editTitle": "تعديل المشرف",
@@ -441,7 +441,6 @@
     "nav": {
       "dashboard": "الرئيسية",
       "teamManagement": "إدارة الفريق",
-      "resellerPricing": "تسعير الموزعين",
       "softwareManagement": "إدارة البرامج",
       "biosBlacklist": "القائمة السوداء لـ BIOS",
       "biosConflicts": "تعارضات BIOS",
@@ -485,7 +484,6 @@
           "teamManagement": "إدارة الفريق",
           "managePrograms": "إدارة البرامج",
           "inviteTeamMember": "دعوة عضو فريق",
-          "updateResellerPricing": "تحديث تسعير الموزعين",
           "reviewCustomers": "مراجعة العملاء",
           "openReports": "فتح التقارير"
         }
@@ -539,7 +537,6 @@
         "companyName": "اسم الشركة",
         "address": "العنوان",
         "defaults": "الإعدادات الافتراضية",
-        "defaultTrialDays": "أيام التجربة الافتراضية",
         "defaultPricing": "التسعير الافتراضي",
         "notifications": "الإشعارات",
         "newActivationsAlerts": "تنبيهات بريدية للتفعيلات الجديدة",
@@ -645,13 +642,12 @@
         "nameValidation": "يجب أن يتكون اسم البرنامج من حرفين على الأقل.",
         "downloadValidation": "أدخل رابط تحميل صالحًا.",
         "installationGuideValidation": "أدخل رابط دليل تثبيت صالحًا.",
-        "numberValidation": "يجب أن تكون أيام التجربة والسعر الأساسي أرقامًا صالحة.",
+        "numberValidation": "??? ?? ???? ????? ??????? ????? ??????.",
         "grid": "شبكة",
         "table": "جدول",
         "addProgram": "إضافة برنامج",
         "searchPlaceholder": "ابحث باسم البرنامج",
         "noDescription": "لا يوجد وصف متاح.",
-        "trialDays": "أيام التجربة",
         "editProgram": "تعديل البرنامج",
         "editDescription": "حدّث تفاصيل البرنامج المحدد.",
         "formDescription": "أنشئ برنامجًا جديدًا مع التسعير وروابط التحميل ودليل التثبيت.",
@@ -691,33 +687,6 @@
         "newUsername": "اسم المستخدم الجديد",
         "usernameRequired": "اسم المستخدم مطلوب.",
         "saveUsername": "حفظ اسم المستخدم"
-      },
-      "resellerPricing": {
-        "title": "تسعير الموزعين",
-        "description": "حدّد أسعار البرامج الخاصة بكل موزع وعدّل نسب العمولة وراجع سجل التسعير.",
-        "updateSuccess": "تم تحديث التسعير بنجاح.",
-        "bulkSuccess": "تم تطبيق التسعير الجماعي على {{count}} صفًا.",
-        "basePrice": "السعر الأساسي",
-        "resellerPrice": "سعر الموزع",
-        "margin": "الهامش %",
-        "commission": "العمولة %",
-        "selectResellerFirst": "اختر موزعًا أولًا.",
-        "oldPrice": "السعر السابق",
-        "newPrice": "السعر الجديد",
-        "changedBy": "تم التغيير بواسطة",
-        "bulkUpdate": "تحديث جماعي",
-        "pricingHistory": "سجل التسعير",
-        "bulkUpdateTitle": "تحديث جماعي للتسعير",
-        "bulkUpdateDescription": "اختر حسابات الموزعين وطبّق إما نسبة زيادة أو سعرًا ثابتًا على جميع البرامج.",
-        "resellers": "الموزعون",
-        "mode": "الوضع",
-        "markupMode": "زيادة مئوية",
-        "fixedMode": "سعر ثابت",
-        "markupValue": "نسبة الزيادة %",
-        "fixedValue": "السعر الثابت",
-        "bulkValidation": "اختر موزعًا واحدًا على الأقل وأدخل قيمة صحيحة.",
-        "applying": "جارٍ التطبيق...",
-        "applyBulkUpdate": "تطبيق التحديث الجماعي"
       },
       "ipAnalytics": {
         "title": "تحليلات IP",
@@ -825,7 +794,6 @@
         "noDescription": "لا يوجد وصف متاح.",
         "openDownload": "فتح رابط التحميل",
         "searchPlaceholder": "ابحث باسم البرنامج",
-        "trialDays": "أيام التجربة",
         "version": "الإصدار"
       },
       "licenses": {
@@ -894,8 +862,8 @@
       },
       "team": {
         "title": "الفريق",
-        "description": "راجع الموزعين المسندين إليك. هذا العرض للقراءة فقط ومقصور على فريقك.",
-        "searchPlaceholder": "ابحث باسم الموزع أو بريده الإلكتروني",
+        "description": "????? ?????? ???????? ???? ???????. ??? ???? ????? ????? ?????? ?? ?????? ??? ???? ????? ??????.",
+        "searchPlaceholder": "???? ???? ???????? ?? ?????? ??????????",
         "resellerDetail": "تفاصيل الموزع",
         "resellerDetailDescription": "راجع أداء موزع الفريق الأخير.",
         "recentLicenses": "التراخيص الأخيرة",
@@ -907,7 +875,23 @@
         "joined": "انضم",
         "columns": {
           "reseller": "الموزع"
-        }
+        },
+        "inviteReseller": "????? ????",
+        "inviteTitle": "????? ????",
+        "inviteDescription": "???? ???? ???? ???? ??? ??????? ??????.",
+        "editTitle": "????? ??????",
+        "editDescription": "???? ?????? ???? ??????.",
+        "createAccount": "????? ??????",
+        "saveChanges": "??? ?????????",
+        "createSuccess": "??? ????? ?????? ?????.",
+        "updateSuccess": "?? ????? ?????? ?????.",
+        "statusUpdated": "?? ????? ???? ?????? ?????.",
+        "deleteSuccess": "??? ????? ?????? ?????.",
+        "deleteTitle": "??? ??????",
+        "deleteDescription": "??? ???? ?????? {{email}} ?? ?????.",
+        "nameValidation": "???? ????? ?????? ??????.",
+        "emailValidation": "???? ?????? ?????????? ?????? ??????.",
+        "passwordValidation": "??? ?? ????? ???? ?????? ?? 8 ???? ??? ?????."
       },
       "activity": {
         "title": "النشاط",
@@ -1444,7 +1428,7 @@
     "status": {
       "active": "نشط",
       "expired": "منتهي",
-      "suspended": "معلق",
+      "suspended": "????",
       "pending": "قيد الانتظار"
     },
     "dashboard": {

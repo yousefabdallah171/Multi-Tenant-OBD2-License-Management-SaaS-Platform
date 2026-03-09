@@ -101,6 +101,12 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
   - BIOS Blacklist + BIOS Details + BIOS Conflicts
   - Settings + Profile
 
+**Manager + Software Workflow Alignment**
+- Manager team page now supports reseller invite, edit, deactivate/reactivate, delete, unlock, username change, and password reset actions.
+- Manager reports now use the same tenant-wide financial reporting surface as Manager Parent reports.
+- Removed reseller-specific pricing from the product flow so resellers use the normal software base price.
+- Removed `Trial Days` from manager-parent software catalog and program-management UI.
+
 **Customer Page Stability**
 - Fixed authenticated customer pages failing on older local schemas missing scheduled-license columns.
 - Added schema-safe guards to scheduled-license processing and customer list queries.
@@ -330,7 +336,6 @@ const canManageUsers = useHasPermission('manage_users');
 | `/:lang/dashboard` | Dashboard | Tenant stats overview |
 | `/:lang/team-management` | Team Management | Add Managers/Resellers |
 | `/:lang/team-management/:id` | Team Member Detail | Full-page team-member detail |
-| `/:lang/reseller-pricing` | Reseller Pricing | Pricing tiers & commissions |
 | `/:lang/software` | Software | Tenant software catalog |
 | `/:lang/customers` | Customers | Canonical tenant customer/license view |
 | `/:lang/program-logs` | Program Logs | External activation/login events per program |
@@ -354,11 +359,11 @@ Additional workflow/detail routes also exist for program create/edit/activate an
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/manager/dashboard` | Dashboard | Personal + team stats |
-| `/:lang/manager/team` | Team | Canonical team page for reseller/team credential operations |
+| `/:lang/manager/team` | Team | Canonical reseller-management page with full reseller actions |
 | `/:lang/manager/customers` | Customers | Canonical team customer/license view |
 | `/:lang/manager/software` | Software | Available programs (read-only) |
 | `/:lang/manager/software-management` | Software Management | Team-scoped CRUD + activation popup |
-| `/:lang/manager/reports` | Reports | Personal/team reports |
+| `/:lang/manager/reports` | Reports | Tenant-wide reports with the same financial layout as Manager Parent |
 | `/:lang/manager/activity` | Activity | Team activity logs |
 | `/:lang/manager/reseller-logs` | Reseller Logs | Team seller activity and direct-sale tracking |
 | `/:lang/manager/profile` | Profile | Profile management |

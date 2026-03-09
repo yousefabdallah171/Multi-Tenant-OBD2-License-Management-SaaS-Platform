@@ -42,13 +42,17 @@ Additional workflow/detail routes:
 - View all tenant resellers
 - View reseller details
 - View reseller recent licenses and activity from the Team page
+- Invite reseller accounts from the Team page
+- Edit reseller accounts from the Team page
+- Deactive/reactivate reseller accounts from the Team page
+- Delete reseller accounts from the Team page
 - View team customers
 - Open customer detail/history views from licenses and customer listings
 - View team licenses with renew/deactivate workflow
 - View software catalog in read-only mode
 - Create, edit, and activate team-scoped software/program records
 - Activate licenses directly as a manager and have those sales attributed correctly in reports/logs
-- View team reports and export them
+- View tenant-wide reports in the same financial layout used by Manager Parent and export them
 - View team activity
 - View seller activity in `reseller-logs` with filters by seller/action/date
 - Unlock usernames for team users
@@ -59,7 +63,6 @@ Additional workflow/detail routes:
 ## Cannot do
 
 - Cannot see data outside the tenant
-- Cannot add, invite, edit, suspend, or delete team members from the Team page
 - Cannot manage users outside the tenant reseller/customer scope
 - Customer workspace is operational/read-only outside activation, renewal, and deactivation flows
 - Cannot access Super Admin, Manager Parent, Reseller, or Customer pages

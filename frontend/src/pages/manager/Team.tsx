@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -18,6 +19,24 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { managerService } from '@/services/manager.service'
 import type { ManagerTeamReseller } from '@/types/manager-reseller.types'
+
+interface TeamFormState {
+  name: string
+  email: string
+  password: string
+  phone: string
+}
+
+const EMPTY_FORM: TeamFormState = {
+  name: '',
+  email: '',
+  password: '',
+  phone: '',
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
 
 export function TeamPage() {
   const { t } = useTranslation()
@@ -29,6 +48,10 @@ export function TeamPage() {
   const [status, setStatus] = useState<'active' | 'suspended' | 'inactive' | ''>('')
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingMember, setEditingMember] = useState<ManagerTeamReseller | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ManagerTeamReseller | null>(null)
+  const [form, setForm] = useState<TeamFormState>(EMPTY_FORM)
   const [unlockTarget, setUnlockTarget] = useState<ManagerTeamReseller | null>(null)
   const [unlockReason, setUnlockReason] = useState('')
   const [usernameTarget, setUsernameTarget] = useState<ManagerTeamReseller | null>(null)
@@ -36,6 +59,7 @@ export function TeamPage() {
   const [changeReason, setChangeReason] = useState('')
   const [passwordTarget, setPasswordTarget] = useState<ManagerTeamReseller | null>(null)
   const [newPassword, setNewPassword] = useState('')
+  const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
 
   const teamQuery = useQuery({
@@ -53,6 +77,58 @@ export function TeamPage() {
     queryKey: ['manager', 'team', 'detail', selectedId],
     queryFn: () => managerService.getTeamMember(selectedId ?? 0),
     enabled: selectedId !== null,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      managerService.createTeamMember({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        phone: form.phone.trim() || null,
+      }),
+    onSuccess: () => {
+      toast.success(t('manager.pages.team.createSuccess'))
+      closeForm()
+      void queryClient.invalidateQueries({ queryKey: ['manager', 'team'] })
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      managerService.updateTeamMember(editingMember?.id ?? 0, {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || null,
+      }),
+    onSuccess: () => {
+      toast.success(t('manager.pages.team.updateSuccess'))
+      closeForm()
+      void queryClient.invalidateQueries({ queryKey: ['manager', 'team'] })
+      void queryClient.invalidateQueries({ queryKey: ['manager', 'team', 'detail'] })
+    },
+  })
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'suspended' | 'inactive' }) =>
+      managerService.updateTeamMemberStatus(id, nextStatus),
+    onSuccess: () => {
+      toast.success(t('manager.pages.team.statusUpdated'))
+      void queryClient.invalidateQueries({ queryKey: ['manager', 'team'] })
+      void queryClient.invalidateQueries({ queryKey: ['manager', 'team', 'detail'] })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => managerService.deleteTeamMember(id),
+    onSuccess: () => {
+      toast.success(t('manager.pages.team.deleteSuccess'))
+      setDeleteTarget(null)
+      if (selectedId === deleteTarget?.id) {
+        setSelectedId(null)
+      }
+      void queryClient.invalidateQueries({ queryKey: ['manager', 'team'] })
+    },
   })
 
   const unlockMutation = useMutation({
@@ -122,61 +198,129 @@ export function TeamPage() {
         key: 'actions',
         label: t('common.actions'),
         render: (row) => (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              disabled={!row.username_locked}
-              onClick={(event) => {
-                event.stopPropagation()
-                setUnlockTarget(row)
-                setUnlockReason('')
-              }}
-            >
-              {t('manager.pages.usernameManagement.unlock')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={(event) => {
-                event.stopPropagation()
-                setUsernameTarget(row)
-                setNewUsername(row.username ?? '')
-                setChangeReason('')
-              }}
-            >
-              {t('manager.pages.usernameManagement.changeUsername')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={(event) => {
-                event.stopPropagation()
-                setPasswordTarget(row)
-                setNewPassword('')
-                setShowNewPassword(false)
-              }}
-            >
-              {t('common.resetPassword')}
-            </Button>
+          <div className="flex justify-end" onClick={(event) => event.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" size="icon" variant="ghost" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">{t('common.actions')}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditingMember(row)
+                    setForm({
+                      name: row.name,
+                      email: row.email,
+                      password: '',
+                      phone: row.phone ?? '',
+                    })
+                    setFormOpen(true)
+                    setShowCreatePassword(false)
+                  }}
+                >
+                  {t('common.edit')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    statusMutation.mutate({
+                      id: row.id,
+                      nextStatus: row.status === 'active' ? 'suspended' : 'active',
+                    })
+                  }
+                >
+                  {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDeleteTarget(row)}>{t('common.delete')}</DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!row.username_locked}
+                  onClick={() => {
+                    setUnlockTarget(row)
+                    setUnlockReason('')
+                  }}
+                >
+                  {t('manager.pages.usernameManagement.unlock')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setUsernameTarget(row)
+                    setNewUsername(row.username ?? '')
+                    setChangeReason('')
+                  }}
+                >
+                  {t('manager.pages.usernameManagement.changeUsername')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setPasswordTarget(row)
+                    setNewPassword('')
+                    setShowNewPassword(false)
+                  }}
+                >
+                  {t('common.resetPassword')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ),
       },
     ],
-    [locale, t],
+    [locale, statusMutation, t],
   )
 
   const selectedReseller = detailQuery.data?.data
+
+  function closeForm() {
+    setFormOpen(false)
+    setEditingMember(null)
+    setForm(EMPTY_FORM)
+    setShowCreatePassword(false)
+  }
+
+  function submitForm() {
+    if (form.name.trim().length < 2) {
+      toast.error(t('manager.pages.team.nameValidation'))
+      return
+    }
+
+    if (!isValidEmail(form.email)) {
+      toast.error(t('manager.pages.team.emailValidation'))
+      return
+    }
+
+    if (!editingMember && form.password.trim().length < 8) {
+      toast.error(t('manager.pages.team.passwordValidation'))
+      return
+    }
+
+    if (editingMember) {
+      updateMutation.mutate()
+      return
+    }
+
+    createMutation.mutate()
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow={t('manager.layout.eyebrow')}
         title={t('manager.pages.team.title')}
-        description={t('manager.pages.usernameManagement.description')}
+        description={t('manager.pages.team.description')}
+        actions={
+          <Button
+            type="button"
+            onClick={() => {
+              setEditingMember(null)
+              setForm(EMPTY_FORM)
+              setFormOpen(true)
+              setShowCreatePassword(false)
+            }}
+          >
+            {t('manager.pages.team.inviteReseller')}
+          </Button>
+        }
       />
 
       <Card>
@@ -223,6 +367,55 @@ export function TeamPage() {
           setPage(1)
         }}
       />
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingMember ? t('manager.pages.team.editTitle') : t('manager.pages.team.inviteTitle')}</DialogTitle>
+            <DialogDescription>{editingMember ? t('manager.pages.team.editDescription') : t('manager.pages.team.inviteDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="team-name">{t('common.name')}</Label>
+              <Input id="team-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="team-email">{t('common.email')}</Label>
+              <Input id="team-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="team-phone">{t('common.phone')}</Label>
+              <Input id="team-phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+            </div>
+            {!editingMember ? (
+              <div className="space-y-2">
+                <Label htmlFor="team-password">{t('common.password')}</Label>
+                <div className="relative">
+                  <Input
+                    id="team-password"
+                    type={showCreatePassword ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                    className="pe-12"
+                  />
+                  <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowCreatePassword((current) => !current)}>
+                    {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="sr-only">{showCreatePassword ? t('common.hide') : t('common.show')}</span>
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeForm}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="button" onClick={submitForm} disabled={createMutation.isPending || updateMutation.isPending}>
+              {createMutation.isPending || updateMutation.isPending ? t('common.saving') : editingMember ? t('manager.pages.team.saveChanges') : t('manager.pages.team.createAccount')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={selectedId !== null} onOpenChange={(open) => !open && setSelectedId(null)}>
         <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
@@ -302,6 +495,25 @@ export function TeamPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+          }
+        }}
+        title={t('manager.pages.team.deleteTitle')}
+        description={deleteTarget ? t('manager.pages.team.deleteDescription', { email: deleteTarget.email }) : undefined}
+        confirmLabel={t('common.delete')}
+        onConfirm={() => {
+          if (!deleteTarget) {
+            return
+          }
+
+          deleteMutation.mutate(deleteTarget.id)
+        }}
+      />
 
       <ConfirmDialog
         open={unlockTarget !== null}

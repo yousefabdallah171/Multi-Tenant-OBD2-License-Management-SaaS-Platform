@@ -53,7 +53,6 @@ const ManagerParentIpAnalyticsPage = lazyNamed(() => import('@/pages/manager-par
 const ManagerParentProfilePage = lazyNamed(() => import('@/pages/manager-parent/Profile'), 'ProfilePage')
 const ManagerParentProgramLogsPage = lazyNamed(() => import('@/pages/manager-parent/ProgramLogs'), 'ProgramLogsPage')
 const ManagerParentResellerLogsPage = lazyNamed(() => import('@/pages/manager-parent/ResellerLogs'), 'ResellerLogsPage')
-const ResellerPricingPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPricing'), 'ResellerPricingPage')
 const ManagerParentSettingsPage = lazyNamed(() => import('@/pages/manager-parent/Settings'), 'SettingsPage')
 const ManagerParentSoftwarePage = lazyNamed(() => import('@/pages/manager-parent/Software'), 'SoftwarePage')
 const SoftwareManagementPage = lazyNamed(() => import('@/pages/manager-parent/SoftwareManagement'), 'SoftwareManagementPage')
@@ -136,7 +135,6 @@ export function AppRouter() {
                   <Route path="dashboard" element={<ManagerParentDashboardPage />} />
                   <Route path="team-management" element={<TeamManagementPage />} />
                   <Route path="team-management/:id" element={<TeamMemberDetailPage />} />
-                  <Route path="reseller-pricing" element={<ResellerPricingPage />} />
                   <Route path="software" element={<ManagerParentSoftwarePage />} />
                   <Route path="software-management" element={<SoftwareManagementPage />} />
                   <Route path="software-management/create" element={<ManagerParentProgramFormPage />} />

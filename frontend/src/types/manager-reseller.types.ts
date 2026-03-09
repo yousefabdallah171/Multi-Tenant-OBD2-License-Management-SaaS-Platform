@@ -49,6 +49,7 @@ export interface RoleActivityEntry {
 export interface ManagerTeamReseller {
   id: number
   name: string
+  role?: 'reseller'
   username: string | null
   email: string
   phone: string | null
@@ -296,6 +297,13 @@ export interface ManagerTeamFilters {
   per_page?: number
   status?: 'active' | 'suspended' | 'inactive' | ''
   search?: string
+}
+
+export interface ManagerTeamPayload {
+  name: string
+  email: string
+  password: string
+  phone?: string | null
 }
 
 export interface TeamManagedUserFilters {

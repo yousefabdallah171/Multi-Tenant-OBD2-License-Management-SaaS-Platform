@@ -30,7 +30,6 @@ use App\Http\Controllers\ManagerParent\FinancialReportController as ManagerParen
 use App\Http\Controllers\ManagerParent\IpAnalyticsController as ManagerParentIpAnalyticsController;
 use App\Http\Controllers\ManagerParent\LicenseController as ManagerParentLicenseController;
 use App\Http\Controllers\ManagerParent\LogController as ManagerParentLogController;
-use App\Http\Controllers\ManagerParent\PricingController as ManagerParentPricingController;
 use App\Http\Controllers\ManagerParent\ProgramController as ManagerParentProgramController;
 use App\Http\Controllers\ManagerParent\ProgramLogsController as ManagerParentProgramLogsController;
 use App\Http\Controllers\ManagerParent\ReportController as ManagerParentReportController;
@@ -128,11 +127,6 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::get('/manager-parent/programs/{program}/active-users', [ManagerParentProgramLogsController::class, 'activeUsers']);
         Route::get('/manager-parent/programs/{program}/stats', [ManagerParentProgramLogsController::class, 'stats']);
 
-        Route::get('/pricing/history', [ManagerParentPricingController::class, 'history']);
-        Route::get('/pricing', [ManagerParentPricingController::class, 'index']);
-        Route::post('/pricing/bulk', [ManagerParentPricingController::class, 'bulkUpdate']);
-        Route::put('/pricing/{program}', [ManagerParentPricingController::class, 'update']);
-
         Route::prefix('reports')->group(function (): void {
             Route::get('/revenue-by-reseller', [ManagerParentReportController::class, 'revenueByReseller']);
             Route::get('/revenue-by-program', [ManagerParentReportController::class, 'revenueByProgram']);
@@ -199,6 +193,10 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::get('/dashboard/recent-activity', [ManagerDashboardController::class, 'recentActivity']);
 
         Route::get('/team', [ManagerTeamController::class, 'index']);
+        Route::post('/team', [ManagerTeamController::class, 'store']);
+        Route::put('/team/{user}', [ManagerTeamController::class, 'update']);
+        Route::delete('/team/{user}', [ManagerTeamController::class, 'destroy']);
+        Route::put('/team/{user}/status', [ManagerTeamController::class, 'updateStatus']);
         Route::get('/team/{user}', [ManagerTeamController::class, 'show']);
 
         Route::get('/username-management', [ManagerUsernameManagementController::class, 'index']);
@@ -222,9 +220,9 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::post('/software/{program}/activate', [ManagerSoftwareController::class, 'activate']);
 
         Route::prefix('reports')->group(function (): void {
-            Route::get('/revenue', [ManagerReportController::class, 'revenue']);
-            Route::get('/activations', [ManagerReportController::class, 'activations']);
-            Route::get('/top-resellers', [ManagerReportController::class, 'topResellers']);
+            Route::get('/financial', [ManagerReportController::class, 'index']);
+            Route::get('/activation-rate', [ManagerReportController::class, 'activationRate']);
+            Route::get('/retention', [ManagerReportController::class, 'retention']);
             Route::get('/export/csv', [ManagerReportController::class, 'exportCsv']);
             Route::get('/export/pdf', [ManagerReportController::class, 'exportPdf']);
         });

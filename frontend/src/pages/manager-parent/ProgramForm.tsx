@@ -23,7 +23,6 @@ interface FormState {
   file_size: string
   system_requirements: string
   installation_guide_url: string
-  trial_days: string
   base_price: string
   status: 'active' | 'inactive'
   external_api_key: string
@@ -40,7 +39,6 @@ const EMPTY_FORM: FormState = {
   file_size: '',
   system_requirements: '',
   installation_guide_url: '',
-  trial_days: '0',
   base_price: '0',
   status: 'active',
   external_api_key: '',
@@ -81,7 +79,6 @@ export function ProgramFormPage() {
       file_size: program.file_size ?? '',
       system_requirements: program.system_requirements ?? '',
       installation_guide_url: program.installation_guide_url ?? '',
-      trial_days: String(program.trial_days ?? 0),
       base_price: String(program.base_price ?? 0),
       status: program.status,
       external_api_key: '',
@@ -97,7 +94,6 @@ export function ProgramFormPage() {
         throw new Error(t('software.externalApiBaseUrlRequired'))
       }
 
-      const trialDays = Number(form.trial_days)
       const basePrice = Number(form.base_price)
       const parsedExternalSoftwareId = form.external_software_id.trim() ? Number(form.external_software_id) : NaN
 
@@ -109,7 +105,6 @@ export function ProgramFormPage() {
         file_size: form.file_size.trim() || null,
         system_requirements: form.system_requirements.trim() || null,
         installation_guide_url: form.installation_guide_url.trim() || null,
-        trial_days: Number.isFinite(trialDays) ? trialDays : 0,
         base_price: Number.isFinite(basePrice) ? basePrice : 0,
         status: form.status,
         external_software_id: Number.isFinite(parsedExternalSoftwareId) && parsedExternalSoftwareId > 0 ? parsedExternalSoftwareId : null,
@@ -164,7 +159,6 @@ export function ProgramFormPage() {
           </div>
 
           <div className="space-y-4">
-            <Field label={t('managerParent.pages.softwareManagement.trialDays')}><Input type="number" min={0} value={form.trial_days} onChange={(event) => setForm((current) => ({ ...current, trial_days: event.target.value }))} /></Field>
             <Field label={t('managerParent.pages.softwareManagement.basePrice')}><Input type="number" min={0} step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} /></Field>
             <Field label={t('common.status')}>
               <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as 'active' | 'inactive' }))} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">

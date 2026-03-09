@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Activity, ArrowUpRight, BadgeDollarSign, PackageSearch, Timer } from 'lucide-react'
+import { Activity, ArrowUpRight, BadgeDollarSign, PackageSearch } from 'lucide-react'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StaggerGroup, StaggerItem } from '@/components/shared/PageTransition'
@@ -98,13 +98,6 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                         {t(`${translationPrefix}.basePrice`)}
                       </p>
                       <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
-                    </div>
-                    <div className="rounded-2xl border border-cyan-100 bg-cyan-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <Timer className="h-3.5 w-3.5 rounded-full bg-cyan-200/60 p-0.5 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300" />
-                        {t(`${translationPrefix}.trialDays`)}
-                      </p>
-                      <p className="mt-1 font-semibold">{program.trial_days}</p>
                     </div>
                     <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
                       <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">

@@ -15,7 +15,6 @@ export const routePaths = {
     dashboard: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/dashboard`,
     teamManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/team-management`,
     teamMemberDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/team-management/${id}`,
-    resellerPricing: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller-pricing`,
     software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/software`,
     softwareManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/software-management`,
     programCreate: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/software-management/create`,

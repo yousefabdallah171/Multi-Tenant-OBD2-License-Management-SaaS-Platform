@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -213,78 +214,71 @@ export function TeamManagementPage() {
         key: 'actions',
         label: t('common.actions'),
         render: (row) => (
-          <div className="flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setEditingMember(row)
-                setInviteRole(row.role === 'reseller' ? 'reseller' : 'manager')
-                setForm({
-                  name: row.name,
-                  email: row.email,
-                  password: '',
-                  phone: row.phone ?? '',
-                })
-                setFormOpen(true)
-                setShowCreatePassword(false)
-              }}
-            >
-              {t('common.edit')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() =>
-                statusMutation.mutate({
-                  id: row.id,
-                  nextStatus: row.status === 'active' ? 'suspended' : 'active',
-                })
-              }
-            >
-              {row.status === 'active' ? t('common.suspend') : t('common.activate')}
-            </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(row)}>
-              {t('common.delete')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              disabled={!row.username_locked}
-              onClick={() => {
-                setUnlockTarget(row)
-                setUnlockReason('')
-              }}
-            >
-              {t('managerParent.pages.usernameManagement.unlock')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setUsernameTarget(row)
-                setNewUsername(row.username ?? '')
-                setChangeReason('')
-              }}
-            >
-              {t('managerParent.pages.usernameManagement.changeUsername')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setPasswordTarget(row)
-                setNewPassword('')
-                setShowResetPassword(false)
-              }}
-            >
-              {t('common.resetPassword')}
-            </Button>
+          <div className="flex justify-end" onClick={(event) => event.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" size="icon" variant="ghost" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">{t('common.actions')}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setEditingMember(row)
+                    setInviteRole(row.role === 'reseller' ? 'reseller' : 'manager')
+                    setForm({
+                      name: row.name,
+                      email: row.email,
+                      password: '',
+                      phone: row.phone ?? '',
+                    })
+                    setFormOpen(true)
+                    setShowCreatePassword(false)
+                  }}
+                >
+                  {t('common.edit')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    statusMutation.mutate({
+                      id: row.id,
+                      nextStatus: row.status === 'active' ? 'suspended' : 'active',
+                    })
+                  }
+                >
+                  {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDeleteTarget(row)}>{t('common.delete')}</DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!row.username_locked}
+                  onClick={() => {
+                    setUnlockTarget(row)
+                    setUnlockReason('')
+                  }}
+                >
+                  {t('managerParent.pages.usernameManagement.unlock')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setUsernameTarget(row)
+                    setNewUsername(row.username ?? '')
+                    setChangeReason('')
+                  }}
+                >
+                  {t('managerParent.pages.usernameManagement.changeUsername')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setPasswordTarget(row)
+                    setNewPassword('')
+                    setShowResetPassword(false)
+                  }}
+                >
+                  {t('common.resetPassword')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ),
       },

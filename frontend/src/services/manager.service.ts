@@ -1,24 +1,22 @@
 import { api } from '@/services/api'
-import type { PaginatedResponse } from '@/types/manager-parent.types'
+import type { FinancialReportData, PaginatedResponse } from '@/types/manager-parent.types'
 import type {
   ActivateManagerSoftwareData,
   CreateManagerSoftwareData,
   DashboardSeriesPoint,
-  ManagerActivationPoint,
   ManagerCustomerDetails,
   ManagerCustomerFilters,
   ManagerDashboardPayload,
   ManagerCustomerSummary,
   ManagerDashboardStats,
-  ManagerRevenueRow,
   ManagerSoftwareFilters,
   ManagerSoftwareProgram,
   ManagerSellerLogEntry,
   ManagerSellerLogSummary,
   ManagerTeamFilters,
+  ManagerTeamPayload,
   ManagerTeamReseller,
   ManagerTeamResellerDetail,
-  ManagerTopResellerRow,
   ReportRangeFilters,
   RoleActivityEntry,
   RoleActivityFilters,
@@ -56,6 +54,22 @@ export const managerService = {
   },
   async getTeamMember(id: number) {
     const { data } = await api.get<{ data: ManagerTeamResellerDetail }>(`/manager/team/${id}`)
+    return data
+  },
+  async createTeamMember(payload: ManagerTeamPayload) {
+    const { data } = await api.post<{ data: ManagerTeamReseller }>('/manager/team', payload)
+    return data
+  },
+  async updateTeamMember(id: number, payload: Partial<Omit<ManagerTeamPayload, 'password'>>) {
+    const { data } = await api.put<{ data: ManagerTeamReseller }>(`/manager/team/${id}`, payload)
+    return data
+  },
+  async updateTeamMemberStatus(id: number, status: 'active' | 'suspended' | 'inactive') {
+    const { data } = await api.put<{ data: ManagerTeamReseller }>(`/manager/team/${id}/status`, { status })
+    return data
+  },
+  async deleteTeamMember(id: number) {
+    const { data } = await api.delete<{ message: string }>(`/manager/team/${id}`)
     return data
   },
   async getUsernameManagement(params: TeamManagedUserFilters) {
@@ -122,23 +136,29 @@ export const managerService = {
     const { data } = await api.post<{ data: ManagerSoftwareProgram }>(`/manager/software/${id}/activate`, payload)
     return data
   },
-  async getRevenueReport(params: ReportRangeFilters) {
-    const { data } = await api.get<{ data: ManagerRevenueRow[] }>('/manager/reports/revenue', { params })
+  async getFinancialReports(params: ReportRangeFilters) {
+    const { data } = await api.get<{ data: FinancialReportData }>('/manager/reports/financial', { params })
     return data
   },
-  async getActivationsReport(params: ReportRangeFilters) {
-    const { data } = await api.get<{ data: ManagerActivationPoint[] }>('/manager/reports/activations', { params })
+  async getActivationRate(params: ReportRangeFilters) {
+    const { data } = await api.get<{ data: Array<{ label: string; count: number; percentage: number }> }>('/manager/reports/activation-rate', { params })
     return data
   },
-  async getTopResellers(params: ReportRangeFilters) {
-    const { data } = await api.get<{ data: ManagerTopResellerRow[] }>('/manager/reports/top-resellers', { params })
+  async getRetention(params: ReportRangeFilters) {
+    const { data } = await api.get<{ data: Array<{ month: string; customers: number; activations: number }> }>('/manager/reports/retention', { params })
     return data
+  },
+  async exportFinancialCsv(params: ReportRangeFilters) {
+    await downloadFile('/manager/reports/export/csv', 'manager-tenant-financial.csv', params)
+  },
+  async exportFinancialPdf(params: ReportRangeFilters) {
+    await downloadFile('/manager/reports/export/pdf', 'manager-tenant-financial.pdf', params)
   },
   async exportCsv(params: ReportRangeFilters) {
-    await downloadFile('/manager/reports/export/csv', 'manager-team-report.csv', params)
+    await managerService.exportFinancialCsv(params)
   },
   async exportPdf(params: ReportRangeFilters) {
-    await downloadFile('/manager/reports/export/pdf', 'manager-team-report.pdf', params)
+    await managerService.exportFinancialPdf(params)
   },
   async getActivity(params: RoleActivityFilters) {
     const { data } = await api.get<PaginatedResponse<RoleActivityEntry>>('/manager/activity', { params })

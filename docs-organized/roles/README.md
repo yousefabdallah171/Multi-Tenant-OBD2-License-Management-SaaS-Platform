@@ -18,4 +18,6 @@ Recent alignment updates:
 - duplicate username-management pages were consolidated into canonical team/admin pages
 - duplicate license pages were consolidated into canonical customer pages
 - duplicate report pages were consolidated into canonical report pages
+- manager reports now use the same tenant-wide financial layout as manager-parent reports
+- reseller pricing was removed; software now follows the normal base price flow
 

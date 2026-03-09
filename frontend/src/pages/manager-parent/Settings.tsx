@@ -46,7 +46,7 @@ export function SettingsPage() {
             address: null,
           },
           defaults: {
-            trial_days: 7,
+            trial_days: 0,
             base_price: 0,
           },
           notifications: {
@@ -133,15 +133,6 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
               <CardTitle className="text-lg">{t('managerParent.pages.settings.defaults')}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="settings-trial">{t('managerParent.pages.settings.defaultTrialDays')}</Label>
-                <Input
-                  id="settings-trial"
-                  type="number"
-                  value={form.defaults.trial_days}
-                  onChange={(event) => setForm((current) => ({ ...current, defaults: { ...current.defaults, trial_days: Number(event.target.value) || 0 } }))}
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="settings-price">{t('managerParent.pages.settings.defaultPricing')}</Label>
                 <Input

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, Download, FileText, History, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users, Wallet } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, Download, FileText, History, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -35,14 +35,13 @@ const superAdminItems: NavItem[] = [
 const managerParentItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.managerParent.dashboard, translationKey: 'managerParent.nav.dashboard' },
   { key: 'teamManagement', icon: Users, href: routePaths.managerParent.teamManagement, translationKey: 'managerParent.nav.teamManagement' },
-  { key: 'resellerPricing', icon: Wallet, href: routePaths.managerParent.resellerPricing, translationKey: 'managerParent.nav.resellerPricing' },
+  { key: 'customers', icon: Users, href: routePaths.managerParent.customers, translationKey: 'managerParent.nav.customers' },
   { key: 'software', icon: Package, href: routePaths.managerParent.software, translationKey: 'managerParent.nav.software' },
-  { key: 'programLogs', icon: FileText, href: routePaths.managerParent.programLogs, translationKey: 'managerParent.nav.programLogs' },
   { key: 'softwareManagement', icon: Package, href: routePaths.managerParent.softwareManagement, translationKey: 'managerParent.nav.softwareManagement' },
+  { key: 'reports', icon: BarChart3, href: routePaths.managerParent.reports, translationKey: 'managerParent.nav.financialReports' },
+  { key: 'programLogs', icon: FileText, href: routePaths.managerParent.programLogs, translationKey: 'managerParent.nav.programLogs' },
   { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, translationKey: 'managerParent.nav.ipAnalytics' },
-  { key: 'reports', icon: BarChart3, href: routePaths.managerParent.reports, translationKey: 'managerParent.nav.financialReports' },
-  { key: 'customers', icon: Users, href: routePaths.managerParent.customers, translationKey: 'managerParent.nav.customers' },
   { key: 'logsGroup', icon: FileText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logsGroup' },
   { key: 'settingsGroup', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
 ]

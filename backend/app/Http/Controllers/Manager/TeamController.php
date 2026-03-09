@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Manager;
 
+use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class TeamController extends BaseManagerController
 {
@@ -92,6 +94,109 @@ class TeamController extends BaseManagerController
                     ])
                     ->values(),
             ],
+        ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8'],
+            'phone' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $user = User::query()->create([
+            'tenant_id' => $this->currentTenantId($request),
+            'name' => $validated['name'],
+            'username' => null,
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'phone' => $validated['phone'] ?? null,
+            'role' => UserRole::RESELLER->value,
+            'status' => 'active',
+            'created_by' => $request->user()?->id,
+            'username_locked' => false,
+        ]);
+
+        $this->logActivity($request, 'team.create', sprintf('Created reseller account for %s.', $user->email), [
+            'target_user_id' => $user->id,
+            'role' => UserRole::RESELLER->value,
+        ]);
+
+        $stats = License::query()->where('reseller_id', $user->id)->get();
+
+        return response()->json([
+            'data' => $this->serializeReseller($user, collect([$user->id => $stats])),
+        ], 201);
+    }
+
+    public function update(Request $request, User $user): JsonResponse
+    {
+        $reseller = $this->resolveTeamReseller($request, $user);
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,'.$reseller->id],
+            'phone' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $reseller->update($validated);
+
+        $this->logActivity($request, 'team.update', sprintf('Updated reseller %s.', $reseller->email), [
+            'target_user_id' => $reseller->id,
+        ]);
+
+        $stats = License::query()->where('reseller_id', $reseller->id)->get();
+
+        return response()->json([
+            'data' => $this->serializeReseller($reseller->fresh(), collect([$reseller->id => $stats])),
+        ]);
+    }
+
+    public function destroy(Request $request, User $user): JsonResponse
+    {
+        $reseller = $this->resolveTeamReseller($request, $user);
+
+        $hasDependencies = License::query()
+            ->where(function ($query) use ($reseller): void {
+                $query->where('reseller_id', $reseller->id)->orWhere('customer_id', $reseller->id);
+            })
+            ->exists();
+
+        if ($hasDependencies) {
+            $reseller->update(['status' => 'inactive']);
+        } else {
+            $reseller->delete();
+        }
+
+        $this->logActivity($request, 'team.delete', sprintf('Removed reseller %s.', $reseller->email), [
+            'target_user_id' => $reseller->id,
+            'soft' => $hasDependencies,
+        ]);
+
+        return response()->json(['message' => 'Reseller removed successfully.']);
+    }
+
+    public function updateStatus(Request $request, User $user): JsonResponse
+    {
+        $reseller = $this->resolveTeamReseller($request, $user);
+
+        $validated = $request->validate([
+            'status' => ['required', 'in:active,suspended,inactive'],
+        ]);
+
+        $reseller->update(['status' => $validated['status']]);
+
+        $this->logActivity($request, 'team.status', sprintf('Updated status for %s.', $reseller->email), [
+            'target_user_id' => $reseller->id,
+            'status' => $validated['status'],
+        ]);
+
+        $stats = License::query()->where('reseller_id', $reseller->id)->get();
+
+        return response()->json([
+            'data' => $this->serializeReseller($reseller->fresh(), collect([$reseller->id => $stats])),
         ]);
     }
 

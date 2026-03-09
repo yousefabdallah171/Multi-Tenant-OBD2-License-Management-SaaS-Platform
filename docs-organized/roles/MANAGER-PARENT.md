@@ -6,28 +6,27 @@ Last updated: 2026-03-09
 - Scope: Tenant
 - Tenant: `Test Tenant`
 - Default landing page: `/:lang/dashboard`
-- Visible navigation routes: 18 main entries plus detail/workflow routes
+- Visible navigation routes: 17 main entries plus detail/workflow routes
 
 ## Pages shown
 
 1. `/:lang/dashboard`
 2. `/:lang/team-management`
-3. `/:lang/reseller-pricing`
+3. `/:lang/customers`
 4. `/:lang/software`
-5. `/:lang/customers`
-6. `/:lang/program-logs`
-7. `/:lang/software-management`
-8. `/:lang/bios-blacklist`
-9. `/:lang/bios-history`
-10. `/:lang/bios-conflicts`
-11. `/:lang/ip-analytics`
-12. `/:lang/reports`
-13. `/:lang/activity`
-14. `/:lang/logs`
-15. `/:lang/reseller-logs`
-16. `/:lang/api-status`
-17. `/:lang/settings`
-18. `/:lang/profile`
+5. `/:lang/program-logs`
+6. `/:lang/software-management`
+7. `/:lang/bios-blacklist`
+8. `/:lang/bios-history`
+9. `/:lang/bios-conflicts`
+10. `/:lang/ip-analytics`
+11. `/:lang/reports`
+12. `/:lang/activity`
+13. `/:lang/logs`
+14. `/:lang/reseller-logs`
+15. `/:lang/api-status`
+16. `/:lang/settings`
+17. `/:lang/profile`
 
 Additional workflow/detail routes:
 
@@ -52,10 +51,9 @@ Additional workflow/detail routes:
 
 - Manage managers and resellers inside the tenant
 - Invite, edit, suspend, activate, and delete team members
-- Set reseller pricing
-- Run bulk pricing updates
 - Create, edit, and delete programs
 - Set program download links
+- Use one normal base price for software without reseller-specific overrides
 - Activate licenses directly from manager-parent software/program flows
 - View tenant reports and export them
 - View tenant financial reports
