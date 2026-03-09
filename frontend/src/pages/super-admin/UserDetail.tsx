@@ -75,11 +75,11 @@ export function UserDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">{t('superAdmin.nav.activity')}</CardTitle>
+              <CardTitle className="text-lg">{t('superAdmin.pages.dashboard.recentActivity')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {user.recent_activity.length === 0 ? (
-                <EmptyState title={t('common.noData')} description={t('superAdmin.pages.activity.noMatches')} />
+                <EmptyState title={t('common.noData')} description={t('superAdmin.pages.dashboard.noActivity')} />
               ) : (
                 user.recent_activity.map((entry) => (
                   <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
