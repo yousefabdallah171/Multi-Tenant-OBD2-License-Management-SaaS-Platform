@@ -3,7 +3,7 @@
 Last updated: 2026-03-09
 
 - Account: `manager@obd2sw.com`
-- Scope: Team
+- Scope: Tenant reseller visibility
 - Tenant: `Test Tenant`
 - Default landing page: `/:lang/manager/dashboard`
 - Visible navigation routes: 9 main entries plus detail/workflow routes
@@ -39,7 +39,7 @@ Additional workflow/detail routes:
 
 ## Can do
 
-- View assigned resellers
+- View all tenant resellers
 - View reseller details
 - View reseller recent licenses and activity from the Team page
 - View team customers
@@ -58,9 +58,9 @@ Additional workflow/detail routes:
 
 ## Cannot do
 
-- Cannot see data outside the team
+- Cannot see data outside the tenant
 - Cannot add, invite, edit, suspend, or delete team members from the Team page
-- Cannot manage users outside the assigned team scope
+- Cannot manage users outside the tenant reseller/customer scope
 - Customer workspace is operational/read-only outside activation, renewal, and deactivation flows
 - Cannot access Super Admin, Manager Parent, Reseller, or Customer pages
 

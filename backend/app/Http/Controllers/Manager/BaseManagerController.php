@@ -49,8 +49,7 @@ abstract class BaseManagerController extends Controller
     {
         return User::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('role', UserRole::RESELLER->value)
-            ->where('created_by', $this->currentManager($request)->id);
+            ->where('role', UserRole::RESELLER->value);
     }
 
     protected function teamCustomersQuery(Request $request)
@@ -93,8 +92,7 @@ abstract class BaseManagerController extends Controller
     {
         abort_unless(
             $user->tenant_id === $this->currentTenantId($request)
-                && ($user->role?->value ?? (string) $user->role) === UserRole::RESELLER->value
-                && $user->created_by === $this->currentManager($request)->id,
+                && ($user->role?->value ?? (string) $user->role) === UserRole::RESELLER->value,
             404,
         );
 
