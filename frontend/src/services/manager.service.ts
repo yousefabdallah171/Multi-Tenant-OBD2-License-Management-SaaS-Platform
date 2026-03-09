@@ -164,6 +164,9 @@ export const managerService = {
     const { data } = await api.get<PaginatedResponse<RoleActivityEntry>>('/manager/activity', { params })
     return data
   },
+  async exportActivity(params: ReportRangeFilters) {
+    await downloadFile('/manager/activity/export', 'manager-activity.csv', params)
+  },
   async getSellerLogs(params?: { page?: number; per_page?: number; seller_id?: number | ''; action?: string; from?: string; to?: string }) {
     const { data } = await api.get<{ data: ManagerSellerLogEntry[]; summary: ManagerSellerLogSummary; meta: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }>('/manager/reseller-logs', { params })
     return data

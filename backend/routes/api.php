@@ -228,6 +228,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         });
 
         Route::get('/activity', [ManagerActivityController::class, 'index']);
+        Route::get('/activity/export', [ManagerActivityController::class, 'export']);
         Route::get('/reseller-logs', [ManagerResellerLogController::class, 'index']);
         Route::get('/online-users', [OnlineUsersController::class, 'index']);
     });

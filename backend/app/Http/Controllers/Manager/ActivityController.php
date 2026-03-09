@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Manager;
 use App\Models\ActivityLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ActivityController extends BaseManagerController
 {
@@ -55,5 +56,27 @@ class ActivityController extends BaseManagerController
             ])->values(),
             'meta' => $this->paginationMeta($activities),
         ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $rows = $this->index($request)->getData(true)['data'];
+
+        return response()->streamDownload(function () use ($rows): void {
+            $handle = fopen('php://output', 'wb');
+            fputcsv($handle, ['Timestamp', 'User', 'Action', 'Description', 'IP']);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row['created_at'],
+                    $row['user']['name'] ?? null,
+                    $row['action'],
+                    $row['description'],
+                    $row['ip_address'],
+                ]);
+            }
+
+            fclose($handle);
+        }, 'manager-activity.csv', ['Content-Type' => 'text/csv']);
     }
 }

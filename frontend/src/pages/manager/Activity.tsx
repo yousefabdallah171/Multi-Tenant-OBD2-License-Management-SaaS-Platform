@@ -46,7 +46,7 @@ export function ActivityPage() {
             <Button type="button" variant="secondary" onClick={() => setRange({ from: '', to: '' })}>
               {t('manager.pages.activity.clearDates')}
             </Button>
-            <Button type="button" onClick={() => void managerService.exportCsv(range)}>
+            <Button type="button" onClick={() => void managerService.exportActivity(range)}>
               <Download className="me-2 h-4 w-4" />
               {t('manager.pages.activity.exportReport')}
             </Button>
