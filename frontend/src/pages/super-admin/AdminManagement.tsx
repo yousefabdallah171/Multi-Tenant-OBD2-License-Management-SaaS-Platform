@@ -3,14 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff, MoreHorizontal, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
-import { EmptyState } from '@/components/shared/EmptyState'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
@@ -37,6 +36,7 @@ const emptyForm = {
 export function AdminManagementPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
@@ -60,7 +60,6 @@ export function AdminManagementPage() {
   const [newPassword, setNewPassword] = useState('')
   const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [showResetPassword, setShowResetPassword] = useState(false)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const adminsQuery = useQuery({
     queryKey: ['super-admin', 'admin-management', page, perPage, role, tenantId, status, search],
@@ -70,12 +69,6 @@ export function AdminManagementPage() {
   const tenantsQuery = useQuery({
     queryKey: ['super-admin', 'admin-tenant-options'],
     queryFn: () => tenantService.getAll({ per_page: 100 }),
-  })
-
-  const detailQuery = useQuery({
-    queryKey: ['super-admin', 'admin-management', 'detail', selectedId],
-    queryFn: () => adminService.getOne(selectedId ?? 0),
-    enabled: selectedId !== null,
   })
 
   const saveMutation = useMutation({
@@ -206,7 +199,16 @@ export function AdminManagementPage() {
               aria-label={t('common.selectRow', { name: row.name })}
               className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
             />
-            <span className="font-medium text-slate-950 dark:text-white">{row.name}</span>
+            <button
+              type="button"
+              className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
+              onClick={(event) => {
+                event.stopPropagation()
+                navigate(routePaths.superAdmin.userDetail(lang, row.id))
+              }}
+            >
+              {row.name}
+            </button>
           </label>
         ),
       },
@@ -218,7 +220,20 @@ export function AdminManagementPage() {
         sortValue: (row) => row.username ?? '',
         render: (row) => (
           <div className="space-y-1">
-            <p className="font-medium text-slate-950 dark:text-white">{row.username ?? '-'}</p>
+            {row.username ? (
+              <button
+                type="button"
+                className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  navigate(routePaths.superAdmin.userDetail(lang, row.id))
+                }}
+              >
+                {row.username}
+              </button>
+            ) : (
+              <p className="font-medium text-slate-950 dark:text-white">-</p>
+            )}
             <StatusBadge status={row.username_locked ? 'suspended' : 'active'} />
           </div>
         ),
@@ -256,6 +271,9 @@ export function AdminManagementPage() {
                 }}
               >
                 {t('common.edit')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.userDetail(lang, row.id))}>
+                {t('common.view')}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
                 {row.status === 'active' ? t('common.suspend') : t('common.activate')}
@@ -296,7 +314,7 @@ export function AdminManagementPage() {
         ),
       },
     ],
-    [locale, selectedIds, statusMutation, t],
+    [lang, locale, navigate, selectedIds, statusMutation, t],
   )
 
   return (
@@ -416,7 +434,7 @@ export function AdminManagementPage() {
         columns={columns}
         data={adminsQuery.data?.data ?? []}
         rowKey={(row) => row.id}
-        onRowClick={(row) => setSelectedId(row.id)}
+        onRowClick={(row) => navigate(routePaths.superAdmin.userDetail(lang, row.id))}
         isLoading={adminsQuery.isLoading}
         pagination={{
           page: adminsQuery.data?.meta.current_page ?? 1,
@@ -430,89 +448,6 @@ export function AdminManagementPage() {
           setPage(1)
         }}
       />
-
-      <Dialog open={selectedId !== null} onOpenChange={(open) => !open && setSelectedId(null)}>
-        <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
-          <DialogHeader>
-            <DialogTitle>{detailQuery.data?.data.name ?? t('superAdmin.pages.adminManagement.title')}</DialogTitle>
-            <DialogDescription>{detailQuery.data?.data.email ?? t('superAdmin.pages.adminManagement.description')}</DialogDescription>
-          </DialogHeader>
-
-          {detailQuery.data?.data ? (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-4">
-                <MetricCard label={t('common.username')} value={detailQuery.data.data.username ?? '-'} />
-                <MetricCard label={t('managerParent.pages.teamManagement.customers')} value={detailQuery.data.data.customers_count} />
-                <MetricCard label={t('managerParent.pages.teamManagement.activeLicenses')} value={detailQuery.data.data.active_licenses_count} />
-                <MetricCard label={t('common.revenue')} value={new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(detailQuery.data.data.revenue)} />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <MetricCard label={t('common.role')} value={<RoleBadge role={detailQuery.data.data.role} />} />
-                <MetricCard label={t('common.status')} value={<StatusBadge status={detailQuery.data.data.status} />} />
-                <MetricCard label={t('common.tenant')} value={detailQuery.data.data.tenant?.name ?? '-'} />
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('manager.pages.team.recentLicenses')}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {detailQuery.data.data.recent_licenses.length === 0 ? (
-                    <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} />
-                  ) : (
-                    detailQuery.data.data.recent_licenses.map((license) => (
-                      <div key={license.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <p className="font-medium text-slate-950 dark:text-white">{license.customer?.name ?? '-'}</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{license.customer?.email ?? '-'}</p>
-                            <p className="text-sm text-slate-600 dark:text-slate-300">{license.program ?? t('manager.pages.customers.unknownProgram')}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {t('activate.biosId')}{' '}
-                              <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, license.bios_id)}>
-                                {license.bios_id}
-                              </Link>
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />
-                            <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-white">
-                              {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(license.price)}
-                            </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {t('manager.pages.customers.expires')} {license.expires_at ? formatDate(license.expires_at, locale) : '-'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('superAdmin.nav.activity')}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {detailQuery.data.data.recent_activity.length === 0 ? (
-                    <EmptyState title={t('common.noData')} description={t('superAdmin.pages.activity.noMatches')} />
-                  ) : (
-                    detailQuery.data.data.recent_activity.map((entry) => (
-                      <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                        <p className="font-medium text-slate-950 dark:text-white">{entry.action}</p>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
-                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent>
@@ -735,16 +670,5 @@ export function AdminManagementPage() {
         onConfirm={() => bulkDeleteMutation.mutate()}
       />
     </div>
-  )
-}
-
-function MetricCard({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-        <div className="mt-2 font-semibold text-slate-950 dark:text-white">{value}</div>
-      </CardContent>
-    </Card>
   )
 }

@@ -22,4 +22,7 @@ Recent alignment updates:
 - reseller pricing was removed; software now follows the normal base price flow
 - manager team now uses canonical detail pages at `/:lang/manager/team/:id`
 - manager and manager-parent BIOS links now resolve to canonical BIOS detail pages
+- super-admin admin-management now routes consistently into canonical user detail pages
+- super-admin API Status was fixed to avoid api-log memory pressure during page load
+- reseller dashboard/runtime polish fixed chart warnings and raw activity/activation labels
 

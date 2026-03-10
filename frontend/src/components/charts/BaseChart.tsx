@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ResponsiveContainer } from 'recharts'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -25,6 +25,23 @@ export function BaseChart({
   children,
 }: BaseChartProps) {
   const { t } = useTranslation()
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [hasMeasuredSize, setHasMeasuredSize] = useState(false)
+
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element) {
+      return
+    }
+
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      setHasMeasuredSize(width > 0 && height > 0)
+    })
+
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
 
   if (isLoading) {
     return <SkeletonChart className={cn(heightClassName, className)} />
@@ -39,10 +56,14 @@ export function BaseChart({
   }
 
   return (
-    <div className={cn(heightClassName, className)}>
-      <ResponsiveContainer width="100%" height="100%">
-        {children}
-      </ResponsiveContainer>
+    <div ref={containerRef} className={cn('min-w-0', heightClassName, className)} style={{ minHeight: 200 }}>
+      {hasMeasuredSize ? (
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
+          {children}
+        </ResponsiveContainer>
+      ) : (
+        <SkeletonChart className="h-full w-full" />
+      )}
     </div>
   )
 }

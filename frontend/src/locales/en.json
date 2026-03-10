@@ -1337,6 +1337,13 @@
   },
   "activate": {
     "title": "Activate License",
+    "username": "Username (API)",
+    "usernameHint": "API username — auto-formatted (no spaces)",
+    "usernamePlaceholder": "e.g. john_doe",
+    "usernameNoSpaces": "Username cannot contain spaces",
+    "clientName": "Client Display Name",
+    "clientNameHint": "Human-readable name for display in your dashboard",
+    "clientNamePlaceholder": "Full client name (optional)",
     "customerName": "Customer Name",
     "customerEmail": "Customer Email",
     "biosId": "BIOS ID",

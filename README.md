@@ -85,6 +85,14 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 
 ### Latest Implemented Features (2026-03-10)
 
+**Super Admin Alignment + Reseller Runtime Cleanup**
+- Super Admin admin-management rows, names, and usernames now open the canonical full user detail route at `/:lang/super-admin/users/:id`.
+- Super Admin API Status was hardened to avoid loading the full `api_logs` table into memory; endpoint health now resolves through targeted latest-log lookups.
+- Reseller activation form labels now use translated user-facing copy instead of raw i18n keys.
+- Reseller dashboard and activity feeds now translate license/customer action labels into readable UI text.
+- Reseller dashboard chart containers were hardened so the prior Recharts `width(-1)/height(-1)` warnings no longer appear during runtime verification.
+- Completed a real browser/runtime verification pass for Reseller and Super Admin routes after these fixes.
+
 **Canonical Detail Pages + BIOS Linking**
 - Manager now has a real team-member detail page at `/:lang/manager/team/:id` instead of a drawer-only flow.
 - Manager reseller logs now open canonical manager team-member pages from the user column.

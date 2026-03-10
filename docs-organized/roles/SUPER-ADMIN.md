@@ -1,6 +1,6 @@
 # Super Admin
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 - Account: `admin@obd2sw.com`
 - Scope: Global
@@ -23,6 +23,7 @@ Last updated: 2026-03-09
 Additional workflow/detail routes:
 
 - `/:lang/super-admin/users/:id`
+- `/:lang/super-admin/bios-details/:biosId`
 - `/:lang/super-admin/profile`
 
 ## Dashboard content
@@ -42,12 +43,15 @@ Additional workflow/detail routes:
 - Open full-page cross-tenant user detail from the Users page
 - Suspend, activate, and delete users
 - Manage admin accounts
+- Open canonical full-page user detail from Admin Management rows, names, and usernames
 - Manage global BIOS blacklist
 - View BIOS history across all tenants
+- Open canonical BIOS detail pages from Super Admin BIOS-linked screens
 - Unlock usernames, change usernames, and reset passwords from consolidated management pages
 - View platform reports and financial reports
 - View reseller balances inside Financial Reports
 - View logs and API health
+- Use the fixed API Status page without the prior api-log memory/sort failure
 - Change system settings
 - Edit own profile and password
 

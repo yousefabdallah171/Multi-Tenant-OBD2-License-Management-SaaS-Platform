@@ -1346,6 +1346,13 @@
   },
   "activate": {
     "title": "تفعيل الترخيص",
+    "username": "اسم المستخدم (API)",
+    "usernameHint": "اسم مستخدم API يتم تنسيقه تلقائيًا بدون مسافات",
+    "usernamePlaceholder": "مثال: john_doe",
+    "usernameNoSpaces": "اسم المستخدم لا يمكن أن يحتوي على مسافات",
+    "clientName": "اسم العرض للعميل",
+    "clientNameHint": "اسم واضح للعرض داخل لوحة التحكم",
+    "clientNamePlaceholder": "الاسم الكامل للعميل (اختياري)",
     "customerName": "اسم العميل",
     "customerEmail": "البريد الإلكتروني للعميل",
     "biosId": "معرّف BIOS",
