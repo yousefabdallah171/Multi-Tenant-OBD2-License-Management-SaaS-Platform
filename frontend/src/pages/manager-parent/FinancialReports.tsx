@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, Banknote, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { Activity, Banknote, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
-import { PieChartWidget } from '@/components/charts/PieChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { ExportButtons } from '@/components/shared/ExportButtons'
@@ -17,18 +16,6 @@ import { formatCurrency } from '@/lib/utils'
 import { managerParentService } from '@/services/manager-parent.service'
 import type { FinancialReportData } from '@/types/manager-parent.types'
 
-function localizeActivationLabel(label: string, t: ReturnType<typeof useTranslation>['t']) {
-  if (label === 'Success') {
-    return t('managerParent.pages.reports.success')
-  }
-
-  if (label === 'Failure') {
-    return t('managerParent.pages.reports.failure')
-  }
-
-  return label
-}
-
 export function FinancialReportsPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
@@ -38,10 +25,6 @@ export function FinancialReportsPage() {
   const reportQuery = useQuery({
     queryKey: ['manager-parent', 'financial-reports', range.from, range.to],
     queryFn: () => managerParentService.getFinancialReports(range),
-  })
-  const activationRateQuery = useQuery({
-    queryKey: ['manager-parent', 'reports', 'activation-rate', range.from, range.to],
-    queryFn: () => managerParentService.getActivationRate(range),
   })
   const retentionQuery = useQuery({
     queryKey: ['manager-parent', 'reports', 'retention', range.from, range.to],
@@ -53,15 +36,10 @@ export function FinancialReportsPage() {
     ...item,
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
   }))
-  const activationRateSeries = (activationRateQuery.data?.data ?? []).map((item) => ({
-    ...item,
-    label: localizeActivationLabel(item.label, t),
-  }))
   const retentionSeries = (retentionQuery.data?.data ?? []).map((item) => ({
     ...item,
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
   }))
-  const successRate = activationRateQuery.data?.data.find((item) => item.label === 'Success')?.percentage ?? 0
 
   const columns = useMemo<Array<DataTableColumn<FinancialReportData['reseller_balances'][number]>>>(
     () => [
@@ -92,7 +70,6 @@ export function FinancialReportsPage() {
         <StatsCard title={t('managerParent.pages.financialReports.totalTenantRevenue')} value={formatCurrency(report?.summary.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
         <StatsCard title={t('managerParent.pages.financialReports.totalActivations')} value={report?.summary.total_activations ?? 0} icon={Activity} color="sky" />
         <StatsCard title={t('managerParent.pages.financialReports.activeLicenses')} value={report?.summary.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        <StatsCard title={t('managerParent.pages.reports.successRate')} value={`${successRate.toFixed(1)}%`} icon={CheckCircle2} color="rose" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -137,23 +114,13 @@ export function FinancialReportsPage() {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <PieChartWidget
-          title={t('managerParent.pages.reports.activationQuality')}
-          data={activationRateSeries}
-          nameKey="label"
-          valueKey="count"
-          isLoading={activationRateQuery.isLoading}
-          totalLabel={t('managerParent.pages.reports.attempts')}
-        />
-        <LineChartWidget
-          title={t('managerParent.pages.reports.customerRetention')}
-          data={retentionSeries}
-          isLoading={retentionQuery.isLoading}
-          xKey="month"
-          series={[{ key: 'customers', label: t('managerParent.pages.reports.customersLabel') }]}
-        />
-      </div>
+      <LineChartWidget
+        title={t('managerParent.pages.reports.customerRetention')}
+        data={retentionSeries}
+        isLoading={retentionQuery.isLoading}
+        xKey="month"
+        series={[{ key: 'customers', label: t('managerParent.pages.reports.customersLabel') }]}
+      />
 
       <Card>
         <CardContent className="p-6">

@@ -36,15 +36,9 @@ export function ReportsPage() {
     queryFn: () => resellerService.getTopPrograms(range),
   })
 
-  const statsQuery = useQuery({
-    queryKey: ['reseller', 'reports', 'dashboard-stats'],
-    queryFn: () => resellerService.getDashboardStats(),
-  })
-
   const totalRevenue = useMemo(() => (revenueQuery.data?.data ?? []).reduce((sum, item) => sum + item.revenue, 0), [revenueQuery.data?.data])
   const totalActivations = useMemo(() => (activationsQuery.data?.data ?? []).reduce((sum, item) => sum + item.count, 0), [activationsQuery.data?.data])
   const avgPrice = totalActivations > 0 ? totalRevenue / totalActivations : 0
-  const successRate = totalActivations > 0 ? ((statsQuery.data?.stats.active_licenses ?? 0) / totalActivations) * 100 : 0
   const hasRange = Boolean(range.from && range.to)
 
   return (
@@ -71,7 +65,7 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
         <div className="rounded-3xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-[1px] dark:from-emerald-950/30 dark:to-emerald-900/20">
           <StatsCard title={t('reseller.pages.reports.totalRevenue')} value={formatCurrency(totalRevenue, 'USD', locale)} icon={Banknote} color="emerald" />
         </div>
@@ -80,9 +74,6 @@ export function ReportsPage() {
         </div>
         <div className="rounded-3xl bg-gradient-to-br from-amber-50 to-amber-100/50 p-[1px] dark:from-amber-950/30 dark:to-amber-900/20">
           <StatsCard title={t('reseller.pages.reports.avgPrice')} value={formatCurrency(avgPrice, 'USD', locale)} icon={Target} color="amber" />
-        </div>
-        <div className="rounded-3xl bg-gradient-to-br from-rose-50 to-rose-100/50 p-[1px] dark:from-rose-950/30 dark:to-rose-900/20">
-          <StatsCard title={t('reseller.pages.reports.successRate')} value={`${Math.max(0, Math.min(100, successRate)).toFixed(1)}%`} icon={Target} color="rose" />
         </div>
       </div>
 

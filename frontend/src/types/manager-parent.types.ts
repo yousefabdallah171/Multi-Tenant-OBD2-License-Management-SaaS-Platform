@@ -360,6 +360,8 @@ export interface IpAnalyticsEntry {
   customer_id: number | null
   customer_name?: string | null
   customer_username?: string | null
+  reseller_id?: number | null
+  reseller_name?: string | null
   license_id?: number | null
   program_id?: number | null
   program_name?: string | null
