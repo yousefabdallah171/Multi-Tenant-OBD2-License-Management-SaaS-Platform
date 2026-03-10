@@ -22,7 +22,7 @@ class SettingsController extends BaseManagerParentController
         $validated = $request->validate([
             'business' => ['sometimes', 'array'],
             'business.company_name' => ['sometimes', 'string', 'max:255'],
-            'business.email' => ['sometimes', 'email', 'max:255'],
+            'business.email' => ['nullable', 'email', 'max:255'],
             'business.phone' => ['nullable', 'string', 'max:20'],
             'business.address' => ['nullable', 'string', 'max:500'],
             'defaults' => ['sometimes', 'array'],
