@@ -175,7 +175,7 @@ export const managerParentService = {
     return data
   },
   async getLicensesExpiring() {
-    const { data } = await api.get<{ data: { day1: number; day3: number; day7: number } }>('/licenses/expiring')
+    const { data } = await api.get<{ data: { day1: number; day3: number; day7: number; expired: number } }>('/licenses/expiring')
     return data
   },
   async getProgramActiveUsers(programId: number): Promise<{ users: Record<string, string> }> {

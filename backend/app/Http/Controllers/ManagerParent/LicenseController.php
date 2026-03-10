@@ -90,12 +90,17 @@ class LicenseController extends BaseManagerParentController
         $day1 = (clone $baseQuery)->where('expires_at', '<=', now()->addDay())->count();
         $day3 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(3))->count();
         $day7 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(7))->count();
+        $expired = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('status', 'expired')
+            ->count();
 
         return response()->json([
             'data' => [
                 'day1' => $day1,
                 'day3' => $day3,
                 'day7' => $day7,
+                'expired' => $expired,
             ],
         ]);
     }

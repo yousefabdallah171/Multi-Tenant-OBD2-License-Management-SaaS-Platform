@@ -113,7 +113,7 @@ export const managerService = {
     return data
   },
   async getLicensesExpiring() {
-    const { data } = await api.get<{ data: { day1: number; day3: number; day7: number } }>('/manager/licenses/expiring')
+    const { data } = await api.get<{ data: { day1: number; day3: number; day7: number; expired: number } }>('/manager/licenses/expiring')
     return data
   },
   async getSoftwarePrograms(params?: ManagerSoftwareFilters) {

@@ -265,7 +265,7 @@ export function CustomersPage() {
   })
 
   const customerRows = customersQuery.data?.data ?? []
-  const expiring = expiringQuery.data?.data ?? { day1: 0, day3: 0, day7: 0 }
+  const expiring = expiringQuery.data?.data ?? { day1: 0, day3: 0, day7: 0, expired: 0 }
   const renewTarget = customerRows.find((row) => row.license_id === renewLicenseId) ?? null
   const renewProgram = (programsQuery.data?.data ?? []).find((program) => program.name === renewTarget?.program)
   const selectableIds = customerRows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
@@ -437,10 +437,11 @@ export function CustomersPage() {
     <div className="space-y-6">
       <PageHeader title={t('managerParent.pages.customers.title')} description={t('managerParent.pages.customers.description')} actions={<Button type="button" onClick={() => navigate(routePaths.managerParent.customerCreate(lang))}><Plus className="me-2 h-4 w-4" />{t('managerParent.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}</Button>} />
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
         <ExpiryAlert label={t('reseller.pages.licenses.expiryLabels.day1')} value={expiring.day1} tone="rose" />
         <ExpiryAlert label={t('reseller.pages.licenses.expiryLabels.day3')} value={expiring.day3} tone="amber" />
         <ExpiryAlert label={t('reseller.pages.licenses.expiryLabels.day7')} value={expiring.day7} tone="yellow" />
+        <ExpiryAlert label={t('common.expired')} value={expiring.expired} tone="slate" />
       </div>
 
       <Tabs value={status} onValueChange={(value) => setStatus(value as (typeof STATUS_OPTIONS)[number])}>
@@ -930,11 +931,12 @@ function validateActivationStep(
 
 
 
-function ExpiryAlert({ label, value, tone }: { label: string; value: number; tone: 'rose' | 'amber' | 'yellow' }) {
+function ExpiryAlert({ label, value, tone }: { label: string; value: number; tone: 'rose' | 'amber' | 'yellow' | 'slate' }) {
   const styles = {
     rose: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300',
     amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
     yellow: 'border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300',
+    slate: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
   }
 
   return (

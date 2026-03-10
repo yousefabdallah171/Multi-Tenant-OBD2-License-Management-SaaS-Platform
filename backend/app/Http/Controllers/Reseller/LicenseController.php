@@ -187,8 +187,18 @@ class LicenseController extends BaseResellerController
             ->orderBy('expires_at')
             ->get();
 
+        $expired = $this->licenseQuery($request)
+            ->where('status', 'expired')
+            ->count();
+
         return response()->json([
             'data' => $licenses->map(fn (License $license): array => $this->serializeLicense($license))->values(),
+            'summary' => [
+                'day1' => $licenses->filter(fn (License $license): bool => $license->expires_at !== null && $license->expires_at->lte(now()->copy()->addDay()))->count(),
+                'day3' => $licenses->filter(fn (License $license): bool => $license->expires_at !== null && $license->expires_at->lte(now()->copy()->addDays(3)))->count(),
+                'day7' => $licenses->count(),
+                'expired' => $expired,
+            ],
         ]);
     }
 

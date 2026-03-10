@@ -557,9 +557,12 @@ export function CustomersPage() {
 
   const customerRows = customersQuery.data?.data ?? []
   const expiring = expiringQuery.data?.data ?? []
-  const oneDay = expiring.filter((license) => daysUntil(license.expires_at) <= 1).length
-  const threeDays = expiring.filter((license) => daysUntil(license.expires_at) <= 3).length
-  const sevenDays = expiring.length
+  const expiringSummary = expiringQuery.data?.summary ?? {
+    day1: expiring.filter((license) => daysUntil(license.expires_at) <= 1).length,
+    day3: expiring.filter((license) => daysUntil(license.expires_at) <= 3).length,
+    day7: expiring.length,
+    expired: 0,
+  }
   const selectableIds = customerRows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
@@ -769,10 +772,11 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <ExpiryAlert count={oneDay} label={t('reseller.pages.licenses.expiryLabels.day1')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="rose" />
-        <ExpiryAlert count={threeDays} label={t('reseller.pages.licenses.expiryLabels.day3')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="amber" />
-        <ExpiryAlert count={sevenDays} label={t('reseller.pages.licenses.expiryLabels.day7')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="yellow" />
+      <div className="grid gap-3 md:grid-cols-4">
+        <ExpiryAlert count={expiringSummary.day1} label={t('reseller.pages.licenses.expiryLabels.day1')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="rose" />
+        <ExpiryAlert count={expiringSummary.day3} label={t('reseller.pages.licenses.expiryLabels.day3')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="amber" />
+        <ExpiryAlert count={expiringSummary.day7} label={t('reseller.pages.licenses.expiryLabels.day7')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="yellow" />
+        <ExpiryAlert count={expiringSummary.expired} label={t('common.expired')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="slate" />
       </div>
 
       <Tabs
@@ -1574,11 +1578,12 @@ function resolveResellerCustomerLabel(row: ResellerCustomerSummary) {
 }
 
 
-function ExpiryAlert({ count, label, licensesLabel, tone }: { count: number; label: string; licensesLabel: string; tone: 'rose' | 'amber' | 'yellow' }) {
+function ExpiryAlert({ count, label, licensesLabel, tone }: { count: number; label: string; licensesLabel: string; tone: 'rose' | 'amber' | 'yellow' | 'slate' }) {
   const styles = {
     rose: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300',
     amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
     yellow: 'border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300',
+    slate: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
   }
 
   return (

@@ -24,7 +24,7 @@ export const licenseService = {
     return data
   },
   async getExpiring(days = 7) {
-    const { data } = await api.get<{ data: LicenseSummary[] }>('/reseller/licenses/expiring', {
+    const { data } = await api.get<{ data: LicenseSummary[]; summary?: { day1: number; day3: number; day7: number; expired: number } }>('/reseller/licenses/expiring', {
       params: { days },
     })
     return data
