@@ -78,6 +78,11 @@ export function BiosDetailsPage() {
     ] as Array<[string, string]>
   }, [locale, overviewQuery.data, t])
 
+  const visibleBiosList = search.trim().length >= 2 ? (searchQuery.data ?? []) : (biosId ? [] : (recentQuery.data ?? []))
+  const latestLicense = overviewQuery.data?.latest_license
+  const latestCustomer = latestLicense?.customer ?? overviewQuery.data?.customer
+  const latestReseller = latestLicense?.reseller ?? overviewQuery.data?.reseller
+
   return (
     <div className="space-y-6">
       <PageHeader title={t('biosDetails.title')} description={biosId || t('biosDetails.search')} />
@@ -85,9 +90,9 @@ export function BiosDetailsPage() {
       <Card>
         <CardContent className="space-y-3 p-4">
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('biosDetails.search')} />
-          {(search.trim().length >= 2 ? searchQuery.data : recentQuery.data) && (search.trim().length >= 2 ? searchQuery.data : recentQuery.data)!.length > 0 ? (
+          {visibleBiosList.length > 0 ? (
             <div className="grid gap-2">
-              {(search.trim().length >= 2 ? searchQuery.data : recentQuery.data)!.map((item) => (
+              {visibleBiosList.map((item) => (
                 <button
                   key={item}
                   type="button"
@@ -98,7 +103,7 @@ export function BiosDetailsPage() {
                 </button>
               ))}
             </div>
-          ) : (
+          ) : biosId ? null : (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {search.trim().length >= 2 ? t('common.noData') : 'Recent BIOS IDs will appear here.'}
             </p>
@@ -127,12 +132,61 @@ export function BiosDetailsPage() {
                     <p className="font-medium">{value}</p>
                   </div>
                 ))}
-                {overviewQuery.data?.customer ? (
+                {latestCustomer ? (
                   <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.customer')}</p>
-                    <Link className="font-medium text-sky-600" to={routePaths.managerParent.customerDetail(lang, overviewQuery.data.customer.id)}>
-                      {overviewQuery.data.customer.name}
+                    <Link className="font-medium text-sky-600" to={routePaths.managerParent.customerDetail(lang, latestCustomer.id)}>
+                      {latestCustomer.name}
                     </Link>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{latestCustomer.email ?? '-'}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{latestCustomer.phone ?? '-'}</p>
+                  </div>
+                ) : null}
+                {latestReseller ? (
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.resellers')}</p>
+                    <p className="font-medium">{latestReseller.name}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{latestReseller.email ?? '-'}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{latestReseller.phone ?? '-'}</p>
+                  </div>
+                ) : null}
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Program</p>
+                  <p className="font-medium">{latestLicense?.program?.name ?? '-'}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Duration</p>
+                  <p className="font-medium">{latestLicense ? `${latestLicense.duration_days} days` : '-'}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Price</p>
+                  <p className="font-medium">{latestLicense ? `$${Number(latestLicense.price).toFixed(2)}` : '-'}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Activated</p>
+                  <p className="font-medium">{latestLicense?.activated_at ? formatDate(latestLicense.activated_at, locale) : '-'}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Expires</p>
+                  <p className="font-medium">{latestLicense?.expires_at ? formatDate(latestLicense.expires_at, locale) : '-'}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">External Username</p>
+                  <p className="font-medium">{latestLicense?.external_username ?? '-'}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Latest License Status</p>
+                  <p className="font-medium">{latestLicense?.status ?? '-'}</p>
+                </div>
+                {latestCustomer && latestLicense ? (
+                  <div className="rounded-xl bg-slate-50 p-3 md:col-span-2 dark:bg-slate-900/40">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Sale Summary</p>
+                    <p className="font-medium">
+                      {`${latestReseller?.name ?? '-'} sold ${latestLicense.program?.name ?? '-'} to ${latestCustomer.name}`}
+                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {`${latestLicense.duration_days} days | $${Number(latestLicense.price).toFixed(2)} | ${latestLicense.activated_at ? formatDate(latestLicense.activated_at, locale) : '-'}`}
+                    </p>
                   </div>
                 ) : null}
               </CardContent>
@@ -159,7 +213,8 @@ export function BiosDetailsPage() {
                   <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                     <p className="font-medium">{reseller.name ?? '-'}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{reseller.activation_count} / {reseller.total_revenue}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Activations: {reseller.activation_count}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Revenue: ${Number(reseller.total_revenue).toFixed(2)}</p>
                   </div>
                 ))}
               </CardContent>

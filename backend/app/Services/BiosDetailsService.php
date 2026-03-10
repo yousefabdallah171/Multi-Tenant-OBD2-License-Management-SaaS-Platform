@@ -16,7 +16,7 @@ class BiosDetailsService
     public function getBiosOverview(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
-            ->with(['customer:id,name,email', 'reseller:id,name,email'])
+            ->with(['customer:id,name,email,phone', 'reseller:id,name,email,phone', 'program:id,name'])
             ->where('bios_id', $biosId);
 
         $this->applyTenantScope($query, $tenantId);
@@ -50,6 +50,7 @@ class BiosDetailsService
                 'total_activations' => 0,
                 'total_licenses' => 0,
                 'avg_days_between_purchases' => 0,
+                'latest_license' => null,
                 'blacklist' => $blacklist,
             ];
         }
@@ -76,11 +77,13 @@ class BiosDetailsService
                 'id' => $first->customer->id,
                 'name' => $first->customer->name,
                 'email' => $first->customer->email,
+                'phone' => $first->customer->phone,
             ] : null,
             'reseller' => $first?->reseller ? [
                 'id' => $first->reseller->id,
                 'name' => $first->reseller->name,
                 'email' => $first->reseller->email,
+                'phone' => $first->reseller->phone,
             ] : null,
             'status' => $last?->status,
             'first_activation' => $first?->activated_at?->toIso8601String(),
@@ -88,6 +91,31 @@ class BiosDetailsService
             'total_activations' => $licenses->count(),
             'total_licenses' => $licenses->count(),
             'avg_days_between_purchases' => empty($intervals) ? 0 : (int) round(array_sum($intervals) / count($intervals)),
+            'latest_license' => $last ? [
+                'id' => $last->id,
+                'status' => $last->status,
+                'price' => (float) $last->price,
+                'duration_days' => (int) $last->duration_days,
+                'activated_at' => $last->activated_at?->toIso8601String(),
+                'expires_at' => $last->expires_at?->toIso8601String(),
+                'external_username' => $last->license_key,
+                'program' => $last->program ? [
+                    'id' => $last->program->id,
+                    'name' => $last->program->name,
+                ] : null,
+                'customer' => $last->customer ? [
+                    'id' => $last->customer->id,
+                    'name' => $last->customer->name,
+                    'email' => $last->customer->email,
+                    'phone' => $last->customer->phone,
+                ] : null,
+                'reseller' => $last->reseller ? [
+                    'id' => $last->reseller->id,
+                    'name' => $last->reseller->name,
+                    'email' => $last->reseller->email,
+                    'phone' => $last->reseller->phone,
+                ] : null,
+            ] : null,
             'blacklist' => $blacklist,
         ];
     }

@@ -2,14 +2,26 @@ export interface BiosOverview {
   bios_id: string
   original_bios_id: string
   username: string
-  customer: { id: number; name: string; email: string | null } | null
-  reseller: { id: number; name: string; email: string | null } | null
+  customer: { id: number; name: string; email: string | null; phone: string | null } | null
+  reseller: { id: number; name: string; email: string | null; phone: string | null } | null
   status: string | null
   first_activation: string | null
   last_activity: string | null
   total_activations: number
   total_licenses: number
   avg_days_between_purchases: number
+  latest_license: {
+    id: number
+    status: string | null
+    price: number
+    duration_days: number
+    activated_at: string | null
+    expires_at: string | null
+    external_username: string | null
+    program: { id: number; name: string } | null
+    customer: { id: number; name: string; email: string | null; phone: string | null } | null
+    reseller: { id: number; name: string; email: string | null; phone: string | null } | null
+  } | null
   blacklist: BiosBlacklist | null
 }
 
@@ -52,4 +64,3 @@ export interface BiosBlacklist {
   blacklisted_by: number | null
   date: string | null
 }
-
