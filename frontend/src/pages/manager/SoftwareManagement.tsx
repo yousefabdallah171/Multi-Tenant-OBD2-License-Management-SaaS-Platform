@@ -28,7 +28,6 @@ interface ProgramFormState {
   file_size: string
   system_requirements: string
   installation_guide_url: string
-  trial_days: string
   base_price: string
   icon: string
   external_api_key: string
@@ -49,7 +48,6 @@ const EMPTY_FORM: ProgramFormState = {
   file_size: '',
   system_requirements: '',
   installation_guide_url: '',
-  trial_days: '7',
   base_price: '0',
   icon: '',
   external_api_key: '',
@@ -104,7 +102,6 @@ export function SoftwareManagementPage() {
         file_size: form.file_size.trim() || null,
         system_requirements: form.system_requirements.trim() || null,
         installation_guide_url: form.installation_guide_url.trim() || null,
-        trial_days: Number(form.trial_days),
         base_price: Number(form.base_price),
         icon: form.icon.trim() || null,
         external_api_key: form.external_api_key.trim() || null,
@@ -176,10 +173,9 @@ export function SoftwareManagementPage() {
       return
     }
 
-    const trialDays = Number(form.trial_days)
     const basePrice = Number(form.base_price)
 
-    if (Number.isNaN(trialDays) || trialDays < 0 || Number.isNaN(basePrice) || basePrice < 0) {
+    if (Number.isNaN(basePrice) || basePrice < 0) {
       toast.error(t('manager.pages.softwareManagement.numberValidation'))
       return
     }
@@ -202,7 +198,6 @@ export function SoftwareManagementPage() {
       file_size: form.file_size.trim() || null,
       system_requirements: form.system_requirements.trim() || null,
       installation_guide_url: form.installation_guide_url.trim() || null,
-      trial_days: trialDays,
       base_price: basePrice,
       icon: form.icon.trim() || null,
       external_software_id: form.external_software_id.trim() ? Number(form.external_software_id) : null,
@@ -326,10 +321,6 @@ export function SoftwareManagementPage() {
                 <p className="line-clamp-2 min-h-10 text-sm text-slate-600 dark:text-slate-300">{program.description || t('manager.pages.softwareManagement.noDescription')}</p>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase text-slate-500 dark:text-slate-400">{t('manager.pages.softwareManagement.trialDays')}</p>
-                    <p className="font-semibold">{program.trial_days}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
                     <p className="text-xs uppercase text-slate-500 dark:text-slate-400">{t('manager.pages.softwareManagement.price')}</p>
                     <p className="font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
                   </div>
@@ -432,10 +423,6 @@ export function SoftwareManagementPage() {
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="program-download">{t('manager.pages.softwareManagement.downloadLink')}</Label>
               <Input id="program-download" type="url" value={form.download_link} onChange={(event) => setForm((current) => ({ ...current, download_link: event.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="program-trial">{t('manager.pages.softwareManagement.trialDays')}</Label>
-              <Input id="program-trial" type="number" value={form.trial_days} onChange={(event) => setForm((current) => ({ ...current, trial_days: event.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="program-price">{t('manager.pages.softwareManagement.price')}</Label>

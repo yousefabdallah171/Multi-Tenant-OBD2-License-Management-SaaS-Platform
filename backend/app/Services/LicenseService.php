@@ -673,7 +673,6 @@ class LicenseService
         $payload = [
             'tenant_id' => $reseller->tenant_id,
             'name' => $displayName,
-            'client_name' => $clientName !== '' ? $clientName : null,
             'email' => $email,
             'phone' => $data['customer_phone'] ?? null,
             'role' => UserRole::CUSTOMER,
@@ -682,6 +681,10 @@ class LicenseService
             'username' => $customer->username_locked ? $customer->username : $externalUsername,
             'username_locked' => true,
         ];
+
+        if (Schema::hasColumn('users', 'client_name')) {
+            $payload['client_name'] = $clientName !== '' ? $clientName : null;
+        }
 
         if (! $customer->exists) {
             $payload['password'] = Hash::make(Str::password(16));
