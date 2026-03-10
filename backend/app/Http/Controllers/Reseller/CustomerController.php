@@ -44,6 +44,7 @@ class CustomerController extends BaseResellerController
             $query->where(function ($builder) use ($validated, $resellerId): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('username', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->where('reseller_id', $resellerId)

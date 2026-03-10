@@ -323,7 +323,15 @@ export function CustomersPage() {
         </Link>
       ),
     },
-    { key: 'email', label: t('common.email'), sortable: true, sortValue: (row) => row.email ?? '', render: (row) => row.email ?? '-' },
+    {
+      key: 'username',
+      label: t('common.username'),
+      sortable: true,
+      sortValue: (row) => resolveCustomerApiUsername(row),
+      render: (row) => (
+        <span className="font-medium text-slate-900 dark:text-slate-100">{resolveCustomerApiUsername(row)}</span>
+      ),
+    },
     {
       key: 'phone',
       label: t('common.phone'),
@@ -845,6 +853,10 @@ export function CustomersPage() {
       />
     </div>
   )
+}
+
+function resolveCustomerApiUsername(row: CustomerSummary) {
+  return row.external_username || row.username || '-'
 }
 
 function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | DurationUnit) {

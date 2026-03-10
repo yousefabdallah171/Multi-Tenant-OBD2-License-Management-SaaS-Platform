@@ -114,10 +114,13 @@ export interface TeamManagedUser {
 export interface ManagerCustomerSummary {
   id: number
   name: string
+  client_name?: string | null
+  username?: string | null
   email: string | null
   phone?: string | null
   license_id?: number | null
   bios_id: string | null
+  external_username?: string | null
   reseller: string | null
   reseller_id: number | null
   program: string | null
@@ -139,6 +142,7 @@ export interface ManagerCustomerSummary {
 
 export interface ManagerCustomerDetails extends ManagerCustomerSummary {
   username?: string | null
+  external_username?: string | null
   phone?: string | null
   created_by?: { id: number; name: string; email: string } | null
   created_at?: string | null

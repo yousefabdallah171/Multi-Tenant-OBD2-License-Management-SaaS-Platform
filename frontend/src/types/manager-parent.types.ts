@@ -240,10 +240,13 @@ export interface SellerLogSummary {
 export interface CustomerSummary {
   id: number
   name: string
+  client_name?: string | null
+  username?: string | null
   email: string | null
   phone?: string | null
   license_id?: number | null
   bios_id: string | null
+  external_username?: string | null
   reseller: string | null
   program: string | null
   status: string | null
@@ -264,6 +267,7 @@ export interface CustomerSummary {
 
 export interface CustomerDetails extends CustomerSummary {
   username?: string | null
+  external_username?: string | null
   phone?: string | null
   created_by?: { id: number; name: string; email: string } | null
   created_at?: string | null

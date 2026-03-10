@@ -36,7 +36,7 @@ class CustomerController extends BaseManagerController
         $sellerIds = $this->teamSellerIds($request);
 
         $query = $this->teamCustomersQuery($request)
-            ->select(['id', 'tenant_id', 'name', 'email', 'phone', 'role', 'created_at'])
+            ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
                 ->select($this->licenseListColumns())
@@ -47,6 +47,7 @@ class CustomerController extends BaseManagerController
             $query->where(function ($builder) use ($validated, $sellerIds): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('username', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->whereIn('reseller_id', $sellerIds)
@@ -179,7 +180,7 @@ class CustomerController extends BaseManagerController
         return response()->json([
             'data' => [
                 ...$this->serializeCustomer($customer),
-                'username' => $customer->username,
+                'username' => $customer->customerLicenses->sortByDesc('activated_at')->first()?->external_username ?: $customer->username,
                 'phone' => $customer->phone,
                 'created_by' => $customer->createdBy ? [
                     'id' => $customer->createdBy->id,
@@ -512,10 +513,13 @@ class CustomerController extends BaseManagerController
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'client_name' => $user->client_name,
+            'username' => $license?->external_username ?: $user->username,
             'email' => $this->visibleEmail($user->email),
             'phone' => $user->phone,
             'license_id' => $license?->id,
             'bios_id' => $license?->bios_id,
+            'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
             'reseller_id' => $license?->reseller?->id,
             'program' => $license?->program?->name,

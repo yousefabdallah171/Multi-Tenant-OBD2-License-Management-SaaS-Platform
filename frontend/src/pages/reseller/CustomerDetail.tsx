@@ -38,7 +38,7 @@ export function CustomerDetailPage() {
       <PageHeader
         eyebrow={t('roles.reseller')}
         title={customer?.name ?? t('reseller.pages.customers.title')}
-        description={customer?.email ?? customer?.phone ?? t('reseller.pages.customers.description')}
+        description={resolveCustomerDetailUsername(customer) ?? customer?.phone ?? t('reseller.pages.customers.description')}
       />
 
       {customer ? (
@@ -51,7 +51,7 @@ export function CustomerDetailPage() {
               <Info label={t('common.name')} value={customer.name} />
               <Info label={t('common.email')} value={customer.email ?? '-'} />
               <Info label={t('common.phone')} value={customer.phone ?? '-'} />
-              <Info label={t('common.username')} value={customer.username ?? '-'} />
+              <Info label={t('common.username')} value={resolveCustomerDetailUsername(customer) ?? '-'} />
               <Info label={t('reseller.pages.customers.table.bios')} value={customer.bios_id ?? '-'} />
               <Info
                 label={t('common.status')}
@@ -73,6 +73,7 @@ export function CustomerDetailPage() {
                   <div className="grid gap-4 md:grid-cols-5">
                     <Info label={t('common.program')} value={license.program ?? '-'} />
                     <Info label={t('reseller.pages.customers.detail.bios')} value={license.bios_id} />
+                    <Info label={t('common.username')} value={customer.external_username ?? customer.username ?? '-'} />
                     <Info
                       label={t('common.status')}
                       value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} />}
@@ -88,6 +89,10 @@ export function CustomerDetailPage() {
       ) : null}
     </div>
   )
+}
+
+function resolveCustomerDetailUsername(customer: { external_username?: string | null; username?: string | null } | undefined) {
+  return customer?.external_username || customer?.username || null
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {

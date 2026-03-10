@@ -287,8 +287,6 @@ export function TeamManagementPage() {
   )
 
   const list = membersQuery.data?.data ?? []
-  const totalRevenue = list.reduce((sum, member) => sum + member.revenue, 0)
-  const totalCustomers = list.reduce((sum, member) => sum + member.customers_count, 0)
 
   function closeForm() {
     setFormOpen(false)
@@ -355,27 +353,6 @@ export function TeamManagementPage() {
           </Button>
         }
       />
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.teamManagement.visibleTeamMembers')}</p>
-            <p className="mt-2 text-3xl font-semibold">{membersQuery.data?.meta.total ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.teamManagement.customersRepresented')}</p>
-            <p className="mt-2 text-3xl font-semibold">{totalCustomers}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.teamManagement.visibleRevenue')}</p>
-            <p className="mt-2 text-3xl font-semibold">{formatCurrency(totalRevenue, 'USD', locale)}</p>
-          </CardContent>
-        </Card>
-      </div>
 
       <Tabs
         value={role || 'all'}

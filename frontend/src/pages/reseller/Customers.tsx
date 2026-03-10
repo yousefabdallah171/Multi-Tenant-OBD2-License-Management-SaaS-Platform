@@ -623,8 +623,16 @@ export function CustomersPage() {
                 {resolveResellerCustomerLabel(row)}
               </Link>
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{row.email ?? '-'}</p>
           </div>
+        ),
+      },
+      {
+        key: 'username',
+        label: t('common.username'),
+        sortable: true,
+        sortValue: (row) => resolveResellerCustomerUsername(row),
+        render: (row) => (
+          <span className="font-medium text-slate-900 dark:text-slate-100">{resolveResellerCustomerUsername(row)}</span>
         ),
       },
       {
@@ -1589,6 +1597,10 @@ function resolveResellerCustomerLabel(row: ResellerCustomerSummary) {
   }
 
   return row.name || '-'
+}
+
+function resolveResellerCustomerUsername(row: ResellerCustomerSummary) {
+  return row.external_username || row.username || '-'
 }
 
 

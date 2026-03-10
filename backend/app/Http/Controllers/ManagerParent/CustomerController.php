@@ -36,7 +36,7 @@ class CustomerController extends BaseManagerParentController
         $query = User::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('role', UserRole::CUSTOMER->value)
-            ->select(['id', 'tenant_id', 'name', 'email', 'phone', 'role', 'created_at'])
+            ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->select($this->licenseListColumns())
                 ->with(['program:id,name', 'reseller:id,name'])])
@@ -46,6 +46,7 @@ class CustomerController extends BaseManagerParentController
             $query->where(function ($builder) use ($validated): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('username', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('bios_id', 'like', '%'.$validated['search'].'%'));
             });
@@ -163,7 +164,7 @@ class CustomerController extends BaseManagerParentController
         return response()->json([
             'data' => [
                 ...$this->serializeCustomer($user),
-                'username' => $user->username,
+                'username' => $user->customerLicenses->sortByDesc('activated_at')->first()?->external_username ?: $user->username,
                 'phone' => $user->phone,
                 'created_by' => $user->createdBy ? [
                     'id' => $user->createdBy->id,
@@ -494,10 +495,13 @@ class CustomerController extends BaseManagerParentController
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'client_name' => $user->client_name,
+            'username' => $license?->external_username ?: $user->username,
             'email' => $this->visibleEmail($user->email),
             'phone' => $user->phone,
             'license_id' => $license?->id,
             'bios_id' => $license?->bios_id,
+            'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
             'program' => $license?->program?->name,
             'status' => $license?->status,

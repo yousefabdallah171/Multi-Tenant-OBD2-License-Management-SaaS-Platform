@@ -37,7 +37,7 @@ export function CustomerDetailPage() {
           {t('common.back')}
         </Button>
       </div>
-      <PageHeader title={customer?.name ?? t('managerParent.pages.customers.customerDetails')} description={customer?.email ?? t('managerParent.pages.customers.customerDetailsDescription')} />
+      <PageHeader title={customer?.name ?? t('managerParent.pages.customers.customerDetails')} description={resolveCustomerDetailUsername(customer) ?? t('managerParent.pages.customers.customerDetailsDescription')} />
 
       {customer ? (
         <>
@@ -46,7 +46,7 @@ export function CustomerDetailPage() {
             <CardContent className="grid gap-4 md:grid-cols-3">
               <Info label={t('common.name')} value={customer.name} />
               <Info label={t('common.email')} value={customer.email} />
-              <Info label={t('common.username')} value={customer.username ?? '-'} />
+              <Info label={t('common.username')} value={resolveCustomerDetailUsername(customer) ?? '-'} />
               <Info label={t('common.phone')} value={customer.phone ?? '-'} />
               <Info label={t('common.status')} value={customer.status ? <StatusBadge status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-'} />
               <Info label={t('common.createdAt')} value={customer.created_at ? formatDate(customer.created_at, locale) : '-'} />
@@ -77,6 +77,7 @@ export function CustomerDetailPage() {
                             </Link>
                           )}
                         />
+                        <Info label={t('common.username')} value={license.external_username ?? customer.username ?? '-'} />
                         <Info label={t('common.reseller')} value={license.reseller ?? '-'} />
                         <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
                       </div>
@@ -132,6 +133,10 @@ export function CustomerDetailPage() {
       ) : null}
     </div>
   )
+}
+
+function resolveCustomerDetailUsername(customer: { external_username?: string | null; username?: string | null; licenses?: Array<{ external_username?: string | null }> } | undefined) {
+  return customer?.licenses?.find((license) => license.external_username)?.external_username || customer?.external_username || customer?.username || null
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
