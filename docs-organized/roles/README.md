@@ -23,6 +23,10 @@ Recent alignment updates:
 - manager team now uses canonical detail pages at `/:lang/manager/team/:id`
 - manager and manager-parent BIOS links now resolve to canonical BIOS detail pages
 - super-admin admin-management now routes consistently into canonical user detail pages
+- super-admin now has a canonical global customer workspace and customer detail routes
+- super-admin BIOS blacklist now includes tenant-scoped entries with tenant context
+- super-admin BIOS and customer drill-downs now use canonical detail pages consistently
+- super-admin account actions now block self-delete, self-deactivate, and last-active-super-admin removal
 - super-admin API Status was fixed to avoid api-log memory pressure during page load
 - reseller dashboard/runtime polish fixed chart warnings and raw activity/activation labels
 - manager-parent, manager, and super-admin dashboard stat cards now deep-link into the matching canonical pages

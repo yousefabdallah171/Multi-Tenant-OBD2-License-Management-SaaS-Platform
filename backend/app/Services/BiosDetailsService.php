@@ -18,7 +18,7 @@ class BiosDetailsService
     public function getBiosOverview(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
-            ->with(['customer:id,name,email,phone', 'reseller:id,name,email,phone', 'program:id,name'])
+            ->with(['customer:id,name,username,email,phone', 'reseller:id,name,email,phone', 'program:id,name'])
             ->where('bios_id', $biosId);
 
         $this->applyTenantScope($query, $tenantId);
@@ -50,7 +50,7 @@ class BiosDetailsService
 
             $activityMetadata = $latestActivity?->metadata ?? [];
             $customer = ! empty($activityMetadata['customer_id'])
-                ? User::query()->select(['id', 'name', 'email', 'phone'])->find((int) $activityMetadata['customer_id'])
+                ? User::query()->select(['id', 'name', 'username', 'email', 'phone'])->find((int) $activityMetadata['customer_id'])
                 : null;
             $reseller = ! empty($latestActivity?->user_id)
                 ? User::query()->select(['id', 'name', 'email', 'phone'])->find((int) $latestActivity->user_id)
@@ -58,15 +58,17 @@ class BiosDetailsService
             $program = ! empty($activityMetadata['program_id'])
                 ? Program::query()->select(['id', 'name'])->find((int) $activityMetadata['program_id'])
                 : null;
-            [$username, $originalBiosId] = $this->splitBiosId($biosId);
+            $originalBiosId = $this->splitBiosId($biosId)[1];
+            $resolvedUsername = $this->resolveOverviewUsername(null, $customer, $activityMetadata, $biosId);
 
             return [
                 'bios_id' => $biosId,
                 'original_bios_id' => $originalBiosId,
-                'username' => $username,
+                'username' => $resolvedUsername,
                 'customer' => $customer ? [
                     'id' => $customer->id,
                     'name' => $customer->name,
+                    'username' => $customer->username,
                     'email' => $customer->email,
                     'phone' => $customer->phone,
                 ] : null,
@@ -113,7 +115,8 @@ class BiosDetailsService
 
         $first = $licenses->first();
         $last = $licenses->sortByDesc('activated_at')->first();
-        [$username, $originalBiosId] = $this->splitBiosId($biosId);
+        $originalBiosId = $this->splitBiosId($biosId)[1];
+        $resolvedUsername = $this->resolveOverviewUsername($last, $last?->customer, [], $biosId);
 
         $intervals = [];
         $sorted = $licenses->sortBy('activated_at')->values();
@@ -128,10 +131,11 @@ class BiosDetailsService
         return [
             'bios_id' => $biosId,
             'original_bios_id' => $originalBiosId,
-            'username' => $username,
+            'username' => $resolvedUsername,
             'customer' => $first?->customer ? [
                 'id' => $first->customer->id,
                 'name' => $first->customer->name,
+                'username' => $first->customer->username,
                 'email' => $first->customer->email,
                 'phone' => $first->customer->phone,
             ] : null,
@@ -154,7 +158,7 @@ class BiosDetailsService
                 'duration_days' => (int) $last->duration_days,
                 'activated_at' => $last->activated_at?->toIso8601String(),
                 'expires_at' => $last->expires_at?->toIso8601String(),
-                'external_username' => $last->license_key,
+                'external_username' => $last->external_username,
                 'program' => $last->program ? [
                     'id' => $last->program->id,
                     'name' => $last->program->name,
@@ -174,6 +178,39 @@ class BiosDetailsService
             ] : null,
             'blacklist' => $blacklist,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     */
+    private function resolveOverviewUsername(?License $license, ?User $customer, array $metadata, string $biosId): string
+    {
+        $licenseExternalUsername = is_string($license?->external_username) ? trim((string) $license->external_username) : '';
+        $customerUsername = is_string($customer?->username) ? trim((string) $customer->username) : '';
+        $customerDisplayName = trim((string) ($customer?->client_name ?: $customer?->name ?: ''));
+
+        if ($licenseExternalUsername !== '') {
+            $normalizedExternal = mb_strtolower($licenseExternalUsername);
+            $normalizedDisplay = $customerDisplayName !== '' ? mb_strtolower($customerDisplayName) : '';
+
+            if ($customerUsername !== '' && $normalizedExternal === $normalizedDisplay) {
+                return $customerUsername;
+            }
+        }
+
+        $candidates = [
+            $licenseExternalUsername !== '' ? $licenseExternalUsername : null,
+            $customerUsername !== '' ? $customerUsername : null,
+            is_string($metadata['external_username'] ?? null) ? $metadata['external_username'] : null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return trim($candidate);
+            }
+        }
+
+        return $this->splitBiosId($biosId)[0];
     }
 
     public function getBiosLicenseHistory(string $biosId, ?int $tenantId = null, array $filters = []): LengthAwarePaginator

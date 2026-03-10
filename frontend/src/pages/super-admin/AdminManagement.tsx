@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { biosService } from '@/services/bios.service'
+import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -36,6 +37,7 @@ const emptyForm = {
 export function AdminManagementPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const queryClient = useQueryClient()
@@ -178,6 +180,11 @@ export function AdminManagementPage() {
 
   const visibleAdminIds = adminsQuery.data?.data.map((admin) => admin.id) ?? []
   const allVisibleSelected = visibleAdminIds.length > 0 && visibleAdminIds.every((id) => selectedIds.includes(id))
+  const activeSuperAdminCount = (adminsQuery.data?.data ?? []).filter((admin) => admin.role === 'super_admin' && admin.status === 'active').length
+  const currentUserId = user?.id ?? null
+
+  const isProtectedSuperAdmin = (row: ManagedUser) =>
+    row.role === 'super_admin' && (row.id === currentUserId || (row.status === 'active' && activeSuperAdminCount <= 1))
 
   const columns = useMemo<Array<DataTableColumn<ManagedUser>>>(
     () => [
@@ -275,7 +282,7 @@ export function AdminManagementPage() {
               <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.userDetail(lang, row.id))}>
                 {t('common.view')}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
+              <DropdownMenuItem disabled={isProtectedSuperAdmin(row)} onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
                 {row.status === 'active' ? t('common.suspend') : t('common.activate')}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -305,7 +312,7 @@ export function AdminManagementPage() {
               >
                 {t('common.resetPassword')}
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400" onSelect={() => setDeleteTarget(row)}>
+              <DropdownMenuItem className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400" disabled={isProtectedSuperAdmin(row)} onSelect={() => setDeleteTarget(row)}>
                 {t('common.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -314,7 +321,7 @@ export function AdminManagementPage() {
         ),
       },
     ],
-    [lang, locale, navigate, selectedIds, statusMutation, t],
+    [activeSuperAdminCount, currentUserId, lang, locale, navigate, selectedIds, statusMutation, t],
   )
 
   return (
@@ -420,10 +427,10 @@ export function AdminManagementPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-slate-500 dark:text-slate-400">{t('common.selectedCount', { count: selectedIds.length })}</span>
-            <Button type="button" variant="secondary" onClick={() => bulkSuspendMutation.mutate()} disabled={selectedIds.length === 0 || bulkSuspendMutation.isPending}>
+            <Button type="button" variant="secondary" onClick={() => bulkSuspendMutation.mutate()} disabled={selectedIds.length === 0 || bulkSuspendMutation.isPending || (adminsQuery.data?.data ?? []).some((row) => selectedIds.includes(row.id) && isProtectedSuperAdmin(row))}>
               {t('superAdmin.pages.adminManagement.bulkSuspend')}
             </Button>
-            <Button type="button" onClick={() => setBulkDeleteOpen(true)} disabled={selectedIds.length === 0 || bulkDeleteMutation.isPending}>
+            <Button type="button" onClick={() => setBulkDeleteOpen(true)} disabled={selectedIds.length === 0 || bulkDeleteMutation.isPending || (adminsQuery.data?.data ?? []).some((row) => selectedIds.includes(row.id) && isProtectedSuperAdmin(row))}>
               {t('superAdmin.pages.adminManagement.bulkDelete')}
             </Button>
           </div>

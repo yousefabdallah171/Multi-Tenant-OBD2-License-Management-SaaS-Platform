@@ -85,6 +85,25 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 
 ### Latest Implemented Features (2026-03-10)
 
+**Super Admin Customers + BIOS Consistency**
+- Added a full global Super Admin customer workspace at `/:lang/super-admin/customers` with list, detail, create, edit, renew, deactivate, pause, resume, retry, and delete actions.
+- Added canonical Super Admin customer routes:
+  - `/:lang/super-admin/customers`
+  - `/:lang/super-admin/customers/create`
+  - `/:lang/super-admin/customers/:id`
+- Super Admin customer tables and detail pages now drill into canonical BIOS and user/customer pages consistently.
+- BIOS detail username resolution now prefers stored license/customer usernames instead of parsed BIOS prefixes, with schema-safe fallback logic for legacy rows.
+- Super Admin BIOS blacklist now shows tenant-scoped entries across the full platform, not only global rows.
+- Super Admin BIOS conflicts now drill into canonical BIOS and customer pages.
+- Super Admin customer detail was hardened for older local schemas where optional `user_ip_logs` columns are missing.
+- Shared license action routes now allow `super_admin`, so customer actions from the Super Admin workspace reuse the same backend workflows as other roles.
+
+**Super Admin Safety Hardening**
+- Super Admin cannot delete the currently authenticated Super Admin account.
+- Super Admin cannot deactivate the currently authenticated Super Admin account.
+- Super Admin cannot delete or deactivate the last remaining active Super Admin account.
+- Frontend actions are disabled for protected Super Admin rows, and backend validation enforces the same safety rules.
+
 **Super Admin Alignment + Reseller Runtime Cleanup**
 - Super Admin admin-management rows, names, and usernames now open the canonical full user detail route at `/:lang/super-admin/users/:id`.
 - Super Admin API Status was hardened to avoid loading the full `api_logs` table into memory; endpoint health now resolves through targeted latest-log lookups.

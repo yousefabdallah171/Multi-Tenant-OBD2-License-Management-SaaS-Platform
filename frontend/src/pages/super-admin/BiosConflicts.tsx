@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -91,7 +91,15 @@ export function BiosConflictsPage() {
       key: 'customers',
       label: t('superAdmin.pages.biosConflicts.columns.affectedCustomers'),
       render: (row) => (row.affected_customers.length > 0
-        ? row.affected_customers.map((customer) => customer.name).join(', ')
+        ? row.affected_customers.map((customer) => customer.id != null ? (
+          <button key={customer.id} type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.superAdmin.customerDetail(lang, Number(customer.id)))}>
+            {customer.name}
+          </button>
+        ) : <span key={customer.name}>{customer.name}</span>).reduce<ReactNode[]>((acc, node, index) => {
+          if (index > 0) acc.push(<span key={`sep-${index}`}>, </span>)
+          acc.push(node)
+          return acc
+        }, [])
         : t('superAdmin.pages.biosConflicts.noCustomers')),
     },
     {

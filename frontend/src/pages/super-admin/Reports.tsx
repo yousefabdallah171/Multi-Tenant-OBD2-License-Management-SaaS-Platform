@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Banknote, CircleDollarSign, Globe2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -12,12 +13,14 @@ import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { reportService } from '@/services/report.service'
 import type { FinancialReportPayload } from '@/types/super-admin.types'
 
 export function ReportsPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [dateRange, setDateRange] = useState<DateRangeValue>(() => resolvePresetRange(365))
   const params = useMemo(
@@ -93,10 +96,10 @@ export function ReportsPage() {
       </Card>
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatsCard title={t('superAdmin.pages.financialReports.totalPlatformRevenue')} value={formatCurrency(financialData?.summary.total_platform_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
-        <StatsCard title={t('superAdmin.pages.financialReports.totalActivations')} value={financialData?.summary.total_activations ?? 0} icon={Globe2} color="sky" />
-        <StatsCard title={t('superAdmin.pages.financialReports.activeLicenses')} value={financialData?.summary.active_licenses ?? 0} icon={Users} color="amber" />
-        <StatsCard title={t('superAdmin.pages.financialReports.avgRevenuePerTenant')} value={formatCurrency(financialData?.summary.avg_revenue_per_tenant ?? 0, 'USD', locale)} icon={CircleDollarSign} color="rose" />
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalPlatformRevenue')} value={formatCurrency(financialData?.summary.total_platform_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" /></button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.customers(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalActivations')} value={financialData?.summary.total_activations ?? 0} icon={Globe2} color="sky" /></button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(`${routePaths.superAdmin.customers(lang)}?status=active`)}><StatsCard title={t('superAdmin.pages.financialReports.activeLicenses')} value={financialData?.summary.active_licenses ?? 0} icon={Users} color="amber" /></button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.avgRevenuePerTenant')} value={formatCurrency(financialData?.summary.avg_revenue_per_tenant ?? 0, 'USD', locale)} icon={CircleDollarSign} color="rose" /></button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

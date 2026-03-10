@@ -68,6 +68,8 @@ export function UsersPage() {
     },
   })
 
+  const resolveDetailPath = (row: ManagedUser) => (row.role === 'customer' ? routePaths.superAdmin.customerDetail(lang, row.id) : routePaths.superAdmin.userDetail(lang, row.id))
+
   const columns = useMemo<Array<DataTableColumn<ManagedUser>>>(
     () => [
       {
@@ -98,7 +100,7 @@ export function UsersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.userDetail(lang, row.id))}>
+              <DropdownMenuItem onSelect={() => navigate(resolveDetailPath(row))}>
                 <Eye className="me-2 h-4 w-4" />
                 {t('common.view')}
               </DropdownMenuItem>
@@ -114,7 +116,7 @@ export function UsersPage() {
         ),
       },
     ],
-    [lang, locale, navigate, statusMutation, t],
+    [lang, locale, navigate, resolveDetailPath, statusMutation, t],
   )
 
   return (
@@ -204,7 +206,7 @@ export function UsersPage() {
           columns={columns}
           data={usersQuery.data?.data ?? []}
           rowKey={(row) => row.id}
-          onRowClick={(row) => navigate(routePaths.superAdmin.userDetail(lang, row.id))}
+          onRowClick={(row) => navigate(resolveDetailPath(row))}
           pagination={{
             page: usersQuery.data?.meta.current_page ?? 1,
             lastPage: usersQuery.data?.meta.last_page ?? 1,

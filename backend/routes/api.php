@@ -50,9 +50,11 @@ use App\Http\Controllers\SuperAdmin\BiosBlacklistController as SuperAdminBiosBla
 use App\Http\Controllers\SuperAdmin\BiosConflictController as SuperAdminBiosConflictController;
 use App\Http\Controllers\SuperAdmin\BiosHistoryController;
 use App\Http\Controllers\SuperAdmin\BiosDetailsController as SuperAdminBiosDetailsController;
+use App\Http\Controllers\SuperAdmin\CustomerController as SuperAdminCustomerController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\FinancialReportController;
 use App\Http\Controllers\SuperAdmin\LogController;
+use App\Http\Controllers\SuperAdmin\LicenseController as SuperAdminLicenseController;
 use App\Http\Controllers\SuperAdmin\ReportController;
 use App\Http\Controllers\SuperAdmin\SecurityController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
@@ -99,12 +101,12 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
     Route::get('/bios-conflicts', [BiosConflictController::class, 'index'])->middleware('role:super_admin,manager_parent,manager');
     Route::get('/balances/me', [BalanceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::post('/balances/{user}/adjust', [BalanceController::class, 'adjust'])->middleware('role:super_admin,manager_parent');
-    Route::post('/licenses/activate', [LicenseController::class, 'activateLicense'])->middleware('role:reseller,manager,manager_parent');
+    Route::post('/licenses/activate', [LicenseController::class, 'activateLicense'])->middleware('role:super_admin,reseller,manager,manager_parent');
     Route::get('/online-widget/settings', [OnlineUsersController::class, 'widgetSettings'])->middleware('role:super_admin,manager_parent,manager,reseller');
 
-    Route::get('/programs', [ManagerParentProgramController::class, 'index'])->middleware('role:manager_parent,manager,reseller');
-    Route::get('/programs/{program}/stats', [ManagerParentProgramController::class, 'stats'])->middleware('role:manager_parent,manager,reseller');
-    Route::get('/programs/{program}', [ManagerParentProgramController::class, 'show'])->middleware('role:manager_parent,manager,reseller');
+    Route::get('/programs', [ManagerParentProgramController::class, 'index'])->middleware('role:super_admin,manager_parent,manager,reseller');
+    Route::get('/programs/{program}/stats', [ManagerParentProgramController::class, 'stats'])->middleware('role:super_admin,manager_parent,manager,reseller');
+    Route::get('/programs/{program}', [ManagerParentProgramController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
 
     Route::middleware('role:manager_parent')->group(function (): void {
         Route::get('/dashboard', [ManagerParentDashboardController::class, 'dashboard']);
@@ -275,7 +277,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         });
     });
 
-    Route::middleware('role:reseller,manager,manager_parent')->group(function (): void {
+    Route::middleware('role:super_admin,reseller,manager,manager_parent')->group(function (): void {
         Route::get('/licenses/{license}', [LicenseController::class, 'show']);
         Route::post('/licenses/{license}/renew', [LicenseController::class, 'renew']);
         Route::post('/licenses/{license}/deactivate', [LicenseController::class, 'deactivate']);
@@ -314,6 +316,12 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::get('/users/{user}', [SuperAdminUserController::class, 'show']);
         Route::put('/users/{user}/status', [SuperAdminUserController::class, 'updateStatus']);
         Route::delete('/users/{user}', [SuperAdminUserController::class, 'destroy']);
+        Route::get('/customers', [SuperAdminCustomerController::class, 'index']);
+        Route::post('/customers', [SuperAdminCustomerController::class, 'store']);
+        Route::get('/customers/{user}', [SuperAdminCustomerController::class, 'show']);
+        Route::put('/customers/{user}', [SuperAdminCustomerController::class, 'update']);
+        Route::delete('/customers/{user}', [SuperAdminCustomerController::class, 'destroy']);
+        Route::get('/licenses/expiring', [SuperAdminLicenseController::class, 'expiring']);
         Route::get('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'index']);
         Route::get('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'show']);
         Route::post('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'store']);

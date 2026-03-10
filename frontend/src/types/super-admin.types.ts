@@ -66,6 +66,90 @@ export interface ManagedUser {
   created_at: string | null
 }
 
+export interface SuperAdminCustomerSummary {
+  id: number
+  tenant: { id: number; name: string; slug?: string; status?: string } | null
+  name: string
+  client_name?: string | null
+  username?: string | null
+  email: string | null
+  phone?: string | null
+  license_id?: number | null
+  bios_id: string | null
+  external_username?: string | null
+  reseller: string | null
+  reseller_id?: number | null
+  program: string | null
+  status: string | null
+  activated_at?: string | null
+  start_at?: string | null
+  expiry: string | null
+  scheduled_at?: string | null
+  scheduled_timezone?: string | null
+  scheduled_last_attempt_at?: string | null
+  scheduled_failed_at?: string | null
+  scheduled_failure_message?: string | null
+  is_scheduled?: boolean
+  paused_at?: string | null
+  pause_remaining_minutes?: number | null
+  license_count: number
+  has_active_license?: boolean
+}
+
+export interface SuperAdminCustomerDetails extends SuperAdminCustomerSummary {
+  created_by?: { id: number; name: string; email: string } | null
+  created_at?: string | null
+  licenses: Array<{
+    id: number
+    bios_id: string
+    external_username?: string | null
+    program: string | null
+    reseller: string | null
+    reseller_id?: number | null
+    reseller_email?: string | null
+    status: string
+    duration_days?: number
+    price: number
+    activated_at: string | null
+    start_at?: string | null
+    expires_at: string | null
+    scheduled_at?: string | null
+    scheduled_timezone?: string | null
+    scheduled_last_attempt_at?: string | null
+    scheduled_failed_at?: string | null
+    scheduled_failure_message?: string | null
+    is_scheduled?: boolean
+    paused_at?: string | null
+    pause_remaining_minutes?: number | null
+  }>
+  resellers_summary?: Array<{
+    reseller_id: number | null
+    reseller_name: string | null
+    reseller_email: string | null
+    activations_count: number
+    last_activation_at: string | null
+  }>
+  ip_logs?: Array<{
+    id: number
+    ip_address: string
+    country: string | null
+    country_code?: string | null
+    city: string | null
+    isp: string | null
+    reputation_score: string
+    action: string
+    created_at: string | null
+  }>
+  activity?: Array<{
+    id: number
+    action: string
+    description: string | null
+    metadata: Record<string, unknown>
+    ip_address: string | null
+    created_at: string | null
+  }>
+}
+
 export interface ManagedUserDetail extends ManagedUser {
   customers_count: number
   active_licenses_count: number
@@ -146,6 +230,7 @@ export interface ApiStatusSummary {
 export interface BiosBlacklistEntry {
   id: number
   bios_id: string
+  tenant?: { id: number; name: string } | null
   reason: string
   status: 'active' | 'removed'
   added_by: string | null

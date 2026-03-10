@@ -22,6 +22,7 @@ class LicenseController extends Controller
     {
         $validated = $request->validate([
             'program_id' => ['required', 'integer'],
+            'seller_id' => ['nullable', 'integer', 'exists:users,id'],
             'customer_name' => ['required', 'string', 'max:5000'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
@@ -334,6 +335,10 @@ class LicenseController extends Controller
 
         if ($role === UserRole::MANAGER_PARENT->value) {
             return License::query()->where('tenant_id', $actor->tenant_id);
+        }
+
+        if ($role === UserRole::SUPER_ADMIN->value) {
+            return License::query();
         }
 
         throw ValidationException::withMessages([

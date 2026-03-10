@@ -23,7 +23,10 @@ class BiosBlacklistController extends BaseSuperAdminController
 
         $perPage = (int) ($validated['per_page'] ?? 10);
 
-        $query = BiosBlacklist::query()->whereNull('tenant_id')->with('addedBy:id,name')->latest();
+        $query = BiosBlacklist::query()
+            ->withoutGlobalScope('tenant')
+            ->with(['addedBy:id,name', 'tenant:id,name'])
+            ->latest();
 
         if (! empty($validated['search'])) {
             $query->where('bios_id', 'like', '%'.$validated['search'].'%');
@@ -46,7 +49,7 @@ class BiosBlacklistController extends BaseSuperAdminController
         $months = collect(range(11, 0))
             ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
 
-        $entries = BiosBlacklist::query()->whereNull('tenant_id')->get();
+        $entries = BiosBlacklist::query()->withoutGlobalScope('tenant')->get();
         $created = $entries
             ->groupBy(fn (BiosBlacklist $entry): string => $entry->created_at?->format('Y-m') ?? '');
         $removed = $entries
@@ -147,12 +150,17 @@ class BiosBlacklistController extends BaseSuperAdminController
 
     public function export(): StreamedResponse
     {
-        $entries = BiosBlacklist::query()->whereNull('tenant_id')->with('addedBy:id,name')->latest()->get();
+        $entries = BiosBlacklist::query()
+            ->withoutGlobalScope('tenant')
+            ->with(['addedBy:id,name', 'tenant:id,name'])
+            ->latest()
+            ->get();
 
         return app(ReportExporter::class)->toCsv('bios-blacklist.csv', [[
-            'headers' => ['BIOS ID', 'Reason', 'Status', 'Added By', 'Created At'],
+            'headers' => ['BIOS ID', 'Tenant', 'Reason', 'Status', 'Added By', 'Created At'],
             'rows' => $entries->map(fn (BiosBlacklist $entry): array => [
                 $entry->bios_id,
+                $entry->tenant?->name ?? 'Global',
                 $entry->reason,
                 $entry->status,
                 $entry->addedBy?->name,
@@ -184,6 +192,10 @@ class BiosBlacklistController extends BaseSuperAdminController
         return [
             'id' => $entry->id,
             'bios_id' => $entry->bios_id,
+            'tenant' => $entry->tenant ? [
+                'id' => $entry->tenant->id,
+                'name' => $entry->tenant->name,
+            ] : null,
             'reason' => $entry->reason,
             'status' => $entry->status,
             'added_by' => $entry->addedBy?->name,

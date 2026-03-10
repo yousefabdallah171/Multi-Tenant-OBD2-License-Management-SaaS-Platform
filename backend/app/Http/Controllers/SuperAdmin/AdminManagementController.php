@@ -111,6 +111,8 @@ class AdminManagementController extends BaseSuperAdminController
             'status' => ['sometimes', 'in:active,suspended,inactive'],
         ]);
 
+        $this->guardSuperAdminMutation($request, $user, $validated['status'] ?? null, false);
+
         $user->update([
             ...$validated,
             'tenant_id' => ($validated['role'] ?? ($user->role?->value ?? $user->role)) === UserRole::SUPER_ADMIN->value
@@ -183,9 +185,7 @@ class AdminManagementController extends BaseSuperAdminController
 
     public function destroy(Request $request, User $user): JsonResponse
     {
-        if ($request->user()?->is($user)) {
-            return response()->json(['message' => 'You cannot delete the current authenticated user.'], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
+        $this->guardSuperAdminMutation($request, $user, null, true);
 
         $email = $user->email;
         $user->delete();
@@ -268,5 +268,39 @@ class AdminManagementController extends BaseSuperAdminController
             ] : null,
             'created_at' => $user->created_at?->toIso8601String(),
         ];
+    }
+
+    private function guardSuperAdminMutation(Request $request, User $target, ?string $nextStatus, bool $isDelete): void
+    {
+        $role = $target->role?->value ?? (string) $target->role;
+        if ($role !== UserRole::SUPER_ADMIN->value) {
+            return;
+        }
+
+        if ($request->user()?->is($target)) {
+            $message = $isDelete
+                ? 'You cannot delete the current authenticated super admin.'
+                : 'You cannot deactivate the current authenticated super admin.';
+
+            abort(response()->json(['message' => $message], Response::HTTP_UNPROCESSABLE_ENTITY));
+        }
+
+        $willDeactivate = $isDelete || in_array($nextStatus, ['suspended', 'inactive'], true);
+        if (! $willDeactivate) {
+            return;
+        }
+
+        $activeSuperAdmins = User::query()
+            ->where('role', UserRole::SUPER_ADMIN->value)
+            ->where('status', 'active')
+            ->count();
+
+        if ($target->status === 'active' && $activeSuperAdmins <= 1) {
+            $message = $isDelete
+                ? 'You cannot delete the last active super admin account.'
+                : 'You cannot deactivate the last active super admin account.';
+
+            abort(response()->json(['message' => $message], Response::HTTP_UNPROCESSABLE_ENTITY));
+        }
     }
 }

@@ -58,7 +58,9 @@ export function UserDetailPage() {
               ) : (
                 user.recent_licenses.map((license) => (
                   <div key={license.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                    <p className="font-medium text-slate-950 dark:text-white">{license.customer?.name ?? '-'}</p>
+                    <p className="font-medium text-slate-950 dark:text-white">
+                      {license.customer?.id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.customerDetail(lang, license.customer.id)}>{license.customer.name}</Link> : (license.customer?.name ?? '-')}
+                    </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{license.customer?.email ?? '-'}</p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">{license.program ?? t('manager.pages.customers.unknownProgram')}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">

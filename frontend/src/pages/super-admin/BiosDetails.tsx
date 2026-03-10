@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -131,7 +131,9 @@ export function BiosDetailsPage() {
                 {latestCustomer ? (
                   <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.customer')}</p>
-                    <p className="font-medium">{latestCustomer.name}</p>
+                    <p className="font-medium">
+                      {latestCustomer.id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.customerDetail(lang, latestCustomer.id)}>{latestCustomer.name}</Link> : latestCustomer.name}
+                    </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{latestCustomer.email ?? '-'}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{latestCustomer.phone ?? '-'}</p>
                   </div>
@@ -139,7 +141,9 @@ export function BiosDetailsPage() {
                 {latestReseller ? (
                   <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.resellers')}</p>
-                    <p className="font-medium">{latestReseller.name}</p>
+                    <p className="font-medium">
+                      {latestReseller.id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.userDetail(lang, latestReseller.id)}>{latestReseller.name}</Link> : latestReseller.name}
+                    </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{latestReseller.email ?? '-'}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{latestReseller.phone ?? '-'}</p>
                   </div>

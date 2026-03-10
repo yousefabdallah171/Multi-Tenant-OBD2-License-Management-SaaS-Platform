@@ -25,7 +25,7 @@ export const reportService = {
     return data
   },
   async getRecentActivity() {
-    const { data } = await api.get<{ data: Array<{ id: number; action: string; description: string | null; user: string | null; tenant: string | null; created_at: string | null }> }>(
+    const { data } = await api.get<{ data: Array<{ id: number; action: string; description: string | null; user: string | null; tenant: string | null; metadata?: Record<string, unknown>; created_at: string | null }> }>(
       '/super-admin/dashboard/recent-activity',
     )
     return data

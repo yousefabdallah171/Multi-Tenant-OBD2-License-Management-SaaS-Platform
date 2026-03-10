@@ -32,7 +32,8 @@ class LicenseService
     public function activate(array $data): License
     {
         $actor = $this->currentActor();
-        $reseller = $this->resolveReseller($actor);
+        $relatedSeller = ! empty($data['seller_id']) ? User::query()->find((int) $data['seller_id']) : null;
+        $reseller = $this->resolveReseller($actor, $relatedSeller);
         $program = Program::query()->findOrFail($data['program_id']);
         $biosId = trim((string) $data['bios_id']);
         $customerName = trim((string) ($data['customer_name'] ?? ''));
@@ -750,6 +751,23 @@ class LicenseService
 
         if ($role === UserRole::MANAGER_PARENT->value) {
             return $actor;
+        }
+
+        if ($role === UserRole::SUPER_ADMIN->value) {
+            if (! $relatedReseller) {
+                throw ValidationException::withMessages([
+                    'seller_id' => 'A seller is required for super admin activations.',
+                ]);
+            }
+
+            $sellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
+            if (! in_array($sellerRole, [UserRole::RESELLER->value, UserRole::MANAGER->value, UserRole::MANAGER_PARENT->value], true)) {
+                throw ValidationException::withMessages([
+                    'seller_id' => 'The selected seller is not allowed to activate licenses.',
+                ]);
+            }
+
+            return $relatedReseller;
         }
 
         throw ValidationException::withMessages([
