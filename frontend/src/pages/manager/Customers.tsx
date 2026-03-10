@@ -334,7 +334,9 @@ export function CustomersPage() {
       sortable: true,
       sortValue: (row) => resolveCustomerApiUsername(row),
       render: (row) => (
-        <span className="font-medium text-slate-900 dark:text-slate-100">{resolveCustomerApiUsername(row)}</span>
+        <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.id)}>
+          {resolveCustomerApiUsername(row)}
+        </Link>
       ),
     },
     {

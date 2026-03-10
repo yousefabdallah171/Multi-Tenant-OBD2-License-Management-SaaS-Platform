@@ -632,7 +632,9 @@ export function CustomersPage() {
         sortable: true,
         sortValue: (row) => resolveResellerCustomerUsername(row),
         render: (row) => (
-          <span className="font-medium text-slate-900 dark:text-slate-100">{resolveResellerCustomerUsername(row)}</span>
+          <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customerDetail(lang, row.id)}>
+            {resolveResellerCustomerUsername(row)}
+          </Link>
         ),
       },
       {
