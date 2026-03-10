@@ -76,7 +76,7 @@ export function CustomerDetailPage() {
                       <div className="grid gap-2 md:grid-cols-4">
                         <Info label={t('common.program')} value={license.program ?? '-'} />
                         <Info label={t('managerParent.pages.customers.biosId')} value={<Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link>} />
-                        <Info label={t('common.username')} value={license.external_username ?? customer.username ?? '-'} />
+                        <Info label={t('common.username')} value={resolveLicenseUsername(customer, license.external_username) ?? '-'} />
                         <Info label={t('common.reseller')} value={license.reseller_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.userDetail(lang, license.reseller_id)}>{license.reseller ?? '-'}</Link> : (license.reseller ?? '-')} />
                         <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
                       </div>
@@ -143,6 +143,17 @@ function resolveCustomerDetailUsername(customer: { name?: string | null; client_
   }
 
   return storedUsername || firstLicenseUsername || customer?.external_username || null
+}
+
+function resolveLicenseUsername(customer: { name?: string | null; client_name?: string | null; username?: string | null }, externalUsername?: string | null) {
+  const candidate = externalUsername?.trim()
+  const storedUsername = customer.username?.trim()
+
+  if (candidate && candidate !== customer.name && candidate !== customer.client_name) {
+    return candidate
+  }
+
+  return storedUsername || candidate || null
 }
 
 function Info({ label, value }: { label: string; value: ReactNode }) {

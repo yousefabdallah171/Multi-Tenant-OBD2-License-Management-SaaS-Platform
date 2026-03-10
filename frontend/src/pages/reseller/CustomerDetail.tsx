@@ -73,7 +73,7 @@ export function CustomerDetailPage() {
                   <div className="grid gap-4 md:grid-cols-5">
                     <Info label={t('common.program')} value={license.program ?? '-'} />
                     <Info label={t('reseller.pages.customers.detail.bios')} value={license.bios_id} />
-                    <Info label={t('common.username')} value={customer.external_username ?? customer.username ?? '-'} />
+                    <Info label={t('common.username')} value={resolveLicenseUsername(customer) ?? '-'} />
                     <Info
                       label={t('common.status')}
                       value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} />}
@@ -93,6 +93,17 @@ export function CustomerDetailPage() {
 
 function resolveCustomerDetailUsername(customer: { external_username?: string | null; username?: string | null } | undefined) {
   return customer?.external_username || customer?.username || null
+}
+
+function resolveLicenseUsername(customer: { name?: string | null; client_name?: string | null; external_username?: string | null; username?: string | null } | undefined) {
+  const candidate = customer?.external_username?.trim()
+  const storedUsername = customer?.username?.trim()
+
+  if (candidate && candidate !== customer?.name && candidate !== customer?.client_name) {
+    return candidate
+  }
+
+  return storedUsername || candidate || null
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {

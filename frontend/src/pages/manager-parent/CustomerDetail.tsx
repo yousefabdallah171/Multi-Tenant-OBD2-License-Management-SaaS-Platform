@@ -77,7 +77,7 @@ export function CustomerDetailPage() {
                             </Link>
                           )}
                         />
-                        <Info label={t('common.username')} value={license.external_username ?? customer.username ?? '-'} />
+                        <Info label={t('common.username')} value={resolveLicenseUsername(customer, license.external_username) ?? '-'} />
                         <Info label={t('common.reseller')} value={license.reseller ?? '-'} />
                         <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
                       </div>
@@ -137,6 +137,17 @@ export function CustomerDetailPage() {
 
 function resolveCustomerDetailUsername(customer: { external_username?: string | null; username?: string | null; licenses?: Array<{ external_username?: string | null }> } | undefined) {
   return customer?.licenses?.find((license) => license.external_username)?.external_username || customer?.external_username || customer?.username || null
+}
+
+function resolveLicenseUsername(customer: { name?: string | null; client_name?: string | null; username?: string | null }, externalUsername?: string | null) {
+  const candidate = externalUsername?.trim()
+  const storedUsername = customer.username?.trim()
+
+  if (candidate && candidate !== customer.name && candidate !== customer.client_name) {
+    return candidate
+  }
+
+  return storedUsername || candidate || null
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {
