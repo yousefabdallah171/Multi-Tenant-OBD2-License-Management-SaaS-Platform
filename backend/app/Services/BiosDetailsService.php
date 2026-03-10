@@ -268,6 +268,50 @@ class BiosDetailsService
             ->all();
     }
 
+    public function getRecentBiosIds(?int $tenantId = null, int $limit = 20): array
+    {
+        $licenseIds = License::query()
+            ->whereNotNull('bios_id')
+            ->where('bios_id', '!=', '')
+            ->orderByDesc('id')
+            ->limit($limit * 5);
+
+        if ($tenantId !== null) {
+            $licenseIds->where('tenant_id', $tenantId);
+        }
+
+        $blacklistIds = $this->biosBlacklistQuery(null, $tenantId)
+            ->whereNotNull('bios_id')
+            ->where('bios_id', '!=', '')
+            ->orderByDesc('id')
+            ->limit($limit * 5)
+            ->pluck('bios_id');
+
+        $accessLogIds = $this->biosAccessLogsQuery(null, $tenantId)
+            ->whereNotNull('bios_id')
+            ->where('bios_id', '!=', '')
+            ->orderByDesc('id')
+            ->limit($limit * 5)
+            ->pluck('bios_id');
+
+        $conflictIds = $this->biosConflictsQuery(null, $tenantId)
+            ->whereNotNull('bios_id')
+            ->where('bios_id', '!=', '')
+            ->orderByDesc('id')
+            ->limit($limit * 5)
+            ->pluck('bios_id');
+
+        return $licenseIds->pluck('bios_id')
+            ->concat($blacklistIds)
+            ->concat($accessLogIds)
+            ->concat($conflictIds)
+            ->filter()
+            ->unique()
+            ->values()
+            ->take($limit)
+            ->all();
+    }
+
     public function getBlacklistStatus(string $biosId, ?int $tenantId = null): ?array
     {
         $query = $this->biosBlacklistQuery($biosId, $tenantId)

@@ -156,6 +156,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::get('/bios-history', [ManagerParentBiosHistoryController::class, 'index']);
         Route::get('/bios-history/{biosId}', [ManagerParentBiosHistoryController::class, 'show']);
         Route::get('/bios/search', [ManagerParentBiosDetailsController::class, 'search']);
+        Route::get('/bios/recent', [ManagerParentBiosDetailsController::class, 'recent']);
         Route::get('/bios/{biosId}', [ManagerParentBiosDetailsController::class, 'show']);
         Route::get('/bios/{biosId}/licenses', [ManagerParentBiosDetailsController::class, 'licenses']);
         Route::get('/bios/{biosId}/resellers', [ManagerParentBiosDetailsController::class, 'resellers']);

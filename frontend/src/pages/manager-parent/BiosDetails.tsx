@@ -26,6 +26,11 @@ export function BiosDetailsPage() {
     enabled: search.trim().length >= 2,
   })
 
+  const recentQuery = useQuery({
+    queryKey: ['bios-details', 'recent'],
+    queryFn: () => managerParentBiosDetailsService.getRecentBiosIds(20),
+  })
+
   const overviewQuery = useQuery({
     queryKey: ['bios-details', 'overview', biosId],
     queryFn: () => managerParentBiosDetailsService.getBiosOverview(biosId),
@@ -79,9 +84,9 @@ export function BiosDetailsPage() {
       <Card>
         <CardContent className="space-y-3 p-4">
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('biosDetails.search')} />
-          {searchQuery.data && searchQuery.data.length > 0 ? (
+          {(search.trim().length >= 2 ? searchQuery.data : recentQuery.data) && (search.trim().length >= 2 ? searchQuery.data : recentQuery.data)!.length > 0 ? (
             <div className="grid gap-2">
-              {searchQuery.data.map((item) => (
+              {(search.trim().length >= 2 ? searchQuery.data : recentQuery.data)!.map((item) => (
                 <button
                   key={item}
                   type="button"
@@ -92,7 +97,11 @@ export function BiosDetailsPage() {
                 </button>
               ))}
             </div>
-          ) : null}
+          ) : (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {search.trim().length >= 2 ? t('common.noData') : 'Recent BIOS IDs will appear here.'}
+            </p>
+          )}
         </CardContent>
       </Card>
 

@@ -17,6 +17,10 @@ function createBiosDetailsService(prefix: '' | '/super-admin') {
       const { data } = await api.get<{ data: string[] }>(`${prefix}/bios/search`, { params: { query } })
       return data.data
     },
+    async getRecentBiosIds(limit = 20) {
+      const { data } = await api.get<{ data: string[] }>(`${prefix}/bios/recent`, { params: { limit } })
+      return data.data
+    },
     async getBiosOverview(biosId: string) {
       const { data } = await api.get<{ data: BiosOverview }>(`${prefix}/bios/${encodeURIComponent(biosId)}`)
       return data.data
@@ -42,4 +46,3 @@ function createBiosDetailsService(prefix: '' | '/super-admin') {
 
 export const managerParentBiosDetailsService = createBiosDetailsService('')
 export const superAdminBiosDetailsService = createBiosDetailsService('/super-admin')
-

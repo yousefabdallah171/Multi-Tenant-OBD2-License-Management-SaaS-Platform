@@ -66,5 +66,18 @@ class BiosDetailsController extends BaseManagerParentController
             'data' => $this->biosDetailsService->searchBiosIds((string) $validated['query'], $this->currentTenantId($request)),
         ]);
     }
-}
 
+    public function recent(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        return response()->json([
+            'data' => $this->biosDetailsService->getRecentBiosIds(
+                $this->currentTenantId($request),
+                (int) ($validated['limit'] ?? 20),
+            ),
+        ]);
+    }
+}
