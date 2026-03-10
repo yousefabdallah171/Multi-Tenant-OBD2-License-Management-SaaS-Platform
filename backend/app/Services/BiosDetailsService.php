@@ -7,6 +7,8 @@ use App\Models\BiosAccessLog;
 use App\Models\BiosBlacklist;
 use App\Models\BiosConflict;
 use App\Models\License;
+use App\Models\Program;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -25,32 +27,86 @@ class BiosDetailsService
         $blacklist = $this->getBlacklistStatus($biosId, $tenantId);
 
         if ($licenses->isEmpty()) {
+            $latestActivity = ActivityLog::query()
+                ->where(function ($query) use ($biosId): void {
+                    $query
+                        ->where('description', 'like', '%'.$biosId.'%')
+                        ->orWhere('metadata->bios_id', $biosId);
+                })
+                ->when($tenantId !== null, fn (Builder $query) => $query->where('tenant_id', $tenantId))
+                ->latest()
+                ->first();
             $lastAccessLog = $this->biosAccessLogsQuery($biosId, $tenantId)->latest()->first();
             $lastConflict = $this->biosConflictsQuery($biosId, $tenantId)->latest()->first();
 
-            abort_if(! $lastAccessLog && ! $lastConflict && ! $blacklist, 404, 'BIOS not found.');
+            abort_if(! $lastAccessLog && ! $lastConflict && ! $blacklist && ! $latestActivity, 404, 'BIOS not found.');
 
             $lastActivity = collect([
+                $latestActivity?->created_at?->toIso8601String(),
                 $lastAccessLog?->created_at?->toIso8601String(),
                 $lastConflict?->created_at?->toIso8601String(),
                 $blacklist['date'] ?? null,
             ])->filter()->sortDesc()->first();
 
+            $activityMetadata = $latestActivity?->metadata ?? [];
+            $customer = ! empty($activityMetadata['customer_id'])
+                ? User::query()->select(['id', 'name', 'email', 'phone'])->find((int) $activityMetadata['customer_id'])
+                : null;
+            $reseller = ! empty($latestActivity?->user_id)
+                ? User::query()->select(['id', 'name', 'email', 'phone'])->find((int) $latestActivity->user_id)
+                : null;
+            $program = ! empty($activityMetadata['program_id'])
+                ? Program::query()->select(['id', 'name'])->find((int) $activityMetadata['program_id'])
+                : null;
             [$username, $originalBiosId] = $this->splitBiosId($biosId);
 
             return [
                 'bios_id' => $biosId,
                 'original_bios_id' => $originalBiosId,
                 'username' => $username,
-                'customer' => null,
-                'reseller' => null,
-                'status' => ($blacklist['is_blacklisted'] ?? false) ? 'blacklisted' : ($lastAccessLog?->metadata['status'] ?? $lastAccessLog?->action),
+                'customer' => $customer ? [
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'email' => $customer->email,
+                    'phone' => $customer->phone,
+                ] : null,
+                'reseller' => $reseller ? [
+                    'id' => $reseller->id,
+                    'name' => $reseller->name,
+                    'email' => $reseller->email,
+                    'phone' => $reseller->phone,
+                ] : null,
+                'status' => ($blacklist['is_blacklisted'] ?? false) ? 'blacklisted' : ($activityMetadata['status'] ?? $lastAccessLog?->metadata['status'] ?? $lastAccessLog?->action ?? $latestActivity?->action),
                 'first_activation' => null,
                 'last_activity' => $lastActivity,
                 'total_activations' => 0,
                 'total_licenses' => 0,
                 'avg_days_between_purchases' => 0,
-                'latest_license' => null,
+                'latest_license' => $latestActivity ? [
+                    'id' => (int) ($activityMetadata['license_id'] ?? 0),
+                    'status' => $activityMetadata['status'] ?? null,
+                    'price' => (float) ($activityMetadata['price'] ?? 0),
+                    'duration_days' => (int) ($activityMetadata['duration_days'] ?? 0),
+                    'activated_at' => $latestActivity->created_at?->toIso8601String(),
+                    'expires_at' => null,
+                    'external_username' => $activityMetadata['external_username'] ?? null,
+                    'program' => $program ? [
+                        'id' => $program->id,
+                        'name' => $program->name,
+                    ] : null,
+                    'customer' => $customer ? [
+                        'id' => $customer->id,
+                        'name' => $customer->name,
+                        'email' => $customer->email,
+                        'phone' => $customer->phone,
+                    ] : null,
+                    'reseller' => $reseller ? [
+                        'id' => $reseller->id,
+                        'name' => $reseller->name,
+                        'email' => $reseller->email,
+                        'phone' => $reseller->phone,
+                    ] : null,
+                ] : null,
                 'blacklist' => $blacklist,
             ];
         }

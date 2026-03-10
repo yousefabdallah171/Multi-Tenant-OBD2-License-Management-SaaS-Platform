@@ -45,6 +45,7 @@ export const routePaths = {
     root: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager`,
     dashboard: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/dashboard`,
     team: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/team`,
+    teamMemberDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/manager/team/${id}`,
     usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/team`,
     customers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/customers`,
     customerCreate: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/customers/create`,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Manager;
 use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\License;
+use App\Models\Program;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,15 +55,17 @@ class TeamController extends BaseManagerController
 
     public function show(Request $request, User $user): JsonResponse
     {
-        $reseller = $this->resolveTeamReseller($request, $user);
+        $reseller = $this->resolveManagedSeller($request, $user);
         $stats = License::query()->where('reseller_id', $reseller->id)->get();
 
-        $recentLicenses = License::query()
+        $memberLicenses = License::query()
             ->with(['customer:id,name,email', 'program:id,name'])
             ->where('reseller_id', $reseller->id)
             ->latest('activated_at')
-            ->limit(5)
-            ->get()
+            ->get();
+
+        $recentLicenses = $memberLicenses
+            ->take(10)
             ->map(fn (License $license): array => [
                 'id' => $license->id,
                 'customer' => $license->customer ? ['id' => $license->customer->id, 'name' => $license->customer->name, 'email' => $license->customer->email] : null,
@@ -74,25 +77,106 @@ class TeamController extends BaseManagerController
             ])
             ->values();
 
+        $memberLicenseIds = $memberLicenses->pluck('id')->filter()->values()->all();
+
+        $activityQuery = ActivityLog::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where(function ($query) use ($reseller, $memberLicenseIds): void {
+                $query
+                    ->where('user_id', $reseller->id)
+                    ->orWhere('metadata->target_user_id', $reseller->id)
+                    ->orWhere('metadata->reseller_id', $reseller->id);
+
+                if ($memberLicenseIds !== []) {
+                    $query->orWhereIn('metadata->license_id', $memberLicenseIds);
+                }
+            })
+            ->latest()
+            ->limit(100);
+
+        $activityItems = $activityQuery->get();
+
+        $activityLicenseIds = $activityItems
+            ->map(fn (ActivityLog $activity): int => (int) (($activity->metadata ?? [])['license_id'] ?? 0))
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $activityLicenses = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->whereIn('id', $activityLicenseIds)
+            ->with(['customer:id,name,email', 'program:id,name'])
+            ->get()
+            ->keyBy('id');
+
+        $activityCustomerIds = $activityItems
+            ->map(fn (ActivityLog $activity): int => (int) (($activity->metadata ?? [])['customer_id'] ?? 0))
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $activityProgramIds = $activityItems
+            ->map(fn (ActivityLog $activity): int => (int) (($activity->metadata ?? [])['program_id'] ?? 0))
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $activityCustomers = User::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->whereIn('id', $activityCustomerIds)
+            ->get(['id', 'name', 'email'])
+            ->keyBy('id');
+
+        $activityPrograms = Program::query()
+            ->whereIn('id', $activityProgramIds)
+            ->get(['id', 'name'])
+            ->keyBy('id');
+
+        $recentActivity = $activityItems
+            ->map(fn (ActivityLog $activity): array => [
+                'id' => $activity->id,
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'metadata' => $activity->metadata ?? [],
+                'created_at' => $activity->created_at?->toIso8601String(),
+            ])
+            ->values();
+
+        $sellerLogHistory = $activityItems
+            ->map(function (ActivityLog $activity) use ($activityCustomers, $activityLicenses, $activityPrograms): array {
+                $metadata = $activity->metadata ?? [];
+                $license = $activityLicenses->get((int) ($metadata['license_id'] ?? 0));
+                $customer = $activityCustomers->get((int) ($metadata['customer_id'] ?? 0));
+                $program = $activityPrograms->get((int) ($metadata['program_id'] ?? 0));
+
+                return [
+                    'id' => $activity->id,
+                    'action' => $activity->action,
+                    'description' => $activity->description,
+                    'customer_id' => (int) ($metadata['customer_id'] ?? $license?->customer_id ?? 0) ?: null,
+                    'customer_name' => $license?->customer?->name ?? $customer?->name,
+                    'customer_email' => $license?->customer?->email ?? $customer?->email,
+                    'program_id' => (int) ($metadata['program_id'] ?? $license?->program_id ?? 0) ?: null,
+                    'program_name' => $license?->program?->name ?? $program?->name,
+                    'bios_id' => $license?->bios_id ?? ($metadata['bios_id'] ?? null),
+                    'license_id' => $license?->id ?? ((int) ($metadata['license_id'] ?? 0) ?: null),
+                    'license_status' => $license?->status,
+                    'price' => array_key_exists('price', $metadata) ? (float) $metadata['price'] : ($license ? (float) $license->price : null),
+                    'ip_address' => $activity->ip_address,
+                    'created_at' => $activity->created_at?->toIso8601String(),
+                ];
+            })
+            ->values();
+
         return response()->json([
             'data' => [
                 ...$this->serializeReseller($reseller, collect([$reseller->id => $stats])),
                 'recent_licenses' => $recentLicenses,
-                'recent_activity' => ActivityLog::query()
-                    ->where('tenant_id', $this->currentTenantId($request))
-                    ->where('user_id', $reseller->id)
-                    ->whereIn('action', ['license.activated', 'license.renewed', 'license.deactivated', 'license.delete'])
-                    ->latest()
-                    ->limit(20)
-                    ->get()
-                    ->map(fn (ActivityLog $activity): array => [
-                        'id' => $activity->id,
-                        'action' => $activity->action,
-                        'description' => $activity->description,
-                        'metadata' => $activity->metadata ?? [],
-                        'created_at' => $activity->created_at?->toIso8601String(),
-                    ])
-                    ->values(),
+                'recent_activity' => $recentActivity,
+                'seller_log_history' => $sellerLogHistory,
             ],
         ]);
     }
@@ -207,6 +291,7 @@ class TeamController extends BaseManagerController
         return [
             'id' => $reseller->id,
             'name' => $reseller->name,
+            'role' => $reseller->role?->value ?? (string) $reseller->role,
             'username' => $reseller->username,
             'email' => $reseller->email,
             'phone' => $reseller->phone,

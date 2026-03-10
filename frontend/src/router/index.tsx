@@ -38,6 +38,7 @@ const ManagerSoftwarePage = lazyNamed(() => import('@/pages/manager/Software'), 
 const ManagerSoftwareManagementPage = lazyNamed(() => import('@/pages/manager/SoftwareManagement'), 'SoftwareManagementPage')
 const ManagerProgramFormPage = lazyNamed(() => import('@/pages/manager/ProgramForm'), 'ProgramFormPage')
 const ManagerTeamPage = lazyNamed(() => import('@/pages/manager/Team'), 'TeamPage')
+const ManagerTeamMemberDetailPage = lazyNamed(() => import('@/pages/manager/TeamMemberDetail'), 'TeamMemberDetailPage')
 
 const ManagerParentActivityPage = lazyNamed(() => import('@/pages/manager-parent/Activity'), 'ActivityPage')
 const ActivateLicensePageForManagerParent = lazyNamed(() => import('@/pages/manager-parent/ActivateLicense'), 'ActivateLicensePageForManagerParent')
@@ -169,6 +170,7 @@ export function AppRouter() {
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="dashboard" element={<ManagerDashboardPage />} />
                   <Route path="team" element={<ManagerTeamPage />} />
+                  <Route path="team/:id" element={<ManagerTeamMemberDetailPage />} />
                   <Route path="username-management" element={<Navigate to="../team" replace />} />
                   <Route path="customers" element={<ManagerCustomersPage />} />
                   <Route path="customers/create" element={<ManagerCreateCustomerPage />} />

@@ -1,9 +1,9 @@
 # Manager
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
-- Account: `manager@obd2sw.com`
-- Scope: Tenant reseller visibility
+- Account: `reseller2@obd2sw.com`
+- Scope: Tenant reseller visibility plus current-manager operational detail access
 - Tenant: `Test Tenant`
 - Default landing page: `/:lang/manager/dashboard`
 - Visible navigation routes: 9 main entries plus detail/workflow routes
@@ -22,7 +22,9 @@ Last updated: 2026-03-09
 
 Additional workflow/detail routes:
 
+- `/:lang/manager/team/:id`
 - `/:lang/manager/customers/:id`
+- `/:lang/manager/bios-details/:biosId`
 - `/:lang/manager/software-management/create`
 - `/:lang/manager/software-management/:id/edit`
 - `/:lang/manager/software/:id/activate`
@@ -40,8 +42,8 @@ Additional workflow/detail routes:
 ## Can do
 
 - View all tenant resellers
-- View reseller details
-- View reseller recent licenses and activity from the Team page
+- View reseller and manager detail pages at `/:lang/manager/team/:id`
+- View reseller recent licenses, activity, and reseller-history tables from the dedicated detail page
 - Invite reseller accounts from the Team page
 - Edit reseller accounts from the Team page
 - Deactive/reactivate reseller accounts from the Team page
@@ -55,6 +57,9 @@ Additional workflow/detail routes:
 - View tenant-wide reports in the same financial layout used by Manager Parent and export them
 - View team activity
 - View seller activity in `reseller-logs` with filters by seller/action/date
+- Open seller rows from `reseller-logs` into the canonical manager detail page
+- Open BIOS IDs from `reseller-logs`, customer pages, and detail pages into canonical manager BIOS pages
+- View BIOS detail pages even when the license row has been removed, using activity-log fallback context
 - Unlock usernames for team users
 - Change usernames for team users
 - Reset passwords for team users

@@ -3,21 +3,20 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
-import { EmptyState } from '@/components/shared/EmptyState'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import type { ManagerTeamReseller } from '@/types/manager-reseller.types'
@@ -43,13 +42,13 @@ function isValidEmail(value: string) {
 export function TeamPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [status, setStatus] = useState<'active' | 'suspended' | 'inactive' | ''>('')
   const [search, setSearch] = useState('')
-  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<ManagerTeamReseller | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ManagerTeamReseller | null>(null)
@@ -73,12 +72,6 @@ export function TeamPage() {
         status,
         search,
       }),
-  })
-
-  const detailQuery = useQuery({
-    queryKey: ['manager', 'team', 'detail', selectedId],
-    queryFn: () => managerService.getTeamMember(selectedId ?? 0),
-    enabled: selectedId !== null,
   })
 
   const createMutation = useMutation({
@@ -126,9 +119,6 @@ export function TeamPage() {
     onSuccess: () => {
       toast.success(t('manager.pages.team.deleteSuccess'))
       setDeleteTarget(null)
-      if (selectedId === deleteTarget?.id) {
-        setSelectedId(null)
-      }
       void queryClient.invalidateQueries({ queryKey: ['manager', 'team'] })
     },
   })
@@ -175,7 +165,18 @@ export function TeamPage() {
         sortValue: (row) => row.name,
         render: (row) => (
           <div className="space-y-1">
-            <p className="font-medium text-slate-950 dark:text-white">{row.name}</p>
+            <p className="font-medium text-slate-950 dark:text-white">
+              <button
+                type="button"
+                className="text-start text-sky-600 hover:underline dark:text-sky-300"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  navigate(routePaths.manager.teamMemberDetail(lang, row.id))
+                }}
+              >
+                {row.name}
+              </button>
+            </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{row.email}</p>
           </div>
         ),
@@ -268,10 +269,8 @@ export function TeamPage() {
         ),
       },
     ],
-    [locale, statusMutation, t],
+    [lang, locale, navigate, statusMutation, t],
   )
-
-  const selectedReseller = detailQuery.data?.data
 
   function closeForm() {
     setFormOpen(false)
@@ -355,7 +354,7 @@ export function TeamPage() {
         columns={columns}
         data={teamQuery.data?.data ?? []}
         rowKey={(row) => row.id}
-        onRowClick={(row) => setSelectedId(row.id)}
+        onRowClick={(row) => navigate(routePaths.manager.teamMemberDetail(lang, row.id))}
         isLoading={teamQuery.isLoading}
         pagination={{
           page: teamQuery.data?.meta.current_page ?? 1,
@@ -416,85 +415,6 @@ export function TeamPage() {
               {createMutation.isPending || updateMutation.isPending ? t('common.saving') : editingMember ? t('manager.pages.team.saveChanges') : t('manager.pages.team.createAccount')}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={selectedId !== null} onOpenChange={(open) => !open && setSelectedId(null)}>
-        <DialogContent className="left-auto right-0 top-0 h-screen w-[min(100vw,44rem)] max-w-[44rem] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-s-3xl">
-          <DialogHeader>
-            <DialogTitle>{selectedReseller?.name ?? t('manager.pages.team.resellerDetail')}</DialogTitle>
-            <DialogDescription>{selectedReseller?.email ?? t('manager.pages.team.resellerDetailDescription')}</DialogDescription>
-          </DialogHeader>
-
-          {selectedReseller ? (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-4">
-                <MetricCard label={t('common.username')} value={selectedReseller.username ?? '-'} />
-                <MetricCard label={t('manager.pages.dashboard.teamCustomers')} value={selectedReseller.customers_count} />
-                <MetricCard label={t('manager.pages.dashboard.activeLicenses')} value={selectedReseller.active_licenses_count} />
-                <MetricCard label={t('common.revenue')} value={formatCurrency(selectedReseller.revenue, 'USD', locale)} />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <MetricCard label={t('common.status')} value={<StatusBadge status={selectedReseller.status} />} />
-                <MetricCard label={t('manager.pages.usernameManagement.locked')} value={<StatusBadge status={selectedReseller.username_locked ? 'suspended' : 'active'} />} />
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('manager.pages.team.recentLicenses')}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {selectedReseller.recent_licenses.length === 0 ? (
-                    <EmptyState title={t('manager.pages.team.noRecentLicensesTitle')} description={t('manager.pages.team.noRecentLicensesDescription')} />
-                  ) : (
-                    selectedReseller.recent_licenses.map((license) => (
-                      <div key={license.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="space-y-1">
-                            <p className="font-medium text-slate-950 dark:text-white">{license.customer?.name ?? t('manager.pages.team.unknownCustomer')}</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{license.customer?.email ?? t('manager.pages.team.noEmail')}</p>
-                            <p className="text-sm text-slate-600 dark:text-slate-300">{license.program ?? t('manager.pages.customers.unknownProgram')}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{t('manager.pages.team.biosId')} <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link></p>
-                          </div>
-                          <div className="text-right">
-                            <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />
-                            <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-white">{formatCurrency(license.price, 'USD', locale)}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {t('manager.pages.customers.expires')} {license.expires_at ? formatDate(license.expires_at, locale) : '-'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">{t('manager.nav.activity')}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {selectedReseller.recent_activity.length === 0 ? (
-                    <EmptyState title={t('common.noData')} description={t('manager.pages.activity.noMatches')} />
-                  ) : (
-                    selectedReseller.recent_activity.map((entry) => (
-                      <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                        <p className="font-medium text-slate-950 dark:text-white">{entry.action}</p>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
-                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {t('manager.pages.team.joined')} {selectedReseller.created_at ? formatDate(selectedReseller.created_at, locale) : '-'}
-              </p>
-            </div>
-          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -636,16 +556,5 @@ export function TeamPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
-}
-
-function MetricCard({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-        <div className="mt-2 font-semibold text-slate-950 dark:text-white">{value}</div>
-      </CardContent>
-    </Card>
   )
 }

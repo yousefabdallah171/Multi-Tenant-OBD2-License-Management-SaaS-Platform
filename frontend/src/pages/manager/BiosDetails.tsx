@@ -83,7 +83,7 @@ export function BiosDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('biosDetails.title')} description={biosId || t('biosDetails.search')} />
+      <PageHeader eyebrow={t('manager.layout.eyebrow')} title={t('biosDetails.title')} description={biosId || t('biosDetails.search')} />
 
       <Card>
         <CardContent className="space-y-3 p-4">
@@ -143,7 +143,13 @@ export function BiosDetailsPage() {
                 {latestReseller ? (
                   <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.resellers')}</p>
-                    <p className="font-medium">{latestReseller.name}</p>
+                    {latestReseller.id ? (
+                      <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.teamMemberDetail(lang, latestReseller.id)}>
+                        {latestReseller.name}
+                      </Link>
+                    ) : (
+                      <p className="font-medium">{latestReseller.name}</p>
+                    )}
                     <p className="text-sm text-slate-500 dark:text-slate-400">{latestReseller.email ?? '-'}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{latestReseller.phone ?? '-'}</p>
                   </div>

@@ -80,18 +80,16 @@ export function ResellerLogsPage() {
 
         return row.seller ? (
           <div className="space-y-1">
-            <button
-              type="button"
-              className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
-              onClick={() => {
-                if (row.seller?.id) {
-                  setSellerId(row.seller.id)
-                  setPage(1)
-                }
-              }}
-            >
-              {row.seller.name ?? '-'}
-            </button>
+            {row.seller.id ? (
+              <Link
+                className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
+                to={routePaths.manager.teamMemberDetail(lang, row.seller.id)}
+              >
+                {row.seller.name ?? '-'}
+              </Link>
+            ) : (
+              row.seller.name ?? '-'
+            )}
             {role ? <RoleBadge role={role} /> : null}
           </div>
         ) : '-'

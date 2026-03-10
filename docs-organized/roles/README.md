@@ -1,6 +1,6 @@
 # Role Files
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 This folder contains one Markdown file per role:
 
@@ -20,4 +20,6 @@ Recent alignment updates:
 - duplicate report pages were consolidated into canonical report pages
 - manager reports now use the same tenant-wide financial layout as manager-parent reports
 - reseller pricing was removed; software now follows the normal base price flow
+- manager team now uses canonical detail pages at `/:lang/manager/team/:id`
+- manager and manager-parent BIOS links now resolve to canonical BIOS detail pages
 

@@ -1,8 +1,8 @@
 # Manager Parent
 
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
-- Account: `parent@obd2sw.com`
+- Account: `manager@obd2sw.com`
 - Scope: Tenant
 - Tenant: `Test Tenant`
 - Default landing page: `/:lang/dashboard`
@@ -31,6 +31,7 @@ Last updated: 2026-03-09
 Additional workflow/detail routes:
 
 - `/:lang/team-management/:id`
+- `/:lang/bios-details/:biosId`
 - `/:lang/software-management/create`
 - `/:lang/software-management/:id/edit`
 - `/:lang/software-management/:id/activate`
@@ -62,6 +63,7 @@ Additional workflow/detail routes:
 - View seller activity in `reseller-logs` with filters by seller/action/date
 - View tenant customers
 - Open customer detail/history views from licenses and related logs
+- Open BIOS detail pages from customers, BIOS conflicts, reseller logs, IP analytics, and team detail history
 - Manage tenant BIOS blacklist
 - View tenant BIOS history
 - Resolve BIOS conflicts
@@ -71,6 +73,7 @@ Additional workflow/detail routes:
 - Edit tenant settings
 - Edit own profile and password
 - Review manager/reseller full-page detail from Team Management
+- Review canonical BIOS detail pages with customer, reseller, program, duration, price, and activity context
 
 ## Cannot do
 

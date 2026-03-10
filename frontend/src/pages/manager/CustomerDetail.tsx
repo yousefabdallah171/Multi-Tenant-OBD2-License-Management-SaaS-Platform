@@ -36,7 +36,7 @@ export function CustomerDetailPage() {
           {t('common.back')}
         </Button>
       </div>
-      <PageHeader title={customer?.name ?? t('manager.pages.customers.customerDetails')} description={customer?.email ?? t('manager.pages.customers.customerDetailsDescription')} />
+      <PageHeader eyebrow={t('manager.layout.eyebrow')} title={customer?.name ?? t('manager.pages.customers.customerDetails')} description={customer?.email ?? t('manager.pages.customers.customerDetailsDescription')} />
 
       {customer ? (
         <>

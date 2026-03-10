@@ -99,6 +99,19 @@ abstract class BaseManagerController extends Controller
         return $user;
     }
 
+    protected function resolveManagedSeller(Request $request, User $user): User
+    {
+        $role = $user->role?->value ?? (string) $user->role;
+
+        abort_unless($user->tenant_id === $this->currentTenantId($request), 404);
+
+        if ($user->id === $this->currentManager($request)->id && $role === UserRole::MANAGER->value) {
+            return $user;
+        }
+
+        return $this->resolveTeamReseller($request, $user);
+    }
+
     protected function resolveTeamUser(Request $request, User $user): User
     {
         $role = $user->role?->value ?? (string) $user->role;

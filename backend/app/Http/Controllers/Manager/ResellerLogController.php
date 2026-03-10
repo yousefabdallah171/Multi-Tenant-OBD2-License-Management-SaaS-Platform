@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Manager;
 
 use App\Models\ActivityLog;
 use App\Models\License;
+use App\Models\Program;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -71,8 +73,33 @@ class ResellerLogController extends BaseManagerController
             ->get()
             ->keyBy('id');
 
+        $customerIds = collect($activities->items())
+            ->map(fn (ActivityLog $activity): int => (int) (($activity->metadata ?? [])['customer_id'] ?? 0))
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $programIds = collect($activities->items())
+            ->map(fn (ActivityLog $activity): int => (int) (($activity->metadata ?? [])['program_id'] ?? 0))
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $customers = User::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('id', $customerIds)
+            ->get(['id', 'name'])
+            ->keyBy('id');
+
+        $programs = Program::query()
+            ->whereIn('id', $programIds)
+            ->get(['id', 'name'])
+            ->keyBy('id');
+
         return response()->json([
-            'data' => collect($activities->items())->map(fn (ActivityLog $activity): array => $this->serializeActivity($activity, $licenses))->values(),
+            'data' => collect($activities->items())->map(fn (ActivityLog $activity): array => $this->serializeActivity($activity, $licenses, $customers, $programs))->values(),
             'summary' => $this->summary($summaryQuery),
             'meta' => [
                 'page' => $activities->currentPage(),
@@ -85,11 +112,13 @@ class ResellerLogController extends BaseManagerController
         ]);
     }
 
-    private function serializeActivity(ActivityLog $activity, $licenses): array
+    private function serializeActivity(ActivityLog $activity, $licenses, $customers, $programs): array
     {
         $metadata = $activity->metadata ?? [];
         $license = $licenses->get((int) ($metadata['license_id'] ?? 0));
         $sellerRole = $activity->user?->role?->value ?? (string) $activity->user?->role;
+        $customer = $customers->get((int) ($metadata['customer_id'] ?? 0));
+        $program = $programs->get((int) ($metadata['program_id'] ?? 0));
 
         return [
             'id' => $activity->id,
@@ -102,10 +131,10 @@ class ResellerLogController extends BaseManagerController
                 'role' => $sellerRole,
             ] : null,
             'customer_id' => (int) ($metadata['customer_id'] ?? $license?->customer_id ?? 0) ?: null,
-            'customer_name' => $license?->customer?->name,
+            'customer_name' => $license?->customer?->name ?? $customer?->name,
             'program_id' => (int) ($metadata['program_id'] ?? $license?->program_id ?? 0) ?: null,
-            'program_name' => $license?->program?->name,
-            'bios_id' => $license?->bios_id,
+            'program_name' => $license?->program?->name ?? $program?->name,
+            'bios_id' => $license?->bios_id ?? ($metadata['bios_id'] ?? null),
             'license_id' => $license?->id ?? ((int) ($metadata['license_id'] ?? 0) ?: null),
             'license_status' => $license?->status,
             'price' => array_key_exists('price', $metadata) ? (float) $metadata['price'] : ($license ? (float) $license->price : null),

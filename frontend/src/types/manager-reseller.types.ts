@@ -82,6 +82,22 @@ export interface ManagerTeamResellerDetail extends ManagerTeamReseller {
     metadata: Record<string, unknown>
     created_at: string | null
   }>
+  seller_log_history: Array<{
+    id: number
+    action: string
+    description: string | null
+    customer_id: number | null
+    customer_name: string | null
+    customer_email: string | null
+    program_id: number | null
+    program_name: string | null
+    bios_id: string | null
+    license_id: number | null
+    license_status: string | null
+    price: number | null
+    ip_address: string | null
+    created_at: string | null
+  }>
 }
 
 export interface TeamManagedUser {

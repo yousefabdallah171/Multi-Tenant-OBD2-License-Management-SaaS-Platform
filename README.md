@@ -48,8 +48,8 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 | Field | Value |
 |-------|-------|
 | **Version** | 1.0.0 |
-| **Status** | Phase 15 UX consolidation, role-page cleanup, and schema-compatibility fixes in progress |
-| **Last Updated** | 2026-03-09 |
+| **Status** | Phase 15 UX consolidation, detail-page unification, and runtime verification in progress |
+| **Last Updated** | 2026-03-10 |
 | **Scale** | Multi-tenant SaaS, 4 active dashboard roles, queued exports, tenant-scoped external API workflows |
 | **Budget** | $30 |
 | **Timeline** | 15 Days (Day 0 - Day 14) |
@@ -83,7 +83,23 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | PHASE-09-Deployment | :red_circle: Not Started | Day 12-13 |
 | PHASE-10-Documentation | :red_circle: Not Started | Day 14 |
 
-### Latest Implemented Features (2026-03-09)
+### Latest Implemented Features (2026-03-10)
+
+**Canonical Detail Pages + BIOS Linking**
+- Manager now has a real team-member detail page at `/:lang/manager/team/:id` instead of a drawer-only flow.
+- Manager reseller logs now open canonical manager team-member pages from the user column.
+- BIOS IDs across manager and manager-parent detail/log pages now route into canonical BIOS detail pages.
+- BIOS detail pages now support activity-only BIOS records, so scheduled/deactivated BIOS IDs still show program, reseller, external username, and last activity context even after the license row is gone.
+
+**Runtime Verification Pass**
+- Ran a real browser smoke pass across Manager and Manager Parent dashboard workspaces after the latest consolidation changes.
+- Verified canonical detail pages for team members, customers, and BIOS IDs load without in-page server/access error states.
+- Reconfirmed customer lists, software pages, reports, activity, reseller logs, API status, settings, and profile routes for both role scopes.
+
+**Customer Summary Updates**
+- Added `Expired` summary cards to Manager Parent, Manager, and Reseller customer pages alongside the existing 1-day, 3-day, and 7-day expiry alerts.
+
+### Previous Implemented Features (2026-03-09)
 
 **Route Consolidation & Detail UX**
 - Merged duplicate report pages into single canonical report pages for Super Admin and Manager Parent.
