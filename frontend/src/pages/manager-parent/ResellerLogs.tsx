@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
@@ -35,6 +35,7 @@ export function ResellerLogsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(15)
@@ -85,18 +86,27 @@ export function ResellerLogsPage() {
 
         return row.seller ? (
           <div className="space-y-1">
-            <button
-              type="button"
-              className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
-              onClick={() => {
-                if (row.seller?.id) {
-                  setSellerId(row.seller.id)
-                  setPage(1)
-                }
-              }}
-            >
-              {row.seller.name ?? '-'}
-            </button>
+            {row.seller.id && (role === 'manager' || role === 'reseller') ? (
+              <Link
+                className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
+                to={routePaths.managerParent.teamMemberDetail(lang, row.seller.id)}
+              >
+                {row.seller.name ?? '-'}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
+                onClick={() => {
+                  if (row.seller?.id) {
+                    setSellerId(row.seller.id)
+                    setPage(1)
+                  }
+                }}
+              >
+                {row.seller.name ?? '-'}
+              </button>
+            )}
             {role ? <RoleBadge role={role} /> : null}
           </div>
         ) : '-'
@@ -264,6 +274,12 @@ export function ResellerLogsPage() {
         rowKey={(row) => row.id}
         isLoading={logsQuery.isLoading}
         emptyMessage={t('managerParent.pages.activity.noMatches')}
+        onRowClick={(row) => {
+          const role = normalizeRole(row.seller?.role)
+          if (row.seller?.id && (role === 'manager' || role === 'reseller')) {
+            navigate(routePaths.managerParent.teamMemberDetail(lang, row.seller.id))
+          }
+        }}
         pagination={{
           page: logsQuery.data?.meta.page ?? 1,
           lastPage: logsQuery.data?.meta.last_page ?? 1,

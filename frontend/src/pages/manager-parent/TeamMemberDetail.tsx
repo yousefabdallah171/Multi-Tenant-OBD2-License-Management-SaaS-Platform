@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +10,9 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { teamService } from '@/services/team.service'
+import type { TeamMemberDetail } from '@/types/manager-parent.types'
+
+type DetailStatus = 'active' | 'suspended' | 'cancelled' | 'inactive' | 'expired' | 'pending' | 'scheduled' | 'scheduled_failed' | 'removed' | 'online' | 'offline' | 'degraded' | 'unknown'
 
 export function TeamMemberDetailPage() {
   const { t } = useTranslation()
@@ -24,6 +28,55 @@ export function TeamMemberDetailPage() {
   })
 
   const member = detailQuery.data?.data
+  const historyColumns: Array<DataTableColumn<TeamMemberDetail['seller_log_history'][number]>> = [
+    {
+      key: 'created_at',
+      label: t('common.timestamp'),
+      render: (row) => row.created_at ? formatDate(row.created_at, locale) : '-',
+    },
+    {
+      key: 'action',
+      label: t('common.action'),
+      render: (row) => row.action,
+    },
+    {
+      key: 'customer',
+      label: t('common.customer'),
+      render: (row) => row.customer_id
+        ? (
+          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
+            {row.customer_name ?? '-'}
+          </Link>
+          )
+        : (row.customer_name ?? '-'),
+    },
+    {
+      key: 'program',
+      label: t('common.program'),
+      render: (row) => row.program_name ?? '-',
+    },
+    {
+      key: 'bios_id',
+      label: t('activate.biosId'),
+      render: (row) => row.bios_id
+        ? (
+          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`}>
+            {row.bios_id}
+          </Link>
+          )
+        : '-',
+    },
+    {
+      key: 'price',
+      label: t('common.price'),
+      render: (row) => row.price === null ? '-' : formatCurrency(row.price, 'USD', locale),
+    },
+    {
+      key: 'status',
+      label: t('common.status'),
+      render: (row) => row.license_status ? <StatusBadge status={row.license_status as DetailStatus} /> : '-',
+    },
+  ]
 
   return (
     <div className="space-y-6">
@@ -88,6 +141,20 @@ export function TeamMemberDetailPage() {
                   </div>
                 ))
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Reseller Activation History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                columns={historyColumns}
+                data={member.seller_log_history}
+                rowKey={(row) => row.id}
+                emptyMessage={t('managerParent.pages.activity.noMatches')}
+              />
             </CardContent>
           </Card>
         </>
