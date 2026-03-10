@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
@@ -81,6 +81,7 @@ export function CustomersPage() {
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const text = useMemo(() => (lang === 'ar'
@@ -307,11 +308,14 @@ export function CustomersPage() {
           requestFailed: t('reseller.pages.customers.validation.requestFailed'),
         },
       }), [lang, t])
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
-  const [programFilter, setProgramFilter] = useState<number | ''>('')
+  const initialStatus = searchParams.get('status')
+  const [page, setPage] = useState(Number(searchParams.get('page') || 1))
+  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 10))
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
+    STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
+  )
+  const [programFilter, setProgramFilter] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [editTarget, setEditTarget] = useState<ResellerCustomerSummary | null>(null)
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
@@ -758,6 +762,16 @@ export function CustomersPage() {
     ],
     [allVisibleSelected, lang, locale, selectedLicenseIds, selectableIds, someVisibleSelected, text, retryScheduledMutation.isPending, t],
   )
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (page > 1) next.set('page', String(page))
+    if (perPage !== 10) next.set('per_page', String(perPage))
+    if (search) next.set('search', search)
+    if (status !== 'all') next.set('status', status)
+    if (programFilter) next.set('program_id', String(programFilter))
+    setSearchParams(next, { replace: true })
+  }, [page, perPage, programFilter, search, setSearchParams, status])
   return (
     <div className="space-y-6">
       <PageHeader

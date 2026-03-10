@@ -70,6 +70,7 @@ export const routePaths = {
     customerCreate: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/customers/create`,
     customerDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/reseller/customers/${id}`,
     licenses: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/customers`,
+    activations: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/activations`,
     software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/software`,
     activateLicense: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/reseller/software/${id}/activate`,
     reports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/reports`,

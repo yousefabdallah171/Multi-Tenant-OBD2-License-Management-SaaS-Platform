@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, Banknote, Target } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -12,13 +13,15 @@ import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { resellerService } from '@/services/reseller.service'
 
 export function ReportsPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
+  const [range, setRange] = useState<DateRangeValue>(() => resolvePresetRange(365))
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly')
 
   const revenueQuery = useQuery({
@@ -40,6 +43,7 @@ export function ReportsPage() {
   const totalActivations = useMemo(() => (activationsQuery.data?.data ?? []).reduce((sum, item) => sum + item.count, 0), [activationsQuery.data?.data])
   const avgPrice = totalActivations > 0 ? totalRevenue / totalActivations : 0
   const hasRange = Boolean(range.from && range.to)
+  const activationDetailsUrl = `${routePaths.reseller.activations(lang)}?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`
 
   return (
     <div className="space-y-6">
@@ -69,9 +73,9 @@ export function ReportsPage() {
         <div className="rounded-3xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-[1px] dark:from-emerald-950/30 dark:to-emerald-900/20">
           <StatsCard title={t('reseller.pages.reports.totalRevenue')} value={formatCurrency(totalRevenue, 'USD', locale)} icon={Banknote} color="emerald" />
         </div>
-        <div className="rounded-3xl bg-gradient-to-br from-sky-50 to-sky-100/50 p-[1px] dark:from-sky-950/30 dark:to-sky-900/20">
+        <button type="button" className="rounded-3xl bg-gradient-to-br from-sky-50 to-sky-100/50 p-[1px] text-start dark:from-sky-950/30 dark:to-sky-900/20" onClick={() => navigate(activationDetailsUrl)}>
           <StatsCard title={t('reseller.pages.reports.totalActivations')} value={totalActivations} icon={Activity} color="sky" />
-        </div>
+        </button>
         <div className="rounded-3xl bg-gradient-to-br from-amber-50 to-amber-100/50 p-[1px] dark:from-amber-950/30 dark:to-amber-900/20">
           <StatsCard title={t('reseller.pages.reports.avgPrice')} value={formatCurrency(avgPrice, 'USD', locale)} icon={Target} color="amber" />
         </div>
@@ -121,4 +125,23 @@ export function ReportsPage() {
       ) : null}
     </div>
   )
+}
+
+function resolvePresetRange(days: number): DateRangeValue {
+  const today = new Date()
+  const from = new Date(today)
+  from.setDate(today.getDate() - (days - 1))
+
+  return {
+    from: formatDateInput(from),
+    to: formatDateInput(today),
+  }
+}
+
+function formatDateInput(value: Date) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }

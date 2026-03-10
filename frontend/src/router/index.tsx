@@ -82,6 +82,7 @@ const ResellerCreateCustomerPage = lazyNamed(() => import('@/pages/reseller/Crea
 const ResellerCustomerDetailPage = lazyNamed(() => import('@/pages/reseller/CustomerDetail'), 'CustomerDetailPage')
 const ResellerDashboardPage = lazyNamed(() => import('@/pages/reseller/Dashboard'), 'DashboardPage')
 const ActivateLicensePageForReseller = lazyNamed(() => import('@/pages/reseller/ActivateLicense'), 'ActivateLicensePageForReseller')
+const ResellerActivationsPage = lazyNamed(() => import('@/pages/reseller/Activations'), 'ActivationsPage')
 const ResellerProfilePage = lazyNamed(() => import('@/pages/reseller/Profile'), 'ProfilePage')
 const ResellerReportsPage = lazyNamed(() => import('@/pages/reseller/Reports'), 'ReportsPage')
 const ResellerSoftwarePage = lazyNamed(() => import('@/pages/reseller/Software'), 'SoftwarePage')
@@ -197,6 +198,7 @@ export function AppRouter() {
                   <Route path="customers/create" element={<ResellerCreateCustomerPage />} />
                   <Route path="customers/:id" element={<ResellerCustomerDetailPage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
+                  <Route path="activations" element={<ResellerActivationsPage />} />
                   <Route path="software" element={<ResellerSoftwarePage />} />
                   <Route path="software/:id/activate" element={<ActivateLicensePageForReseller />} />
                   <Route path="reports" element={<ResellerReportsPage />} />

@@ -353,6 +353,8 @@ export interface LicenseFilters {
   status?: string
   search?: string
   program_id?: number | ''
+  from?: string
+  to?: string
 }
 
 export interface ReportRangeFilters {

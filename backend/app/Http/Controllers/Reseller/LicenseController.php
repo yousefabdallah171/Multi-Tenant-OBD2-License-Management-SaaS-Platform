@@ -23,6 +23,8 @@ class LicenseController extends BaseResellerController
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'program_id' => ['nullable', 'integer', 'min:1'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
         ]);
 
         $query = $this->licenseQuery($request)
@@ -56,6 +58,14 @@ class LicenseController extends BaseResellerController
                     })
                     ->orWhereHas('program', fn ($programQuery) => $programQuery->where('name', 'like', '%'.$validated['search'].'%'));
             });
+        }
+
+        if (! empty($validated['from'])) {
+            $query->whereDate('activated_at', '>=', $validated['from']);
+        }
+
+        if (! empty($validated['to'])) {
+            $query->whereDate('activated_at', '<=', $validated['to']);
         }
 
         $licenses = $query->paginate((int) ($validated['per_page'] ?? 10));
