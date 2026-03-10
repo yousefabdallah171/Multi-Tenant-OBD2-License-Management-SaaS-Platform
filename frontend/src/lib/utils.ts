@@ -22,6 +22,78 @@ export function formatCurrency(value: number, currency = 'USD', locale = 'en-US'
   }).format(value)
 }
 
+export function formatActivityActionLabel(action: string) {
+  if (!action) {
+    return '-'
+  }
+
+  const normalized = action.toLowerCase()
+
+  if (normalized.includes('license.activated') || normalized.includes('license.activate')) {
+    return 'Activation'
+  }
+
+  if (normalized.includes('license.deactivated') || normalized.includes('license.deactivate')) {
+    return 'Deactivation'
+  }
+
+  if (normalized.includes('license.renewed') || normalized.includes('license.renew')) {
+    return 'Renewal'
+  }
+
+  if (normalized.includes('license.scheduled_activation_executed')) {
+    return 'Scheduled Activation Executed'
+  }
+
+  if (normalized.includes('license.scheduled_activation_failed')) {
+    return 'Scheduled Activation Failed'
+  }
+
+  if (normalized.includes('license.scheduled')) {
+    return 'Scheduled Activation'
+  }
+
+  if (normalized.includes('customer.deleted')) {
+    return 'Customer Deleted'
+  }
+
+  if (normalized.includes('team.create')) {
+    return 'Create Team Member'
+  }
+
+  if (normalized.includes('team.update')) {
+    return 'Update Team Member'
+  }
+
+  if (normalized.includes('team.delete')) {
+    return 'Delete Team Member'
+  }
+
+  if (normalized.includes('username.reset_password')) {
+    return 'Reset Password'
+  }
+
+  if (normalized.includes('username.change')) {
+    return 'Change Username'
+  }
+
+  if (normalized.includes('username.unlock')) {
+    return 'Unlock Username'
+  }
+
+  if (normalized.includes('auth.login')) {
+    return 'Login'
+  }
+
+  const fallback = action.includes('.') ? action.split('.').at(-1) ?? action : action
+
+  return fallback
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 export function hasFutureDate(value: string | Date | null | undefined) {
   if (!value) {
     return false

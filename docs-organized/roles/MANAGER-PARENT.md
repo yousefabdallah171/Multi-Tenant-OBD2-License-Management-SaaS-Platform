@@ -47,6 +47,7 @@ Additional workflow/detail routes:
 - Expiry forecast
 - Team performance chart
 - Quick actions
+- Dashboard stat cards deep-link into Team Management, Customers, active-customer view, and Reports
 
 ## Can do
 
@@ -58,6 +59,7 @@ Additional workflow/detail routes:
 - Activate licenses directly from manager-parent software/program flows
 - View tenant reports and export them
 - View tenant financial reports
+- Open tenant reports with the last-year date range preloaded by default
 - View reseller balances inside Financial Reports
 - View tenant activity logs
 - View seller activity in `reseller-logs` with filters by seller/action/date

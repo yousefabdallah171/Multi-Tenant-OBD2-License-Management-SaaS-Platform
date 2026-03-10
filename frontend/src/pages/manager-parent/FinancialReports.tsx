@@ -20,7 +20,7 @@ export function FinancialReportsPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
+  const [range, setRange] = useState<DateRangeValue>(() => resolvePresetRange(365))
 
   const reportQuery = useQuery({
     queryKey: ['manager-parent', 'financial-reports', range.from, range.to],
@@ -130,4 +130,23 @@ export function FinancialReportsPage() {
       </Card>
     </div>
   )
+}
+
+function resolvePresetRange(days: number): DateRangeValue {
+  const today = new Date()
+  const from = new Date(today)
+  from.setDate(today.getDate() - (days - 1))
+
+  return {
+    from: formatDateInput(from),
+    to: formatDateInput(today),
+  }
+}
+
+function formatDateInput(value: Date) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }

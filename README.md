@@ -107,6 +107,12 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 **Customer Summary Updates**
 - Added `Expired` summary cards to Manager Parent, Manager, and Reseller customer pages alongside the existing 1-day, 3-day, and 7-day expiry alerts.
 
+**Cross-Role UX Consistency**
+- Manager Parent, Manager, and Super Admin dashboard stat cards now route into the relevant canonical pages instead of acting as static tiles.
+- Manager Parent and Manager customer pages now keep filter state in the URL, so dashboard deep-links like `?status=active` open the correct tab immediately.
+- Manager Parent, Manager, and Super Admin reports now default to the last-year date range so charts and tables render immediately on first load.
+- Manager and Super Admin dashboard activity feeds now format raw event keys into readable action labels.
+
 ### Previous Implemented Features (2026-03-09)
 
 **Route Consolidation & Detail UX**

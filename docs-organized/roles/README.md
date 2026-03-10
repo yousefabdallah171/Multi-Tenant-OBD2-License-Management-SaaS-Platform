@@ -25,4 +25,7 @@ Recent alignment updates:
 - super-admin admin-management now routes consistently into canonical user detail pages
 - super-admin API Status was fixed to avoid api-log memory pressure during page load
 - reseller dashboard/runtime polish fixed chart warnings and raw activity/activation labels
+- manager-parent, manager, and super-admin dashboard stat cards now deep-link into the matching canonical pages
+- manager-parent, manager, and super-admin reports now open with the last-year range preloaded
+- manager-parent and manager customer pages now sync filters into the URL for dashboard-driven deep links
 

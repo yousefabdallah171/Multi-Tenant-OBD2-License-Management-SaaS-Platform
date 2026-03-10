@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
@@ -77,12 +77,16 @@ export function CustomersPage() {
   const queryClient = useQueryClient()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const navigate = useNavigate()
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
-  const [resellerId, setResellerId] = useState<number | ''>('')
-  const [programId, setProgramId] = useState<number | ''>('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialStatus = searchParams.get('status')
+  const [page, setPage] = useState(Number(searchParams.get('page') || 1))
+  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 10))
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
+    STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
+  )
+  const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
+  const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
@@ -423,6 +427,17 @@ export function CustomersPage() {
       },
     },
   ], [allVisibleSelected, lang, locale, selectableIds, selectedLicenseIds, someVisibleSelected, t, retryScheduledMutation.isPending])
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (page > 1) next.set('page', String(page))
+    if (perPage !== 10) next.set('per_page', String(perPage))
+    if (search) next.set('search', search)
+    if (status !== 'all') next.set('status', status)
+    if (resellerId) next.set('reseller_id', String(resellerId))
+    if (programId) next.set('program_id', String(programId))
+    setSearchParams(next, { replace: true })
+  }, [page, perPage, programId, resellerId, search, setSearchParams, status])
 
   return (
     <div className="space-y-6">

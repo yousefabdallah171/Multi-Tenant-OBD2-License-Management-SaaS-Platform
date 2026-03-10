@@ -33,6 +33,7 @@ Additional workflow/detail routes:
 - Tenant comparison
 - License activity timeline
 - Recent activity feed
+- Dashboard stat cards deep-link into Tenants, Users, and Reports
 
 ## Can do
 
@@ -49,6 +50,7 @@ Additional workflow/detail routes:
 - Open canonical BIOS detail pages from Super Admin BIOS-linked screens
 - Unlock usernames, change usernames, and reset passwords from consolidated management pages
 - View platform reports and financial reports
+- Open Super Admin reports with the last-year date range preloaded by default
 - View reseller balances inside Financial Reports
 - View logs and API health
 - Use the fixed API Status page without the prior api-log memory/sort failure

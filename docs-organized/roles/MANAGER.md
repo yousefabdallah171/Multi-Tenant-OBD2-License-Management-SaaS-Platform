@@ -38,6 +38,7 @@ Additional workflow/detail routes:
 - Team activations trend
 - Team revenue trend
 - Recent team activity
+- Dashboard stat cards deep-link into Team, Customers, active-customer view, and Reports
 
 ## Can do
 
@@ -55,6 +56,7 @@ Additional workflow/detail routes:
 - Create, edit, and activate team-scoped software/program records
 - Activate licenses directly as a manager and have those sales attributed correctly in reports/logs
 - View tenant-wide reports in the same financial layout used by Manager Parent and export them
+- Open Manager reports with the last-year date range preloaded by default
 - View team activity
 - View seller activity in `reseller-logs` with filters by seller/action/date
 - Open seller rows from `reseller-logs` into the canonical manager detail page

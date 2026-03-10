@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Banknote, Building2, Globe2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { AreaChartWidget } from '@/components/charts/AreaChartWidget'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
@@ -12,12 +13,13 @@ import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate } from '@/lib/utils'
 import { reportService } from '@/services/report.service'
 
 export function DashboardPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
 
   const statsQuery = useQuery({
@@ -67,19 +69,29 @@ export function DashboardPage() {
         ) : (
           <>
             <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.totalTenants')} value={stats?.total_tenants ?? 0} icon={Building2} color="sky" />
+              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/tenants`)}>
+                <StatsCard title={t('superAdmin.cards.totalTenants')} value={stats?.total_tenants ?? 0} icon={Building2} color="sky" />
+              </button>
             </StaggerItem>
             <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.totalRevenue')} value={formatCurrency(stats?.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
+              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/reports`)}>
+                <StatsCard title={t('superAdmin.cards.totalRevenue')} value={formatCurrency(stats?.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
+              </button>
             </StaggerItem>
             <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.activeLicenses')} value={stats?.active_licenses ?? 0} icon={Globe2} color="amber" />
+              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/reports`)}>
+                <StatsCard title={t('superAdmin.cards.activeLicenses')} value={stats?.active_licenses ?? 0} icon={Globe2} color="amber" />
+              </button>
             </StaggerItem>
             <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.totalUsers')} value={stats?.total_users ?? 0} icon={Users} color="rose" />
+              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/users`)}>
+                <StatsCard title={t('superAdmin.cards.totalUsers')} value={stats?.total_users ?? 0} icon={Users} color="rose" />
+              </button>
             </StaggerItem>
             <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.countryCoverage')} value={countryData.length} icon={Globe2} color="sky" />
+              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/reports`)}>
+                <StatsCard title={t('superAdmin.cards.countryCoverage')} value={countryData.length} icon={Globe2} color="sky" />
+              </button>
             </StaggerItem>
           </>
         )}
@@ -137,7 +149,7 @@ export function DashboardPage() {
             <div key={item.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium text-slate-950 dark:text-white">{item.action}</p>
+                  <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(item.action)}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
                 </div>
                 <span className="text-xs text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</span>

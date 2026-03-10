@@ -64,18 +64,29 @@ export function DashboardPage() {
             <Button type="button" variant="secondary" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
               {t('managerParent.pages.dashboard.actions.teamManagement')}
             </Button>
-            <Button type="button" onClick={() => navigate(routePaths.managerParent.softwareManagement(lang))}>
-              {t('managerParent.pages.dashboard.actions.managePrograms')}
+            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
+              {t('managerParent.pages.dashboard.actions.reviewCustomers')}
+            </Button>
+            <Button type="button" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
+              {t('managerParent.pages.dashboard.actions.openReports')}
             </Button>
           </>
         }
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatsCard title={t('managerParent.pages.dashboard.teamMembers')} value={stats?.team_members ?? 0} icon={Users} color="sky" />
-        <StatsCard title={t('managerParent.pages.dashboard.customers')} value={stats?.total_customers ?? 0} icon={UserSquare2} color="emerald" />
-        <StatsCard title={t('managerParent.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        <StatsCard title={t('managerParent.pages.dashboard.monthlyRevenue')} value={formatCurrency(stats?.monthly_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+        <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
+          <StatsCard title={t('managerParent.pages.dashboard.teamMembers')} value={stats?.team_members ?? 0} icon={Users} color="sky" />
+        </button>
+        <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
+          <StatsCard title={t('managerParent.pages.dashboard.customers')} value={stats?.total_customers ?? 0} icon={UserSquare2} color="emerald" />
+        </button>
+        <button type="button" className="text-start" onClick={() => navigate(`${routePaths.managerParent.customers(lang)}?status=active`)}>
+          <StatsCard title={t('managerParent.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+        </button>
+        <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
+          <StatsCard title={t('managerParent.pages.dashboard.monthlyRevenue')} value={formatCurrency(stats?.monthly_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+        </button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
