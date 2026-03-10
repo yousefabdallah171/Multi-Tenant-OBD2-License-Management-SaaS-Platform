@@ -148,7 +148,7 @@ export function DashboardPage() {
             <CardTitle className="text-lg">{t('reseller.pages.dashboard.quickActions')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button type="button" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.customers(lang))}>
+            <Button type="button" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.customerCreate(lang))}>
               {t('reseller.pages.dashboard.quickActionsList.activateNewCustomer')}
               <ActionIcon className="h-4 w-4" />
             </Button>
