@@ -11,7 +11,7 @@ interface PagedResponse<T> {
   }
 }
 
-function createBiosDetailsService(prefix: '' | '/super-admin') {
+function createBiosDetailsService(prefix: '' | '/super-admin' | '/manager') {
   return {
     async searchBiosIds(query: string) {
       const { data } = await api.get<{ data: string[] }>(`${prefix}/bios/search`, { params: { query } })
@@ -45,4 +45,5 @@ function createBiosDetailsService(prefix: '' | '/super-admin') {
 }
 
 export const managerParentBiosDetailsService = createBiosDetailsService('')
+export const managerBiosDetailsService = createBiosDetailsService('/manager')
 export const superAdminBiosDetailsService = createBiosDetailsService('/super-admin')

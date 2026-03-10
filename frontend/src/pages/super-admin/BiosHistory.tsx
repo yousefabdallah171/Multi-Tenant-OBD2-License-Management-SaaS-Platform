@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { biosService } from '@/services/bios.service'
 import { tenantService } from '@/services/tenant.service'
 import type { BiosHistoryEvent } from '@/types/super-admin.types'
@@ -48,7 +49,7 @@ export function BiosHistoryPage() {
   })
 
   const columns: Array<DataTableColumn<BiosHistoryEvent>> = [
-    { key: 'bios', label: t('superAdmin.pages.biosHistory.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
+    { key: 'bios', label: t('superAdmin.pages.biosHistory.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, row.bios_id)}><code>{row.bios_id}</code></Link> },
     { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant ?? '', render: (row) => row.tenant ?? '-' },
     { key: 'customer', label: t('common.customer'), sortable: true, sortValue: (row) => row.customer ?? '', render: (row) => row.customer ?? '-' },
     { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => row.action },

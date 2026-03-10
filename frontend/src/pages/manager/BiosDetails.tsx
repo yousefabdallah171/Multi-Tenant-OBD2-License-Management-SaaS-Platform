@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
-import { superAdminBiosDetailsService } from '@/services/bios-details.service'
+import { managerBiosDetailsService } from '@/services/bios-details.service'
 
 export function BiosDetailsPage() {
   const { t } = useTranslation()
@@ -21,45 +22,49 @@ export function BiosDetailsPage() {
   const biosId = params.biosId ?? searchParams.get('bios') ?? ''
 
   const searchQuery = useQuery({
-    queryKey: ['super-admin', 'bios-details', 'search', search],
-    queryFn: () => superAdminBiosDetailsService.searchBiosIds(search),
+    queryKey: ['manager', 'bios-details', 'search', search],
+    queryFn: () => managerBiosDetailsService.searchBiosIds(search),
     enabled: search.trim().length >= 2,
   })
+
   const recentQuery = useQuery({
-    queryKey: ['super-admin', 'bios-details', 'recent'],
-    queryFn: () => superAdminBiosDetailsService.getRecentBiosIds(20),
+    queryKey: ['manager', 'bios-details', 'recent'],
+    queryFn: () => managerBiosDetailsService.getRecentBiosIds(20),
   })
+
   const overviewQuery = useQuery({
-    queryKey: ['super-admin', 'bios-details', 'overview', biosId],
-    queryFn: () => superAdminBiosDetailsService.getBiosOverview(biosId),
+    queryKey: ['manager', 'bios-details', 'overview', biosId],
+    queryFn: () => managerBiosDetailsService.getBiosOverview(biosId),
     enabled: biosId !== '',
   })
+
   const licensesQuery = useQuery({
-    queryKey: ['super-admin', 'bios-details', 'licenses', biosId],
-    queryFn: () => superAdminBiosDetailsService.getBiosLicenses(biosId),
+    queryKey: ['manager', 'bios-details', 'licenses', biosId],
+    queryFn: () => managerBiosDetailsService.getBiosLicenses(biosId),
     enabled: biosId !== '',
   })
+
   const resellersQuery = useQuery({
-    queryKey: ['super-admin', 'bios-details', 'resellers', biosId],
-    queryFn: () => superAdminBiosDetailsService.getResellerBreakdown(biosId),
+    queryKey: ['manager', 'bios-details', 'resellers', biosId],
+    queryFn: () => managerBiosDetailsService.getResellerBreakdown(biosId),
     enabled: biosId !== '',
   })
+
   const ipsQuery = useQuery({
-    queryKey: ['super-admin', 'bios-details', 'ips', biosId],
-    queryFn: () => superAdminBiosDetailsService.getIpAnalytics(biosId),
+    queryKey: ['manager', 'bios-details', 'ips', biosId],
+    queryFn: () => managerBiosDetailsService.getIpAnalytics(biosId),
     enabled: biosId !== '',
   })
+
   const activityQuery = useQuery({
-    queryKey: ['super-admin', 'bios-details', 'activity', biosId],
-    queryFn: () => superAdminBiosDetailsService.getBiosActivity(biosId),
+    queryKey: ['manager', 'bios-details', 'activity', biosId],
+    queryFn: () => managerBiosDetailsService.getBiosActivity(biosId),
     enabled: biosId !== '',
   })
 
   const overviewRows = useMemo(() => {
     const overview = overviewQuery.data
-    if (!overview) {
-      return []
-    }
+    if (!overview) return []
     return [
       [t('biosDetails.originalBios'), overview.original_bios_id || '-'],
       [t('biosDetails.username'), overview.username || '-'],
@@ -75,10 +80,7 @@ export function BiosDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-3xl font-semibold">{t('biosDetails.title')}</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">{biosId || t('biosDetails.search')}</p>
-      </div>
+      <PageHeader title={t('biosDetails.title')} description={biosId || t('biosDetails.search')} />
 
       <Card>
         <CardContent className="space-y-3 p-4">
@@ -89,7 +91,7 @@ export function BiosDetailsPage() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => navigate(routePaths.superAdmin.biosDetail(lang, item))}
+                  onClick={() => navigate(routePaths.manager.biosDetail(lang, item))}
                   className="rounded-xl border border-slate-200 px-3 py-2 text-start text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
                 >
                   {item}
@@ -125,20 +127,29 @@ export function BiosDetailsPage() {
                     <p className="font-medium">{value}</p>
                   </div>
                 ))}
+                {overviewQuery.data?.customer ? (
+                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.customer')}</p>
+                    <Link className="font-medium text-sky-600" to={routePaths.manager.customerDetail(lang, overviewQuery.data.customer.id)}>
+                      {overviewQuery.data.customer.name}
+                    </Link>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="licenses">
-            <Card><CardContent className="space-y-2 p-4">{(licensesQuery.data?.data ?? []).map((license) => <div key={license.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">{license.program?.name ?? '-'}</div>)}</CardContent></Card>
+            <Card><CardContent className="space-y-2 p-4">{(licensesQuery.data?.data ?? []).map((license) => <div key={license.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{license.program?.name ?? '-'}</p><p className="text-sm text-slate-500 dark:text-slate-400">{license.status} | {license.price}</p></div>)}</CardContent></Card>
           </TabsContent>
           <TabsContent value="resellers">
-            <Card><CardContent className="space-y-2 p-4">{(resellersQuery.data ?? []).map((reseller) => <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">{reseller.name ?? '-'}</div>)}</CardContent></Card>
+            <Card><CardContent className="space-y-2 p-4">{(resellersQuery.data ?? []).map((reseller) => <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{reseller.name ?? '-'}</p><p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p></div>)}</CardContent></Card>
           </TabsContent>
           <TabsContent value="ips">
-            <Card><CardContent className="space-y-2 p-4">{(ipsQuery.data ?? []).map((ip, index) => <div key={`${ip.ip_address}-${index}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">{ip.ip_address ?? '-'}</div>)}</CardContent></Card>
+            <Card><CardContent className="space-y-2 p-4">{(ipsQuery.data ?? []).map((ip, index) => <div key={`${ip.ip_address}-${index}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{ip.ip_address ?? '-'}</p><p className="text-xs text-slate-500 dark:text-slate-400">{ip.created_at ? formatDate(ip.created_at, locale) : '-'}</p></div>)}</CardContent></Card>
           </TabsContent>
           <TabsContent value="activity">
-            <Card><CardContent className="space-y-2 p-4">{(activityQuery.data ?? []).map((item) => <div key={`${item.id}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">{item.action}</div>)}</CardContent></Card>
+            <Card><CardContent className="space-y-2 p-4">{(activityQuery.data ?? []).map((item) => <div key={`${item.id}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{item.action}</p><p className="text-sm text-slate-500 dark:text-slate-400">{item.description ?? '-'}</p></div>)}</CardContent></Card>
           </TabsContent>
           <TabsContent value="blacklist">
             <Card><CardContent className="p-4 text-sm text-slate-600 dark:text-slate-300">{overviewQuery.data?.blacklist?.is_blacklisted ? (overviewQuery.data.blacklist.reason || t('activate.biosBlacklisted')) : t('biosDetails.notBlacklisted')}</CardContent></Card>

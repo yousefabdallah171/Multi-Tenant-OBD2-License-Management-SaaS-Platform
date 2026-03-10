@@ -63,7 +63,7 @@ export function UserDetailPage() {
                     <p className="text-sm text-slate-600 dark:text-slate-300">{license.program ?? t('manager.pages.customers.unknownProgram')}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {t('activate.biosId')}{' '}
-                      <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.superAdmin.biosDetails(lang)}?bios=${encodeURIComponent(license.bios_id)}`}>
+                      <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, license.bios_id)}>
                         {license.bios_id}
                       </Link>
                     </p>

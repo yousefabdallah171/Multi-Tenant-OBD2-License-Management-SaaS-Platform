@@ -153,7 +153,7 @@ export function ResellerLogsPage() {
         }
 
         return (
-          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(biosId)}`}>
+          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, biosId)}>
             {biosId}
           </Link>
         )

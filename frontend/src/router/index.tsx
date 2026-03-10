@@ -26,6 +26,7 @@ const CustomerSoftwarePage = lazyNamed(() => import('@/pages/customer/Software')
 
 const ManagerActivityPage = lazyNamed(() => import('@/pages/manager/Activity'), 'ActivityPage')
 const ActivateLicensePageForManager = lazyNamed(() => import('@/pages/manager/ActivateLicense'), 'ActivateLicensePageForManager')
+const ManagerBiosDetailsPage = lazyNamed(() => import('@/pages/manager/BiosDetails'), 'BiosDetailsPage')
 const ManagerCustomersPage = lazyNamed(() => import('@/pages/manager/Customers'), 'CustomersPage')
 const ManagerCreateCustomerPage = lazyNamed(() => import('@/pages/manager/CreateCustomer'), 'CreateCustomerPageForManager')
 const ManagerCustomerDetailPage = lazyNamed(() => import('@/pages/manager/CustomerDetail'), 'CustomerDetailPage')
@@ -118,6 +119,7 @@ export function AppRouter() {
                   <Route path="bios-blacklist" element={<BiosBlacklistPage />} />
                   <Route path="bios-history" element={<Navigate to="../bios-conflicts" replace />} />
                   <Route path="bios-details" element={<SuperAdminBiosDetailsPage />} />
+                  <Route path="bios-details/:biosId" element={<SuperAdminBiosDetailsPage />} />
                   <Route path="bios-conflicts" element={<SuperAdminBiosConflictsPage />} />
                   <Route path="username-management" element={<Navigate to="../admin-management" replace />} />
                   <Route path="security-locks" element={<SecurityLocksPage />} />
@@ -143,6 +145,7 @@ export function AppRouter() {
                   <Route path="bios-blacklist" element={<ManagerParentBiosBlacklistPage />} />
                   <Route path="bios-history" element={<Navigate to="../bios-conflicts" replace />} />
                   <Route path="bios-details" element={<ManagerParentBiosDetailsPage />} />
+                  <Route path="bios-details/:biosId" element={<ManagerParentBiosDetailsPage />} />
                   <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
                   <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />
                   <Route path="logs" element={<Navigate to="../activity" replace />} />
@@ -176,6 +179,8 @@ export function AppRouter() {
                   <Route path="software-management" element={<ManagerSoftwareManagementPage />} />
                   <Route path="software-management/create" element={<ManagerProgramFormPage />} />
                   <Route path="software-management/:id/edit" element={<ManagerProgramFormPage />} />
+                  <Route path="bios-details" element={<ManagerBiosDetailsPage />} />
+                  <Route path="bios-details/:biosId" element={<ManagerBiosDetailsPage />} />
                   <Route path="reports" element={<ManagerReportsPage />} />
                   <Route path="activity" element={<ManagerActivityPage />} />
                   <Route path="reseller-logs" element={<ManagerResellerLogsPage />} />

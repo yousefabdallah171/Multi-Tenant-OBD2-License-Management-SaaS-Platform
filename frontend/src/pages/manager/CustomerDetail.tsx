@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -59,7 +59,7 @@ export function CustomerDetailPage() {
                 <div key={license.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
                   <div className="grid gap-2 md:grid-cols-4">
                     <Info label={t('common.program')} value={license.program ?? '-'} />
-                    <Info label={t('manager.pages.customers.biosId')} value={`${license.bios_id}${license.external_username ? `\n@${license.external_username}` : ''}`} />
+                    <Info label={t('manager.pages.customers.biosId')} value={<><Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link>{license.external_username ? `\n@${license.external_username}` : ''}</>} />
                     <Info label={t('common.reseller')} value={license.reseller ?? '-'} />
                     <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
                   </div>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,7 @@ export function BiosConflictsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(15)
@@ -72,7 +73,9 @@ export function BiosConflictsPage() {
       sortValue: (row) => row.bios_id,
       render: (row) => (
         <div>
-          <code>{row.bios_id}</code>
+          <button type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.managerParent.biosDetail(lang, row.bios_id))}>
+            <code>{row.bios_id}</code>
+          </button>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             @{row.affected_customers[0]?.username ?? '-'}
           </p>

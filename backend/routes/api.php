@@ -11,6 +11,7 @@ use App\Http\Controllers\BiosConflictController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\Manager\ActivityController as ManagerActivityController;
+use App\Http\Controllers\Manager\BiosDetailsController as ManagerBiosDetailsController;
 use App\Http\Controllers\Manager\CustomerController as ManagerCustomerController;
 use App\Http\Controllers\Manager\DashboardController as ManagerDashboardController;
 use App\Http\Controllers\Manager\LicenseController as ManagerLicenseController;
@@ -219,6 +220,13 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::put('/software/{program}', [ManagerSoftwareController::class, 'update']);
         Route::delete('/software/{program}', [ManagerSoftwareController::class, 'destroy']);
         Route::post('/software/{program}/activate', [ManagerSoftwareController::class, 'activate']);
+        Route::get('/bios/search', [ManagerBiosDetailsController::class, 'search']);
+        Route::get('/bios/recent', [ManagerBiosDetailsController::class, 'recent']);
+        Route::get('/bios/{biosId}', [ManagerBiosDetailsController::class, 'show']);
+        Route::get('/bios/{biosId}/licenses', [ManagerBiosDetailsController::class, 'licenses']);
+        Route::get('/bios/{biosId}/resellers', [ManagerBiosDetailsController::class, 'resellers']);
+        Route::get('/bios/{biosId}/ips', [ManagerBiosDetailsController::class, 'ips']);
+        Route::get('/bios/{biosId}/activity', [ManagerBiosDetailsController::class, 'activity']);
 
         Route::prefix('reports')->group(function (): void {
             Route::get('/financial', [ManagerReportController::class, 'index']);
@@ -329,6 +337,7 @@ Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_se
         Route::get('/bios-history', [BiosHistoryController::class, 'index']);
         Route::get('/bios-history/{biosId}', [BiosHistoryController::class, 'show']);
         Route::get('/bios/search', [SuperAdminBiosDetailsController::class, 'search']);
+        Route::get('/bios/recent', [SuperAdminBiosDetailsController::class, 'recent']);
         Route::get('/bios/{biosId}', [SuperAdminBiosDetailsController::class, 'show']);
         Route::get('/bios/{biosId}/licenses', [SuperAdminBiosDetailsController::class, 'licenses']);
         Route::get('/bios/{biosId}/resellers', [SuperAdminBiosDetailsController::class, 'resellers']);

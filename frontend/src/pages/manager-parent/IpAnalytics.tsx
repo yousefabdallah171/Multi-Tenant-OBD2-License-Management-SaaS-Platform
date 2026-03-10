@@ -112,7 +112,7 @@ export function IpAnalyticsPage() {
       sortable: true,
       sortValue: (row) => row.bios_id ?? '',
       render: (row) => row.bios_id ? (
-        <Link className="text-sky-600 hover:underline" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`}>
+        <Link className="text-sky-600 hover:underline" to={routePaths.managerParent.biosDetail(lang, row.bios_id)}>
           <code>{row.bios_id}</code>
         </Link>
       ) : <code>-</code>,

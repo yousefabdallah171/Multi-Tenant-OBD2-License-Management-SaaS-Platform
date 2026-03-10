@@ -72,7 +72,7 @@ export function CustomerDetailPage() {
                         <Info
                           label={t('managerParent.pages.customers.biosId')}
                           value={(
-                            <Link className="text-sky-600 hover:underline" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(license.bios_id)}`}>
+                            <Link className="text-sky-600 hover:underline" to={routePaths.managerParent.biosDetail(lang, license.bios_id)}>
                               {license.bios_id}
                             </Link>
                           )}
@@ -90,7 +90,7 @@ export function CustomerDetailPage() {
               <Card>
                 <CardContent className="space-y-2 p-4">
                   {(customer.licenses ?? []).map((license) => (
-                    <Link key={`bios-${license.id}`} className="block rounded-xl border border-slate-200 p-3 text-sky-600 hover:underline dark:border-slate-700" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(license.bios_id)}`}>
+                    <Link key={`bios-${license.id}`} className="block rounded-xl border border-slate-200 p-3 text-sky-600 hover:underline dark:border-slate-700" to={routePaths.managerParent.biosDetail(lang, license.bios_id)}>
                       {license.bios_id}
                     </Link>
                   ))}

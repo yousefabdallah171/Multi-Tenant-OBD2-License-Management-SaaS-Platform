@@ -84,7 +84,7 @@ export function BiosBlacklistPage() {
 
   const columns = useMemo<Array<DataTableColumn<BiosBlacklistEntry>>>(
     () => [
-      { key: 'bios', label: t('superAdmin.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
+      { key: 'bios', label: t('superAdmin.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <button type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.superAdmin.biosDetail(lang, row.bios_id))}><code>{row.bios_id}</code></button> },
       { key: 'addedBy', label: t('common.addedBy'), sortable: true, sortValue: (row) => row.added_by ?? '', render: (row) => row.added_by ?? '-' },
       { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.reason, render: (row) => row.reason || '-' },
       { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
@@ -101,7 +101,7 @@ export function BiosBlacklistPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => navigate(`${routePaths.superAdmin.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`)}>
+              <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.biosDetail(lang, row.bios_id))}>
                 {t('superAdmin.pages.biosBlacklist.viewHistory')}
               </DropdownMenuItem>
               <DropdownMenuItem disabled={row.status === 'removed'} onSelect={() => removeMutation.mutate(row.id)}>

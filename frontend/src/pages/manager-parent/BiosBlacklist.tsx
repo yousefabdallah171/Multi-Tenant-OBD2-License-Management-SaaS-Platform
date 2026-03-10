@@ -68,7 +68,7 @@ export function BiosBlacklistPage() {
 
   const columns = useMemo<Array<DataTableColumn<BiosBlacklistEntry>>>(
     () => [
-      { key: 'bios', label: t('managerParent.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
+      { key: 'bios', label: t('managerParent.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <button type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.managerParent.biosDetail(lang, row.bios_id))}><code>{row.bios_id}</code></button> },
       { key: 'addedBy', label: t('common.addedBy'), sortable: true, sortValue: (row) => row.added_by ?? '', render: (row) => row.added_by ?? '-' },
       { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.reason, render: (row) => row.reason || '-' },
       { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
@@ -78,7 +78,7 @@ export function BiosBlacklistPage() {
         label: t('common.actions'),
         render: (row) => (
           <div className="flex gap-2">
-            <Button type="button" size="sm" variant="ghost" onClick={() => navigate(`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`)}>
+            <Button type="button" size="sm" variant="ghost" onClick={() => navigate(routePaths.managerParent.biosDetail(lang, row.bios_id))}>
               {t('managerParent.pages.biosBlacklist.history')}
             </Button>
             <Button type="button" size="sm" variant="ghost" disabled={row.status === 'removed'} onClick={() => removeMutation.mutate(row.id)}>

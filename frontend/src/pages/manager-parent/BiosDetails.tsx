@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -16,9 +16,10 @@ export function BiosDetailsPage() {
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const navigate = useNavigate()
+  const params = useParams()
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
-  const biosId = searchParams.get('bios') ?? ''
+  const biosId = params.biosId ?? searchParams.get('bios') ?? ''
 
   const searchQuery = useQuery({
     queryKey: ['bios-details', 'search', search],
@@ -90,7 +91,7 @@ export function BiosDetailsPage() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => navigate(`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(item)}`)}
+                  onClick={() => navigate(routePaths.managerParent.biosDetail(lang, item))}
                   className="rounded-xl border border-slate-200 px-3 py-2 text-start text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
                 >
                   {item}

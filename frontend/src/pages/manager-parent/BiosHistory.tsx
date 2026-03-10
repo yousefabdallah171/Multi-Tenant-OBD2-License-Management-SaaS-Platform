@@ -65,7 +65,9 @@ export function BiosHistoryPage() {
         sortValue: (row) => row.bios_id,
         render: (row) => (
           <div>
-            <code>{row.bios_id}</code>
+            <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, row.bios_id)}>
+              <code>{row.bios_id}</code>
+            </Link>
             <p className="text-xs text-slate-500 dark:text-slate-400">@{row.external_username ?? '-'}</p>
           </div>
         ),

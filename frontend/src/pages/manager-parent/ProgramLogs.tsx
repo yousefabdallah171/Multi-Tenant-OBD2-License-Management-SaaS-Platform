@@ -267,7 +267,7 @@ export function ProgramLogsPage() {
       sortable: true,
       sortValue: (row) => row.bios_id,
       render: (row) => row.bios_id ? (
-        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`}>
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, row.bios_id)}>
           {row.bios_id}
         </Link>
       ) : '-',

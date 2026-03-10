@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -17,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import type { ManagerTeamReseller } from '@/types/manager-reseller.types'
 
@@ -453,7 +455,7 @@ export function TeamPage() {
                             <p className="font-medium text-slate-950 dark:text-white">{license.customer?.name ?? t('manager.pages.team.unknownCustomer')}</p>
                             <p className="text-sm text-slate-500 dark:text-slate-400">{license.customer?.email ?? t('manager.pages.team.noEmail')}</p>
                             <p className="text-sm text-slate-600 dark:text-slate-300">{license.program ?? t('manager.pages.customers.unknownProgram')}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{t('manager.pages.team.biosId')} {license.bios_id}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{t('manager.pages.team.biosId')} <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link></p>
                           </div>
                           <div className="text-right">
                             <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />

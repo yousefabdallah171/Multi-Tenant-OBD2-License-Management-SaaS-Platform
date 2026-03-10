@@ -137,11 +137,11 @@ export function ResellerLogsPage() {
           return '-'
         }
 
-        return row.customer_id ? (
-          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.customer_id)}>
+        return (
+          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.biosDetail(lang, biosId)}>
             {biosId}
           </Link>
-        ) : biosId
+        )
       },
     },
     {

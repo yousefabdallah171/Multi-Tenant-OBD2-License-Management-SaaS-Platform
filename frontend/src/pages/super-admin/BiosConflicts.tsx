@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { biosService, type BiosConflictParams } from '@/services/bios.service'
 import type { BiosConflictItem } from '@/types/super-admin.types'
 
@@ -25,6 +27,7 @@ export function BiosConflictsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(15)
@@ -68,7 +71,7 @@ export function BiosConflictsPage() {
       label: t('superAdmin.pages.biosConflicts.columns.biosId'),
       sortable: true,
       sortValue: (row) => row.bios_id,
-      render: (row) => <code>{row.bios_id}</code>,
+      render: (row) => <button type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.superAdmin.biosDetail(lang, row.bios_id))}><code>{row.bios_id}</code></button>,
     },
     {
       key: 'tenant',

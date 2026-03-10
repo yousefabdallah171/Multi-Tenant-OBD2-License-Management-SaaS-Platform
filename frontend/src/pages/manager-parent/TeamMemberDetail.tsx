@@ -60,7 +60,7 @@ export function TeamMemberDetailPage() {
       label: t('activate.biosId'),
       render: (row) => row.bios_id
         ? (
-          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`}>
+          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, row.bios_id)}>
             {row.bios_id}
           </Link>
           )
@@ -115,7 +115,7 @@ export function TeamMemberDetailPage() {
                     <p className="text-sm text-slate-600 dark:text-slate-300">{license.program ?? '-'}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {t('activate.biosId')}{' '}
-                      <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(license.bios_id)}`}>
+                      <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, license.bios_id)}>
                         {license.bios_id}
                       </Link>
                     </p>
