@@ -153,6 +153,15 @@ class CustomerController extends BaseResellerController
             ? strtolower(trim($validated['email']))
             : sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $this->currentTenantId($request), $username);
 
+        if (! empty($validated['bios_id']) && ! empty($validated['program_id'])) {
+            $this->assertPendingLicenseCanBeCreated(
+                $request,
+                (string) $validated['bios_id'],
+                (int) $validated['program_id'],
+                $this->currentReseller($request),
+            );
+        }
+
         $customer = User::query()
             ->where(function ($query) use ($email, $username): void {
                 $query->where('email', $email)->orWhere('username', $username);
@@ -406,6 +415,28 @@ class CustomerController extends BaseResellerController
 
     private function createPendingLicense(Request $request, User $customer, string $biosId, int $programId, User $seller): void
     {
+        $program = $this->assertPendingLicenseCanBeCreated($request, $biosId, $programId, $seller);
+        $normalizedBiosId = trim($biosId);
+
+        License::query()->create([
+            'tenant_id' => $this->currentTenantId($request),
+            'customer_id' => $customer->id,
+            'reseller_id' => $seller->id,
+            'program_id' => $program->id,
+            'bios_id' => $normalizedBiosId,
+            'external_username' => $customer->username,
+            'external_activation_response' => 'Pending activation.',
+            'duration_days' => 0,
+            'price' => 0,
+            'activated_at' => now(),
+            'expires_at' => now(),
+            'status' => 'pending',
+            'is_scheduled' => false,
+        ]);
+    }
+
+    private function assertPendingLicenseCanBeCreated(Request $request, string $biosId, int $programId, User $seller): Program
+    {
         $program = Program::query()
             ->whereKey($programId)
             ->where('status', 'active')
@@ -444,20 +475,6 @@ class CustomerController extends BaseResellerController
             ]);
         }
 
-        License::query()->create([
-            'tenant_id' => $this->currentTenantId($request),
-            'customer_id' => $customer->id,
-            'reseller_id' => $seller->id,
-            'program_id' => $program->id,
-            'bios_id' => $normalizedBiosId,
-            'external_username' => $customer->username,
-            'external_activation_response' => 'Pending activation.',
-            'duration_days' => 0,
-            'price' => 0,
-            'activated_at' => now(),
-            'expires_at' => now(),
-            'status' => 'pending',
-            'is_scheduled' => false,
-        ]);
+        return $program;
     }
 }
