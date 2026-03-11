@@ -19,7 +19,7 @@ class FinancialReportController extends BaseSuperAdminController
         $summary = [
             'total_platform_revenue' => round((float) $licenses->sum('price'), 2),
             'total_activations' => $licenses->count(),
-            'active_licenses' => $licenses->where('status', 'active')->count(),
+            'active_licenses' => $licenses->filter(fn (License $license): bool => $license->isEffectivelyActive())->count(),
             'avg_revenue_per_tenant' => round((float) $licenses->sum('price') / $tenantCount, 2),
         ];
 

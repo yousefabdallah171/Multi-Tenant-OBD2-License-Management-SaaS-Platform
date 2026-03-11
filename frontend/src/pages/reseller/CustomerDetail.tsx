@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
+import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { resellerService } from '@/services/reseller.service'
@@ -23,6 +24,7 @@ export function CustomerDetailPage() {
     queryKey: ['reseller', 'customer-detail', customerId],
     queryFn: () => resellerService.getCustomer(customerId),
     enabled: Number.isFinite(customerId),
+    ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_DETAIL),
   })
 
   const customer = query.data?.data

@@ -26,12 +26,20 @@ class TenantScope
             app()->instance('tenant.scope.id', $tenantId);
 
             $throttleKey = 'licenses:expire:tenant:'.$tenantId;
-            if (Cache::add($throttleKey, 1, 60)) {
+            if (Cache::add($throttleKey, 1, now()->addSecond())) {
                 try {
                     $this->licenseExpiryService->expireDue($tenantId, true, 50);
                 } catch (\Throwable $exception) {
                     report($exception);
                 }
+            }
+        }
+
+        if ($user && $user->role === UserRole::SUPER_ADMIN && Cache::add('licenses:expire:global', 1, now()->addSecond())) {
+            try {
+                $this->licenseExpiryService->expireDue(null, true, 100);
+            } catch (\Throwable $exception) {
+                report($exception);
             }
         }
 

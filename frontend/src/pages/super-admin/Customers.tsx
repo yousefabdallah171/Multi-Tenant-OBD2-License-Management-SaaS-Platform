@@ -3,10 +3,9 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
-import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -15,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
+import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { canReactivateLicense, canRetryScheduledLicense, formatDate, getLicenseDisplayStatus, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
@@ -23,9 +23,8 @@ import { superAdminCustomerService } from '@/services/super-admin-customer.servi
 import { adminService } from '@/services/admin.service'
 import { tenantService } from '@/services/tenant.service'
 import type { SuperAdminCustomerSummary } from '@/types/super-admin.types'
-import type { RenewLicenseData } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending', 'no_license'] as const
 
 export function CustomersPage() {
   const { t } = useTranslation()
@@ -33,14 +32,18 @@ export function CustomersPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(25)
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
-  const [tenantId, setTenantId] = useState<number | ''>('')
-  const [resellerId, setResellerId] = useState<number | ''>('')
-  const [programId, setProgramId] = useState<number | ''>('')
-  const [renewLicenseId, setRenewLicenseId] = useState<number | null>(null)
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialStatus = searchParams.get('status')
+  const [page, setPage] = useState(Number(searchParams.get('page') || 1))
+  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 25))
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
+    STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
+  )
+  const [tenantId, setTenantId] = useState<number | ''>(searchParams.get('tenant_id') ? Number(searchParams.get('tenant_id')) : '')
+  const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
+  const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [editTarget, setEditTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [deactivateTarget, setDeactivateTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
@@ -59,6 +62,7 @@ export function CustomersPage() {
         program_id: programId,
         status: status === 'all' ? '' : status,
       }),
+    ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
   })
 
   const tenantsQuery = useQuery({
@@ -76,38 +80,57 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
-  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery, noLicenseCountQuery] = useQueries({
     queries: [
       {
         queryKey: ['super-admin', 'customers', 'count', 'all', search, tenantId, resellerId, programId],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId }),
+        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
         queryKey: ['super-admin', 'customers', 'count', 'active', search, tenantId, resellerId, programId],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'active' }),
+        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
         queryKey: ['super-admin', 'customers', 'count', 'scheduled', search, tenantId, resellerId, programId],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'scheduled' }),
+        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
         queryKey: ['super-admin', 'customers', 'count', 'expired', search, tenantId, resellerId, programId],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'expired' }),
+        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
         queryKey: ['super-admin', 'customers', 'count', 'cancelled', search, tenantId, resellerId, programId],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'cancelled' }),
+        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
         queryKey: ['super-admin', 'customers', 'count', 'pending', search, tenantId, resellerId, programId],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'pending' }),
+        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
+      },
+      {
+        queryKey: ['super-admin', 'customers', 'count', 'no_license', search, tenantId, resellerId, programId],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'no_license' }),
+        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
     ],
   })
 
   useEffect(() => {
-    setPage(1)
-  }, [search, status, tenantId, resellerId, programId])
+    const next = new URLSearchParams()
+    if (page > 1) next.set('page', String(page))
+    if (perPage !== 25) next.set('per_page', String(perPage))
+    if (search) next.set('search', search)
+    if (status !== 'all') next.set('status', status)
+    if (tenantId) next.set('tenant_id', String(tenantId))
+    if (resellerId) next.set('reseller_id', String(resellerId))
+    if (programId) next.set('program_id', String(programId))
+    setSearchParams(next, { replace: true })
+  }, [page, perPage, programId, resellerId, search, setSearchParams, status, tenantId])
 
   const editMutation = useMutation({
     mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
@@ -115,16 +138,6 @@ export function CustomersPage() {
     onSuccess: () => {
       toast.success(t('common.saved', { defaultValue: 'Saved' }))
       setEditTarget(null)
-      invalidate(queryClient)
-    },
-    onError: () => toast.error(t('common.error')),
-  })
-
-  const renewMutation = useMutation({
-    mutationFn: (payload: RenewLicenseData) => licenseService.renew(renewLicenseId ?? 0, payload),
-    onSuccess: () => {
-      toast.success(t('common.renewed'))
-      setRenewLicenseId(null)
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -217,12 +230,21 @@ export function CustomersPage() {
       { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
       { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => row.start_at ?? '', render: (row) => (row.start_at ? formatDate(row.start_at, locale) : '-') },
-      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status ?? '', render: (row) => row.status ? <StatusBadge status={getLicenseDisplayStatus(row) as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-' },
+      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status ? getLicenseDisplayStatus(row) : '', render: (row) => row.status ? <StatusBadge status={getLicenseDisplayStatus(row)} /> : '-' },
       { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
       {
         key: 'actions',
         label: t('common.actions'),
-        render: (row) => (
+        render: (row) => {
+          const displayStatus = row.status ? getLicenseDisplayStatus(row) : null
+          const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+          const renewActionLabel = displayStatus === 'active'
+            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+            : isScheduleEditable
+              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+              : t('common.renew')
+
+          return (
           <div onClick={(event) => event.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -236,10 +258,10 @@ export function CustomersPage() {
                   <Pencil className="me-2 h-4 w-4" />
                   {t('common.edit')}
                 </DropdownMenuItem>
-                {row.license_id && shouldRenewLicense(row) ? (
-                  <DropdownMenuItem onSelect={() => setRenewLicenseId(row.license_id ?? null)}>
+                {row.license_id && (displayStatus === 'active' || shouldRenewLicense(row)) ? (
+                  <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.licenseRenew(lang, row.license_id ?? 0), { state: { returnTo: `${location.pathname}${location.search}` } })}>
                     <RotateCw className="me-2 h-4 w-4" />
-                    {t('common.renew')}
+                    {renewActionLabel}
                   </DropdownMenuItem>
                 ) : null}
                 {row.license_id && row.status === 'active' ? (
@@ -273,10 +295,11 @@ export function CustomersPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        ),
+          )
+        },
       },
     ],
-    [lang, locale, navigate, retryScheduledMutation, t],
+    [lang, locale, location.pathname, location.search, navigate, retryScheduledMutation, t],
   )
 
   return (
@@ -292,7 +315,7 @@ export function CustomersPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-7">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -353,6 +376,16 @@ export function CustomersPage() {
           }}
           color="amber"
         />
+        <StatusFilterCard
+          label={t('common.noLicense', { defaultValue: 'No License' })}
+          count={noLicenseCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'no_license'}
+          onClick={() => {
+            setStatus('no_license')
+            setPage(1)
+          }}
+          color="slate"
+        />
       </div>
 
       <Card>
@@ -402,18 +435,6 @@ export function CustomersPage() {
         initialPhone={editTarget?.phone ?? ''}
         onSubmit={(payload: { client_name: string; email?: string; phone?: string }) => editMutation.mutate(payload)}
         isPending={editMutation.isPending}
-      />
-
-      <RenewLicenseDialog
-        open={renewLicenseId !== null}
-        onOpenChange={(open) => !open && setRenewLicenseId(null)}
-        title={t('common.renew')}
-        description={t('common.renew', { defaultValue: 'Renew license' })}
-        confirmLabel={t('common.renew')}
-        confirmLoadingLabel={t('common.loading')}
-        cancelLabel={t('common.cancel')}
-        onSubmit={(payload) => renewMutation.mutate(payload)}
-        isPending={renewMutation.isPending}
       />
 
       <ConfirmDialog open={deactivateTarget !== null} onOpenChange={(open) => !open && setDeactivateTarget(null)} title={t('common.deactivate')} description={deactivateTarget?.name ?? ''} confirmLabel={t('common.deactivate')} onConfirm={() => deactivateTarget?.license_id && deactivateMutation.mutate(deactivateTarget.license_id)} />

@@ -13,10 +13,12 @@ class LicenseExpiryService
 
     public function expireDue(?int $tenantId = null, bool $deactivateExternal = true, int $limit = 500): int
     {
+        $minuteWindowEnd = now()->startOfMinute()->addMinute();
+
         $query = License::query()
             ->where('status', 'active')
             ->whereNotNull('expires_at')
-            ->where('expires_at', '<=', now())
+            ->where('expires_at', '<', $minuteWindowEnd)
             ->limit($limit);
 
         if ($deactivateExternal) {

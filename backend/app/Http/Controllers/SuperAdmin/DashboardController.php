@@ -35,7 +35,7 @@ class DashboardController extends BaseSuperAdminController
                     'stats' => [
                         'total_tenants' => Tenant::query()->count(),
                         'total_revenue' => (float) License::query()->sum('price'),
-                        'active_licenses' => License::query()->where('status', 'active')->count(),
+                        'active_licenses' => License::query()->whereEffectivelyActive()->count(),
                         'total_users' => User::query()->count(),
                         'ip_country_map' => $countries,
                     ],
@@ -73,7 +73,7 @@ class DashboardController extends BaseSuperAdminController
         $tenants = Cache::remember('super-admin:dashboard:tenant-comparison', now()->addMinutes(5), function (): array {
             return Tenant::query()
                 ->withCount([
-                    'licenses as active_licenses_count' => fn ($query) => $query->where('status', 'active'),
+                    'licenses as active_licenses_count' => fn ($query) => $query->whereEffectivelyActive(),
                 ])
                 ->withSum('licenses as total_revenue', 'price')
                 ->get()

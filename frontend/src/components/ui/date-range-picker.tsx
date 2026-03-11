@@ -13,6 +13,7 @@ interface DateRangePickerProps {
   value: DateRangeValue
   onChange: (value: DateRangeValue) => void
   className?: string
+  showPresets?: boolean
 }
 
 function formatDateInput(value: Date) {
@@ -35,7 +36,7 @@ function resolvePresetRange(days: number) {
   }
 }
 
-export function DateRangePicker({ value, onChange, className }: DateRangePickerProps) {
+export function DateRangePicker({ value, onChange, className, showPresets = true }: DateRangePickerProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const hasValue = Boolean(value.from || value.to)
@@ -57,23 +58,25 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
 
   return (
     <div className={cn('space-y-3', className)}>
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="secondary" size="sm" onClick={() => onChange(resolvePresetRange(7))}>
-          {presetLabels.last7}
-        </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={() => onChange(resolvePresetRange(30))}>
-          {presetLabels.last30}
-        </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={() => onChange(resolvePresetRange(90))}>
-          {presetLabels.last90}
-        </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={() => onChange(resolvePresetRange(365))}>
-          {presetLabels.last365}
-        </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={() => onChange(value)}>
-          {presetLabels.custom}
-        </Button>
-      </div>
+      {showPresets ? (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={() => onChange(resolvePresetRange(7))}>
+            {presetLabels.last7}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onChange(resolvePresetRange(30))}>
+            {presetLabels.last30}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onChange(resolvePresetRange(90))}>
+            {presetLabels.last90}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onChange(resolvePresetRange(365))}>
+            {presetLabels.last365}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange(value)}>
+            {presetLabels.custom}
+          </Button>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
         <div className="space-y-2">

@@ -22,7 +22,7 @@ class FinancialReportController extends BaseManagerParentController
                 'summary' => [
                     'total_revenue' => round((float) $licenses->sum('price'), 2),
                     'total_activations' => $licenses->count(),
-                    'active_licenses' => $licenses->where('status', 'active')->count(),
+                    'active_licenses' => $licenses->filter(fn (License $license): bool => $license->isEffectivelyActive())->count(),
                 ],
                 'revenue_by_reseller' => $licenses
                     ->groupBy(fn (License $license): string => $license->reseller?->name ?? 'Unknown')

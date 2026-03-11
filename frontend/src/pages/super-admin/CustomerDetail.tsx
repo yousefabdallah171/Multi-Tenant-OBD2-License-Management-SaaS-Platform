@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
+import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { superAdminCustomerService } from '@/services/super-admin-customer.service'
@@ -25,6 +26,7 @@ export function CustomerDetailPage() {
     queryKey: ['super-admin', 'customer-detail', customerId],
     queryFn: () => superAdminCustomerService.getOne(customerId),
     enabled: Number.isFinite(customerId),
+    ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_DETAIL),
   })
 
   const customer = query.data?.data

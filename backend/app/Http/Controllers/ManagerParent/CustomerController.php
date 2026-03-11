@@ -28,7 +28,7 @@ class CustomerController extends BaseManagerParentController
         $validated = $request->validate([
             'reseller_id' => ['nullable', 'integer'],
             'program_id' => ['nullable', 'integer'],
-            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled,no_license'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -61,6 +61,9 @@ class CustomerController extends BaseManagerParentController
         }
 
         if (! empty($validated['status'])) {
+            if ($validated['status'] === 'no_license') {
+                $query->whereDoesntHave('customerLicenses');
+            } else {
             $query->whereHas('customerLicenses', function ($licenseQuery) use ($validated): void {
                 if (! $this->supportsScheduledLicenses()) {
                     if ($validated['status'] === 'scheduled') {
@@ -84,8 +87,9 @@ class CustomerController extends BaseManagerParentController
                     return;
                 }
 
-                $licenseQuery->where('status', $validated['status']);
+                $licenseQuery->whereEffectiveStatus($validated['status']);
             });
+            }
         }
 
         $customers = $query->paginate((int) ($validated['per_page'] ?? 25));
@@ -180,7 +184,7 @@ class CustomerController extends BaseManagerParentController
                     'reseller' => $license->reseller?->name,
                     'reseller_id' => $license->reseller_id,
                     'reseller_email' => $license->reseller?->email,
-                    'status' => $license->status,
+                    'status' => $license->effectiveStatus(),
                     'duration_days' => (float) $license->duration_days,
                     'price' => (float) $license->price,
                     'activated_at' => $license->activated_at?->toIso8601String(),
@@ -410,7 +414,11 @@ class CustomerController extends BaseManagerParentController
             ->where('reseller_id', $seller->id)
             ->where('program_id', $program->id)
             ->where('bios_id', $normalizedBiosId)
-            ->whereIn('status', ['active', 'pending', 'suspended'])
+            ->where(function ($query): void {
+                $query
+                    ->whereEffectivelyActive()
+                    ->orWhereIn('status', ['pending', 'suspended']);
+            })
             ->first();
 
         if ($existingLicense) {
@@ -489,7 +497,7 @@ class CustomerController extends BaseManagerParentController
     {
         $license = $user->customerLicenses->sortByDesc('activated_at')->first();
         $hasActiveLicense = $user->customerLicenses->contains(
-            fn ($item) => ($item->status ?? null) === 'active'
+            fn ($item) => $item->isEffectivelyActive()
         );
 
         return [
@@ -504,7 +512,7 @@ class CustomerController extends BaseManagerParentController
             'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
             'program' => $license?->program?->name,
-            'status' => $license?->status,
+            'status' => $license?->effectiveStatus() ?? 'no_license',
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),

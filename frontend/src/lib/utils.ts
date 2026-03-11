@@ -188,7 +188,7 @@ export function getLicenseDisplayStatus<T extends SchedulableLicense>(value: T |
     return 'scheduled' as const
   }
 
-  return value.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'
+  return value.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending' | 'no_license'
 }
 
 export function getLicenseStartDate(value: SchedulableLicense | null | undefined) {

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ExportButtons } from '@/components/shared/ExportButtons'
@@ -22,7 +23,7 @@ export function ReportsPage() {
   const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [range, setRange] = useState<DateRangeValue>(() => resolvePresetRange(365))
-  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly')
+  const period = 'monthly'
 
   const revenueQuery = useQuery({
     queryKey: ['reseller', 'reports', 'revenue', range.from, range.to, period],
@@ -44,6 +45,20 @@ export function ReportsPage() {
   const avgPrice = totalActivations > 0 ? totalRevenue / totalActivations : 0
   const hasRange = Boolean(range.from && range.to)
   const activationDetailsUrl = `${routePaths.reseller.activations(lang)}?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`
+  const presetCards = useMemo(() => {
+    const last7 = resolvePresetRange(7)
+    const last30 = resolvePresetRange(30)
+    const last90 = resolvePresetRange(90)
+    const last365 = resolvePresetRange(365)
+
+    return [
+      { key: 'last7', label: t('dateRange.last7Days', { defaultValue: 'Last 7 Days' }), value: last7, color: 'sky' as const },
+      { key: 'last30', label: t('dateRange.last30Days', { defaultValue: 'Last 30 Days' }), value: last30, color: 'emerald' as const },
+      { key: 'last90', label: t('dateRange.last3Months', { defaultValue: 'Last 3 Months' }), value: last90, color: 'amber' as const },
+      { key: 'last365', label: t('dateRange.lastYear', { defaultValue: 'Last Year' }), value: last365, color: 'rose' as const },
+    ]
+  }, [t])
+  const activePresetKey = presetCards.find((preset) => preset.value.from === range.from && preset.value.to === range.to)?.key ?? 'custom'
 
   return (
     <div className="space-y-6">
@@ -54,18 +69,27 @@ export function ReportsPage() {
         actions={<ExportButtons onExportCsv={() => resellerService.exportCsv({ ...range, period })} onExportPdf={() => resellerService.exportPdf({ ...range, period })} />}
       />
 
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {presetCards.map((preset) => (
+          <StatusFilterCard
+            key={preset.key}
+            label={preset.label}
+            isActive={activePresetKey === preset.key}
+            onClick={() => setRange(preset.value)}
+            color={preset.color}
+          />
+        ))}
+        <StatusFilterCard
+          label={t('common.custom', { defaultValue: 'Custom' })}
+          isActive={activePresetKey === 'custom'}
+          onClick={() => setRange((current) => current)}
+          color="slate"
+        />
+      </div>
+
       <Card className="border-sky-200/80 dark:border-sky-900/40">
-        <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <DateRangePicker value={range} onChange={setRange} />
-          <select
-            value={period}
-            onChange={(event) => setPeriod(event.target.value as 'daily' | 'weekly' | 'monthly')}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-          >
-            <option value="daily">{t('reseller.pages.reports.daily')}</option>
-            <option value="weekly">{t('reseller.pages.reports.weekly')}</option>
-            <option value="monthly">{t('reseller.pages.reports.monthly')}</option>
-          </select>
+        <CardContent className="p-4">
+          <DateRangePicker value={range} onChange={setRange} showPresets={false} />
         </CardContent>
       </Card>
 
@@ -86,7 +110,7 @@ export function ReportsPage() {
       {!hasRange ? (
         <Card>
           <CardContent className="p-8">
-            <EmptyState title={lang === 'ar' ? 'اختر نطاق تاريخ لعرض الرسوم' : 'Pick a date range to render charts'} description={lang === 'ar' ? 'حدد تاريخ البداية والنهاية ثم اختر الفترة الزمنية.' : 'Select start and end dates, then choose your reporting period.'} icon={Activity} />
+            <EmptyState title={lang === 'ar' ? 'اختر نطاق تاريخ لعرض الرسوم' : 'Pick a date range to render charts'} description={lang === 'ar' ? 'حدد تاريخ البداية والنهاية لعرض بيانات التقارير.' : 'Select a start and end date to render the report data.'} icon={Activity} />
           </CardContent>
         </Card>
       ) : null}

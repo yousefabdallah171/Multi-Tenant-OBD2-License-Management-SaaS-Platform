@@ -24,7 +24,7 @@ class CustomerController extends BaseSuperAdminController
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
             'reseller_id' => ['nullable', 'integer', 'exists:users,id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id'],
-            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled,no_license'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -61,6 +61,9 @@ class CustomerController extends BaseSuperAdminController
         }
 
         if (! empty($validated['status'])) {
+            if ($validated['status'] === 'no_license') {
+                $query->whereDoesntHave('customerLicenses');
+            } else {
             $query->whereHas('customerLicenses', function ($licenseQuery) use ($validated): void {
                 if ($validated['status'] === 'scheduled') {
                     $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
@@ -74,8 +77,9 @@ class CustomerController extends BaseSuperAdminController
                     return;
                 }
 
-                $licenseQuery->where('status', $validated['status']);
+                $licenseQuery->whereEffectiveStatus($validated['status']);
             });
+            }
         }
 
         $customers = $query->paginate((int) ($validated['per_page'] ?? 25));
@@ -176,7 +180,7 @@ class CustomerController extends BaseSuperAdminController
                     'reseller' => $license->reseller?->name,
                     'reseller_id' => $license->reseller_id,
                     'reseller_email' => $license->reseller?->email,
-                    'status' => $license->status,
+                    'status' => $license->effectiveStatus(),
                     'duration_days' => (float) $license->duration_days,
                     'price' => (float) $license->price,
                     'activated_at' => $license->activated_at?->toIso8601String(),
@@ -394,7 +398,7 @@ class CustomerController extends BaseSuperAdminController
     {
         $license = $user->customerLicenses->sortByDesc('activated_at')->first();
         $hasActiveLicense = $user->customerLicenses->contains(
-            fn ($item) => ($item->status ?? null) === 'active'
+            fn ($item) => $item->isEffectivelyActive()
         );
         $resolvedUsername = $this->resolveCustomerUsername($user, $license);
 
@@ -417,7 +421,7 @@ class CustomerController extends BaseSuperAdminController
             'reseller' => $license?->reseller?->name,
             'reseller_id' => $license?->reseller_id,
             'program' => $license?->program?->name,
-            'status' => $license?->status,
+            'status' => $license?->effectiveStatus() ?? 'no_license',
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),
@@ -601,7 +605,11 @@ class CustomerController extends BaseSuperAdminController
             ->where('reseller_id', $seller->id)
             ->where('program_id', $program->id)
             ->where('bios_id', $normalizedBiosId)
-            ->whereIn('status', ['active', 'pending', 'suspended'])
+            ->where(function ($query): void {
+                $query
+                    ->whereEffectivelyActive()
+                    ->orWhereIn('status', ['pending', 'suspended']);
+            })
             ->first();
 
         if ($existingLicense) {

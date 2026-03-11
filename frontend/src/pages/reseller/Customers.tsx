@@ -4,7 +4,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
 import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -35,7 +36,7 @@ import { resellerService } from '@/services/reseller.service'
 import { formatUsername, rawBiosId } from '@/utils/biosId'
 import type { RenewLicenseData, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending', 'no_license'] as const
 const DEFAULT_TIMEZONE = resolveDisplayTimezone()
 
 interface ActivationFormState {
@@ -81,6 +82,7 @@ export function CustomersPage() {
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
@@ -90,7 +92,7 @@ export function CustomersPage() {
         title: 'العملاء',
         description: 'أنشئ العملاء وفعلهم ثم أدِر عمليات التجديد والإلغاء من مساحة عملك الشخصية كموزع.',
         addCustomer: 'إضافة عميل',
-        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي', pending: 'موقف' },
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي', pending: 'موقف', noLicense: 'بدون ترخيص' },
         searchPlaceholder: 'ابحث بالاسم أو البريد الإلكتروني أو BIOS ID',
         table: {
           customer: 'العميل',
@@ -198,6 +200,7 @@ export function CustomersPage() {
           expired: t('common.expired'),
           cancelled: t('common.cancelled'),
           pending: t('common.pending'),
+          noLicense: t('common.noLicense', { defaultValue: 'No License' }),
         },
         searchPlaceholder: t('reseller.pages.customers.searchPlaceholder'),
         table: {
@@ -321,7 +324,6 @@ export function CustomersPage() {
   const [activationStep, setActivationStep] = useState(0)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
   const [activationError, setActivationError] = useState('')
-  const [renewLicenseId, setRenewLicenseId] = useState<number | null>(null)
   const [deactivateTarget, setDeactivateTarget] = useState<ResellerCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ResellerCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ResellerCustomerSummary | null>(null)
@@ -342,6 +344,7 @@ export function CustomersPage() {
         status: status === 'all' ? '' : status,
         program_id: programFilter || undefined,
       }),
+    ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
   })
 
   const programsQuery = useQuery({
@@ -349,24 +352,17 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
   })
 
-  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery, noLicenseCountQuery] = useQueries({
     queries: [
-      { queryKey: ['reseller', 'customers', 'count', 'all', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined }) },
-      { queryKey: ['reseller', 'customers', 'count', 'active', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'active' }) },
-      { queryKey: ['reseller', 'customers', 'count', 'scheduled', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'scheduled' }) },
-      { queryKey: ['reseller', 'customers', 'count', 'expired', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'expired' }) },
-      { queryKey: ['reseller', 'customers', 'count', 'cancelled', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'cancelled' }) },
-      { queryKey: ['reseller', 'customers', 'count', 'pending', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'pending' }) },
+      { queryKey: ['reseller', 'customers', 'count', 'all', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'active', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'scheduled', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'scheduled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'expired', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'cancelled', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'pending', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'pending' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'no_license', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'no_license' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
     ],
   })
-
-  const renewLicenseQuery = useQuery({
-    queryKey: ['reseller', 'customers', 'renew-license', renewLicenseId],
-    queryFn: () => licenseService.getById(renewLicenseId ?? 0),
-    enabled: renewLicenseId !== null,
-  })
-  const renewLicense = renewLicenseQuery.data?.data
-  const renewProgram = (programsQuery.data?.data ?? []).find((program) => program.id === renewLicense?.program_id || program.name === renewLicense?.program)
 
   const activationSteps = text.activationDialog.steps
 
@@ -439,20 +435,6 @@ export function CustomersPage() {
       setActivationError(message)
       toast.error(message)
     },
-  })
-
-  const renewMutation = useMutation({
-    mutationFn: (payload: RenewLicenseData) => licenseService.renew(renewLicenseId ?? 0, payload),
-    onSuccess: () => {
-      toast.success(text.toasts.renewed)
-      setRenewLicenseId(null)
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'dashboard'] }),
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
-      ])
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
   const deactivateMutation = useMutation({
@@ -701,7 +683,9 @@ export function CustomersPage() {
                   <DropdownMenuItem
                     onClick={(event) => {
                       event.stopPropagation()
-                      setRenewLicenseId(row.license_id!)
+                      navigate(routePaths.reseller.licenseRenew(lang, row.license_id!), {
+                        state: { returnTo: `${location.pathname}${location.search}` },
+                      })
                     }}
                   >
                     <RotateCw className="me-2 h-4 w-4" />
@@ -769,7 +753,7 @@ export function CustomersPage() {
         },
       },
     ],
-    [allVisibleSelected, lang, locale, selectedLicenseIds, selectableIds, someVisibleSelected, text, retryScheduledMutation.isPending, t],
+    [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectedLicenseIds, selectableIds, someVisibleSelected, text, retryScheduledMutation.isPending, t],
   )
 
   useEffect(() => {
@@ -795,7 +779,7 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-7">
         <StatusFilterCard
           label={text.statusOptions.all}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -855,6 +839,16 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="amber"
+        />
+        <StatusFilterCard
+          label={text.statusOptions.noLicense}
+          count={noLicenseCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'no_license'}
+          onClick={() => {
+            setStatus('no_license')
+            setPage(1)
+          }}
+          color="slate"
         />
       </div>
 
@@ -1346,41 +1340,6 @@ export function CustomersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <RenewLicenseDialog
-        open={renewLicenseId !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRenewLicenseId(null)
-          }
-        }}
-        title={renewLicense
-          ? getLicenseDisplayStatus(renewLicense) === 'active'
-            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
-            : getLicenseDisplayStatus(renewLicense) === 'scheduled' || getLicenseDisplayStatus(renewLicense) === 'scheduled_failed'
-              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : text.renewDialog.title
-          : text.renewDialog.title}
-        description={renewLicense ? text.renewDialog.descriptionWithProgram(renewLicense.program ?? text.detail.program, renewLicense.bios_id) : text.renewDialog.descriptionFallback}
-        confirmLabel={renewLicense
-          ? getLicenseDisplayStatus(renewLicense) === 'active'
-            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
-            : getLicenseDisplayStatus(renewLicense) === 'scheduled' || getLicenseDisplayStatus(renewLicense) === 'scheduled_failed'
-              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : text.renewDialog.renew
-          : text.renewDialog.renew}
-        confirmLoadingLabel={text.renewDialog.renewing}
-        cancelLabel={text.renewDialog.cancel}
-        anchorDate={renewLicense?.expires_at}
-        initialScheduledAt={renewLicense?.scheduled_at}
-        initialScheduledTimezone={renewLicense?.scheduled_timezone}
-        initialExpiresAt={renewLicense?.expires_at}
-        initialPrice={renewLicense?.price ?? 0}
-        autoPricePerDay={renewProgram?.base_price ?? (renewLicense && renewLicense.duration_days > 0 ? renewLicense.price / renewLicense.duration_days : 0)}
-        resetKey={renewLicenseId}
-        isPending={renewMutation.isPending}
-        onSubmit={(payload) => renewMutation.mutate(payload)}
-      />
 
       <ConfirmDialog
         open={deleteTarget !== null}

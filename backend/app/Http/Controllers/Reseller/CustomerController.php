@@ -24,7 +24,7 @@ class CustomerController extends BaseResellerController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled,no_license'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'program_id' => ['nullable', 'integer', 'min:1'],
@@ -53,6 +53,9 @@ class CustomerController extends BaseResellerController
         }
 
         if (! empty($validated['status'])) {
+            if ($validated['status'] === 'no_license') {
+                $query->whereDoesntHave('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('reseller_id', $resellerId));
+            } else {
             $query->whereHas('customerLicenses', function ($licenseQuery) use ($resellerId, $validated): void {
                 $licenseQuery->where('reseller_id', $resellerId);
 
@@ -78,8 +81,9 @@ class CustomerController extends BaseResellerController
                     return;
                 }
 
-                $licenseQuery->where('status', $validated['status']);
+                $licenseQuery->whereEffectiveStatus($validated['status']);
             });
+            }
         }
 
         if (! empty($validated['program_id'])) {
@@ -275,7 +279,7 @@ class CustomerController extends BaseResellerController
                     'id' => $license->id,
                     'bios_id' => $license->bios_id,
                     'program' => $license->program?->name,
-                'status' => $license->status,
+                'status' => $license->effectiveStatus(),
                 'price' => (float) $license->price,
                 'activated_at' => $license->activated_at?->toIso8601String(),
                 'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
@@ -347,7 +351,7 @@ class CustomerController extends BaseResellerController
             'external_username' => $license?->external_username,
             'program' => $license?->program?->name,
             'program_id' => $license?->program_id,
-            'status' => $license?->status,
+            'status' => $license?->effectiveStatus() ?? 'no_license',
             'price' => $license ? (float) $license->price : 0,
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
@@ -467,7 +471,11 @@ class CustomerController extends BaseResellerController
             ->where('reseller_id', $seller->id)
             ->where('program_id', $program->id)
             ->where('bios_id', $normalizedBiosId)
-            ->whereIn('status', ['active', 'pending', 'suspended'])
+            ->where(function ($query): void {
+                $query
+                    ->whereEffectivelyActive()
+                    ->orWhereIn('status', ['pending', 'suspended']);
+            })
             ->first();
 
         if ($existingLicense) {

@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
+import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatCurrency, formatDate, getLicenseDisplayStatus } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
@@ -46,6 +47,7 @@ export function ActivationsPage() {
       from: range.from || undefined,
       to: range.to || undefined,
     }),
+    ...liveQueryOptions(LIVE_QUERY_INTERVAL.ACTIVATIONS),
   })
 
   const rows = activationsQuery.data?.data ?? []
@@ -62,12 +64,20 @@ export function ActivationsPage() {
     {
       key: 'externalUsername',
       label: t('activate.username', { defaultValue: 'Username (API)' }),
-      render: (row) => row.external_username ?? '-',
+      render: (row) => row.customer_id ? (
+        <Link className="font-medium text-sky-700 hover:underline dark:text-sky-300" to={routePaths.reseller.customerDetail(lang, row.customer_id)}>
+          {row.external_username ?? '-'}
+        </Link>
+      ) : (row.external_username ?? '-'),
     },
     {
       key: 'bios',
       label: t('reseller.pages.customers.table.bios'),
-      render: (row) => row.bios_id,
+      render: (row) => row.customer_id ? (
+        <Link className="font-medium text-sky-700 hover:underline dark:text-sky-300" to={routePaths.reseller.customerDetail(lang, row.customer_id)}>
+          {row.bios_id}
+        </Link>
+      ) : row.bios_id,
     },
     {
       key: 'program',

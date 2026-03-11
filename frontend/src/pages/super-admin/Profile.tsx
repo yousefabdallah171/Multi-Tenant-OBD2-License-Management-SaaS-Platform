@@ -29,11 +29,6 @@ export function ProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [preferences, setPreferences] = useState({
-    emailNotifications: true,
-    pusherNotifications: true,
-  })
-
   const profileMutation = useMutation({
     mutationFn: () => profileService.updateProfile(profileForm),
     onSuccess: (data) => {
@@ -116,78 +111,52 @@ export function ProfilePage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('superAdmin.pages.profile.changePassword')}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">{t('superAdmin.pages.profile.currentPassword')}</Label>
-              <div className="relative">
-                <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={passwordForm.current_password} onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))} className="pe-12" />
-                <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowCurrentPassword((current) => !current)}>
-                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  <span className="sr-only">{showCurrentPassword ? t('common.hide') : t('common.show')}</span>
-                </Button>
-              </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('superAdmin.pages.profile.changePassword')}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="current-password">{t('superAdmin.pages.profile.currentPassword')}</Label>
+            <div className="relative">
+              <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={passwordForm.current_password} onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))} className="pe-12" />
+              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowCurrentPassword((current) => !current)}>
+                {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showCurrentPassword ? t('common.hide') : t('common.show')}</span>
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">{t('superAdmin.pages.profile.newPassword')}</Label>
-              <div className="relative">
-                <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={passwordForm.password} onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))} className="pe-12" />
-                <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowNewPassword((current) => !current)}>
-                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  <span className="sr-only">{showNewPassword ? t('common.hide') : t('common.show')}</span>
-                </Button>
-              </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password">{t('superAdmin.pages.profile.newPassword')}</Label>
+            <div className="relative">
+              <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={passwordForm.password} onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))} className="pe-12" />
+              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowNewPassword((current) => !current)}>
+                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showNewPassword ? t('common.hide') : t('common.show')}</span>
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">{t('superAdmin.pages.profile.confirmPassword')}</Label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={passwordForm.password_confirmation}
-                  onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
-                  className="pe-12"
-                />
-                <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowConfirmPassword((current) => !current)}>
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  <span className="sr-only">{showConfirmPassword ? t('common.hide') : t('common.show')}</span>
-                </Button>
-              </div>
-            </div>
-            <Button type="button" onClick={() => passwordMutation.mutate()} disabled={passwordMutation.isPending}>
-              {passwordMutation.isPending ? t('common.saving') : t('superAdmin.pages.profile.updatePassword')}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('superAdmin.pages.profile.preferences')}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={preferences.emailNotifications}
-                onChange={(event) => setPreferences((current) => ({ ...current, emailNotifications: event.target.checked }))}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">{t('superAdmin.pages.profile.confirmPassword')}</Label>
+            <div className="relative">
+              <Input
+                id="confirm-password"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={passwordForm.password_confirmation}
+                onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
+                className="pe-12"
               />
-              {t('superAdmin.pages.profile.emailNotifications')}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={preferences.pusherNotifications}
-                onChange={(event) => setPreferences((current) => ({ ...current, pusherNotifications: event.target.checked }))}
-              />
-              {t('superAdmin.pages.profile.pusherNotifications')}
-            </label>
-          </CardContent>
-        </Card>
-      </div>
+              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowConfirmPassword((current) => !current)}>
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showConfirmPassword ? t('common.hide') : t('common.show')}</span>
+              </Button>
+            </div>
+          </div>
+          <Button type="button" onClick={() => passwordMutation.mutate()} disabled={passwordMutation.isPending}>
+            {passwordMutation.isPending ? t('common.saving') : t('superAdmin.pages.profile.updatePassword')}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

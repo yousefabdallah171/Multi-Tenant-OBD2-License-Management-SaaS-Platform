@@ -150,15 +150,10 @@ class DashboardController extends BaseManagerParentController
                 ->groupBy('role')
                 ->pluck('total', 'role');
 
-            $licenseStats = License::query()
-                ->where('tenant_id', $tenantId)
-                ->selectRaw('status, COUNT(*) as total, COALESCE(SUM(price), 0) as revenue')
-                ->groupBy('status')
-                ->get();
-
-            $licenseTotals = $licenseStats->sum(fn ($row): int => (int) $row->total);
-            $activeLicenses = (int) ($licenseStats->firstWhere('status', 'active')?->total ?? 0);
-            $revenue = (float) $licenseStats->sum(fn ($row): float => (float) $row->revenue);
+            $licenseQuery = License::query()->where('tenant_id', $tenantId);
+            $licenseTotals = (int) (clone $licenseQuery)->count();
+            $activeLicenses = (int) (clone $licenseQuery)->whereEffectivelyActive()->count();
+            $revenue = (float) (clone $licenseQuery)->sum('price');
 
             $monthlyRevenue = (float) License::query()
                 ->where('tenant_id', $tenantId)

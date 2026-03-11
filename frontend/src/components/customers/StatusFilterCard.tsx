@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 
 interface StatusFilterCardProps {
   label: string
-  count: number
+  count?: number | string
   isActive?: boolean
   onClick?: () => void
   color?: 'emerald' | 'amber' | 'rose' | 'slate' | 'sky'
@@ -47,9 +47,11 @@ export function StatusFilterCard({
           <p className={cn('text-xs font-medium sm:text-sm', labelStyles[color])}>
             {label}
           </p>
-          <p className="text-2xl font-semibold text-slate-950 dark:text-white sm:text-3xl">
-            {count}
-          </p>
+          {count !== undefined ? (
+            <p className="text-2xl font-semibold text-slate-950 dark:text-white sm:text-3xl">
+              {count}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </button>

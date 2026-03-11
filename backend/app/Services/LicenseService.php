@@ -50,7 +50,7 @@ class LicenseService
         $externalUsername = $this->normalizeExternalUsername($customerName, $biosId);
         $isScheduled = (bool) ($data['is_scheduled'] ?? false);
         $scheduledTimezone = $this->normalizeTimezone((string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC')));
-        $scheduledAt = $isScheduled ? Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc() : null;
+        $scheduledAt = $isScheduled ? $this->normalizeToMinute(Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc()) : null;
 
         if ($program->status !== 'active') {
             throw ValidationException::withMessages(['program_id' => 'The selected program is not active.']);
@@ -90,7 +90,8 @@ class LicenseService
             $customer = $this->upsertCustomer($reseller, $data, $externalUsername);
             $durationDays = (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
-            $activationAnchor = $scheduledAt ?? now();
+            $activationAnchor = $scheduledAt ?? $this->currentMinute();
+            $activatedAt = $isScheduled ? null : $this->currentMinute();
 
             $license = License::query()->create([
                 'tenant_id' => $reseller->tenant_id,
@@ -102,7 +103,7 @@ class LicenseService
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'duration_days' => $durationDays,
                 'price' => (float) $data['price'],
-                'activated_at' => $isScheduled ? null : now(),
+                'activated_at' => $activatedAt,
                 'expires_at' => $activationAnchor->copy()->addMinutes($durationMinutes),
                 'scheduled_at' => $scheduledAt,
                 'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
@@ -149,15 +150,48 @@ class LicenseService
     {
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
-        $this->logBiosAccess($reseller, $license->bios_id, 'renew', ['license_id' => $license->id]);
+        $license->loadMissing(['program', 'customer', 'reseller']);
 
-        $renewedLicense = DB::transaction(function () use ($license, $data, $reseller): License {
-            $anchor = $license->expires_at && $license->expires_at->isFuture() ? $license->expires_at->copy() : now();
+        $isScheduled = (bool) ($data['is_scheduled'] ?? false);
+        $apiResponse = [
+            'success' => true,
+            'data' => ['response' => $isScheduled ? 'Scheduled renewal pending.' : 'Renewed locally.'],
+            'status_code' => $isScheduled ? 202 : 200,
+        ];
+
+        if (! $isScheduled) {
+            $program = $license->program;
+            $apiKey = $program?->getDecryptedApiKey();
+
+            if ($program && $apiKey !== null) {
+                $externalUsername = (string) ($license->external_username ?: $license->customer?->username ?: $license->bios_id);
+                $apiResponse = $this->externalApiService->activateUser(
+                    $apiKey,
+                    $externalUsername,
+                    (string) $license->bios_id,
+                    $program->external_api_base_url
+                );
+
+                if (! $apiResponse['success']) {
+                    throw ValidationException::withMessages([
+                        'license' => $this->extractExternalMessage($apiResponse, 'The renewal request was rejected by the external service.'),
+                    ]);
+                }
+            }
+        }
+
+        $this->logBiosAccess($reseller, $license->bios_id, 'renew', [
+            'license_id' => $license->id,
+            'external' => $apiResponse,
+            'is_scheduled' => $isScheduled,
+        ]);
+
+        $renewedLicense = DB::transaction(function () use ($license, $data, $reseller, $apiResponse, $isScheduled): License {
+            $anchor = $license->expires_at && $license->expires_at->isFuture() ? $this->normalizeToMinute($license->expires_at->copy()) : $this->currentMinute();
             $durationDays = (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
-            $isScheduled = (bool) ($data['is_scheduled'] ?? false);
             $scheduledTimezone = $this->normalizeTimezone((string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC')));
-            $scheduledAt = $isScheduled ? Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc() : null;
+            $scheduledAt = $isScheduled ? $this->normalizeToMinute(Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc()) : null;
             $expiresAt = ($scheduledAt?->copy() ?? $anchor->copy())->addMinutes($durationMinutes);
             $activatedAt = $license->activated_at;
 
@@ -166,7 +200,7 @@ class LicenseService
                     $activatedAt = null;
                 }
             } elseif (! $license->expires_at || ! $license->expires_at->isFuture() || $license->status !== 'active') {
-                $activatedAt = now();
+                $activatedAt = $this->currentMinute();
             }
 
             $license->forceFill([
@@ -174,6 +208,7 @@ class LicenseService
                 'price' => (float) $data['price'],
                 'activated_at' => $activatedAt,
                 'expires_at' => $expiresAt,
+                'external_activation_response' => (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
                 'status' => $isScheduled ? 'pending' : 'active',
                 'scheduled_at' => $scheduledAt,
                 'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
@@ -303,12 +338,12 @@ class LicenseService
         ]);
 
         return DB::transaction(function () use ($license, $reseller, $apiResponse): License {
-            $remainingMinutes = max(1, now()->diffInMinutes($license->expires_at, false));
+            $remainingMinutes = max(1, $this->currentMinute()->diffInMinutes($license->expires_at, false));
 
             $license->forceFill([
                 'status' => 'pending',
                 'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Paused locally.'),
-                'paused_at' => now(),
+                'paused_at' => $this->currentMinute(),
                 'pause_remaining_minutes' => $remainingMinutes,
                 'scheduled_at' => null,
                 'scheduled_timezone' => null,
@@ -392,7 +427,7 @@ class LicenseService
             $license->forceFill([
                 'status' => 'active',
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
-                'expires_at' => $remainingMinutes !== null ? now()->addMinutes($remainingMinutes) : $license->expires_at,
+                'expires_at' => $remainingMinutes !== null ? $this->currentMinute()->addMinutes($remainingMinutes) : $license->expires_at,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
                 'scheduled_at' => null,
@@ -429,7 +464,7 @@ class LicenseService
     public function executeScheduledActivation(License $license): array
     {
         $license->loadMissing(['program', 'reseller']);
-        $attemptedAt = now();
+        $attemptedAt = $this->currentMinute();
         $reseller = $license->reseller;
 
         if (! $license->is_scheduled || $license->status !== 'pending' || $license->scheduled_at === null) {
@@ -602,7 +637,7 @@ class LicenseService
         $duplicate = License::query()
             ->where('bios_id', $biosId)
             ->where('program_id', $program->id)
-            ->where('status', 'active')
+            ->whereEffectivelyActive()
             ->first();
 
         if ($duplicate) {
@@ -628,7 +663,7 @@ class LicenseService
             ->where('program_id', $program->id)
             ->where('external_username', $externalUsername)
             ->where('bios_id', '!=', $biosId)
-            ->where('status', 'active')
+            ->whereEffectivelyActive()
             ->exists();
 
         if ($usernameConflict) {
@@ -829,6 +864,16 @@ class LicenseService
         }
 
         return (string) config('app.timezone', 'UTC');
+    }
+
+    private function currentMinute(): Carbon
+    {
+        return now()->startOfMinute();
+    }
+
+    private function normalizeToMinute(Carbon $value): Carbon
+    {
+        return $value->copy()->startOfMinute();
     }
 
     /**

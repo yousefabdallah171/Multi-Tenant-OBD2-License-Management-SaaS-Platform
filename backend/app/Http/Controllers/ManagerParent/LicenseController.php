@@ -32,7 +32,7 @@ class LicenseController extends BaseManagerParentController
                     $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
                 });
             } else {
-                $query->where('status', $validated['status']);
+                $query->whereEffectiveStatus($validated['status']);
             }
         }
 
@@ -85,7 +85,7 @@ class LicenseController extends BaseManagerParentController
     {
         $baseQuery = License::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('status', 'active')
+            ->whereEffectivelyActive()
             ->where('expires_at', '>=', now());
 
         $day1 = (clone $baseQuery)->where('expires_at', '<=', now()->addDay())->count();
@@ -93,7 +93,7 @@ class LicenseController extends BaseManagerParentController
         $day7 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(7))->count();
         $expired = License::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('status', 'expired')
+            ->whereEffectivelyExpired()
             ->count();
 
         return response()->json([
@@ -110,7 +110,7 @@ class LicenseController extends BaseManagerParentController
     {
         $resolved = $this->resolveTenantLicense($request, $license);
 
-        if ($resolved->status === 'active') {
+        if ($resolved->isEffectivelyActive()) {
             return response()->json([
                 'message' => 'Cannot delete an active license. Deactivate it first.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -176,7 +176,7 @@ class LicenseController extends BaseManagerParentController
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
-            'status' => $license->status,
+            'status' => $license->effectiveStatus(),
         ];
     }
 }

@@ -30,7 +30,7 @@ class LicenseController extends BaseManagerController
                     $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
                 });
             } else {
-                $query->where('status', $validated['status']);
+                $query->whereEffectiveStatus($validated['status']);
             }
         }
 
@@ -80,7 +80,7 @@ class LicenseController extends BaseManagerController
         $sellerIds = $this->teamSellerIds($request);
         $baseQuery = License::query()
             ->whereIn('reseller_id', $sellerIds)
-            ->where('status', 'active')
+            ->whereEffectivelyActive()
             ->where('expires_at', '>=', now());
 
         $day1 = (clone $baseQuery)->where('expires_at', '<=', now()->addDay())->count();
@@ -88,7 +88,7 @@ class LicenseController extends BaseManagerController
         $day7 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(7))->count();
         $expired = License::query()
             ->whereIn('reseller_id', $sellerIds)
-            ->where('status', 'expired')
+            ->whereEffectivelyExpired()
             ->count();
 
         return response()->json([
@@ -129,7 +129,7 @@ class LicenseController extends BaseManagerController
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
-            'status' => $license->status,
+            'status' => $license->effectiveStatus(),
         ];
     }
 }

@@ -30,6 +30,7 @@ const ManagerBiosDetailsPage = lazyNamed(() => import('@/pages/manager/BiosDetai
 const ManagerCustomersPage = lazyNamed(() => import('@/pages/manager/Customers'), 'CustomersPage')
 const ManagerCreateCustomerPage = lazyNamed(() => import('@/pages/manager/CreateCustomer'), 'CreateCustomerPageForManager')
 const ManagerCustomerDetailPage = lazyNamed(() => import('@/pages/manager/CustomerDetail'), 'CustomerDetailPage')
+const ManagerRenewLicensePage = lazyNamed(() => import('@/pages/manager/RenewLicense'), 'RenewLicensePageForManager')
 const ManagerDashboardPage = lazyNamed(() => import('@/pages/manager/Dashboard'), 'DashboardPage')
 const ManagerProfilePage = lazyNamed(() => import('@/pages/manager/Profile'), 'ProfilePage')
 const ManagerReportsPage = lazyNamed(() => import('@/pages/manager/Reports'), 'ReportsPage')
@@ -49,6 +50,7 @@ const ManagerParentBiosDetailsPage = lazyNamed(() => import('@/pages/manager-par
 const ManagerParentCustomersPage = lazyNamed(() => import('@/pages/manager-parent/Customers'), 'CustomersPage')
 const ManagerParentCreateCustomerPage = lazyNamed(() => import('@/pages/manager-parent/CreateCustomer'), 'CreateCustomerPageForManagerParent')
 const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-parent/CustomerDetail'), 'CustomerDetailPage')
+const ManagerParentRenewLicensePage = lazyNamed(() => import('@/pages/manager-parent/RenewLicense'), 'RenewLicensePageForManagerParent')
 const ManagerParentDashboardPage = lazyNamed(() => import('@/pages/manager-parent/Dashboard'), 'DashboardPage')
 const ManagerParentFinancialReportsPage = lazyNamed(() => import('@/pages/manager-parent/FinancialReports'), 'FinancialReportsPage')
 const ManagerParentIpAnalyticsPage = lazyNamed(() => import('@/pages/manager-parent/IpAnalytics'), 'IpAnalyticsPage')
@@ -69,6 +71,7 @@ const SuperAdminBiosDetailsPage = lazyNamed(() => import('@/pages/super-admin/Bi
 const SuperAdminCustomersPage = lazyNamed(() => import('@/pages/super-admin/Customers'), 'CustomersPage')
 const SuperAdminCreateCustomerPage = lazyNamed(() => import('@/pages/super-admin/CreateCustomer'), 'CreateCustomerPage')
 const SuperAdminCustomerDetailPage = lazyNamed(() => import('@/pages/super-admin/CustomerDetail'), 'CustomerDetailPage')
+const SuperAdminRenewLicensePage = lazyNamed(() => import('@/pages/super-admin/RenewLicense'), 'RenewLicensePageForSuperAdmin')
 const DashboardPage = lazyNamed(() => import('@/pages/super-admin/Dashboard'), 'DashboardPage')
 const LogsPage = lazyNamed(() => import('@/pages/super-admin/Logs'), 'LogsPage')
 const ReportsPage = lazyNamed(() => import('@/pages/super-admin/Reports'), 'ReportsPage')
@@ -83,6 +86,7 @@ const SecurityLocksPage = lazyNamed(() => import('@/pages/super-admin/SecurityLo
 const ResellerCustomersPage = lazyNamed(() => import('@/pages/reseller/Customers'), 'CustomersPage')
 const ResellerCreateCustomerPage = lazyNamed(() => import('@/pages/reseller/CreateCustomer'), 'CreateCustomerPageForReseller')
 const ResellerCustomerDetailPage = lazyNamed(() => import('@/pages/reseller/CustomerDetail'), 'CustomerDetailPage')
+const ResellerRenewLicensePage = lazyNamed(() => import('@/pages/reseller/RenewLicense'), 'RenewLicensePageForReseller')
 const ResellerDashboardPage = lazyNamed(() => import('@/pages/reseller/Dashboard'), 'DashboardPage')
 const ActivateLicensePageForReseller = lazyNamed(() => import('@/pages/reseller/ActivateLicense'), 'ActivateLicensePageForReseller')
 const ResellerActivationsPage = lazyNamed(() => import('@/pages/reseller/Activations'), 'ActivationsPage')
@@ -120,6 +124,7 @@ export function AppRouter() {
                   <Route path="tenants" element={<TenantsPage />} />
                   <Route path="customers" element={<SuperAdminCustomersPage />} />
                   <Route path="customers/create" element={<SuperAdminCreateCustomerPage />} />
+                  <Route path="customers/licenses/:id/renew" element={<SuperAdminRenewLicensePage />} />
                   <Route path="customers/:id" element={<SuperAdminCustomerDetailPage />} />
                   <Route path="users" element={<UsersPage />} />
                   <Route path="users/:id" element={<UserDetailPage />} />
@@ -166,6 +171,7 @@ export function AppRouter() {
                   <Route path="activity" element={<ManagerParentActivityPage />} />
                   <Route path="customers" element={<ManagerParentCustomersPage />} />
                   <Route path="customers/create" element={<ManagerParentCreateCustomerPage />} />
+                  <Route path="customers/licenses/:id/renew" element={<ManagerParentRenewLicensePage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="customers/:id" element={<ManagerParentCustomerDetailPage />} />
                   <Route path="settings" element={<ManagerParentSettingsPage />} />
@@ -181,6 +187,7 @@ export function AppRouter() {
                   <Route path="username-management" element={<Navigate to="../team" replace />} />
                   <Route path="customers" element={<ManagerCustomersPage />} />
                   <Route path="customers/create" element={<ManagerCreateCustomerPage />} />
+                  <Route path="customers/licenses/:id/renew" element={<ManagerRenewLicensePage />} />
                   <Route path="customers/:id" element={<ManagerCustomerDetailPage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="software" element={<ManagerSoftwarePage />} />
@@ -202,6 +209,7 @@ export function AppRouter() {
                   <Route path="dashboard" element={<ResellerDashboardPage />} />
                   <Route path="customers" element={<ResellerCustomersPage />} />
                   <Route path="customers/create" element={<ResellerCreateCustomerPage />} />
+                  <Route path="customers/licenses/:id/renew" element={<ResellerRenewLicensePage />} />
                   <Route path="customers/:id" element={<ResellerCustomerDetailPage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="activations" element={<ResellerActivationsPage />} />

@@ -209,7 +209,7 @@ export interface ResellerCustomerSummary {
   external_username: string | null
   program: string | null
   program_id: number | null
-  status: 'active' | 'expired' | 'suspended' | 'cancelled' | 'pending' | null
+  status: 'active' | 'expired' | 'suspended' | 'cancelled' | 'pending' | 'no_license' | null
   price: number
   activated_at: string | null
   start_at?: string | null

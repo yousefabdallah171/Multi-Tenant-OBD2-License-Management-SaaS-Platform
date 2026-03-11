@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Bell, Eye, EyeOff, LockKeyhole, Mail, Phone, UserRound } from 'lucide-react'
+import { Eye, EyeOff, LockKeyhole, Mail, Phone, UserRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { RoleBadge } from '@/components/shared/RoleBadge'
@@ -36,11 +36,6 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [preferences, setPreferences] = useState({
-    emailNotifications: true,
-    productUpdates: false,
-  })
-
   const profileMutation = useMutation({
     mutationFn: () => profileService.updateProfile(profileForm),
     onSuccess: (data) => {
@@ -138,88 +133,57 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="border-amber-200 bg-gradient-to-br from-amber-50/70 to-orange-100/40 dark:border-amber-900/40 dark:from-amber-950/10 dark:to-orange-950/10">
-          <CardHeader className="border-b border-amber-200/70 dark:border-amber-900/40">
-            <CardTitle className="inline-flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                <LockKeyhole className="h-4 w-4" />
-              </span>
-              {t(`${translationPrefix}.changePassword`)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">{t(`${translationPrefix}.currentPassword`)}</Label>
-              <div className="relative">
-                <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={passwordForm.current_password} onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))} className="pe-12" />
-                <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowCurrentPassword((current) => !current)}>
-                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  <span className="sr-only">{showCurrentPassword ? t('common.hide') : t('common.show')}</span>
-                </Button>
-              </div>
+      <Card className="border-amber-200 bg-gradient-to-br from-amber-50/70 to-orange-100/40 dark:border-amber-900/40 dark:from-amber-950/10 dark:to-orange-950/10">
+        <CardHeader className="border-b border-amber-200/70 dark:border-amber-900/40">
+          <CardTitle className="inline-flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              <LockKeyhole className="h-4 w-4" />
+            </span>
+            {t(`${translationPrefix}.changePassword`)}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="current-password">{t(`${translationPrefix}.currentPassword`)}</Label>
+            <div className="relative">
+              <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={passwordForm.current_password} onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))} className="pe-12" />
+              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowCurrentPassword((current) => !current)}>
+                {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showCurrentPassword ? t('common.hide') : t('common.show')}</span>
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">{t(`${translationPrefix}.newPassword`)}</Label>
-              <div className="relative">
-                <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={passwordForm.password} onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))} className="pe-12" />
-                <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowNewPassword((current) => !current)}>
-                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  <span className="sr-only">{showNewPassword ? t('common.hide') : t('common.show')}</span>
-                </Button>
-              </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password">{t(`${translationPrefix}.newPassword`)}</Label>
+            <div className="relative">
+              <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={passwordForm.password} onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))} className="pe-12" />
+              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowNewPassword((current) => !current)}>
+                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showNewPassword ? t('common.hide') : t('common.show')}</span>
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">{t(`${translationPrefix}.confirmPassword`)}</Label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={passwordForm.password_confirmation}
-                  onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
-                  className="pe-12"
-                />
-                <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowConfirmPassword((current) => !current)}>
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  <span className="sr-only">{showConfirmPassword ? t('common.hide') : t('common.show')}</span>
-                </Button>
-              </div>
-            </div>
-            <Button type="button" onClick={() => passwordMutation.mutate()} disabled={passwordMutation.isPending}>
-              {passwordMutation.isPending ? t('common.saving') : t(`${translationPrefix}.updatePassword`)}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-                <Bell className="h-4 w-4" />
-              </span>
-              {t(`${translationPrefix}.preferences`)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={preferences.emailNotifications}
-                onChange={(event) => setPreferences((current) => ({ ...current, emailNotifications: event.target.checked }))}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">{t(`${translationPrefix}.confirmPassword`)}</Label>
+            <div className="relative">
+              <Input
+                id="confirm-password"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={passwordForm.password_confirmation}
+                onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
+                className="pe-12"
               />
-              {t(`${translationPrefix}.emailNotifications`)}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={preferences.productUpdates}
-                onChange={(event) => setPreferences((current) => ({ ...current, productUpdates: event.target.checked }))}
-              />
-              {t(`${translationPrefix}.productUpdates`)}
-            </label>
-          </CardContent>
-        </Card>
-      </div>
+              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowConfirmPassword((current) => !current)}>
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="sr-only">{showConfirmPassword ? t('common.hide') : t('common.show')}</span>
+              </Button>
+            </div>
+          </div>
+          <Button type="button" onClick={() => passwordMutation.mutate()} disabled={passwordMutation.isPending}>
+            {passwordMutation.isPending ? t('common.saving') : t(`${translationPrefix}.updatePassword`)}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

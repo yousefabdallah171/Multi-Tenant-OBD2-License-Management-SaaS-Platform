@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
-type Status = 'active' | 'suspended' | 'cancelled' | 'inactive' | 'expired' | 'pending' | 'scheduled' | 'scheduled_failed' | 'removed' | 'online' | 'offline' | 'degraded' | 'unknown'
+type Status = 'active' | 'suspended' | 'cancelled' | 'inactive' | 'expired' | 'pending' | 'scheduled' | 'scheduled_failed' | 'removed' | 'online' | 'offline' | 'degraded' | 'unknown' | 'no_license'
 
 const statusStyles: Record<Status, string> = {
   active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
@@ -17,6 +17,7 @@ const statusStyles: Record<Status, string> = {
   offline: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
   degraded: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
   unknown: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  no_license: 'bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300',
 }
 
 export function StatusBadge({ status }: { status: Status }) {
@@ -36,6 +37,7 @@ export function StatusBadge({ status }: { status: Status }) {
     offline: t('common.offline'),
     degraded: t('common.degraded'),
     unknown: t('common.unknown'),
+    no_license: t('common.noLicense', { defaultValue: 'No License' }),
   }
 
   return <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', statusStyles[status])}>{labels[status]}</span>

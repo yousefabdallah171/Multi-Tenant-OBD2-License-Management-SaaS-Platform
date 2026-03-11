@@ -40,7 +40,7 @@ class LicenseController extends BaseResellerController
                     $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
                 });
             } else {
-                $query->where('status', $validated['status']);
+                $query->whereEffectiveStatus($validated['status']);
             }
         }
 
@@ -131,6 +131,7 @@ class LicenseController extends BaseResellerController
     {
         $resolved = $this->resolveLicense($request, $license);
         $renewed = $this->licenseService->renew($resolved, $renewLicenseRequest->validated());
+        LicenseCacheInvalidation::invalidateForLicense($renewed);
 
         return response()->json([
             'message' => 'License renewed successfully.',
@@ -197,13 +198,13 @@ class LicenseController extends BaseResellerController
         $days = (int) ($validated['days'] ?? 7);
         $licenses = $this->licenseQuery($request)
             ->with(['customer:id,name,email', 'program:id,name'])
-            ->where('status', 'active')
+            ->whereEffectivelyActive()
             ->whereBetween('expires_at', [now(), now()->addDays($days)])
             ->orderBy('expires_at')
             ->get();
 
         $expired = $this->licenseQuery($request)
-            ->where('status', 'expired')
+            ->whereEffectivelyExpired()
             ->count();
 
         return response()->json([
@@ -314,7 +315,7 @@ class LicenseController extends BaseResellerController
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
-            'status' => $license->status,
+            'status' => $license->effectiveStatus(),
         ];
     }
 }
