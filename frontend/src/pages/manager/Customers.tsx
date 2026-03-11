@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
@@ -532,13 +531,7 @@ export function CustomersPage() {
         />
       </div>
 
-      <Tabs value={status} onValueChange={(value) => setStatus(value as (typeof STATUS_OPTIONS)[number])}>
-        <TabsList>
-          {STATUS_OPTIONS.map((option) => (
-            <TabsTrigger key={option} value={option}>{option === 'all' ? t('common.all') : option === 'scheduled' ? t('common.scheduled', { defaultValue: 'Scheduled' }) : t(`common.${option}`)}</TabsTrigger>
-          ))}
-        </TabsList>
-        <TabsContent value={status} className="space-y-4">
+      <div className="space-y-4">
           <Card>
             <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('manager.pages.customers.searchPlaceholder')} />
@@ -585,8 +578,7 @@ export function CustomersPage() {
               setPage(1)
             }}
           />
-        </TabsContent>
-      </Tabs>
+      </div>
 
       <Dialog open={activationOpen} onOpenChange={setActivationOpen}>
         <DialogContent className="max-w-3xl">

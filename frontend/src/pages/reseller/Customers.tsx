@@ -23,7 +23,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
@@ -859,21 +858,7 @@ export function CustomersPage() {
         />
       </div>
 
-      <Tabs
-        value={status}
-        onValueChange={(value) => {
-          setStatus(value as (typeof STATUS_OPTIONS)[number])
-          setPage(1)
-        }}
-      >
-        <TabsList>
-          {STATUS_OPTIONS.map((option) => (
-            <TabsTrigger key={option} value={option}>
-              {option === 'scheduled' ? t('common.scheduled', { defaultValue: 'Scheduled' }) : text.statusOptions[option]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <TabsContent value={status} className="space-y-4">
+      <div className="space-y-4">
           <Card>
             <CardContent className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_200px]">
               <Input
@@ -930,8 +915,7 @@ export function CustomersPage() {
               setPage(1)
             }}
           />
-        </TabsContent>
-      </Tabs>
+      </div>
 
       <Dialog
         open={activationOpen}

@@ -65,10 +65,6 @@ class ResellerLogController extends BaseManagerParentController
             }
         }
 
-        if (! empty($validated['action'])) {
-            $query->where('action', $validated['action']);
-        }
-
         if (! empty($validated['from'])) {
             $query->whereDate('created_at', '>=', $validated['from']);
         }
@@ -78,6 +74,11 @@ class ResellerLogController extends BaseManagerParentController
         }
 
         $summaryQuery = clone $query;
+
+        if (! empty($validated['action'])) {
+            $query->where('action', $validated['action']);
+        }
+
         $activities = $query->paginate((int) ($validated['per_page'] ?? 15));
         $licenseIds = collect($activities->items())
             ->map(fn (ActivityLog $activity): int => (int) (($activity->metadata ?? [])['license_id'] ?? 0))

@@ -40,7 +40,13 @@ export function BaseChart({
 
   return (
     <div className={cn('min-w-0', heightClassName, className)} style={{ minHeight: 200 }}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        minWidth={0}
+        minHeight={200}
+        initialDimension={{ width: 520, height: 200 }}
+      >
         {children}
       </ResponsiveContainer>
     </div>

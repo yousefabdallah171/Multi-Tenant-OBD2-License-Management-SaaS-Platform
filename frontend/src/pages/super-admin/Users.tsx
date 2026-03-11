@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Building2, Eye, MoreVertical, Search, UserCog, UserRound, Users as UsersIcon } from 'lucide-react'
+import { Eye, MoreVertical, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
-import { StatsCard } from '@/components/shared/StatsCard'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -126,12 +126,13 @@ export function UsersPage() {
         <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.users.description')}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
-        <StatsCard title={t('roles.super_admin')} value={usersQuery.data?.role_counts.super_admin ?? 0} icon={UserCog} color="rose" />
-        <StatsCard title={t('roles.manager_parent')} value={usersQuery.data?.role_counts.manager_parent ?? 0} icon={Building2} color="sky" />
-        <StatsCard title={t('roles.manager')} value={usersQuery.data?.role_counts.manager ?? 0} icon={UsersIcon} color="sky" />
-        <StatsCard title={t('roles.reseller')} value={usersQuery.data?.role_counts.reseller ?? 0} icon={UsersIcon} color="emerald" />
-        <StatsCard title={t('roles.customer')} value={usersQuery.data?.role_counts.customer ?? 0} icon={UserRound} color="amber" />
+      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <StatusFilterCard label={t('common.all')} count={Object.values(usersQuery.data?.role_counts ?? {}).reduce((sum, count) => sum + count, 0)} isActive={role === ''} onClick={() => { setRole(''); setPage(1) }} color="sky" />
+        <StatusFilterCard label={t('roles.super_admin')} count={usersQuery.data?.role_counts.super_admin ?? 0} isActive={role === 'super_admin'} onClick={() => { setRole('super_admin'); setPage(1) }} color="rose" />
+        <StatusFilterCard label={t('roles.manager_parent')} count={usersQuery.data?.role_counts.manager_parent ?? 0} isActive={role === 'manager_parent'} onClick={() => { setRole('manager_parent'); setPage(1) }} color="sky" />
+        <StatusFilterCard label={t('roles.manager')} count={usersQuery.data?.role_counts.manager ?? 0} isActive={role === 'manager'} onClick={() => { setRole('manager'); setPage(1) }} color="sky" />
+        <StatusFilterCard label={t('roles.reseller')} count={usersQuery.data?.role_counts.reseller ?? 0} isActive={role === 'reseller'} onClick={() => { setRole('reseller'); setPage(1) }} color="emerald" />
+        <StatusFilterCard label={t('roles.customer')} count={usersQuery.data?.role_counts.customer ?? 0} isActive={role === 'customer'} onClick={() => { setRole('customer'); setPage(1) }} color="amber" />
       </div>
 
       <Card>
@@ -149,21 +150,6 @@ export function UsersPage() {
                 placeholder={t('common.search')}
               />
             </div>
-            <select
-              value={role}
-              onChange={(event) => {
-                setRole(event.target.value)
-                setPage(1)
-              }}
-              className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-            >
-              <option value="">{t('common.allRoles')}</option>
-              <option value="super_admin">{t('roles.super_admin')}</option>
-              <option value="manager_parent">{t('roles.manager_parent')}</option>
-              <option value="manager">{t('roles.manager')}</option>
-              <option value="reseller">{t('roles.reseller')}</option>
-              <option value="customer">{t('roles.customer')}</option>
-            </select>
             <select
               value={tenantId}
               onChange={(event) => {

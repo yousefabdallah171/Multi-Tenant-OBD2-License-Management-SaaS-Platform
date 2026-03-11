@@ -33,12 +33,14 @@ class TenantController extends BaseSuperAdminController
             ->withSum('licenses as total_revenue', 'price')
             ->latest();
 
-        if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
-        }
-
         if (! empty($validated['search'])) {
             $query->where('name', 'like', '%'.$validated['search'].'%');
+        }
+
+        $statusCountsQuery = clone $query;
+
+        if (! empty($validated['status'])) {
+            $query->where('status', $validated['status']);
         }
 
         $tenants = $query->paginate($perPage);
@@ -46,6 +48,12 @@ class TenantController extends BaseSuperAdminController
         return response()->json([
             'data' => collect($tenants->items())->map(fn (Tenant $tenant): array => $this->serializeTenant($tenant))->values(),
             'meta' => $this->paginationMeta($tenants),
+            'status_counts' => [
+                'all' => (clone $statusCountsQuery)->count(),
+                'active' => (clone $statusCountsQuery)->where('status', 'active')->count(),
+                'suspended' => (clone $statusCountsQuery)->where('status', 'suspended')->count(),
+                'inactive' => (clone $statusCountsQuery)->where('status', 'inactive')->count(),
+            ],
         ]);
     }
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
@@ -218,11 +219,11 @@ export function ResellerLogsPage() {
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <MetricCard label={t('common.actions')} value={summary.total_entries} />
-        <MetricCard label={t('common.activate')} value={summary.activations} />
-        <MetricCard label={t('common.renew')} value={summary.renewals} />
-        <MetricCard label={t('common.deactivate')} value={summary.deactivations} />
-        <MetricCard label={t('common.delete')} value={summary.deletions} />
+        <StatusFilterCard label={t('managerParent.pages.activity.allActions')} count={summary.total_entries} isActive={action === ''} onClick={() => { setAction(''); setPage(1) }} color="sky" />
+        <StatusFilterCard label={t('common.activate')} count={summary.activations} isActive={action === 'license.activated'} onClick={() => { setAction('license.activated'); setPage(1) }} color="emerald" />
+        <StatusFilterCard label={t('common.renew')} count={summary.renewals} isActive={action === 'license.renewed'} onClick={() => { setAction('license.renewed'); setPage(1) }} color="sky" />
+        <StatusFilterCard label={t('common.deactivate')} count={summary.deactivations} isActive={action === 'license.deactivated'} onClick={() => { setAction('license.deactivated'); setPage(1) }} color="amber" />
+        <StatusFilterCard label={t('common.delete')} count={summary.deletions} isActive={action === 'license.delete'} onClick={() => { setAction('license.delete'); setPage(1) }} color="rose" />
         <MetricCard label={t('common.revenue')} value={formatCurrency(summary.revenue, 'USD', locale)} />
       </div>
 

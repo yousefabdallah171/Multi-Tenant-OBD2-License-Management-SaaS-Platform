@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BarChart3, MoreHorizontal, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
@@ -25,13 +26,6 @@ const emptyTenantForm = {
   manager_password: '',
   status: 'active' as 'active' | 'suspended' | 'inactive',
 }
-
-const statusTabs: Array<{ value: '' | 'active' | 'suspended' | 'inactive'; labelKey: string }> = [
-  { value: '', labelKey: 'common.all' },
-  { value: 'active', labelKey: 'common.active' },
-  { value: 'suspended', labelKey: 'common.suspended' },
-  { value: 'inactive', labelKey: 'common.inactive' },
-]
 
 export function TenantsPage() {
   const { t } = useTranslation()
@@ -205,21 +199,11 @@ export function TenantsPage() {
               placeholder={t('common.search')}
             />
           </div>
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('common.status')}>
-            {statusTabs.map((tab) => (
-              <Button
-                key={tab.value || 'all'}
-                type="button"
-                size="sm"
-                variant={status === tab.value ? 'default' : 'secondary'}
-                onClick={() => {
-                  setStatus(tab.value)
-                  setPage(1)
-                }}
-              >
-                {t(tab.labelKey)}
-              </Button>
-            ))}
+          <div className="grid gap-3 md:grid-cols-4">
+            <StatusFilterCard label={t('common.all')} count={tenantsQuery.data?.status_counts.all ?? 0} isActive={status === ''} onClick={() => { setStatus(''); setPage(1) }} color="sky" />
+            <StatusFilterCard label={t('common.active')} count={tenantsQuery.data?.status_counts.active ?? 0} isActive={status === 'active'} onClick={() => { setStatus('active'); setPage(1) }} color="emerald" />
+            <StatusFilterCard label={t('common.suspended')} count={tenantsQuery.data?.status_counts.suspended ?? 0} isActive={status === 'suspended'} onClick={() => { setStatus('suspended'); setPage(1) }} color="amber" />
+            <StatusFilterCard label={t('common.inactive')} count={tenantsQuery.data?.status_counts.inactive ?? 0} isActive={status === 'inactive'} onClick={() => { setStatus('inactive'); setPage(1) }} color="slate" />
           </div>
         </CardContent>
       </Card>

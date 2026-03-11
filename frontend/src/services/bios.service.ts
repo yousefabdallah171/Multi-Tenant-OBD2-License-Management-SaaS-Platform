@@ -28,6 +28,16 @@ export interface BiosConflictParams {
   to?: string
 }
 
+export interface BiosConflictListResponse {
+  data: BiosConflictItem[]
+  meta: PaginationMeta
+  status_counts: {
+    all: number
+    open: number
+    resolved: number
+  }
+}
+
 export const biosService = {
   async getBlacklist(params: BiosBlacklistParams) {
     const { data } = await api.get<{ data: BiosBlacklistEntry[]; meta: PaginationMeta }>('/super-admin/bios-blacklist', { params })
@@ -69,7 +79,7 @@ export const biosService = {
     return data
   },
   async getConflicts(params?: BiosConflictParams) {
-    const { data } = await api.get<{ data: BiosConflictItem[]; meta: PaginationMeta }>('/super-admin/bios-conflicts', { params })
+    const { data } = await api.get<BiosConflictListResponse>('/super-admin/bios-conflicts', { params })
     return data
   },
   async resolveConflict(id: number, payload: { resolution_notes: string }) {

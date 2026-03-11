@@ -357,13 +357,6 @@ export function CustomersPage() {
 
       <Card>
         <CardContent className="space-y-4 p-4">
-          <div className="flex flex-wrap gap-2">
-            {STATUS_OPTIONS.map((option) => (
-              <Button key={option} type="button" size="sm" variant={status === option ? 'default' : 'secondary'} onClick={() => { setStatus(option); setPage(1) }}>
-                {option === 'all' ? t('common.all') : t(`common.${option}`, { defaultValue: option.charAt(0).toUpperCase() + option.slice(1) })}
-              </Button>
-            ))}
-          </div>
           <div className="grid gap-3 xl:grid-cols-5">
             <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder={t('managerParent.pages.customers.searchPlaceholder')} />
             <select value={tenantId} onChange={(event) => { setTenantId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">

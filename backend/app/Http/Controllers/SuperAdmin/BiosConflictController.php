@@ -23,10 +23,6 @@ class BiosConflictController extends BaseSuperAdminController
             ->with(['attemptedBy:id,name', 'program:id,name', 'tenant:id,name'])
             ->latest();
 
-        if (! empty($validated['status'])) {
-            $query->where('resolved', $validated['status'] === 'resolved');
-        }
-
         if (! empty($validated['conflict_type'])) {
             $query->where('conflict_type', $validated['conflict_type']);
         }
@@ -39,11 +35,22 @@ class BiosConflictController extends BaseSuperAdminController
             $query->whereDate('created_at', '<=', $validated['to']);
         }
 
+        $countsQuery = clone $query;
+
+        if (! empty($validated['status'])) {
+            $query->where('resolved', $validated['status'] === 'resolved');
+        }
+
         $conflicts = $query->paginate((int) ($validated['per_page'] ?? 15));
 
         return response()->json([
             'data' => collect($conflicts->items())->map(fn (BiosConflict $conflict): array => $this->serializeConflict($conflict))->values(),
             'meta' => $this->paginationMeta($conflicts),
+            'status_counts' => [
+                'all' => (clone $countsQuery)->count(),
+                'open' => (clone $countsQuery)->where('resolved', false)->count(),
+                'resolved' => (clone $countsQuery)->where('resolved', true)->count(),
+            ],
         ]);
     }
 

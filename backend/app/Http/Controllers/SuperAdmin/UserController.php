@@ -26,10 +26,6 @@ class UserController extends BaseSuperAdminController
 
         $query = User::query()->with('tenant')->latest();
 
-        if (! empty($validated['role'])) {
-            $query->where('role', $validated['role']);
-        }
-
         if (! empty($validated['tenant_id'])) {
             $query->where('tenant_id', $validated['tenant_id']);
         }
@@ -47,10 +43,16 @@ class UserController extends BaseSuperAdminController
             });
         }
 
+        $roleCountsQuery = clone $query;
+
+        if (! empty($validated['role'])) {
+            $query->where('role', $validated['role']);
+        }
+
         $users = $query->paginate($perPage);
 
         $roleCounts = collect(UserRole::cases())
-            ->mapWithKeys(fn (UserRole $role): array => [$role->value => User::query()->where('role', $role->value)->count()]);
+            ->mapWithKeys(fn (UserRole $role): array => [$role->value => (clone $roleCountsQuery)->where('role', $role->value)->count()]);
 
         return response()->json([
             'data' => collect($users->items())->map(fn (User $user): array => $this->serializeUser($user))->values(),

@@ -20,6 +20,12 @@ export interface CreateTenantPayload {
 export interface TenantListResponse {
   data: TenantSummary[]
   meta: PaginationMeta
+  status_counts: {
+    all: number
+    active: number
+    suspended: number
+    inactive: number
+  }
 }
 
 export interface TenantCreateResponse {

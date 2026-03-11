@@ -162,7 +162,7 @@ export const managerParentService = {
     return data
   },
   async getBiosConflicts(params?: BiosConflictFilters) {
-    const { data } = await api.get<PaginatedResponse<BiosConflictItem>>('/bios-conflicts', { params })
+    const { data } = await api.get<PaginatedResponse<BiosConflictItem> & { status_counts: { all: number; open: number; resolved: number } }>('/bios-conflicts', { params })
     return data
   },
   async resolveBiosConflict(id: number, payload: { resolution_notes: string }) {

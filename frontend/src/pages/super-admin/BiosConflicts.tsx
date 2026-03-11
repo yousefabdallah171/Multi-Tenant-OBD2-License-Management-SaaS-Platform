@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
@@ -143,16 +144,10 @@ export function BiosConflictsPage() {
 
       <Card>
         <CardContent className="space-y-4 p-4">
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant={status === '' ? 'default' : 'secondary'} onClick={() => setStatus('')}>
-              {t('common.all')}
-            </Button>
-            <Button type="button" size="sm" variant={status === 'open' ? 'default' : 'secondary'} onClick={() => setStatus('open')}>
-              {t('superAdmin.pages.biosConflicts.status.open')}
-            </Button>
-            <Button type="button" size="sm" variant={status === 'resolved' ? 'default' : 'secondary'} onClick={() => setStatus('resolved')}>
-              {t('superAdmin.pages.biosConflicts.status.resolved')}
-            </Button>
+          <div className="grid gap-3 md:grid-cols-3">
+            <StatusFilterCard label={t('common.all')} count={conflictsQuery.data?.status_counts.all ?? 0} isActive={status === ''} onClick={() => { setStatus(''); setPage(1) }} color="sky" />
+            <StatusFilterCard label={t('superAdmin.pages.biosConflicts.status.open')} count={conflictsQuery.data?.status_counts.open ?? 0} isActive={status === 'open'} onClick={() => { setStatus('open'); setPage(1) }} color="rose" />
+            <StatusFilterCard label={t('superAdmin.pages.biosConflicts.status.resolved')} count={conflictsQuery.data?.status_counts.resolved ?? 0} isActive={status === 'resolved'} onClick={() => { setStatus('resolved'); setPage(1) }} color="emerald" />
           </div>
           <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
             <select
