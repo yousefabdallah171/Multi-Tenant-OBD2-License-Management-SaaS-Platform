@@ -98,8 +98,11 @@ export const biosService = {
     const { data } = await api.put<{ data: ManagedUser }>(`/super-admin/username-management/${id}/username`, { username, reason })
     return data
   },
-  async resetUserPassword(id: number, password?: string) {
-    const { data } = await api.post<{ message: string; temporary_password: string }>(`/super-admin/username-management/${id}/reset-password`, { password })
+  async resetUserPassword(id: number, password?: string, revokeTokens = true) {
+    const { data } = await api.post<{ message: string; temporary_password: string }>(`/super-admin/username-management/${id}/reset-password`, {
+      password,
+      revoke_tokens: revokeTokens,
+    })
     return data
   },
 }

@@ -92,8 +92,10 @@ export function TeamMemberDetailPage() {
 
       {member ? (
         <>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
             <MetricCard label={t('common.username')} value={member.username ?? '-'} />
+            <MetricCard label={t('common.email')} value={member.email} />
+            <MetricCard label={t('common.phone')} value={member.phone ?? '-'} />
             <MetricCard label={t('manager.pages.dashboard.teamCustomers')} value={member.customers_count} />
             <MetricCard label={t('manager.pages.dashboard.activeLicenses')} value={member.active_licenses_count} />
             <MetricCard label={t('common.revenue')} value={formatCurrency(member.revenue, 'USD', locale)} />

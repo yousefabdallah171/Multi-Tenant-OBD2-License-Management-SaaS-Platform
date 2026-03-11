@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -126,5 +127,53 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->role === UserRole::SUPER_ADMIN;
+    }
+
+    public static function generateUniqueUsername(?string $seed, ?int $ignoreId = null): string
+    {
+        $value = trim((string) $seed);
+
+        if ($value !== '' && filter_var($value, FILTER_VALIDATE_EMAIL)) {
+            $value = Str::before($value, '@');
+        }
+
+        $base = Str::of($value)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+        $base = $base !== '' ? $base : 'user';
+        $username = $base;
+        $counter = 2;
+
+        while (static::query()
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->where('username', $username)
+            ->exists()) {
+            $username = $base.'_'.$counter;
+            $counter++;
+        }
+
+        return $username;
+    }
+
+    public function ensureUsername(?string $seed = null): string
+    {
+        if (! empty($this->username)) {
+            return (string) $this->username;
+        }
+
+        $username = static::generateUniqueUsername($seed ?? $this->email ?? $this->name, $this->id);
+        $this->forceFill(['username' => $username])->save();
+        $this->username = $username;
+
+        return $username;
+    }
+
+    public function revokeAuthTokens(?int $exceptTokenId = null): int
+    {
+        $query = $this->tokens();
+
+        if ($exceptTokenId) {
+            $query->whereKeyNot($exceptTokenId);
+        }
+
+        return $query->delete();
     }
 }

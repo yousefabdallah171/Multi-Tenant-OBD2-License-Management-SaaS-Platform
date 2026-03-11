@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import type { ManagerTeamReseller } from '@/types/manager-reseller.types'
@@ -62,6 +62,7 @@ export function TeamPage() {
   const [newPassword, setNewPassword] = useState('')
   const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
+  const [revokeTokensOnReset, setRevokeTokensOnReset] = useState(true)
 
   const teamQuery = useQuery({
     queryKey: ['manager', 'team', page, perPage, status, search],
@@ -80,7 +81,7 @@ export function TeamPage() {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
-        phone: form.phone.trim() || null,
+        phone: normalizePhoneInput(form.phone.trim()) || null,
       }),
     onSuccess: () => {
       toast.success(t('manager.pages.team.createSuccess'))
@@ -94,7 +95,7 @@ export function TeamPage() {
       managerService.updateTeamMember(editingMember?.id ?? 0, {
         name: form.name.trim(),
         email: form.email.trim(),
-        phone: form.phone.trim() || null,
+        phone: normalizePhoneInput(form.phone.trim()) || null,
       }),
     onSuccess: () => {
       toast.success(t('manager.pages.team.updateSuccess'))
@@ -147,12 +148,13 @@ export function TeamPage() {
   })
 
   const resetMutation = useMutation({
-    mutationFn: () => managerService.resetPassword(passwordTarget?.id ?? 0, newPassword),
+    mutationFn: () => managerService.resetPassword(passwordTarget?.id ?? 0, newPassword, revokeTokensOnReset),
     onSuccess: () => {
       toast.success(t('manager.pages.usernameManagement.resetPasswordSuccess'))
       setPasswordTarget(null)
       setNewPassword('')
       setShowNewPassword(false)
+      setRevokeTokensOnReset(true)
     },
   })
 
@@ -177,7 +179,6 @@ export function TeamPage() {
                 {row.name}
               </button>
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{row.email}</p>
           </div>
         ),
       },
@@ -192,6 +193,20 @@ export function TeamPage() {
             <StatusBadge status={row.username_locked ? 'suspended' : 'active'} />
           </div>
         ),
+      },
+      {
+        key: 'email',
+        label: t('common.email'),
+        sortable: true,
+        sortValue: (row) => row.email,
+        render: (row) => row.email,
+      },
+      {
+        key: 'phone',
+        label: t('common.phone'),
+        sortable: true,
+        sortValue: (row) => row.phone ?? '',
+        render: (row) => row.phone || '-',
       },
       { key: 'customers', label: t('manager.pages.dashboard.teamCustomers'), sortable: true, sortValue: (row) => row.customers_count, render: (row) => row.customers_count },
       { key: 'licenses', label: t('manager.pages.dashboard.activeLicenses'), sortable: true, sortValue: (row) => row.active_licenses_count, render: (row) => row.active_licenses_count },
@@ -259,6 +274,7 @@ export function TeamPage() {
                     setPasswordTarget(row)
                     setNewPassword('')
                     setShowNewPassword(false)
+                    setRevokeTokensOnReset(true)
                   }}
                 >
                   {t('common.resetPassword')}
@@ -292,6 +308,11 @@ export function TeamPage() {
 
     if (!editingMember && form.password.trim().length < 8) {
       toast.error(t('manager.pages.team.passwordValidation'))
+      return
+    }
+
+    if (form.phone.trim() && !isValidPhoneNumber(form.phone)) {
+      toast.error(t('validation.invalidPhone', { defaultValue: 'Invalid phone number' }))
       return
     }
 
@@ -386,7 +407,14 @@ export function TeamPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="team-phone">{t('common.phone')}</Label>
-              <Input id="team-phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+              <Input
+                id="team-phone"
+                type="tel"
+                inputMode="tel"
+                placeholder="+966..."
+                value={form.phone}
+                onChange={(event) => setForm((current) => ({ ...current, phone: normalizePhoneInput(event.target.value) }))}
+              />
             </div>
             {!editingMember ? (
               <div className="space-y-2">
@@ -516,6 +544,8 @@ export function TeamPage() {
           if (!open) {
             setPasswordTarget(null)
             setNewPassword('')
+            setShowNewPassword(false)
+            setRevokeTokensOnReset(true)
           }
         }}
       >
@@ -534,6 +564,19 @@ export function TeamPage() {
               </Button>
             </div>
           </div>
+          <label htmlFor="manager-reset-revoke-tokens" className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800">
+            <input
+              id="manager-reset-revoke-tokens"
+              type="checkbox"
+              checked={revokeTokensOnReset}
+              onChange={(event) => setRevokeTokensOnReset(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+            />
+            <span className="space-y-1">
+              <span className="block font-medium text-slate-950 dark:text-white">{t('common.revokeSessionsOnPasswordReset')}</span>
+              <span className="block text-xs text-slate-500 dark:text-slate-400">{t('common.revokeSessionsOnPasswordResetHelp')}</span>
+            </span>
+          </label>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setPasswordTarget(null)}>
               {t('common.cancel')}

@@ -110,6 +110,8 @@
     "allMethods": "كل الطرق",
     "selectTenant": "اختر الشريك",
     "resetPassword": "إعادة تعيين كلمة المرور",
+    "revokeSessionsOnPasswordReset": "تسجيل خروج هذا المستخدم من جميع الأجهزة",
+    "revokeSessionsOnPasswordResetHelp": "يتم إبطال جلسات تسجيل الدخول الحالية حتى تصبح كلمة المرور الجديدة فعالة فورًا.",
     "addedBy": "أضيف بواسطة",
     "removed": "تمت الإزالة",
     "reason": "السبب",

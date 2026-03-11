@@ -87,13 +87,20 @@ class UsernameManagementController extends BaseManagerController
         $target = $this->resolveTeamUser($request, $user);
         $validated = $request->validate([
             'password' => ['nullable', 'string', 'min:8'],
+            'revoke_tokens' => ['nullable', 'boolean'],
         ]);
 
         $password = $validated['password'] ?? 'password1234';
         $target->update(['password' => Hash::make($password)]);
 
+        if (($validated['revoke_tokens'] ?? false) === true) {
+            $exceptTokenId = $request->user()?->is($target) ? $request->user()?->currentAccessToken()?->getKey() : null;
+            $target->revokeAuthTokens($exceptTokenId);
+        }
+
         $this->logActivity($request, 'username.reset_password', sprintf('Reset password for %s.', $target->email), [
             'target_user_id' => $target->id,
+            'revoke_tokens' => $validated['revoke_tokens'] ?? false,
         ]);
 
         return response()->json([

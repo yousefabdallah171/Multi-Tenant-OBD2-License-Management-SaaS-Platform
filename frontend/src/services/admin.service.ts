@@ -41,9 +41,10 @@ export const adminService = {
     const { data } = await api.delete<{ message: string }>(`/super-admin/admin-management/${id}`)
     return data
   },
-  async resetPassword(id: number, newPassword?: string) {
+  async resetPassword(id: number, newPassword?: string, revokeTokens = true) {
     const { data } = await api.post<{ message: string; temporary_password: string }>(`/super-admin/admin-management/${id}/reset-password`, {
       new_password: newPassword,
+      revoke_tokens: revokeTokens,
     })
     return data
   },

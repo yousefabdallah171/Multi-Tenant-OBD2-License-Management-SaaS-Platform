@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import { teamService, type TeamPayload } from '@/services/team.service'
@@ -68,6 +68,7 @@ export function TeamManagementPage() {
   const [newPassword, setNewPassword] = useState('')
   const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [showResetPassword, setShowResetPassword] = useState(false)
+  const [revokeTokensOnReset, setRevokeTokensOnReset] = useState(true)
 
   const membersQuery = useQuery({
     queryKey: ['manager-parent', 'team', role, page, perPage, search, status],
@@ -133,12 +134,13 @@ export function TeamManagementPage() {
   })
 
   const resetMutation = useMutation({
-    mutationFn: () => managerParentService.resetPassword(passwordTarget?.id ?? 0, newPassword),
+    mutationFn: () => managerParentService.resetPassword(passwordTarget?.id ?? 0, newPassword, revokeTokensOnReset),
     onSuccess: () => {
       toast.success(t('managerParent.pages.usernameManagement.resetPasswordSuccess'))
       setPasswordTarget(null)
       setNewPassword('')
       setShowResetPassword(false)
+      setRevokeTokensOnReset(true)
     },
   })
 
@@ -273,6 +275,7 @@ export function TeamManagementPage() {
                     setPasswordTarget(row)
                     setNewPassword('')
                     setShowResetPassword(false)
+                    setRevokeTokensOnReset(true)
                   }}
                 >
                   {t('common.resetPassword')}
@@ -312,13 +315,18 @@ export function TeamManagementPage() {
       return
     }
 
+    if (form.phone.trim() && !isValidPhoneNumber(form.phone)) {
+      toast.error(t('validation.invalidPhone', { defaultValue: 'Invalid phone number' }))
+      return
+    }
+
     if (editingMember) {
       updateMutation.mutate({
         id: editingMember.id,
         payload: {
           name: form.name.trim(),
           email: form.email.trim(),
-          phone: form.phone.trim() || null,
+          phone: normalizePhoneInput(form.phone.trim()) || null,
         },
       })
       return
@@ -328,7 +336,7 @@ export function TeamManagementPage() {
       name: form.name.trim(),
       email: form.email.trim(),
       password: form.password,
-      phone: form.phone.trim() || null,
+      phone: normalizePhoneInput(form.phone.trim()) || null,
       role: inviteRole,
     })
   }
@@ -450,7 +458,14 @@ export function TeamManagementPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="team-phone">{t('common.phone')}</Label>
-              <Input id="team-phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+              <Input
+                id="team-phone"
+                type="tel"
+                inputMode="tel"
+                placeholder="+966..."
+                value={form.phone}
+                onChange={(event) => setForm((current) => ({ ...current, phone: normalizePhoneInput(event.target.value) }))}
+              />
             </div>
             {!editingMember ? (
               <div className="space-y-2">
@@ -555,6 +570,8 @@ export function TeamManagementPage() {
           if (!open) {
             setPasswordTarget(null)
             setNewPassword('')
+            setShowResetPassword(false)
+            setRevokeTokensOnReset(true)
           }
         }}
       >
@@ -573,6 +590,19 @@ export function TeamManagementPage() {
               </Button>
             </div>
           </div>
+          <label htmlFor="manager-parent-reset-revoke-tokens" className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800">
+            <input
+              id="manager-parent-reset-revoke-tokens"
+              type="checkbox"
+              checked={revokeTokensOnReset}
+              onChange={(event) => setRevokeTokensOnReset(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+            />
+            <span className="space-y-1">
+              <span className="block font-medium text-slate-950 dark:text-white">{t('common.revokeSessionsOnPasswordReset')}</span>
+              <span className="block text-xs text-slate-500 dark:text-slate-400">{t('common.revokeSessionsOnPasswordResetHelp')}</span>
+            </span>
+          </label>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setPasswordTarget(null)}>
               {t('common.cancel')}

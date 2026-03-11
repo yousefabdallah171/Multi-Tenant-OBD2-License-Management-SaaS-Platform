@@ -181,8 +181,11 @@ export const managerParentService = {
     const { data } = await api.put<{ data: UsernameManagedUser }>(`/username-management/${id}/username`, { username, reason })
     return data
   },
-  async resetPassword(id: number, password?: string) {
-    const { data } = await api.post<{ message: string; temporary_password: string }>(`/username-management/${id}/reset-password`, { password })
+  async resetPassword(id: number, password?: string, revokeTokens = true) {
+    const { data } = await api.post<{ message: string; temporary_password: string }>(`/username-management/${id}/reset-password`, {
+      password,
+      revoke_tokens: revokeTokens,
+    })
     return data
   },
   async getFinancialReports(params?: { from?: string; to?: string }) {

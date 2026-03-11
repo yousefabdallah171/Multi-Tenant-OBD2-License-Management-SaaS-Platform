@@ -32,13 +32,15 @@ class TeamController extends BaseManagerController
             $query->where(function ($builder) use ($validated): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
-                    ->orWhere('email', 'like', '%'.$validated['search'].'%');
+                    ->orWhere('email', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('username', 'like', '%'.$validated['search'].'%');
             });
         }
 
         $page = (int) ($validated['page'] ?? 1);
         $perPage = (int) ($validated['per_page'] ?? 10);
         $resellers = $query->get();
+        $resellers->each(fn (User $reseller) => $reseller->ensureUsername());
         $stats = License::query()
             ->whereIn('reseller_id', $resellers->pluck('id')->all())
             ->get()
@@ -56,6 +58,7 @@ class TeamController extends BaseManagerController
     public function show(Request $request, User $user): JsonResponse
     {
         $reseller = $this->resolveManagedSeller($request, $user);
+        $reseller->ensureUsername();
         $stats = License::query()->where('reseller_id', $reseller->id)->get();
 
         $memberLicenses = License::query()
@@ -187,13 +190,13 @@ class TeamController extends BaseManagerController
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
         ]);
 
         $user = User::query()->create([
             'tenant_id' => $this->currentTenantId($request),
             'name' => $validated['name'],
-            'username' => null,
+            'username' => User::generateUniqueUsername($validated['email'] ?? $validated['name']),
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'phone' => $validated['phone'] ?? null,
@@ -222,7 +225,7 @@ class TeamController extends BaseManagerController
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,'.$reseller->id],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
         ]);
 
         $reseller->update($validated);

@@ -34,8 +34,10 @@ export function UserDetailPage() {
 
       {user ? (
         <>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
             <MetricCard label={t('common.username')} value={user.username ?? '-'} />
+            <MetricCard label={t('common.email')} value={user.email} />
+            <MetricCard label={t('common.phone')} value={user.phone ?? '-'} />
             <MetricCard label={t('managerParent.pages.teamManagement.customers')} value={user.customers_count} />
             <MetricCard label={t('managerParent.pages.teamManagement.activeLicenses')} value={user.active_licenses_count} />
             <MetricCard label={t('common.revenue')} value={new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(user.revenue)} />

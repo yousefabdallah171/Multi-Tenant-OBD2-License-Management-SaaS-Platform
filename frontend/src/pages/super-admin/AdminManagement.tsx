@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { biosService } from '@/services/bios.service'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatDate } from '@/lib/utils'
+import { formatDate, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { adminService } from '@/services/admin.service'
 import { tenantService } from '@/services/tenant.service'
@@ -62,6 +62,7 @@ export function AdminManagementPage() {
   const [newPassword, setNewPassword] = useState('')
   const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [showResetPassword, setShowResetPassword] = useState(false)
+  const [revokeTokensOnReset, setRevokeTokensOnReset] = useState(true)
 
   const adminsQuery = useQuery({
     queryKey: ['super-admin', 'admin-management', page, perPage, role, tenantId, status, search],
@@ -75,13 +76,15 @@ export function AdminManagementPage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const normalizedPhone = normalizePhoneInput(form.phone.trim())
+
       if (editing) {
         return adminService.update(editing.id, {
           name: form.name,
           email: form.email,
           role: form.role,
           tenant_id: form.role === 'super_admin' ? null : Number(form.tenant_id),
-          phone: form.phone || null,
+          phone: normalizedPhone || null,
           status: form.status,
         })
       }
@@ -92,7 +95,7 @@ export function AdminManagementPage() {
         password: form.password,
         role: form.role,
         tenant_id: form.role === 'super_admin' ? null : Number(form.tenant_id),
-        phone: form.phone || null,
+        phone: normalizedPhone || null,
         status: form.status,
       })
     },
@@ -169,12 +172,13 @@ export function AdminManagementPage() {
   })
 
   const resetPasswordMutation = useMutation({
-    mutationFn: () => adminService.resetPassword(passwordTarget?.id ?? 0, newPassword),
+    mutationFn: () => adminService.resetPassword(passwordTarget?.id ?? 0, newPassword, revokeTokensOnReset),
     onSuccess: () => {
       toast.success(t('superAdmin.pages.adminManagement.resetSuccess'))
       setPasswordTarget(null)
       setNewPassword('')
       setShowResetPassword(false)
+      setRevokeTokensOnReset(true)
     },
   })
 
@@ -185,6 +189,15 @@ export function AdminManagementPage() {
 
   const isProtectedSuperAdmin = (row: ManagedUser) =>
     row.role === 'super_admin' && (row.id === currentUserId || (row.status === 'active' && activeSuperAdminCount <= 1))
+
+  function validateForm() {
+    if (form.phone.trim() && !isValidPhoneNumber(form.phone)) {
+      toast.error(t('validation.invalidPhone', { defaultValue: 'Invalid phone number' }))
+      return false
+    }
+
+    return true
+  }
 
   const columns = useMemo<Array<DataTableColumn<ManagedUser>>>(
     () => [
@@ -308,6 +321,7 @@ export function AdminManagementPage() {
                   setPasswordTarget(row)
                   setNewPassword('')
                   setShowResetPassword(false)
+                  setRevokeTokensOnReset(true)
                 }}
               >
                 {t('common.resetPassword')}
@@ -485,7 +499,14 @@ export function AdminManagementPage() {
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="admin-phone">{t('common.phone')}</Label>
-              <Input id="admin-phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+              <Input
+                id="admin-phone"
+                type="tel"
+                inputMode="tel"
+                placeholder="+966..."
+                value={form.phone}
+                onChange={(event) => setForm((current) => ({ ...current, phone: normalizePhoneInput(event.target.value) }))}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="admin-role">{t('common.role')}</Label>
@@ -523,7 +544,17 @@ export function AdminManagementPage() {
             <Button type="button" variant="ghost" onClick={() => setFormOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="button" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!validateForm()) {
+                  return
+                }
+
+                saveMutation.mutate()
+              }}
+              disabled={saveMutation.isPending}
+            >
               {saveMutation.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
@@ -609,6 +640,8 @@ export function AdminManagementPage() {
           if (!open) {
             setPasswordTarget(null)
             setNewPassword('')
+            setShowResetPassword(false)
+            setRevokeTokensOnReset(true)
           }
         }}
       >
@@ -627,6 +660,19 @@ export function AdminManagementPage() {
               </Button>
             </div>
           </div>
+          <label htmlFor="super-admin-reset-revoke-tokens" className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800">
+            <input
+              id="super-admin-reset-revoke-tokens"
+              type="checkbox"
+              checked={revokeTokensOnReset}
+              onChange={(event) => setRevokeTokensOnReset(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+            />
+            <span className="space-y-1">
+              <span className="block font-medium text-slate-950 dark:text-white">{t('common.revokeSessionsOnPasswordReset')}</span>
+              <span className="block text-xs text-slate-500 dark:text-slate-400">{t('common.revokeSessionsOnPasswordResetHelp')}</span>
+            </span>
+          </label>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setPasswordTarget(null)}>
               {t('common.cancel')}

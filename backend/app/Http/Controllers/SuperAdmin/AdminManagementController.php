@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class AdminManagementController extends BaseSuperAdminController
@@ -48,11 +47,13 @@ class AdminManagementController extends BaseSuperAdminController
             $query->where(function ($builder) use ($validated): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
-                    ->orWhere('email', 'like', '%'.$validated['search'].'%');
+                    ->orWhere('email', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('username', 'like', '%'.$validated['search'].'%');
             });
         }
 
         $admins = $query->paginate($perPage);
+        collect($admins->items())->each(fn (User $user) => $user->ensureUsername());
 
         return response()->json([
             'data' => collect($admins->items())->map(fn (User $user): array => $this->serializeAdmin($user))->values(),
@@ -68,7 +69,7 @@ class AdminManagementController extends BaseSuperAdminController
             'password' => ['required', 'string', 'min:8'],
             'role' => ['required', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
         ]);
 
         if ($validated['role'] !== UserRole::SUPER_ADMIN->value && empty($validated['tenant_id'])) {
@@ -79,7 +80,7 @@ class AdminManagementController extends BaseSuperAdminController
             $user = User::query()->create([
                 'tenant_id' => $validated['role'] === UserRole::SUPER_ADMIN->value ? null : $validated['tenant_id'],
                 'name' => $validated['name'],
-                'username' => Str::slug($validated['name']).'-'.Str::lower(Str::random(4)),
+                'username' => User::generateUniqueUsername($validated['email'] ?? $validated['name']),
                 'email' => $validated['email'],
                 'phone' => $validated['phone'] ?? null,
                 'password' => Hash::make($validated['password']),
@@ -105,7 +106,7 @@ class AdminManagementController extends BaseSuperAdminController
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'role' => ['sometimes', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
             'status' => ['sometimes', 'in:active,suspended,inactive'],
@@ -132,6 +133,7 @@ class AdminManagementController extends BaseSuperAdminController
         abort_if(($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value, Response::HTTP_NOT_FOUND);
 
         $member = $user->load('tenant');
+        $member->ensureUsername();
         $stats = $this->memberStats($member);
 
         $recentLicenses = License::query()
@@ -201,13 +203,20 @@ class AdminManagementController extends BaseSuperAdminController
     {
         $validated = $request->validate([
             'new_password' => ['nullable', 'string', 'min:8'],
+            'revoke_tokens' => ['nullable', 'boolean'],
         ]);
 
         $newPassword = $validated['new_password'] ?? Str::password(12, true, true, true, false);
         $user->update(['password' => Hash::make($newPassword)]);
 
+        if (($validated['revoke_tokens'] ?? false) === true) {
+            $exceptTokenId = $request->user()?->is($user) ? $request->user()?->currentAccessToken()?->getKey() : null;
+            $user->revokeAuthTokens($exceptTokenId);
+        }
+
         $this->logActivity($request, 'admin.reset_password', sprintf('Reset password for %s.', $user->email), [
             'target_user_id' => $user->id,
+            'revoke_tokens' => $validated['revoke_tokens'] ?? false,
         ]);
 
         return response()->json([

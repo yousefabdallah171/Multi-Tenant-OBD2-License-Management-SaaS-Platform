@@ -34,11 +34,13 @@ class TeamController extends BaseManagerParentController
                 $query->where(function ($builder) use ($validated): void {
                     $builder
                         ->where('name', 'like', '%'.$validated['search'].'%')
-                        ->orWhere('email', 'like', '%'.$validated['search'].'%');
+                        ->orWhere('email', 'like', '%'.$validated['search'].'%')
+                        ->orWhere('username', 'like', '%'.$validated['search'].'%');
                 });
             })
             ->latest()
             ->get()
+            ->each(fn (User $user) => $user->ensureUsername())
             ->map(fn (User $user): array => $this->serializeUser($user));
 
         $paginator = $this->paginateCollection($items, $page, $perPage);
@@ -55,14 +57,14 @@ class TeamController extends BaseManagerParentController
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'role' => ['required', 'in:manager,reseller'],
         ]);
 
         $user = User::query()->create([
             'tenant_id' => $this->currentTenantId($request),
             'name' => $validated['name'],
-            'username' => null,
+            'username' => User::generateUniqueUsername($validated['email'] ?? $validated['name']),
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'phone' => $validated['phone'] ?? null,
@@ -87,7 +89,7 @@ class TeamController extends BaseManagerParentController
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'status' => ['sometimes', 'in:active,suspended,inactive'],
         ]);
 
@@ -154,6 +156,7 @@ class TeamController extends BaseManagerParentController
     public function show(Request $request, User $user): JsonResponse
     {
         $member = $this->resolveTeamUser($request, $user);
+        $member->ensureUsername();
 
         $memberLicenses = License::query()
             ->with(['customer:id,name,email', 'program:id,name'])

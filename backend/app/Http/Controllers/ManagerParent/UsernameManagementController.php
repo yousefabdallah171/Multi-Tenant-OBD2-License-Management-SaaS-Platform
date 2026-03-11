@@ -92,13 +92,20 @@ class UsernameManagementController extends BaseManagerParentController
 
         $validated = $request->validate([
             'password' => ['nullable', 'string', 'min:8'],
+            'revoke_tokens' => ['nullable', 'boolean'],
         ]);
 
         $password = $validated['password'] ?? 'password1234';
         $user->update(['password' => Hash::make($password)]);
 
+        if (($validated['revoke_tokens'] ?? false) === true) {
+            $exceptTokenId = $request->user()?->is($user) ? $request->user()?->currentAccessToken()?->getKey() : null;
+            $user->revokeAuthTokens($exceptTokenId);
+        }
+
         $this->logActivity($request, 'username.reset_password', sprintf('Reset password for %s.', $user->email), [
             'target_user_id' => $user->id,
+            'revoke_tokens' => $validated['revoke_tokens'] ?? false,
         ]);
 
         return response()->json([

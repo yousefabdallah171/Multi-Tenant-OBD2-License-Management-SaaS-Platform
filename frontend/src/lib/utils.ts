@@ -232,6 +232,22 @@ export function formatDuration(durationDays: number) {
   return `${days} day${days === 1 ? '' : 's'}`
 }
 
+export function normalizePhoneInput(value: string) {
+  const compact = value.replace(/\s+/g, '')
+  if (compact === '') {
+    return ''
+  }
+
+  const hasLeadingPlus = compact.startsWith('+')
+  const digitsOnly = compact.replace(/\D+/g, '')
+
+  return `${hasLeadingPlus ? '+' : ''}${digitsOnly}`
+}
+
+export function isValidPhoneNumber(value: string) {
+  return /^\+?\d{6,20}$/.test(value.trim())
+}
+
 export function isLikelyBios(value: string | null | undefined) {
   const normalized = value?.trim()
   if (!normalized) {

@@ -50,6 +50,7 @@ class UserController extends BaseSuperAdminController
         }
 
         $users = $query->paginate($perPage);
+        collect($users->items())->each(fn (User $user) => $user->ensureUsername());
 
         $roleCounts = collect(UserRole::cases())
             ->mapWithKeys(fn (UserRole $role): array => [$role->value => (clone $roleCountsQuery)->where('role', $role->value)->count()]);
@@ -77,6 +78,7 @@ class UserController extends BaseSuperAdminController
     public function show(User $user): JsonResponse
     {
         $member = $user->load('tenant');
+        $member->ensureUsername();
         $stats = $this->memberStats($member);
 
         $recentLicensesQuery = License::query()

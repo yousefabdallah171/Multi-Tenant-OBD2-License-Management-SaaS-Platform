@@ -110,6 +110,8 @@
     "allMethods": "All methods",
     "selectTenant": "Select tenant",
     "resetPassword": "Reset password",
+    "revokeSessionsOnPasswordReset": "Log out this user from all devices",
+    "revokeSessionsOnPasswordResetHelp": "Revokes existing login sessions so the new password takes effect immediately.",
     "addedBy": "Added by",
     "removed": "Removed",
     "reason": "Reason",
