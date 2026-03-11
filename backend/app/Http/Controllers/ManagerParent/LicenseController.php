@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Models\License;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -120,6 +121,7 @@ class LicenseController extends BaseManagerParentController
         $customerId = $resolved->customer_id;
         $programId = $resolved->program_id;
 
+        LicenseCacheInvalidation::invalidateForLicense($resolved);
         $resolved->delete();
 
         $this->logActivity(

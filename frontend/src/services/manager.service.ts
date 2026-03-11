@@ -1,4 +1,5 @@
 import { api } from '@/services/api'
+import { apiCache } from '@/lib/apiCache'
 import type { FinancialReportData, PaginatedResponse } from '@/types/manager-parent.types'
 import type {
   ActivateManagerSoftwareData,
@@ -27,25 +28,55 @@ import type {
 import type { LicenseFilters, LicenseSummary } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
+/**
+ * Cache TTL values (in milliseconds)
+ */
+const CACHE_TTL = {
+  STATS: 45 * 1000, // 45 seconds
+  CHART: 30 * 1000, // 30 seconds
+  ACTIVITY: 60 * 1000, // 60 seconds
+  REPORT: 90 * 1000, // 90 seconds
+}
+
 export const managerService = {
   async getDashboard() {
     const { data } = await api.get<ManagerDashboardPayload>('/manager/dashboard')
     return data
   },
   async getDashboardStats() {
+    const cacheKey = 'manager:dashboard:stats'
+    const cached = apiCache.get<{ stats: ManagerDashboardStats }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ stats: ManagerDashboardStats }>('/manager/dashboard/stats')
+    apiCache.set(cacheKey, data, CACHE_TTL.STATS)
     return data
   },
   async getActivationsChart() {
+    const cacheKey = 'manager:dashboard:activations-chart'
+    const cached = apiCache.get<{ data: DashboardSeriesPoint[] }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: DashboardSeriesPoint[] }>('/manager/dashboard/activations-chart')
+    apiCache.set(cacheKey, data, CACHE_TTL.CHART)
     return data
   },
   async getRevenueChart() {
+    const cacheKey = 'manager:dashboard:revenue-chart'
+    const cached = apiCache.get<{ data: DashboardSeriesPoint[] }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: DashboardSeriesPoint[] }>('/manager/dashboard/revenue-chart')
+    apiCache.set(cacheKey, data, CACHE_TTL.CHART)
     return data
   },
   async getRecentActivity() {
+    const cacheKey = 'manager:dashboard:recent-activity'
+    const cached = apiCache.get<{ data: RoleActivityEntry[] }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: RoleActivityEntry[] }>('/manager/dashboard/recent-activity')
+    apiCache.set(cacheKey, data, CACHE_TTL.ACTIVITY)
     return data
   },
   async getTeam(params: ManagerTeamFilters) {
@@ -94,6 +125,9 @@ export const managerService = {
   },
   async createCustomer(payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: ManagerCustomerSummary }>('/manager/customers', payload)
+    // Invalidate cache after mutation
+    apiCache.clearPattern(/^manager:dashboard:/)
+    apiCache.clearPattern(/^manager:reports:/)
     return data
   },
   async getCustomer(id: number) {
@@ -102,10 +136,16 @@ export const managerService = {
   },
   async updateCustomer(id: number, payload: { client_name: string; email?: string; phone?: string }) {
     const { data } = await api.put<{ data: ManagerCustomerSummary }>(`/manager/customers/${id}`, payload)
+    // Invalidate cache after mutation
+    apiCache.clearPattern(/^manager:dashboard:/)
+    apiCache.clearPattern(/^manager:reports:/)
     return data
   },
   async deleteCustomer(id: number) {
     const { data } = await api.delete<{ message: string }>(`/manager/customers/${id}`)
+    // Invalidate cache after mutation
+    apiCache.clearPattern(/^manager:dashboard:/)
+    apiCache.clearPattern(/^manager:reports:/)
     return data
   },
   async getLicenses(params?: LicenseFilters) {
@@ -137,15 +177,33 @@ export const managerService = {
     return data
   },
   async getFinancialReports(params: ReportRangeFilters) {
+    const paramKey = JSON.stringify(params)
+    const cacheKey = `manager:reports:financial:${paramKey}`
+    const cached = apiCache.get<{ data: FinancialReportData }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: FinancialReportData }>('/manager/reports/financial', { params })
+    apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
     return data
   },
   async getActivationRate(params: ReportRangeFilters) {
+    const paramKey = JSON.stringify(params)
+    const cacheKey = `manager:reports:activation-rate:${paramKey}`
+    const cached = apiCache.get<{ data: Array<{ label: string; count: number; percentage: number }> }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: Array<{ label: string; count: number; percentage: number }> }>('/manager/reports/activation-rate', { params })
+    apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
     return data
   },
   async getRetention(params: ReportRangeFilters) {
+    const paramKey = JSON.stringify(params)
+    const cacheKey = `manager:reports:retention:${paramKey}`
+    const cached = apiCache.get<{ data: Array<{ month: string; customers: number; activations: number }> }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: Array<{ month: string; customers: number; activations: number }> }>('/manager/reports/retention', { params })
+    apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
     return data
   },
   async exportFinancialCsv(params: ReportRangeFilters) {

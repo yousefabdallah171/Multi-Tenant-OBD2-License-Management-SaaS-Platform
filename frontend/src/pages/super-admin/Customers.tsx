@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -75,9 +76,25 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
-  const expiringQuery = useQuery({
-    queryKey: ['super-admin', 'licenses', 'expiring'],
-    queryFn: () => superAdminCustomerService.getExpiring(),
+  const [activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery] = useQueries({
+    queries: [
+      {
+        queryKey: ['super-admin', 'customers', 'count', 'active', search, tenantId, resellerId, programId],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'active' }),
+      },
+      {
+        queryKey: ['super-admin', 'customers', 'count', 'scheduled', search, tenantId, resellerId, programId],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'scheduled' }),
+      },
+      {
+        queryKey: ['super-admin', 'customers', 'count', 'expired', search, tenantId, resellerId, programId],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'expired' }),
+      },
+      {
+        queryKey: ['super-admin', 'customers', 'count', 'cancelled', search, tenantId, resellerId, programId],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'cancelled' }),
+      },
+    ],
   })
 
   const editMutation = useMutation({
@@ -263,11 +280,57 @@ export function CustomersPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <Card><CardContent className="p-4"><p className="text-sm text-slate-500">{t('managerParent.pages.customers.expireIn1Day', { defaultValue: 'Expire in 1 day' })}</p><p className="mt-2 text-2xl font-semibold">{expiringQuery.data?.data.day1 ?? 0}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-slate-500">{t('managerParent.pages.customers.expireIn3Days', { defaultValue: 'Expire in 3 days' })}</p><p className="mt-2 text-2xl font-semibold">{expiringQuery.data?.data.day3 ?? 0}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-slate-500">{t('managerParent.pages.customers.expireIn7Days', { defaultValue: 'Expire in 7 days' })}</p><p className="mt-2 text-2xl font-semibold">{expiringQuery.data?.data.day7 ?? 0}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-slate-500">{t('managerParent.pages.customers.expired', { defaultValue: 'Expired' })}</p><p className="mt-2 text-2xl font-semibold">{expiringQuery.data?.data.expired ?? 0}</p></CardContent></Card>
+      <div className="grid gap-3 md:grid-cols-5">
+        <StatusFilterCard
+          label={t('common.all')}
+          count={customersQuery.data?.meta.total ?? 0}
+          isActive={status === 'all'}
+          onClick={() => {
+            setStatus('all')
+            setPage(1)
+          }}
+          color="sky"
+        />
+        <StatusFilterCard
+          label={t('common.active')}
+          count={activeCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'active'}
+          onClick={() => {
+            setStatus('active')
+            setPage(1)
+          }}
+          color="emerald"
+        />
+        <StatusFilterCard
+          label={t('common.scheduled', { defaultValue: 'Scheduled' })}
+          count={scheduledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'scheduled'}
+          onClick={() => {
+            setStatus('scheduled')
+            setPage(1)
+          }}
+          color="amber"
+        />
+        <StatusFilterCard
+          label={t('common.expired')}
+          count={expiredCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'expired'}
+          onClick={() => {
+            setStatus('expired')
+            setPage(1)
+          }}
+          color="rose"
+        />
+        <StatusFilterCard
+          label={t('common.cancelled')}
+          count={cancelledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'cancelled'}
+          onClick={() => {
+            setStatus('cancelled')
+            setPage(1)
+          }}
+          color="slate"
+        />
       </div>
 
       <Card>
@@ -348,5 +411,4 @@ export function CustomersPage() {
 
 function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: ['super-admin', 'customers'] })
-  void queryClient.invalidateQueries({ queryKey: ['super-admin', 'licenses', 'expiring'] })
 }

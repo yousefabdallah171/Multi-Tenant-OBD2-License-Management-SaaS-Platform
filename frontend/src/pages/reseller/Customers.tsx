@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -349,9 +350,13 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
   })
 
-  const expiringQuery = useQuery({
-    queryKey: ['reseller', 'licenses', 'expiring'],
-    queryFn: () => licenseService.getExpiring(7),
+  const [activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery] = useQueries({
+    queries: [
+      { queryKey: ['reseller', 'customers', 'count', 'active', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'active' }) },
+      { queryKey: ['reseller', 'customers', 'count', 'scheduled', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'scheduled' }) },
+      { queryKey: ['reseller', 'customers', 'count', 'expired', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'expired' }) },
+      { queryKey: ['reseller', 'customers', 'count', 'cancelled', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'cancelled' }) },
+    ],
   })
 
   const renewLicenseQuery = useQuery({
@@ -560,13 +565,6 @@ export function CustomersPage() {
   })
 
   const customerRows = customersQuery.data?.data ?? []
-  const expiring = expiringQuery.data?.data ?? []
-  const expiringSummary = expiringQuery.data?.summary ?? {
-    day1: expiring.filter((license) => daysUntil(license.expires_at) <= 1).length,
-    day3: expiring.filter((license) => daysUntil(license.expires_at) <= 3).length,
-    day7: expiring.length,
-    expired: 0,
-  }
   const selectableIds = customerRows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
@@ -796,11 +794,57 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <ExpiryAlert count={expiringSummary.day1} label={t('reseller.pages.licenses.expiryLabels.day1')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="rose" />
-        <ExpiryAlert count={expiringSummary.day3} label={t('reseller.pages.licenses.expiryLabels.day3')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="amber" />
-        <ExpiryAlert count={expiringSummary.day7} label={t('reseller.pages.licenses.expiryLabels.day7')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="yellow" />
-        <ExpiryAlert count={expiringSummary.expired} label={t('common.expired')} licensesLabel={t('reseller.pages.licenses.expiryLabels.licenses')} tone="slate" />
+      <div className="grid gap-3 md:grid-cols-5">
+        <StatusFilterCard
+          label={text.statusOptions.all}
+          count={customersQuery.data?.meta.total ?? 0}
+          isActive={status === 'all'}
+          onClick={() => {
+            setStatus('all')
+            setPage(1)
+          }}
+          color="sky"
+        />
+        <StatusFilterCard
+          label={text.statusOptions.active}
+          count={activeCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'active'}
+          onClick={() => {
+            setStatus('active')
+            setPage(1)
+          }}
+          color="emerald"
+        />
+        <StatusFilterCard
+          label={t('common.scheduled', { defaultValue: 'Scheduled' })}
+          count={scheduledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'scheduled'}
+          onClick={() => {
+            setStatus('scheduled')
+            setPage(1)
+          }}
+          color="amber"
+        />
+        <StatusFilterCard
+          label={text.statusOptions.expired}
+          count={expiredCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'expired'}
+          onClick={() => {
+            setStatus('expired')
+            setPage(1)
+          }}
+          color="rose"
+        />
+        <StatusFilterCard
+          label={text.statusOptions.cancelled}
+          count={cancelledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'cancelled'}
+          onClick={() => {
+            setStatus('cancelled')
+            setPage(1)
+          }}
+          color="slate"
+        />
       </div>
 
       <Tabs
@@ -1606,28 +1650,3 @@ function resolveResellerCustomerUsername(row: ResellerCustomerSummary) {
 }
 
 
-function ExpiryAlert({ count, label, licensesLabel, tone }: { count: number; label: string; licensesLabel: string; tone: 'rose' | 'amber' | 'yellow' | 'slate' }) {
-  const styles = {
-    rose: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300',
-    amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
-    yellow: 'border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300',
-    slate: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
-  }
-
-  return (
-    <Card className={styles[tone]}>
-      <CardContent className="space-y-1 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
-        <p className="text-3xl font-semibold">{count}</p>
-        <p className="text-sm opacity-80">{licensesLabel}</p>
-      </CardContent>
-    </Card>
-  )
-}
-
-function daysUntil(value?: string | null) {
-  if (!value) return Number.POSITIVE_INFINITY
-  const expiry = new Date(value).getTime()
-  if (!Number.isFinite(expiry)) return Number.POSITIVE_INFINITY
-  return Math.ceil((expiry - Date.now()) / 86400000)
-}

@@ -1,4 +1,5 @@
 import { api } from '@/services/api'
+import { apiCache } from '@/lib/apiCache'
 import type { PaginatedResponse } from '@/types/manager-parent.types'
 import type {
   DashboardSeriesPoint,
@@ -16,21 +17,52 @@ import type {
 } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
+/**
+ * Cache TTL values (in milliseconds)
+ */
+const CACHE_TTL = {
+  STATS: 45 * 1000, // 45 seconds
+  CHART: 30 * 1000, // 30 seconds
+  ACTIVITY: 60 * 1000, // 60 seconds
+  REPORT: 90 * 1000, // 90 seconds
+  CUSTOMERS: 60 * 1000, // 60 seconds
+}
+
 export const resellerService = {
   async getDashboardStats() {
+    const cacheKey = 'reseller:dashboard:stats'
+    const cached = apiCache.get<{ stats: ResellerDashboardStats }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ stats: ResellerDashboardStats }>('/reseller/dashboard/stats')
+    apiCache.set(cacheKey, data, CACHE_TTL.STATS)
     return data
   },
   async getActivationsChart() {
+    const cacheKey = 'reseller:dashboard:activations-chart'
+    const cached = apiCache.get<{ data: DashboardSeriesPoint[] }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: DashboardSeriesPoint[] }>('/reseller/dashboard/activations-chart')
+    apiCache.set(cacheKey, data, CACHE_TTL.CHART)
     return data
   },
   async getRevenueChart() {
+    const cacheKey = 'reseller:dashboard:revenue-chart'
+    const cached = apiCache.get<{ data: DashboardSeriesPoint[] }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: DashboardSeriesPoint[] }>('/reseller/dashboard/revenue-chart')
+    apiCache.set(cacheKey, data, CACHE_TTL.CHART)
     return data
   },
   async getRecentActivity() {
+    const cacheKey = 'reseller:dashboard:recent-activity'
+    const cached = apiCache.get<{ data: RoleActivityEntry[] }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: RoleActivityEntry[] }>('/reseller/dashboard/recent-activity')
+    apiCache.set(cacheKey, data, CACHE_TTL.ACTIVITY)
     return data
   },
   async getCustomers(params: ResellerCustomerFilters) {
@@ -39,6 +71,9 @@ export const resellerService = {
   },
   async createCustomer(payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: ResellerCustomerSummary }>('/reseller/customers', payload)
+    // Invalidate dashboard cache after mutation
+    apiCache.clearPattern(/^reseller:dashboard:/)
+    apiCache.clearPattern(/^reseller:reports:/)
     return data
   },
   async getCustomer(id: number) {
@@ -47,10 +82,16 @@ export const resellerService = {
   },
   async updateCustomer(id: number, payload: { client_name: string; email?: string; phone?: string }) {
     const { data } = await api.put<{ data: ResellerCustomerSummary }>(`/reseller/customers/${id}`, payload)
+    // Invalidate cache after mutation
+    apiCache.clearPattern(/^reseller:dashboard:/)
+    apiCache.clearPattern(/^reseller:reports:/)
     return data
   },
   async deleteCustomer(id: number) {
     const { data } = await api.delete<{ message: string }>(`/reseller/customers/${id}`)
+    // Invalidate cache after mutation
+    apiCache.clearPattern(/^reseller:dashboard:/)
+    apiCache.clearPattern(/^reseller:reports:/)
     return data
   },
   async getSoftware() {
@@ -58,15 +99,33 @@ export const resellerService = {
     return data
   },
   async getRevenueReport(params: ResellerReportFilters) {
+    const paramKey = JSON.stringify(params)
+    const cacheKey = `reseller:reports:revenue:${paramKey}`
+    const cached = apiCache.get<{ data: ResellerReportPoint[] }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: ResellerReportPoint[] }>('/reseller/reports/revenue', { params })
+    apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
     return data
   },
   async getActivationsReport(params: ResellerReportFilters) {
+    const paramKey = JSON.stringify(params)
+    const cacheKey = `reseller:reports:activations:${paramKey}`
+    const cached = apiCache.get<{ data: ResellerReportPoint[] }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: ResellerReportPoint[] }>('/reseller/reports/activations', { params })
+    apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
     return data
   },
   async getTopPrograms(params: ReportRangeFilters) {
+    const paramKey = JSON.stringify(params)
+    const cacheKey = `reseller:reports:top-programs:${paramKey}`
+    const cached = apiCache.get<{ data: TopProgramRow[] }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: TopProgramRow[] }>('/reseller/reports/top-programs', { params })
+    apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
     return data
   },
   async getActivity(params: RoleActivityFilters) {

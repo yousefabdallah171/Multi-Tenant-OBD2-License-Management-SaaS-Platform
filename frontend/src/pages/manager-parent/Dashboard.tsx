@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -75,18 +76,29 @@ export function DashboardPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
-          <StatsCard title={t('managerParent.pages.dashboard.teamMembers')} value={stats?.team_members ?? 0} icon={Users} color="sky" />
-        </button>
-        <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
-          <StatsCard title={t('managerParent.pages.dashboard.customers')} value={stats?.total_customers ?? 0} icon={UserSquare2} color="emerald" />
-        </button>
-        <button type="button" className="text-start" onClick={() => navigate(`${routePaths.managerParent.customers(lang)}?status=active`)}>
-          <StatsCard title={t('managerParent.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        </button>
-        <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
-          <StatsCard title={t('managerParent.pages.dashboard.monthlyRevenue')} value={formatCurrency(stats?.monthly_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
-        </button>
+        {statsQuery.isLoading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : (
+          <>
+            <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
+              <StatsCard title={t('managerParent.pages.dashboard.teamMembers')} value={stats?.team_members ?? 0} icon={Users} color="sky" />
+            </button>
+            <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
+              <StatsCard title={t('managerParent.pages.dashboard.customers')} value={stats?.total_customers ?? 0} icon={UserSquare2} color="emerald" />
+            </button>
+            <button type="button" className="text-start" onClick={() => navigate(`${routePaths.managerParent.customers(lang)}?status=active`)}>
+              <StatsCard title={t('managerParent.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+            </button>
+            <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
+              <StatsCard title={t('managerParent.pages.dashboard.monthlyRevenue')} value={formatCurrency(stats?.monthly_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+            </button>
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

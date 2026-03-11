@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -124,9 +125,13 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
-  const expiringQuery = useQuery({
-    queryKey: ['manager', 'licenses', 'expiring'],
-    queryFn: () => managerService.getLicensesExpiring(),
+  const [activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery] = useQueries({
+    queries: [
+      { queryKey: ['manager', 'customers', 'count', 'active', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'active' }) },
+      { queryKey: ['manager', 'customers', 'count', 'scheduled', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'scheduled' }) },
+      { queryKey: ['manager', 'customers', 'count', 'expired', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'expired' }) },
+      { queryKey: ['manager', 'customers', 'count', 'cancelled', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'cancelled' }) },
+    ],
   })
 
   const activateMutation = useMutation({
@@ -274,7 +279,6 @@ export function CustomersPage() {
   const totalPrice = priceMode === 'auto' ? autoPrice : Number(activationForm.price || 0)
 
   const rows = customersQuery.data?.data ?? []
-  const expiring = expiringQuery.data?.data ?? { day1: 0, day3: 0, day7: 0, expired: 0 }
   const renewTarget = rows.find((row) => row.license_id === renewLicenseId) ?? null
   const renewProgram = (programsQuery.data?.data ?? []).find((program) => program.name === renewTarget?.program)
   const selectableIds = rows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
@@ -463,11 +467,57 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <ExpiryAlert label={t('reseller.pages.licenses.expiryLabels.day1')} value={expiring.day1} tone="rose" />
-        <ExpiryAlert label={t('reseller.pages.licenses.expiryLabels.day3')} value={expiring.day3} tone="amber" />
-        <ExpiryAlert label={t('reseller.pages.licenses.expiryLabels.day7')} value={expiring.day7} tone="yellow" />
-        <ExpiryAlert label={t('common.expired')} value={expiring.expired} tone="slate" />
+      <div className="grid gap-3 md:grid-cols-5">
+        <StatusFilterCard
+          label={t('common.all')}
+          count={customersQuery.data?.meta.total ?? 0}
+          isActive={status === 'all'}
+          onClick={() => {
+            setStatus('all')
+            setPage(1)
+          }}
+          color="sky"
+        />
+        <StatusFilterCard
+          label={t('common.active')}
+          count={activeCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'active'}
+          onClick={() => {
+            setStatus('active')
+            setPage(1)
+          }}
+          color="emerald"
+        />
+        <StatusFilterCard
+          label={t('common.scheduled', { defaultValue: 'Scheduled' })}
+          count={scheduledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'scheduled'}
+          onClick={() => {
+            setStatus('scheduled')
+            setPage(1)
+          }}
+          color="amber"
+        />
+        <StatusFilterCard
+          label={t('common.expired')}
+          count={expiredCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'expired'}
+          onClick={() => {
+            setStatus('expired')
+            setPage(1)
+          }}
+          color="rose"
+        />
+        <StatusFilterCard
+          label={t('common.cancelled')}
+          count={cancelledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'cancelled'}
+          onClick={() => {
+            setStatus('cancelled')
+            setPage(1)
+          }}
+          color="slate"
+        />
       </div>
 
       <Tabs value={status} onValueChange={(value) => setStatus(value as (typeof STATUS_OPTIONS)[number])}>
@@ -928,21 +978,4 @@ function validateActivationStep(
 
 
 
-function ExpiryAlert({ label, value, tone }: { label: string; value: number; tone: 'rose' | 'amber' | 'yellow' | 'slate' }) {
-  const styles = {
-    rose: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300',
-    amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
-    yellow: 'border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-900/60 dark:bg-yellow-950/30 dark:text-yellow-300',
-    slate: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
-  }
-
-  return (
-    <Card className={styles[tone]}>
-      <CardContent className="space-y-1 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
-        <p className="text-3xl font-semibold">{value}</p>
-      </CardContent>
-    </Card>
-  )
-}
 

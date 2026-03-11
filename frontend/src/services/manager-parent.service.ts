@@ -1,4 +1,5 @@
 import { api } from '@/services/api'
+import { apiCache } from '@/lib/apiCache'
 import type {
   ApiStatusHistoryPoint,
   BiosConflictFilters,
@@ -27,29 +28,64 @@ import type {
 import type { LicenseFilters, LicenseSummary } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
+/**
+ * Cache TTL values (in milliseconds)
+ */
+const CACHE_TTL = {
+  STATS: 45 * 1000, // 45 seconds
+  CHART: 30 * 1000, // 30 seconds
+  ACTIVITY: 60 * 1000, // 60 seconds
+  REPORT: 90 * 1000, // 90 seconds
+}
+
 export const managerParentService = {
   async getDashboard() {
     const { data } = await api.get<ManagerParentDashboardPayload>('/dashboard')
     return data
   },
   async getDashboardStats() {
+    const cacheKey = 'manager-parent:dashboard:stats'
+    const cached = apiCache.get<{ stats: ManagerParentDashboardStats }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ stats: ManagerParentDashboardStats }>('/dashboard/stats')
+    apiCache.set(cacheKey, data, CACHE_TTL.STATS)
     return data
   },
   async getRevenueChart() {
+    const cacheKey = 'manager-parent:dashboard:revenue-chart'
+    const cached = apiCache.get<{ data: Array<{ month: string; revenue: number }> }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: Array<{ month: string; revenue: number }> }>('/dashboard/revenue-chart')
+    apiCache.set(cacheKey, data, CACHE_TTL.CHART)
     return data
   },
   async getExpiryForecast() {
+    const cacheKey = 'manager-parent:dashboard:expiry-forecast'
+    const cached = apiCache.get<{ data: Array<{ range: string; count: number }> }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: Array<{ range: string; count: number }> }>('/dashboard/expiry-forecast')
+    apiCache.set(cacheKey, data, CACHE_TTL.CHART)
     return data
   },
   async getTeamPerformance() {
+    const cacheKey = 'manager-parent:dashboard:team-performance'
+    const cached = apiCache.get<{ data: Array<{ id: number; name: string; role: string; activations: number; revenue: number; customers: number }> }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: Array<{ id: number; name: string; role: string; activations: number; revenue: number; customers: number }> }>('/dashboard/team-performance')
+    apiCache.set(cacheKey, data, CACHE_TTL.CHART)
     return data
   },
   async getConflictRate() {
+    const cacheKey = 'manager-parent:dashboard:conflict-rate'
+    const cached = apiCache.get<{ data: Array<{ month: string; count: number }> }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: Array<{ month: string; count: number }> }>('/dashboard/conflict-rate')
+    apiCache.set(cacheKey, data, CACHE_TTL.CHART)
     return data
   },
   async getRevenueByReseller(params?: { from?: string; to?: string }) {
@@ -80,6 +116,9 @@ export const managerParentService = {
   },
   async updateSettings(payload: TenantSettings) {
     const { data } = await api.put<{ data: TenantSettings; message: string }>('/settings', payload)
+    // Invalidate cache after mutation
+    apiCache.clearPattern(/^manager-parent:dashboard:/)
+    apiCache.clearPattern(/^manager-parent:reports:/)
     return data
   },
   async getBiosHistory(params?: { page?: number; per_page?: number; bios_id?: string; action?: string; reseller_id?: number | ''; from?: string; to?: string }) {
@@ -147,7 +186,13 @@ export const managerParentService = {
     return data
   },
   async getFinancialReports(params?: { from?: string; to?: string }) {
+    const paramKey = JSON.stringify(params)
+    const cacheKey = `manager-parent:reports:financial:${paramKey}`
+    const cached = apiCache.get<{ data: FinancialReportData }>(cacheKey)
+    if (cached) return cached
+
     const { data } = await api.get<{ data: FinancialReportData }>('/financial-reports', { params })
+    apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
     return data
   },
   async getProgramsWithExternalApi() {

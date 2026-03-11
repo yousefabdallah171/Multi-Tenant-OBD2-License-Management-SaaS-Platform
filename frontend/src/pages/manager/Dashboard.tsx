@@ -6,6 +6,7 @@ import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,18 +57,29 @@ export function DashboardPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.team(lang))}>
-          <StatsCard title={t('manager.pages.dashboard.teamResellers')} value={stats?.team_resellers ?? 0} icon={Users} color="sky" />
-        </button>
-        <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.customers(lang))}>
-          <StatsCard title={t('manager.pages.dashboard.teamCustomers')} value={stats?.team_customers ?? 0} icon={UserRound} color="emerald" />
-        </button>
-        <button type="button" className="text-start" onClick={() => navigate(`${routePaths.manager.customers(lang)}?status=active`)}>
-          <StatsCard title={t('manager.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        </button>
-        <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.reports(lang))}>
-          <StatsCard title={t('manager.pages.dashboard.teamRevenue')} value={formatCurrency(stats?.team_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
-        </button>
+        {statsQuery.isLoading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : (
+          <>
+            <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.team(lang))}>
+              <StatsCard title={t('manager.pages.dashboard.teamResellers')} value={stats?.team_resellers ?? 0} icon={Users} color="sky" />
+            </button>
+            <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.customers(lang))}>
+              <StatsCard title={t('manager.pages.dashboard.teamCustomers')} value={stats?.team_customers ?? 0} icon={UserRound} color="emerald" />
+            </button>
+            <button type="button" className="text-start" onClick={() => navigate(`${routePaths.manager.customers(lang)}?status=active`)}>
+              <StatsCard title={t('manager.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+            </button>
+            <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.reports(lang))}>
+              <StatsCard title={t('manager.pages.dashboard.teamRevenue')} value={formatCurrency(stats?.team_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+            </button>
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

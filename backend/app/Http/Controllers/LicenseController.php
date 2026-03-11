@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\License;
 use App\Models\User;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -37,6 +38,7 @@ class LicenseController extends Controller
 
         $license = $this->licenseService->activate($validated);
         $licenseKey = Str::upper('LIC-'.$license->id.'-'.Str::random(8));
+        LicenseCacheInvalidation::invalidateForLicense($license);
 
         return response()->json([
             'message' => 'License activated.',
@@ -90,6 +92,7 @@ class LicenseController extends Controller
 
         $resolved = $this->resolveAccessibleLicense($request, $license);
         $renewed = $this->licenseService->renew($resolved, $validated);
+        LicenseCacheInvalidation::invalidateForLicense($renewed);
 
         return response()->json([
             'message' => 'License renewed successfully.',
@@ -101,6 +104,7 @@ class LicenseController extends Controller
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
         $deactivated = $this->licenseService->deactivate($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($deactivated);
 
         return response()->json([
             'message' => 'License deactivated successfully.',
@@ -115,6 +119,7 @@ class LicenseController extends Controller
             $this->licenseService->deactivate($resolved);
         }
 
+        LicenseCacheInvalidation::invalidateForLicense($resolved);
         $resolved->delete();
 
         return response()->json([
@@ -126,6 +131,7 @@ class LicenseController extends Controller
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
         $paused = $this->licenseService->pause($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($paused);
 
         return response()->json([
             'message' => 'License paused successfully.',
@@ -137,6 +143,7 @@ class LicenseController extends Controller
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
         $resumed = $this->licenseService->resume($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($resumed);
 
         return response()->json([
             'message' => 'License resumed successfully.',
@@ -148,6 +155,7 @@ class LicenseController extends Controller
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
         $retried = $this->licenseService->retryScheduledActivation($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($retried);
 
         return response()->json([
             'message' => 'Scheduled activation retried successfully.',
@@ -179,10 +187,11 @@ class LicenseController extends Controller
             ->get();
 
         foreach ($licenses as $license) {
-            $this->licenseService->renew($license, [
+            $updated = $this->licenseService->renew($license, [
                 'duration_days' => (float) $validated['duration_days'],
                 'price' => (float) $validated['price'],
             ]);
+            LicenseCacheInvalidation::invalidateForLicense($updated);
         }
 
         return response()->json([
@@ -213,7 +222,8 @@ class LicenseController extends Controller
             ->get();
 
         foreach ($licenses as $license) {
-            $this->licenseService->deactivate($license);
+            $updated = $this->licenseService->deactivate($license);
+            LicenseCacheInvalidation::invalidateForLicense($updated);
         }
 
         return response()->json([
@@ -248,6 +258,7 @@ class LicenseController extends Controller
             if ($license->status === 'active') {
                 $this->licenseService->deactivate($license);
             }
+            LicenseCacheInvalidation::invalidateForLicense($license);
             $license->delete();
         }
 

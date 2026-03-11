@@ -193,9 +193,8 @@ class DashboardController extends BaseManagerController
                 ->with('user:id,name')
                 ->whereIn('user_id', $userIds)
                 ->latest()
-                ->limit(100)
+                ->limit(10)
                 ->get()
-                ->take(10)
                 ->map(fn (ActivityLog $entry): array => [
                     'id' => $entry->id,
                     'action' => $entry->action,

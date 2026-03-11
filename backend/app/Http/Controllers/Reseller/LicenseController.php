@@ -7,6 +7,7 @@ use App\Http\Requests\RenewLicenseRequest;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Services\LicenseService;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -118,6 +119,7 @@ class LicenseController extends BaseResellerController
     public function activate(ActivateLicenseRequest $request): JsonResponse
     {
         $license = $this->licenseService->activate($request->validated());
+        LicenseCacheInvalidation::invalidateForLicense($license);
 
         return response()->json([
             'message' => 'License activated successfully.',
@@ -154,6 +156,7 @@ class LicenseController extends BaseResellerController
             $this->licenseService->deactivate($resolved);
         }
 
+        LicenseCacheInvalidation::invalidateForLicense($resolved);
         $resolved->delete();
 
         return response()->json([
@@ -165,6 +168,7 @@ class LicenseController extends BaseResellerController
     {
         $resolved = $this->resolveLicense($request, $license);
         $paused = $this->licenseService->pause($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($paused);
 
         return response()->json([
             'message' => 'License paused successfully.',
@@ -176,6 +180,7 @@ class LicenseController extends BaseResellerController
     {
         $resolved = $this->resolveLicense($request, $license);
         $resumed = $this->licenseService->resume($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($resumed);
 
         return response()->json([
             'message' => 'License resumed successfully.',
@@ -224,10 +229,11 @@ class LicenseController extends BaseResellerController
         $licenses = $this->licenseQuery($request)->whereIn('id', $validated['ids'])->get();
 
         foreach ($licenses as $license) {
-            $this->licenseService->renew($license, [
+            $updated = $this->licenseService->renew($license, [
                 'duration_days' => (int) $validated['duration_days'],
                 'price' => (float) $validated['price'],
             ]);
+            LicenseCacheInvalidation::invalidateForLicense($updated);
         }
 
         return response()->json([
@@ -246,7 +252,8 @@ class LicenseController extends BaseResellerController
         $licenses = $this->licenseQuery($request)->whereIn('id', $validated['ids'])->get();
 
         foreach ($licenses as $license) {
-            $this->licenseService->deactivate($license);
+            $updated = $this->licenseService->deactivate($license);
+            LicenseCacheInvalidation::invalidateForLicense($updated);
         }
 
         return response()->json([
@@ -271,6 +278,7 @@ class LicenseController extends BaseResellerController
             if ($license->status === 'active') {
                 $this->licenseService->deactivate($license);
             }
+            LicenseCacheInvalidation::invalidateForLicense($license);
             $license->delete();
         }
 
