@@ -16,7 +16,7 @@ export const superAdminCustomerService = {
     const { data } = await api.get<{ data: SuperAdminCustomerSummary[]; meta: PaginationMeta }>('/super-admin/customers', { params })
     return data
   },
-  async create(payload: { name: string; client_name?: string; email?: string; phone?: string; tenant_id: number }) {
+  async create(payload: { name: string; client_name?: string; email?: string; phone?: string; tenant_id: number; seller_id?: number; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: SuperAdminCustomerSummary }>('/super-admin/customers', payload)
     return data
   },

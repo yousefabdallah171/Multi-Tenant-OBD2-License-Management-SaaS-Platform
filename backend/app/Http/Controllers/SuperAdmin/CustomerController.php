@@ -4,7 +4,9 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Enums\UserRole;
 use App\Models\ActivityLog;
+use App\Models\BiosBlacklist;
 use App\Models\License;
+use App\Models\Program;
 use App\Models\User;
 use App\Models\UserIpLog;
 use Illuminate\Http\JsonResponse;
@@ -204,6 +206,9 @@ class CustomerController extends BaseSuperAdminController
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'tenant_id' => ['required', 'integer', 'exists:tenants,id'],
+            'seller_id' => ['nullable', 'integer', 'exists:users,id', 'required_with:bios_id,program_id'],
+            'bios_id' => ['nullable', 'string', 'min:3', 'max:255', 'required_with:program_id,seller_id'],
+            'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id,seller_id'],
         ]);
 
         $username = Str::of((string) $validated['name'])->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
@@ -211,6 +216,17 @@ class CustomerController extends BaseSuperAdminController
         $email = isset($validated['email']) && is_string($validated['email']) && trim($validated['email']) !== ''
             ? strtolower(trim($validated['email']))
             : sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $validated['tenant_id'], $username);
+
+        $seller = null;
+        if (! empty($validated['seller_id']) && ! empty($validated['bios_id']) && ! empty($validated['program_id'])) {
+            $seller = $this->resolvePendingLicenseSeller((int) $validated['seller_id'], (int) $validated['tenant_id']);
+            $this->assertPendingLicenseCanBeCreated(
+                (int) $validated['tenant_id'],
+                (string) $validated['bios_id'],
+                (int) $validated['program_id'],
+                $seller,
+            );
+        }
 
         $customer = User::query()
             ->where(function ($query) use ($email, $username): void {
@@ -255,6 +271,17 @@ class CustomerController extends BaseSuperAdminController
         }
 
         $customer->save();
+
+        if ($seller && ! empty($validated['bios_id']) && ! empty($validated['program_id'])) {
+            $this->createPendingLicense(
+                $customer,
+                (int) $validated['tenant_id'],
+                (string) $validated['bios_id'],
+                (int) $validated['program_id'],
+                $seller,
+            );
+        }
+
         $customer->load(['tenant', 'customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->select($this->licenseListColumns())
             ->with(['program:id,name', 'reseller:id,name'])]);
@@ -499,5 +526,90 @@ class CustomerController extends BaseSuperAdminController
     private function columnExists(array $columns, string $column): bool
     {
         return in_array($column, $columns, true);
+    }
+
+    private function resolvePendingLicenseSeller(int $sellerId, int $tenantId): User
+    {
+        $seller = User::query()->findOrFail($sellerId);
+        $sellerRole = $seller->role?->value ?? (string) $seller->role;
+
+        if (! in_array($sellerRole, [UserRole::RESELLER->value, UserRole::MANAGER->value, UserRole::MANAGER_PARENT->value], true)) {
+            throw ValidationException::withMessages([
+                'seller_id' => 'The selected seller is not allowed to activate licenses.',
+            ]);
+        }
+
+        if ((int) $seller->tenant_id !== $tenantId) {
+            throw ValidationException::withMessages([
+                'seller_id' => 'The selected seller does not belong to the chosen tenant.',
+            ]);
+        }
+
+        return $seller;
+    }
+
+    private function createPendingLicense(User $customer, int $tenantId, string $biosId, int $programId, User $seller): void
+    {
+        $program = $this->assertPendingLicenseCanBeCreated($tenantId, $biosId, $programId, $seller);
+        $normalizedBiosId = trim($biosId);
+
+        License::query()->create([
+            'tenant_id' => $tenantId,
+            'customer_id' => $customer->id,
+            'reseller_id' => $seller->id,
+            'program_id' => $program->id,
+            'bios_id' => $normalizedBiosId,
+            'external_username' => $customer->username,
+            'external_activation_response' => 'Pending activation.',
+            'duration_days' => 0,
+            'price' => 0,
+            'activated_at' => now(),
+            'expires_at' => now(),
+            'status' => 'pending',
+            'is_scheduled' => false,
+        ]);
+    }
+
+    private function assertPendingLicenseCanBeCreated(int $tenantId, string $biosId, int $programId, User $seller): Program
+    {
+        $program = Program::query()
+            ->whereKey($programId)
+            ->where('status', 'active')
+            ->first();
+
+        if (! $program) {
+            throw ValidationException::withMessages([
+                'program_id' => 'The selected program is not active.',
+            ]);
+        }
+
+        $normalizedBiosId = trim($biosId);
+        if ($normalizedBiosId === '') {
+            throw ValidationException::withMessages([
+                'bios_id' => 'The BIOS ID field is required.',
+            ]);
+        }
+
+        if (BiosBlacklist::blocksBios($normalizedBiosId, $tenantId)) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'This BIOS ID is blacklisted.',
+            ]);
+        }
+
+        $existingLicense = License::query()
+            ->where('tenant_id', $tenantId)
+            ->where('reseller_id', $seller->id)
+            ->where('program_id', $program->id)
+            ->where('bios_id', $normalizedBiosId)
+            ->whereIn('status', ['active', 'pending', 'suspended'])
+            ->first();
+
+        if ($existingLicense) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'A license already exists for this BIOS ID and program.',
+            ]);
+        }
+
+        return $program;
     }
 }
