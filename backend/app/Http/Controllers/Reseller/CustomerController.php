@@ -88,7 +88,7 @@ class CustomerController extends BaseResellerController
                 ->where('program_id', $validated['program_id']));
         }
 
-        $customers = $query->paginate((int) ($validated['per_page'] ?? 10));
+        $customers = $query->paginate((int) ($validated['per_page'] ?? 25));
 
         return response()->json([
             'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user))->values(),
@@ -347,7 +347,7 @@ class CustomerController extends BaseResellerController
             'external_username' => $license?->external_username,
             'program' => $license?->program?->name,
             'program_id' => $license?->program_id,
-            'status' => $license?->status ?? 'pending',
+            'status' => $license?->status,
             'price' => $license ? (float) $license->price : 0,
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),

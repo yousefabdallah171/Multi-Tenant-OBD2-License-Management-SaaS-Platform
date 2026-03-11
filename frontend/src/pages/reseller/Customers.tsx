@@ -311,7 +311,7 @@ export function CustomersPage() {
       }), [lang, t])
   const initialStatus = searchParams.get('status')
   const [page, setPage] = useState(Number(searchParams.get('page') || 1))
-  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 10))
+  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 25))
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
     STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
@@ -350,12 +350,14 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
   })
 
-  const [activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
+      { queryKey: ['reseller', 'customers', 'count', 'all', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined }) },
       { queryKey: ['reseller', 'customers', 'count', 'active', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'active' }) },
       { queryKey: ['reseller', 'customers', 'count', 'scheduled', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'scheduled' }) },
       { queryKey: ['reseller', 'customers', 'count', 'expired', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'expired' }) },
       { queryKey: ['reseller', 'customers', 'count', 'cancelled', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'cancelled' }) },
+      { queryKey: ['reseller', 'customers', 'count', 'pending', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'pending' }) },
     ],
   })
 
@@ -613,7 +615,7 @@ export function CustomersPage() {
         render: (row) => (
           <div>
             <p className="font-medium text-slate-950 dark:text-white">
-              <span className={`me-2 inline-block h-2.5 w-2.5 rounded-full ${row.status === 'active' ? 'bg-emerald-500' : row.status === 'pending' ? 'bg-amber-500' : row.status === 'cancelled' ? 'bg-rose-500' : 'bg-slate-400'}`} />
+              <span className={`me-2 inline-block h-2.5 w-2.5 rounded-full ${row.status === 'active' ? 'bg-emerald-500' : row.status === 'pending' ? 'bg-amber-500' : row.status === 'cancelled' ? 'bg-rose-500' : row.status === 'expired' ? 'bg-rose-400' : 'bg-slate-400'}`} />
               <Link
                 className="text-start text-sky-600 hover:underline dark:text-sky-300"
                 to={routePaths.reseller.customerDetail(lang, row.id)}
@@ -658,7 +660,7 @@ export function CustomersPage() {
       },
       { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale) : '-') },
-      { key: 'status', label: text.table.status, sortable: true, sortValue: (row) => getLicenseDisplayStatus(row), render: (row) => <StatusBadge status={getLicenseDisplayStatus(row)} /> },
+      { key: 'status', label: text.table.status, sortable: true, sortValue: (row) => row.status ? getLicenseDisplayStatus(row) : '', render: (row) => row.status ? <StatusBadge status={getLicenseDisplayStatus(row)} /> : '-' },
       { key: 'price', label: text.table.price, sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },
       { key: 'expiry', label: text.table.expiry, sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
       {
@@ -774,7 +776,7 @@ export function CustomersPage() {
   useEffect(() => {
     const next = new URLSearchParams()
     if (page > 1) next.set('page', String(page))
-    if (perPage !== 10) next.set('per_page', String(perPage))
+    if (perPage !== 25) next.set('per_page', String(perPage))
     if (search) next.set('search', search)
     if (status !== 'all') next.set('status', status)
     if (programFilter) next.set('program_id', String(programFilter))
@@ -794,10 +796,10 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={text.statusOptions.all}
-          count={customersQuery.data?.meta.total ?? 0}
+          count={allCountQuery.data?.meta.total ?? 0}
           isActive={status === 'all'}
           onClick={() => {
             setStatus('all')
@@ -844,6 +846,16 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="slate"
+        />
+        <StatusFilterCard
+          label={text.statusOptions.pending}
+          count={pendingCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'pending'}
+          onClick={() => {
+            setStatus('pending')
+            setPage(1)
+          }}
+          color="amber"
         />
       </div>
 

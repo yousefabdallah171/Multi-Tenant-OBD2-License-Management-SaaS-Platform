@@ -81,7 +81,7 @@ export function CustomersPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialStatus = searchParams.get('status')
   const [page, setPage] = useState(Number(searchParams.get('page') || 1))
-  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 10))
+  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 25))
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
     STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
@@ -125,12 +125,14 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
-  const [activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
+      { queryKey: ['manager', 'customers', 'count', 'all', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId }) },
       { queryKey: ['manager', 'customers', 'count', 'active', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'active' }) },
       { queryKey: ['manager', 'customers', 'count', 'scheduled', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'scheduled' }) },
       { queryKey: ['manager', 'customers', 'count', 'expired', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'expired' }) },
       { queryKey: ['manager', 'customers', 'count', 'cancelled', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'cancelled' }) },
+      { queryKey: ['manager', 'customers', 'count', 'pending', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'pending' }) },
     ],
   })
 
@@ -445,7 +447,7 @@ export function CustomersPage() {
   useEffect(() => {
     const next = new URLSearchParams()
     if (page > 1) next.set('page', String(page))
-    if (perPage !== 10) next.set('per_page', String(perPage))
+    if (perPage !== 25) next.set('per_page', String(perPage))
     if (search) next.set('search', search)
     if (status !== 'all') next.set('status', status)
     if (resellerId) next.set('reseller_id', String(resellerId))
@@ -467,10 +469,10 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
-          count={customersQuery.data?.meta.total ?? 0}
+          count={allCountQuery.data?.meta.total ?? 0}
           isActive={status === 'all'}
           onClick={() => {
             setStatus('all')
@@ -517,6 +519,16 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="slate"
+        />
+        <StatusFilterCard
+          label={t('common.pending')}
+          count={pendingCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'pending'}
+          onClick={() => {
+            setStatus('pending')
+            setPage(1)
+          }}
+          color="amber"
         />
       </div>
 

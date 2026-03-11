@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -34,7 +34,7 @@ export function CustomersPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
+  const [perPage, setPerPage] = useState(25)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
   const [tenantId, setTenantId] = useState<number | ''>('')
@@ -76,8 +76,12 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
-  const [activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
+      {
+        queryKey: ['super-admin', 'customers', 'count', 'all', search, tenantId, resellerId, programId],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId }),
+      },
       {
         queryKey: ['super-admin', 'customers', 'count', 'active', search, tenantId, resellerId, programId],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'active' }),
@@ -94,8 +98,16 @@ export function CustomersPage() {
         queryKey: ['super-admin', 'customers', 'count', 'cancelled', search, tenantId, resellerId, programId],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'cancelled' }),
       },
+      {
+        queryKey: ['super-admin', 'customers', 'count', 'pending', search, tenantId, resellerId, programId],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'pending' }),
+      },
     ],
   })
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, status, tenantId, resellerId, programId])
 
   const editMutation = useMutation({
     mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
@@ -280,10 +292,10 @@ export function CustomersPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
-          count={customersQuery.data?.meta.total ?? 0}
+          count={allCountQuery.data?.meta.total ?? 0}
           isActive={status === 'all'}
           onClick={() => {
             setStatus('all')
@@ -330,6 +342,16 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="slate"
+        />
+        <StatusFilterCard
+          label={t('common.pending')}
+          count={pendingCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'pending'}
+          onClick={() => {
+            setStatus('pending')
+            setPage(1)
+          }}
+          color="amber"
         />
       </div>
 

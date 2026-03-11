@@ -97,7 +97,7 @@ class CustomerController extends BaseManagerController
             });
         }
 
-        $customers = $query->paginate((int) ($validated['per_page'] ?? 10));
+        $customers = $query->paginate((int) ($validated['per_page'] ?? 25));
 
         return response()->json([
             'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user))->values(),
