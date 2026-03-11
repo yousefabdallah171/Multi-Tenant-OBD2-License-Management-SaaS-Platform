@@ -28,7 +28,7 @@ import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
-import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
+import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -36,7 +36,7 @@ import { resellerService } from '@/services/reseller.service'
 import { formatUsername, rawBiosId } from '@/utils/biosId'
 import type { RenewLicenseData, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending', 'no_license'] as const
+const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 const DEFAULT_TIMEZONE = resolveDisplayTimezone()
 
 interface ActivationFormState {
@@ -92,7 +92,7 @@ export function CustomersPage() {
         title: 'العملاء',
         description: 'أنشئ العملاء وفعلهم ثم أدِر عمليات التجديد والإلغاء من مساحة عملك الشخصية كموزع.',
         addCustomer: 'إضافة عميل',
-        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي', pending: 'موقف', noLicense: 'بدون ترخيص' },
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي', pending: 'قيد الانتظار' },
         searchPlaceholder: 'ابحث بالاسم أو البريد الإلكتروني أو BIOS ID',
         table: {
           customer: 'العميل',
@@ -200,7 +200,6 @@ export function CustomersPage() {
           expired: t('common.expired'),
           cancelled: t('common.cancelled'),
           pending: t('common.pending'),
-          noLicense: t('common.noLicense', { defaultValue: 'No License' }),
         },
         searchPlaceholder: t('reseller.pages.customers.searchPlaceholder'),
         table: {
@@ -352,7 +351,7 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
   })
 
-  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery, noLicenseCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
       { queryKey: ['reseller', 'customers', 'count', 'all', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['reseller', 'customers', 'count', 'active', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
@@ -360,7 +359,6 @@ export function CustomersPage() {
       { queryKey: ['reseller', 'customers', 'count', 'expired', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['reseller', 'customers', 'count', 'cancelled', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['reseller', 'customers', 'count', 'pending', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'pending' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
-      { queryKey: ['reseller', 'customers', 'count', 'no_license', search, programFilter], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, search, program_id: programFilter || undefined, status: 'no_license' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
     ],
   })
 
@@ -779,7 +777,7 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-7">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={text.statusOptions.all}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -792,6 +790,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={text.statusOptions.active}
+          description={getStatusMeaning('active', t)}
           count={activeCountQuery.data?.meta.total ?? 0}
           isActive={status === 'active'}
           onClick={() => {
@@ -802,6 +801,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={t('common.scheduled', { defaultValue: 'Scheduled' })}
+          description={getStatusMeaning('scheduled', t)}
           count={scheduledCountQuery.data?.meta.total ?? 0}
           isActive={status === 'scheduled'}
           onClick={() => {
@@ -812,6 +812,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={text.statusOptions.expired}
+          description={getStatusMeaning('expired', t)}
           count={expiredCountQuery.data?.meta.total ?? 0}
           isActive={status === 'expired'}
           onClick={() => {
@@ -822,6 +823,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={text.statusOptions.cancelled}
+          description={getStatusMeaning('cancelled', t)}
           count={cancelledCountQuery.data?.meta.total ?? 0}
           isActive={status === 'cancelled'}
           onClick={() => {
@@ -832,6 +834,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={text.statusOptions.pending}
+          description={getStatusMeaning('pending', t)}
           count={pendingCountQuery.data?.meta.total ?? 0}
           isActive={status === 'pending'}
           onClick={() => {
@@ -839,16 +842,6 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="amber"
-        />
-        <StatusFilterCard
-          label={text.statusOptions.noLicense}
-          count={noLicenseCountQuery.data?.meta.total ?? 0}
-          isActive={status === 'no_license'}
-          onClick={() => {
-            setStatus('no_license')
-            setPage(1)
-          }}
-          color="slate"
         />
       </div>
 

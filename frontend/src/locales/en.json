@@ -92,6 +92,18 @@
     "reactivateSuccess": "License reactivated successfully.",
     "inactive": "Inactive",
     "pending": "Pending",
+    "scheduled": "Scheduled",
+    "scheduledFailed": "Scheduled Failed",
+    "noLicense": "No License",
+    "statusMeaning": {
+      "active": "Live and usable right now.",
+      "expired": "Time ended automatically.",
+      "scheduled": "Will activate automatically later.",
+      "scheduledFailed": "Scheduled activation failed and needs a retry.",
+      "pending": "Saved or created, but not active yet.",
+      "cancelled": "Stopped and removed from the software until renewed or reactivated.",
+      "noLicense": "Customer profile exists, but no license has been created yet."
+    },
     "allRoles": "All roles",
     "allTenants": "All tenants",
     "allStatuses": "All statuses",

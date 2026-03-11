@@ -24,7 +24,7 @@ class CustomerController extends BaseResellerController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled,no_license'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'program_id' => ['nullable', 'integer', 'min:1'],
@@ -53,36 +53,44 @@ class CustomerController extends BaseResellerController
         }
 
         if (! empty($validated['status'])) {
-            if ($validated['status'] === 'no_license') {
-                $query->whereDoesntHave('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('reseller_id', $resellerId));
-            } else {
-            $query->whereHas('customerLicenses', function ($licenseQuery) use ($resellerId, $validated): void {
-                $licenseQuery->where('reseller_id', $resellerId);
+            if ($validated['status'] === 'pending') {
+                $query->where(function ($statusQuery) use ($resellerId): void {
+                    $statusQuery
+                        ->whereDoesntHave('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('reseller_id', $resellerId))
+                        ->orWhereHas('customerLicenses', function ($licenseQuery) use ($resellerId): void {
+                            $licenseQuery->where('reseller_id', $resellerId);
 
-                if (! $this->supportsScheduledLicenses()) {
-                    if ($validated['status'] === 'scheduled') {
-                        $licenseQuery->whereRaw('1 = 0');
+                            if (! $this->supportsScheduledLicenses()) {
+                                $licenseQuery->where('status', 'pending');
+                                return;
+                            }
+
+                            $licenseQuery->where('status', 'pending')->where(function ($pendingQuery): void {
+                                $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                            });
+                        });
+                });
+            } else {
+                $query->whereHas('customerLicenses', function ($licenseQuery) use ($resellerId, $validated): void {
+                    $licenseQuery->where('reseller_id', $resellerId);
+
+                    if (! $this->supportsScheduledLicenses()) {
+                        if ($validated['status'] === 'scheduled') {
+                            $licenseQuery->whereRaw('1 = 0');
+                            return;
+                        }
+
+                        $licenseQuery->where('status', $validated['status']);
                         return;
                     }
 
-                    $licenseQuery->where('status', $validated['status'] === 'pending' ? 'pending' : $validated['status']);
-                    return;
-                }
+                    if ($validated['status'] === 'scheduled') {
+                        $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
+                        return;
+                    }
 
-                if ($validated['status'] === 'scheduled') {
-                    $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
-                    return;
-                }
-
-                if ($validated['status'] === 'pending') {
-                    $licenseQuery->where('status', 'pending')->where(function ($pendingQuery): void {
-                        $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
-                    });
-                    return;
-                }
-
-                $licenseQuery->whereEffectiveStatus($validated['status']);
-            });
+                    $licenseQuery->whereEffectiveStatus($validated['status']);
+                });
             }
         }
 
@@ -351,7 +359,7 @@ class CustomerController extends BaseResellerController
             'external_username' => $license?->external_username,
             'program' => $license?->program?->name,
             'program_id' => $license?->program_id,
-            'status' => $license?->effectiveStatus() ?? 'no_license',
+            'status' => $license?->effectiveStatus() ?? 'pending',
             'price' => $license ? (float) $license->price : 0,
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),

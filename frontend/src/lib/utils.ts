@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from 'clsx'
+import type { TFunction } from 'i18next'
 import { twMerge } from 'tailwind-merge'
 import { resolveDisplayTimezone } from '@/lib/timezones'
 
@@ -188,7 +189,26 @@ export function getLicenseDisplayStatus<T extends SchedulableLicense>(value: T |
     return 'scheduled' as const
   }
 
-  return value.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending' | 'no_license'
+  if (value.status === 'no_license') {
+    return 'pending' as const
+  }
+
+  return value.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'
+}
+
+type ExplainedStatus = 'active' | 'expired' | 'pending' | 'cancelled' | 'scheduled' | 'scheduled_failed'
+
+export function getStatusMeaning(status: string, t: TFunction) {
+  const meanings: Record<ExplainedStatus, string> = {
+    active: t('common.statusMeaning.active', { defaultValue: 'Live and usable right now.' }),
+    expired: t('common.statusMeaning.expired', { defaultValue: 'Time ended automatically.' }),
+    pending: t('common.statusMeaning.pending', { defaultValue: 'Saved or created, but not active yet.' }),
+    cancelled: t('common.statusMeaning.cancelled', { defaultValue: 'Stopped and removed from the software until renewed or reactivated.' }),
+    scheduled: t('common.statusMeaning.scheduled', { defaultValue: 'Will activate automatically later.' }),
+    scheduled_failed: t('common.statusMeaning.scheduledFailed', { defaultValue: 'Scheduled activation failed and needs a retry.' }),
+  }
+
+  return meanings[status as ExplainedStatus] ?? null
 }
 
 export function getLicenseStartDate(value: SchedulableLicense | null | undefined) {

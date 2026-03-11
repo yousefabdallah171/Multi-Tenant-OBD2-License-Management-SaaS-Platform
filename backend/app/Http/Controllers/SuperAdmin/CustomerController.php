@@ -24,7 +24,7 @@ class CustomerController extends BaseSuperAdminController
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
             'reseller_id' => ['nullable', 'integer', 'exists:users,id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id'],
-            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled,no_license'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -61,24 +61,25 @@ class CustomerController extends BaseSuperAdminController
         }
 
         if (! empty($validated['status'])) {
-            if ($validated['status'] === 'no_license') {
-                $query->whereDoesntHave('customerLicenses');
+            if ($validated['status'] === 'pending') {
+                $query->where(function ($statusQuery): void {
+                    $statusQuery
+                        ->whereDoesntHave('customerLicenses')
+                        ->orWhereHas('customerLicenses', function ($licenseQuery): void {
+                            $licenseQuery->where('status', 'pending')->where(function ($pendingQuery): void {
+                                $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                            });
+                        });
+                });
             } else {
-            $query->whereHas('customerLicenses', function ($licenseQuery) use ($validated): void {
-                if ($validated['status'] === 'scheduled') {
-                    $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
-                    return;
-                }
+                $query->whereHas('customerLicenses', function ($licenseQuery) use ($validated): void {
+                    if ($validated['status'] === 'scheduled') {
+                        $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
+                        return;
+                    }
 
-                if ($validated['status'] === 'pending') {
-                    $licenseQuery->where('status', 'pending')->where(function ($pendingQuery): void {
-                        $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
-                    });
-                    return;
-                }
-
-                $licenseQuery->whereEffectiveStatus($validated['status']);
-            });
+                    $licenseQuery->whereEffectiveStatus($validated['status']);
+                });
             }
         }
 
@@ -421,7 +422,7 @@ class CustomerController extends BaseSuperAdminController
             'reseller' => $license?->reseller?->name,
             'reseller_id' => $license?->reseller_id,
             'program' => $license?->program?->name,
-            'status' => $license?->effectiveStatus() ?? 'no_license',
+            'status' => $license?->effectiveStatus() ?? 'pending',
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),

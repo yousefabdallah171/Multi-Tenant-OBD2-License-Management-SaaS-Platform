@@ -21,7 +21,7 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
-import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
+import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
@@ -29,7 +29,7 @@ import { programService } from '@/services/program.service'
 import type { DurationUnit, ManagerCustomerSummary, RenewLicenseData } from '@/types/manager-reseller.types'
 import { formatUsername } from '@/utils/biosId'
 
-const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending', 'no_license'] as const
+const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 const DEFAULT_TIMEZONE = resolveDisplayTimezone()
 
 interface ActivationFormState {
@@ -126,7 +126,7 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
-  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery, noLicenseCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
       { queryKey: ['manager', 'customers', 'count', 'all', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager', 'customers', 'count', 'active', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
@@ -134,7 +134,6 @@ export function CustomersPage() {
       { queryKey: ['manager', 'customers', 'count', 'expired', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager', 'customers', 'count', 'cancelled', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager', 'customers', 'count', 'pending', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'pending' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
-      { queryKey: ['manager', 'customers', 'count', 'no_license', search, resellerId, programId], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'no_license' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
     ],
   })
 
@@ -460,7 +459,7 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-7">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -473,6 +472,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={t('common.active')}
+          description={getStatusMeaning('active', t)}
           count={activeCountQuery.data?.meta.total ?? 0}
           isActive={status === 'active'}
           onClick={() => {
@@ -483,6 +483,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={t('common.scheduled', { defaultValue: 'Scheduled' })}
+          description={getStatusMeaning('scheduled', t)}
           count={scheduledCountQuery.data?.meta.total ?? 0}
           isActive={status === 'scheduled'}
           onClick={() => {
@@ -493,6 +494,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={t('common.expired')}
+          description={getStatusMeaning('expired', t)}
           count={expiredCountQuery.data?.meta.total ?? 0}
           isActive={status === 'expired'}
           onClick={() => {
@@ -503,6 +505,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={t('common.cancelled')}
+          description={getStatusMeaning('cancelled', t)}
           count={cancelledCountQuery.data?.meta.total ?? 0}
           isActive={status === 'cancelled'}
           onClick={() => {
@@ -513,6 +516,7 @@ export function CustomersPage() {
         />
         <StatusFilterCard
           label={t('common.pending')}
+          description={getStatusMeaning('pending', t)}
           count={pendingCountQuery.data?.meta.total ?? 0}
           isActive={status === 'pending'}
           onClick={() => {
@@ -520,16 +524,6 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="amber"
-        />
-        <StatusFilterCard
-          label={t('common.noLicense', { defaultValue: 'No License' })}
-          count={noLicenseCountQuery.data?.meta.total ?? 0}
-          isActive={status === 'no_license'}
-          onClick={() => {
-            setStatus('no_license')
-            setPage(1)
-          }}
-          color="slate"
         />
       </div>
 

@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 interface StatusFilterCardProps {
   label: string
   count?: number | string
+  description?: string
   isActive?: boolean
   onClick?: () => void
   color?: 'emerald' | 'amber' | 'rose' | 'slate' | 'sky'
@@ -28,6 +29,7 @@ const labelStyles = {
 export function StatusFilterCard({
   label,
   count,
+  description,
   isActive = false,
   onClick,
   color = 'sky',
@@ -36,20 +38,26 @@ export function StatusFilterCard({
     <button
       type="button"
       onClick={onClick}
+      title={description ? `${label}: ${description}` : label}
       className={cn(
-        'rounded-3xl border p-[1px] text-start transition-all duration-200 hover:shadow-md',
+        'h-full rounded-3xl border p-[1px] text-start transition-all duration-200 hover:shadow-md',
         colorStyles[color],
         isActive && 'ring-2 ring-offset-2 dark:ring-offset-slate-950',
       )}
     >
-      <Card className="cursor-pointer border-0 bg-transparent shadow-none hover:shadow-sm">
-        <CardContent className="space-y-2 p-4 sm:p-6">
+      <Card className="h-full cursor-pointer border-0 bg-transparent shadow-none hover:shadow-sm">
+        <CardContent className="flex h-full flex-col gap-2 p-4 sm:p-6">
           <p className={cn('text-xs font-medium sm:text-sm', labelStyles[color])}>
             {label}
           </p>
           {count !== undefined ? (
             <p className="text-2xl font-semibold text-slate-950 dark:text-white sm:text-3xl">
               {count}
+            </p>
+          ) : null}
+          {description ? (
+            <p className="text-xs leading-5 text-slate-600 dark:text-slate-300">
+              {description}
             </p>
           ) : null}
         </CardContent>
