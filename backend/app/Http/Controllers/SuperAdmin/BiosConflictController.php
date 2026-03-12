@@ -41,7 +41,7 @@ class BiosConflictController extends BaseSuperAdminController
             $query->where('resolved', $validated['status'] === 'resolved');
         }
 
-        $conflicts = $query->paginate((int) ($validated['per_page'] ?? 15));
+        $conflicts = $query->paginate((int) ($validated['per_page'] ?? 25));
 
         return response()->json([
             'data' => collect($conflicts->items())->map(fn (BiosConflict $conflict): array => $this->serializeConflict($conflict))->values(),

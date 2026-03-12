@@ -31,7 +31,7 @@ export function BiosConflictsPage() {
   const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(15)
+  const [perPage, setPerPage] = useState(25)
   const [status, setStatus] = useState<BiosConflictParams['status']>('')
   const [conflictType, setConflictType] = useState('')
   const [dateRange, setDateRange] = useState({ from: '', to: '' })

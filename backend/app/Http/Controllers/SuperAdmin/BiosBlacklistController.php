@@ -21,7 +21,7 @@ class BiosBlacklistController extends BaseSuperAdminController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $perPage = (int) ($validated['per_page'] ?? 10);
+        $perPage = (int) ($validated['per_page'] ?? 25);
 
         $query = BiosBlacklist::query()
             ->withoutGlobalScope('tenant')

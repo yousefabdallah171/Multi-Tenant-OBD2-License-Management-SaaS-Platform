@@ -22,7 +22,7 @@ class LogController extends BaseSuperAdminController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $perPage = (int) ($validated['per_page'] ?? 10);
+        $perPage = (int) ($validated['per_page'] ?? 25);
 
         $query = ApiLog::query()->with(['tenant:id,name', 'user:id,name'])->latest();
 

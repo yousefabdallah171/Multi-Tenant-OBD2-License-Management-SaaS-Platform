@@ -45,7 +45,7 @@ export function UsersPage() {
     }
   } | null)?.restore
   const [page, setPage] = useState(() => restoreState?.page ?? 1)
-  const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 10)
+  const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 25)
   const [role, setRole] = useState(() => restoreState?.role ?? '')
   const [tenantId, setTenantId] = useState<number | ''>(() => restoreState?.tenantId ?? '')
   const [status, setStatus] = useState(() => restoreState?.status ?? '')

@@ -5,7 +5,6 @@ import { toast } from 'sonner'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import type { AxiosError } from 'axios'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { LockStateBadge } from '@/components/shared/LockStateBadge'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -152,11 +151,10 @@ export function UserDetailPage() {
             <MetricCard label={t('common.revenue')} value={new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(user.revenue)} />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <MetricCard label={t('common.role')} value={<RoleBadge role={user.role} />} />
             <MetricCard label={t('common.accountStatus')} value={<StatusBadge status={user.status} />} />
             <MetricCard label={t('common.tenant')} value={user.tenant?.name ?? '-'} />
-            <MetricCard label={t('common.loginLock')} value={<LockStateBadge locked={Boolean(user.username_locked)} />} />
           </div>
 
           <Card>
