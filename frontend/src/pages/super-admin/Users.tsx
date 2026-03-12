@@ -111,7 +111,7 @@ export function UsersPage() {
       },
       { key: 'role', label: t('common.role'), sortable: true, sortValue: (row) => row.role, render: (row) => <RoleBadge role={row.role} /> },
       { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? '-' },
-      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'status', label: t('common.accountStatus'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
       { key: 'created', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
       {
         key: 'actions',
@@ -191,7 +191,8 @@ export function UsersPage() {
               ))}
             </select>
           </div>
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('common.status')}>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t('superAdmin.pages.users.accountStatusHint')}</p>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('common.accountStatus')}>
             {statusTabs.map((tab) => (
               <Button
                 key={tab.value || 'all'}

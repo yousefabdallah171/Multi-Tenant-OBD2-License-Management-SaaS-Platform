@@ -189,6 +189,12 @@ class AdminManagementController extends BaseSuperAdminController
     {
         $this->guardSuperAdminMutation($request, $user, null, true);
 
+        if (! $user->canBePermanentlyDeleted()) {
+            return response()->json([
+                'message' => $user->permanentDeleteBlockedMessage() ?? 'This account cannot be deleted.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $email = $user->email;
         $user->delete();
 
@@ -271,6 +277,7 @@ class AdminManagementController extends BaseSuperAdminController
             'role' => $user->role?->value ?? (string) $user->role,
             'status' => $user->status,
             'username_locked' => $user->username_locked,
+            'can_delete' => $user->canBePermanentlyDeleted(),
             'tenant' => $user->tenant ? [
                 'id' => $user->tenant->id,
                 'name' => $user->tenant->name,

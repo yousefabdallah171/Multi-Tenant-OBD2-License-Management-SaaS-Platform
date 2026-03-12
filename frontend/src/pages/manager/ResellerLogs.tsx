@@ -185,7 +185,7 @@ export function ResellerLogsPage() {
       <PageHeader
         eyebrow={t('manager.layout.eyebrow')}
         title={t('manager.nav.resellerLogs')}
-        description={t('manager.pages.activity.description')}
+        description={t('manager.pages.resellerLogs.description')}
         actions={
           <Button
             type="button"

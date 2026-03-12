@@ -92,7 +92,7 @@ export function DashboardPage() {
               <StatsCard title={t('managerParent.pages.dashboard.customers')} value={stats?.total_customers ?? 0} icon={UserSquare2} color="emerald" />
             </button>
             <button type="button" className="text-start" onClick={() => navigate(`${routePaths.managerParent.customers(lang)}?status=active`)}>
-              <StatsCard title={t('managerParent.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+              <StatsCard title={t('managerParent.pages.dashboard.activeCustomers')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
             </button>
             <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
               <StatsCard title={t('managerParent.pages.dashboard.monthlyRevenue')} value={formatCurrency(stats?.monthly_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />

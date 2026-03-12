@@ -62,6 +62,7 @@ export interface ManagedUser {
   role: 'super_admin' | 'manager_parent' | 'manager' | 'reseller' | 'customer'
   status: 'active' | 'suspended' | 'inactive'
   username_locked?: boolean
+  can_delete: boolean
   tenant: { id: number; name: string; slug?: string; status?: string } | null
   created_at: string | null
 }

@@ -7,6 +7,7 @@ import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { LockStateBadge } from '@/components/shared/LockStateBadge'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -185,8 +186,8 @@ export function TeamMemberDetailPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <MetricCard label={t('common.status')} value={<StatusBadge status={member.status} />} />
-            <MetricCard label={t('manager.pages.usernameManagement.locked')} value={<StatusBadge status={member.username_locked ? 'suspended' : 'active'} />} />
+            <MetricCard label={t('common.accountStatus')} value={<StatusBadge status={member.status} />} />
+            <MetricCard label={t('common.loginLock')} value={<LockStateBadge locked={Boolean(member.username_locked)} />} />
             <MetricCard label={t('common.role')} value={role ? <RoleBadge role={role} /> : (member.role ?? '-')} />
           </div>
 

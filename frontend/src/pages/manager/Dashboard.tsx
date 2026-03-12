@@ -73,7 +73,7 @@ export function DashboardPage() {
               <StatsCard title={t('manager.pages.dashboard.teamCustomers')} value={stats?.team_customers ?? 0} icon={UserRound} color="emerald" />
             </button>
             <button type="button" className="text-start" onClick={() => navigate(`${routePaths.manager.customers(lang)}?status=active`)}>
-              <StatsCard title={t('manager.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+              <StatsCard title={t('manager.pages.dashboard.activeCustomers')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
             </button>
             <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.reports(lang))}>
               <StatsCard title={t('manager.pages.dashboard.teamRevenue')} value={formatCurrency(stats?.team_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />

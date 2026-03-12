@@ -52,6 +52,7 @@
       "programs": "البرامج",
       "licenses": "التراخيص",
       "activeLicenses": "التراخيص النشطة",
+      "activeCustomers": "العملاء النشطون",
       "revenue": "الإيراد"
     }
   },
@@ -65,6 +66,10 @@
     "password": "كلمة المرور",
     "phone": "الهاتف",
     "status": "الحالة",
+    "accountStatus": "حالة الحساب",
+    "loginLock": "قفل تسجيل الدخول",
+    "locked": "مقفل",
+    "unlocked": "غير مقفل",
     "revenue": "الإيراد",
     "users": "المستخدمون",
     "actions": "الإجراءات",
@@ -236,6 +241,7 @@
       "totalTenants": "إجمالي الشركاء",
       "totalRevenue": "إجمالي الإيرادات",
       "activeLicenses": "التراخيص النشطة",
+      "activeCustomers": "العملاء النشطون",
       "totalUsers": "إجمالي المستخدمين",
       "countryCoverage": "الدول المتتبعة"
     },
@@ -273,6 +279,7 @@
       "users": {
         "title": "جميع المستخدمين",
         "description": "راجع المستخدمين عبر كل الشركاء وقم بتحديث حالتهم.",
+        "accountStatusHint": "تُطبَّق هذه الفلاتر على حالة الحساب، وليس على حالة تراخيص العملاء.",
         "statusUpdated": "تم تحديث حالة المستخدم بنجاح.",
         "deleteSuccess": "تم حذف المستخدم بنجاح.",
         "deleteTitle": "حذف المستخدم"
@@ -413,6 +420,7 @@
         "totalPlatformRevenue": "إجمالي إيراد المنصة",
         "totalActivations": "إجمالي التفعيلات",
         "activeLicenses": "التراخيص النشطة",
+        "activeCustomers": "العملاء النشطون",
         "avgRevenuePerTenant": "متوسط الإيراد لكل شريك",
         "revenueByTenant": "الإيراد حسب الشريك",
         "revenueByProgram": "الإيراد حسب البرنامج",
@@ -475,7 +483,7 @@
       "usernameManagement": "إدارة اسم المستخدم",
       "financialReports": "التقارير",
       "reports": "التقارير",
-      "activity": "النشاط",
+      "activity": "نشاط اللوحة",
       "customers": "العملاء",
       "settings": "الإعدادات",
       "profile": "الملف الشخصي",
@@ -492,6 +500,7 @@
         "teamMembers": "أعضاء الفريق",
         "customers": "العملاء",
         "activeLicenses": "التراخيص النشطة",
+        "activeCustomers": "العملاء النشطون",
         "monthlyRevenue": "الإيراد الشهري",
         "licenseExpiryForecast": "توقع انتهاء التراخيص",
         "licenseCount": "عدد التراخيص",
@@ -585,14 +594,17 @@
         "addCustomer": "إضافة عميل"
       },
       "activity": {
-        "title": "النشاط",
-        "description": "راجع أحداث التدقيق على مستوى الشريك وصفِّها حسب المستخدم أو الإجراء وصدّر السجل الحالي.",
+        "title": "نشاط اللوحة",
+        "description": "راجع أحداث نشاط لوحة التحكم على مستوى الشريك وصفِّها حسب المستخدم أو الإجراء وصدّر السجل الحالي.",
         "export": "تصدير",
         "allActions": "كل الإجراءات",
         "allUsers": "كل المستخدمين",
         "system": "النظام",
         "noMatches": "لا يوجد نشاط يطابق الفلاتر الحالية.",
         "totalEntries": "إجمالي السجلات: {{count}}"
+      },
+      "resellerLogs": {
+        "description": "راجع إجراءات التراخيص التي ينفذها الموزعون عبر فريقك."
       },
       "biosBlacklist": {
         "title": "قائمة BIOS السوداء",
@@ -838,7 +850,7 @@
       "customers": "العملاء",
       "software": "البرامج",
       "reports": "التقارير",
-      "activity": "النشاط",
+      "activity": "نشاط اللوحة",
       "profile": "الملف الشخصي",
       "softwareManagement": "إدارة البرامج",
       "licenses": "التراخيص",
@@ -851,6 +863,7 @@
         "teamResellers": "موزعو الفريق",
         "teamCustomers": "عملاء الفريق",
         "activeLicenses": "التراخيص النشطة",
+        "activeCustomers": "العملاء النشطون",
         "teamRevenue": "إيراد الفريق",
         "teamActivations": "تفعيلات الفريق",
         "recentTeamActivity": "أحدث نشاطات الفريق",
@@ -918,14 +931,17 @@
         "passwordValidation": "??? ?? ????? ???? ?????? ?? 8 ???? ??? ?????."
       },
       "activity": {
-        "title": "النشاط",
-        "description": "راجع أحدث إجراءات المدير والموزعين عبر فريقك.",
+        "title": "نشاط اللوحة",
+        "description": "راجع أحدث إجراءات لوحة التحكم عبر فريقك.",
         "clearDates": "مسح التواريخ",
         "exportReport": "تصدير التقرير",
         "allActions": "كل الإجراءات",
         "allResellers": "كل الموزعين",
         "noMatches": "لا يوجد نشاط يطابق الفلاتر الحالية.",
         "totalEntries": "إجمالي السجلات: {{count}}"
+      },
+      "resellerLogs": {
+        "description": "راجع إجراءات التراخيص التي ينفذها الموزعون عبر فريقك."
       },
       "software": {
         "title": "البرامج",
@@ -1056,7 +1072,7 @@
       "software": "البرامج",
       "licenses": "التراخيص",
       "reports": "التقارير",
-      "activity": "النشاط",
+      "activity": "نشاط اللوحة",
       "profile": "الملف الشخصي"
     },
     "pages": {
@@ -1065,6 +1081,7 @@
         "description": "تابع العملاء والتراخيص النشطة والإيراد الحالي وأحدث أعمال التفعيل ضمن نطاق حسابك كموزع.",
         "customers": "العملاء",
         "activeLicenses": "التراخيص النشطة",
+        "activeCustomers": "العملاء النشطون",
         "monthlyActivations": "التفعيلات الشهرية",
         "activationTrend": "اتجاه التفعيل",
         "revenueTrend": "اتجاه الإيراد",
@@ -1265,8 +1282,8 @@
         "passwordSaved": "تم تحديث كلمة المرور بنجاح."
       },
       "activity": {
-        "title": "النشاط",
-        "description": "راجع إجراءات التفعيل والتجديد والإلغاء وتسجيل الدخول الخاصة بك.",
+        "title": "نشاط اللوحة",
+        "description": "راجع إجراءات لوحة التحكم الخاصة بك، بما فيها التفعيل والتجديد والإلغاء وتسجيل الدخول.",
         "allActions": "كل الإجراءات",
         "activation": "تفعيل",
         "renewal": "تجديد",

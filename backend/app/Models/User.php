@@ -176,4 +176,44 @@ class User extends Authenticatable
 
         return $query->delete();
     }
+
+    public function hasLicenseDependencies(): bool
+    {
+        return License::query()
+            ->where(function ($query): void {
+                $query
+                    ->where('reseller_id', $this->id)
+                    ->orWhere('customer_id', $this->id);
+            })
+            ->exists();
+    }
+
+    public function hasManagedAccountDependencies(): bool
+    {
+        return $this->createdUsers()
+            ->whereIn('role', [
+                UserRole::MANAGER_PARENT->value,
+                UserRole::MANAGER->value,
+                UserRole::RESELLER->value,
+            ])
+            ->exists();
+    }
+
+    public function canBePermanentlyDeleted(): bool
+    {
+        return ! $this->hasLicenseDependencies() && ! $this->hasManagedAccountDependencies();
+    }
+
+    public function permanentDeleteBlockedMessage(): ?string
+    {
+        if ($this->hasLicenseDependencies()) {
+            return 'This account has existing customer or license history and cannot be deleted. Deactivate it instead.';
+        }
+
+        if ($this->hasManagedAccountDependencies()) {
+            return 'This account still manages team members and cannot be deleted. Deactivate it instead.';
+        }
+
+        return null;
+    }
 }

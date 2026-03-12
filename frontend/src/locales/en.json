@@ -52,6 +52,7 @@
       "programs": "Programs",
       "licenses": "Licenses",
       "activeLicenses": "Active licenses",
+      "activeCustomers": "Active customers",
       "revenue": "Revenue"
     }
   },
@@ -65,6 +66,10 @@
     "password": "Password",
     "phone": "Phone",
     "status": "Status",
+    "accountStatus": "Account Status",
+    "loginLock": "Login Lock",
+    "locked": "Locked",
+    "unlocked": "Unlocked",
     "revenue": "Revenue",
     "users": "Users",
     "actions": "Actions",
@@ -238,6 +243,7 @@
       "totalTenants": "Total tenants",
       "totalRevenue": "Total revenue",
       "activeLicenses": "Active licenses",
+      "activeCustomers": "Active customers",
       "totalUsers": "Total users",
       "countryCoverage": "Tracked countries"
     },
@@ -275,6 +281,7 @@
       "users": {
         "title": "All Users",
         "description": "Filter, review, and update users across every tenant.",
+        "accountStatusHint": "These filters apply to account status, not customer license status.",
         "statusUpdated": "User status updated successfully.",
         "deleteSuccess": "User deleted successfully.",
         "deleteTitle": "Delete user"
@@ -447,6 +454,7 @@
         "totalPlatformRevenue": "Total platform revenue",
         "totalActivations": "Total activations",
         "activeLicenses": "Active licenses",
+        "activeCustomers": "Active customers",
         "avgRevenuePerTenant": "Avg revenue per tenant",
         "revenueByTenant": "Revenue by tenant",
         "revenueByProgram": "Revenue by program",
@@ -481,7 +489,7 @@
       "financialReports": "Reports",
       "reports": "Reports",
       "logsGroup": "Logs",
-      "activity": "Activity",
+      "activity": "Panel Activity",
       "customers": "Customers",
       "settings": "Settings",
       "profile": "Profile",
@@ -495,6 +503,7 @@
         "teamMembers": "Team Members",
         "customers": "Customers",
         "activeLicenses": "Active Licenses",
+        "activeCustomers": "Active Customers",
         "monthlyRevenue": "Monthly Revenue",
         "licenseExpiryForecast": "License Expiry Forecast",
         "licenseCount": "Licenses",
@@ -585,14 +594,17 @@
         "addCustomer": "Add Customer"
       },
       "activity": {
-        "title": "Activity",
-        "description": "Review tenant audit events, filter them by user or action, and export the current activity stream.",
+        "title": "Panel Activity",
+        "description": "Review tenant control-panel audit events, filter them by user or action, and export the current activity stream.",
         "export": "Export",
         "allActions": "All actions",
         "allUsers": "All users",
         "system": "System",
         "noMatches": "No activity matches the current filters.",
         "totalEntries": "Total entries: {{count}}"
+      },
+      "resellerLogs": {
+        "description": "Review reseller-side license actions across your team."
       },
       "biosBlacklist": {
         "title": "BIOS Blacklist",
@@ -838,7 +850,7 @@
       "software": "Software",
       "softwareManagement": "Software Management",
       "reports": "Reports",
-      "activity": "Activity",
+      "activity": "Panel Activity",
       "resellerLogs": "Reseller Logs",
       "profile": "Profile",
       "licenses": "Licenses"
@@ -850,6 +862,7 @@
         "teamResellers": "Team Resellers",
         "teamCustomers": "Team Customers",
         "activeLicenses": "Active Licenses",
+        "activeCustomers": "Active Customers",
         "teamRevenue": "Team Revenue",
         "teamActivations": "Team Activations",
         "recentTeamActivity": "Recent Team Activity",
@@ -917,14 +930,17 @@
         "passwordValidation": "Password must be at least 8 characters."
       },
       "activity": {
-        "title": "Activity",
-        "description": "Audit recent manager and reseller actions across your team.",
+        "title": "Panel Activity",
+        "description": "Audit recent control-panel actions across your team.",
         "clearDates": "Clear Dates",
         "exportReport": "Export Report",
         "allActions": "All actions",
         "allResellers": "All resellers",
         "noMatches": "No activity matches the current filters.",
         "totalEntries": "Total entries: {{count}}"
+      },
+      "resellerLogs": {
+        "description": "Review reseller-side license actions across your team."
       },
       "software": {
         "title": "Software",
@@ -1055,7 +1071,7 @@
       "software": "Software",
       "licenses": "Licenses",
       "reports": "Reports",
-      "activity": "Activity",
+      "activity": "Panel Activity",
       "profile": "Profile"
     },
     "pages": {
@@ -1064,6 +1080,7 @@
         "description": "Track your customers, active licenses, current revenue, and the latest activation work from your personal reseller scope.",
         "customers": "Customers",
         "activeLicenses": "Active Licenses",
+        "activeCustomers": "Active Customers",
         "monthlyActivations": "Monthly Activations",
         "activationTrend": "Activation Trend",
         "revenueTrend": "Revenue Trend",
@@ -1264,8 +1281,8 @@
         "passwordSaved": "Password updated successfully."
       },
       "activity": {
-        "title": "Activity",
-        "description": "Review your activation, renewal, deactivation, and sign-in actions.",
+        "title": "Panel Activity",
+        "description": "Review your control-panel actions, including activations, renewals, deactivations, and sign-ins.",
         "allActions": "All Actions",
         "activation": "Activation",
         "renewal": "Renewal",

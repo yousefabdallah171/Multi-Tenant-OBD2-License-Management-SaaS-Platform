@@ -95,7 +95,7 @@ export function DashboardPage() {
               <StatsCard title={t('reseller.pages.dashboard.customers')} value={stats?.customers ?? 0} icon={UserRound} color="sky" />
             </button>
             <button type="button" className="rounded-3xl bg-gradient-to-br from-emerald-50 to-teal-100/60 p-[1px] text-start dark:from-emerald-950/40 dark:to-teal-950/20" onClick={() => navigate(`${routePaths.reseller.customers(lang)}?status=active`)}>
-              <StatsCard title={t('reseller.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
+              <StatsCard title={t('reseller.pages.dashboard.activeCustomers')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
             </button>
             <div className="rounded-3xl bg-gradient-to-br from-rose-50 to-orange-100/60 p-[1px] dark:from-rose-950/40 dark:to-orange-950/20">
               <StatsCard title={t('common.revenue')} value={formatCurrency(stats?.revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />

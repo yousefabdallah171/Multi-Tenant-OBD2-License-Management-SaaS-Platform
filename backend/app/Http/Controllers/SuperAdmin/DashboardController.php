@@ -35,7 +35,11 @@ class DashboardController extends BaseSuperAdminController
                     'stats' => [
                         'total_tenants' => Tenant::query()->count(),
                         'total_revenue' => (float) License::query()->sum('price'),
-                        'active_licenses' => License::query()->whereEffectivelyActive()->count(),
+                        'active_licenses' => License::query()
+                            ->whereEffectivelyActive()
+                            ->whereNotNull('customer_id')
+                            ->distinct('customer_id')
+                            ->count('customer_id'),
                         'total_users' => User::query()->count(),
                         'ip_country_map' => $countries,
                     ],

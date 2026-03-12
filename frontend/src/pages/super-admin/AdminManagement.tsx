@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import type { AxiosError } from 'axios'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { LockStateBadge } from '@/components/shared/LockStateBadge'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -169,6 +170,10 @@ export function AdminManagementPage() {
       setSelectedIds((current) => current.filter((id) => id !== deleteTarget?.id))
       invalidateUserQueries(deleteTarget?.id)
     },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'This account cannot be deleted.'))
+      setDeleteTarget(null)
+    },
   })
 
   const bulkSuspendMutation = useMutation({
@@ -304,12 +309,12 @@ export function AdminManagementPage() {
             ) : (
               <p className="font-medium text-slate-950 dark:text-white">-</p>
             )}
-            <StatusBadge status={row.username_locked ? 'suspended' : 'active'} />
+            <LockStateBadge locked={Boolean(row.username_locked)} />
           </div>
         ),
       },
       { key: 'role', label: t('common.role'), sortable: true, sortValue: (row) => row.role, render: (row) => <RoleBadge role={row.role} /> },
-      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'status', label: t('common.accountStatus'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
       { key: 'created', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
       {
         key: 'actions',
@@ -369,9 +374,11 @@ export function AdminManagementPage() {
               >
                 {t('common.resetPassword')}
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400" disabled={isProtectedSuperAdmin(row)} onSelect={() => setDeleteTarget(row)}>
-                {t('common.delete')}
-              </DropdownMenuItem>
+              {row.can_delete ? (
+                <DropdownMenuItem className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400" disabled={isProtectedSuperAdmin(row)} onSelect={() => setDeleteTarget(row)}>
+                  {t('common.delete')}
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
             </DropdownMenu>
           </div>

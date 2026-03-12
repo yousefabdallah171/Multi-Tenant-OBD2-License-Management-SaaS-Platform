@@ -17,21 +17,22 @@ class DashboardController extends BaseResellerController
         $currentMonth = now()->startOfMonth();
 
         $result = Cache::remember("reseller:{$resellerId}:dashboard:stats", 45, function () use ($resellerId, $currentMonth): array {
-            $stats = License::query()
-                ->where('reseller_id', $resellerId)
-                ->selectRaw("
-                    COUNT(DISTINCT customer_id) as customers,
-                    SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_licenses,
-                    ROUND(SUM(price), 2) as revenue,
-                    SUM(CASE WHEN activated_at >= ? THEN 1 ELSE 0 END) as monthly_activations
-                ", [$currentMonth])
-                ->first();
+            $licenseQuery = License::query()->where('reseller_id', $resellerId);
 
             return [
-                'customers' => (int) ($stats->customers ?? 0),
-                'active_licenses' => (int) ($stats->active_licenses ?? 0),
-                'revenue' => (float) ($stats->revenue ?? 0),
-                'monthly_activations' => (int) ($stats->monthly_activations ?? 0),
+                'customers' => (int) (clone $licenseQuery)
+                    ->whereNotNull('customer_id')
+                    ->distinct('customer_id')
+                    ->count('customer_id'),
+                'active_licenses' => (int) (clone $licenseQuery)
+                    ->whereEffectivelyActive()
+                    ->whereNotNull('customer_id')
+                    ->distinct('customer_id')
+                    ->count('customer_id'),
+                'revenue' => round((float) (clone $licenseQuery)->sum('price'), 2),
+                'monthly_activations' => (int) (clone $licenseQuery)
+                    ->where('activated_at', '>=', $currentMonth)
+                    ->count(),
             ];
         });
 

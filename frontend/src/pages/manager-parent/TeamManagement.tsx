@@ -8,6 +8,7 @@ import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { LockStateBadge } from '@/components/shared/LockStateBadge'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -151,6 +152,10 @@ export function TeamManagementPage() {
       setDeleteTarget(null)
       invalidateTeamQueries(deleteTarget?.id)
     },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'This team member cannot be deleted.'))
+      setDeleteTarget(null)
+    },
   })
 
   const unlockMutation = useMutation({
@@ -197,7 +202,7 @@ export function TeamManagementPage() {
         render: (row) => (
           <div className="space-y-1">
             <p className="font-medium text-slate-950 dark:text-white">{row.username ?? '-'}</p>
-            <StatusBadge status={row.username_locked ? 'suspended' : 'active'} />
+            <LockStateBadge locked={Boolean(row.username_locked)} />
           </div>
         ),
       },
@@ -217,7 +222,7 @@ export function TeamManagementPage() {
       },
       {
         key: 'status',
-        label: t('common.status'),
+        label: t('common.accountStatus'),
         sortable: true,
         sortValue: (row) => row.status,
         render: (row) => <StatusBadge status={row.status} />,
@@ -283,7 +288,7 @@ export function TeamManagementPage() {
                 >
                   {row.status === 'active' ? t('common.suspend') : t('common.activate')}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setDeleteTarget(row)}>{t('common.delete')}</DropdownMenuItem>
+                {row.can_delete ? <DropdownMenuItem onClick={() => setDeleteTarget(row)}>{t('common.delete')}</DropdownMenuItem> : null}
                 {row.username_locked ? (
                   <DropdownMenuItem
                     onClick={() => {

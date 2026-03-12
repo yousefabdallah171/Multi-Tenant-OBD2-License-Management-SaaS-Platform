@@ -201,7 +201,7 @@ export function ResellerLogsPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('managerParent.nav.resellerLogs')}
-        description={t('managerParent.pages.activity.description')}
+        description={t('managerParent.pages.resellerLogs.description')}
         actions={
           <Button
             type="button"

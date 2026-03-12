@@ -152,7 +152,11 @@ class DashboardController extends BaseManagerParentController
 
             $licenseQuery = License::query()->where('tenant_id', $tenantId);
             $licenseTotals = (int) (clone $licenseQuery)->count();
-            $activeLicenses = (int) (clone $licenseQuery)->whereEffectivelyActive()->count();
+            $activeLicenses = (int) (clone $licenseQuery)
+                ->whereEffectivelyActive()
+                ->whereNotNull('customer_id')
+                ->distinct('customer_id')
+                ->count('customer_id');
             $revenue = (float) (clone $licenseQuery)->sum('price');
 
             $monthlyRevenue = (float) License::query()

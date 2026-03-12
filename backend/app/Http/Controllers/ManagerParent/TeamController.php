@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\Response;
 
 class TeamController extends BaseManagerParentController
 {
@@ -106,21 +107,16 @@ class TeamController extends BaseManagerParentController
     {
         $user = $this->resolveTeamUser($request, $user);
 
-        $hasDependencies = License::query()
-            ->where(function ($query) use ($user): void {
-                $query->where('reseller_id', $user->id)->orWhere('customer_id', $user->id);
-            })
-            ->exists();
-
-        if ($hasDependencies) {
-            $user->update(['status' => 'inactive']);
-        } else {
-            $user->delete();
+        if (! $user->canBePermanentlyDeleted()) {
+            return response()->json([
+                'message' => $user->permanentDeleteBlockedMessage() ?? 'This team member cannot be deleted.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        $user->delete();
 
         $this->logActivity($request, 'team.delete', sprintf('Removed team member %s.', $user->email), [
             'target_user_id' => $user->id,
-            'soft' => $hasDependencies,
         ]);
 
         return response()->json(['message' => 'Team member removed successfully.']);
@@ -285,6 +281,7 @@ class TeamController extends BaseManagerParentController
             'customers_count' => $stats['customers'],
             'active_licenses_count' => $stats['active_licenses'],
             'revenue' => $stats['revenue'],
+            'can_delete' => $user->canBePermanentlyDeleted(),
             'created_at' => $user->created_at?->toIso8601String(),
         ];
     }

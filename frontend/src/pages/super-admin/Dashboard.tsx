@@ -81,7 +81,7 @@ export function DashboardPage() {
             </StaggerItem>
             <StaggerItem>
               <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/customers?status=active`)}>
-                <StatsCard title={t('superAdmin.cards.activeLicenses')} value={stats?.active_licenses ?? 0} icon={Globe2} color="amber" />
+                <StatsCard title={t('superAdmin.cards.activeCustomers')} value={stats?.active_licenses ?? 0} icon={Globe2} color="amber" />
               </button>
             </StaggerItem>
             <StaggerItem>

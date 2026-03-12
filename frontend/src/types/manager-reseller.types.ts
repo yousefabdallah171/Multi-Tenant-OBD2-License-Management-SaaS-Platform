@@ -58,6 +58,7 @@ export interface ManagerTeamReseller {
   customers_count: number
   active_licenses_count: number
   revenue: number
+  can_delete: boolean
   created_at: string | null
 }
 

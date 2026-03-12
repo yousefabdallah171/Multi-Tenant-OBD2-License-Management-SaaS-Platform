@@ -86,7 +86,7 @@ class CustomerController extends BaseSuperAdminController
         $customers = $query->paginate((int) ($validated['per_page'] ?? 25));
 
         return response()->json([
-            'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user))->values(),
+            'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user, $validated))->values(),
             'meta' => $this->paginationMeta($customers),
         ]);
     }
@@ -395,9 +395,12 @@ class CustomerController extends BaseSuperAdminController
         ];
     }
 
-    private function serializeCustomer(User $user): array
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function serializeCustomer(User $user, array $filters = []): array
     {
-        $license = $user->customerLicenses->sortByDesc('activated_at')->first();
+        $license = $this->resolveDisplayLicense($user, $filters);
         $hasActiveLicense = $user->customerLicenses->contains(
             fn ($item) => $item->isEffectivelyActive()
         );
@@ -437,6 +440,62 @@ class CustomerController extends BaseSuperAdminController
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function resolveDisplayLicense(User $user, array $filters = []): ?License
+    {
+        $licenses = $user->customerLicenses->sortByDesc(
+            fn (License $license) => ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0
+        );
+
+        $filtered = $licenses->filter(fn (License $license): bool => $this->licenseMatchesDisplayFilters($license, $filters));
+
+        return $filtered->first() ?? $licenses->first();
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function licenseMatchesDisplayFilters(License $license, array $filters): bool
+    {
+        $tenantId = isset($filters['tenant_id']) ? (int) $filters['tenant_id'] : null;
+        if ($tenantId) {
+            if ((int) $license->tenant_id !== $tenantId) {
+                return false;
+            }
+        }
+
+        $resellerId = isset($filters['reseller_id']) ? (int) $filters['reseller_id'] : null;
+        if ($resellerId) {
+            if ((int) $license->reseller_id !== $resellerId) {
+                return false;
+            }
+        }
+
+        $programId = isset($filters['program_id']) ? (int) $filters['program_id'] : null;
+        if ($programId) {
+            if ((int) $license->program_id !== $programId) {
+                return false;
+            }
+        }
+
+        $status = isset($filters['status']) && is_string($filters['status']) ? $filters['status'] : '';
+        if ($status === '' || $status === 'all') {
+            return true;
+        }
+
+        if ($status === 'scheduled') {
+            return $license->status === 'pending' && (bool) $license->is_scheduled;
+        }
+
+        if ($status === 'pending') {
+            return $license->status === 'pending' && ! (bool) $license->is_scheduled;
+        }
+
+        return $license->effectiveStatus() === $status;
     }
 
     private function visibleEmail(?string $email): ?string

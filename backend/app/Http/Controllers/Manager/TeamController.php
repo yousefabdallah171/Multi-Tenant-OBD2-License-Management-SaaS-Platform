@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\Response;
 
 class TeamController extends BaseManagerController
 {
@@ -245,21 +246,16 @@ class TeamController extends BaseManagerController
     {
         $reseller = $this->resolveTeamReseller($request, $user);
 
-        $hasDependencies = License::query()
-            ->where(function ($query) use ($reseller): void {
-                $query->where('reseller_id', $reseller->id)->orWhere('customer_id', $reseller->id);
-            })
-            ->exists();
-
-        if ($hasDependencies) {
-            $reseller->update(['status' => 'inactive']);
-        } else {
-            $reseller->delete();
+        if (! $reseller->canBePermanentlyDeleted()) {
+            return response()->json([
+                'message' => $reseller->permanentDeleteBlockedMessage() ?? 'This reseller cannot be deleted.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        $reseller->delete();
 
         $this->logActivity($request, 'team.delete', sprintf('Removed reseller %s.', $reseller->email), [
             'target_user_id' => $reseller->id,
-            'soft' => $hasDependencies,
         ]);
 
         return response()->json(['message' => 'Reseller removed successfully.']);
@@ -303,6 +299,7 @@ class TeamController extends BaseManagerController
             'customers_count' => $licenses->pluck('customer_id')->filter()->unique()->count(),
             'active_licenses_count' => $licenses->where('status', 'active')->count(),
             'revenue' => round((float) $licenses->sum('price'), 2),
+            'can_delete' => $licenses->isEmpty(),
             'created_at' => $reseller->created_at?->toIso8601String(),
         ];
     }

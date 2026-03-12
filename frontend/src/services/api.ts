@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { toast } from 'sonner'
 import type { SupportedLanguage } from '@/hooks/useLanguage'
-import i18n from '@/i18n'
+  import i18n from '@/i18n'
 import { extractAccountDisabledState, storeAccountDisabledState } from '@/lib/account-disabled'
 import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY } from '@/lib/constants'
 import { getDashboardPath, routePaths } from '@/router/routes'

@@ -8,6 +8,7 @@ import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { LockStateBadge } from '@/components/shared/LockStateBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -164,6 +165,10 @@ export function TeamPage() {
       setDeleteTarget(null)
       invalidateTeamQueries(deleteTarget?.id)
     },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'This reseller cannot be deleted.'))
+      setDeleteTarget(null)
+    },
   })
 
   const unlockMutation = useMutation({
@@ -220,7 +225,7 @@ export function TeamPage() {
         render: (row) => (
           <div className="space-y-1">
             <p className="font-medium text-slate-950 dark:text-white">{row.username ?? '-'}</p>
-            <StatusBadge status={row.username_locked ? 'suspended' : 'active'} />
+            <LockStateBadge locked={Boolean(row.username_locked)} />
           </div>
         ),
       },
@@ -241,7 +246,7 @@ export function TeamPage() {
       { key: 'customers', label: t('manager.pages.dashboard.teamCustomers'), sortable: true, sortValue: (row) => row.customers_count, render: (row) => row.customers_count },
       { key: 'licenses', label: t('manager.pages.dashboard.activeLicenses'), sortable: true, sortValue: (row) => row.active_licenses_count, render: (row) => row.active_licenses_count },
       { key: 'revenue', label: t('common.revenue'), sortable: true, sortValue: (row) => row.revenue, render: (row) => formatCurrency(row.revenue, 'USD', locale) },
-      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      { key: 'status', label: t('common.accountStatus'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
       {
         key: 'actions',
         label: t('common.actions'),
@@ -281,7 +286,7 @@ export function TeamPage() {
                 >
                   {row.status === 'active' ? t('common.suspend') : t('common.activate')}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setDeleteTarget(row)}>{t('common.delete')}</DropdownMenuItem>
+                {row.can_delete ? <DropdownMenuItem onClick={() => setDeleteTarget(row)}>{t('common.delete')}</DropdownMenuItem> : null}
                 {row.username_locked ? (
                   <DropdownMenuItem
                     onClick={() => {
