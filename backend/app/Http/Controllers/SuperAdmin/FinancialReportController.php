@@ -7,83 +7,107 @@ use App\Models\License;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\ExportTaskService;
+use App\Support\LicenseCacheInvalidation;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class FinancialReportController extends BaseSuperAdminController
 {
     public function index(Request $request): JsonResponse
     {
-        $licenses = $this->filteredLicenses($request);
-        $tenantCount = max(Tenant::query()->count(), 1);
-        $totalCustomers = User::query()
-            ->where('role', UserRole::CUSTOMER->value)
-            ->count();
-        $activeCustomers = License::query()
-            ->whereEffectivelyActive()
-            ->whereNotNull('customer_id')
-            ->distinct('customer_id')
-            ->count('customer_id');
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
 
-        $summary = [
-            'total_platform_revenue' => round((float) $licenses->sum('price'), 2),
-            'total_customers' => $totalCustomers,
-            'total_activations' => $licenses->count(),
-            'active_licenses' => $activeCustomers,
-            'avg_revenue_per_tenant' => round((float) $licenses->sum('price') / $tenantCount, 2),
-        ];
+        $data = Cache::remember($this->cacheKey('financial-reports', $validated), now()->addSeconds(90), function () use ($validated): array {
+            $tenantCount = max(Tenant::query()->count(), 1);
+            $totalCustomers = User::query()
+                ->where('role', UserRole::CUSTOMER->value)
+                ->count();
+            $activeCustomers = License::query()
+                ->whereEffectivelyActive()
+                ->whereNotNull('customer_id')
+                ->distinct('customer_id')
+                ->count('customer_id');
+            $baseQuery = $this->baseQuery($validated);
+            $summary = (clone $baseQuery)
+                ->selectRaw('ROUND(COALESCE(SUM(licenses.price), 0), 2) as total_platform_revenue, COUNT(*) as total_activations')
+                ->first();
+            $revenueByTenant = (clone $baseQuery)
+                ->leftJoin('tenants', 'tenants.id', '=', 'licenses.tenant_id')
+                ->selectRaw("COALESCE(tenants.name, 'Unknown') as tenant, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue")
+                ->groupBy('licenses.tenant_id', 'tenants.name')
+                ->orderByDesc('revenue')
+                ->get()
+                ->map(fn ($row): array => [
+                    'tenant' => (string) $row->tenant,
+                    'revenue' => round((float) $row->revenue, 2),
+                ])
+                ->values()
+                ->all();
+            $revenueByProgram = (clone $baseQuery)
+                ->leftJoin('programs', 'programs.id', '=', 'licenses.program_id')
+                ->selectRaw("COALESCE(programs.name, 'Unknown') as program, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue, COUNT(*) as activations")
+                ->groupBy('licenses.program_id', 'programs.name')
+                ->orderByDesc('revenue')
+                ->get()
+                ->map(fn ($row): array => [
+                    'program' => (string) $row->program,
+                    'revenue' => round((float) $row->revenue, 2),
+                    'activations' => (int) $row->activations,
+                ])
+                ->values()
+                ->all();
+            $revenueBreakdownRows = (clone $baseQuery)
+                ->leftJoin('tenants', 'tenants.id', '=', 'licenses.tenant_id')
+                ->leftJoin('programs', 'programs.id', '=', 'licenses.program_id')
+                ->selectRaw("COALESCE(tenants.name, 'Unknown') as tenant, COALESCE(programs.name, 'Unknown') as program, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue")
+                ->groupBy('licenses.tenant_id', 'tenants.name', 'licenses.program_id', 'programs.name')
+                ->orderBy('tenant')
+                ->orderBy('program')
+                ->get();
+            $breakdownPrograms = $revenueBreakdownRows
+                ->pluck('program')
+                ->unique()
+                ->values()
+                ->all();
+            $revenueBreakdown = $revenueBreakdownRows
+                ->groupBy('tenant')
+                ->map(function ($group, string $tenant) use ($breakdownPrograms): array {
+                    $row = ['tenant' => $tenant];
 
-        $revenueByTenant = $licenses
-            ->groupBy(fn (License $license): string => $license->tenant?->name ?? 'Unknown')
-            ->map(fn ($group, string $tenant): array => [
-                'tenant' => $tenant,
-                'revenue' => round((float) $group->sum('price'), 2),
-            ])
-            ->sortByDesc('revenue')
-            ->values();
+                    foreach ($breakdownPrograms as $program) {
+                        $programRow = $group->firstWhere('program', $program);
+                        $row[$program] = round((float) ($programRow->revenue ?? 0), 2);
+                    }
 
-        $revenueByProgram = $licenses
-            ->groupBy(fn (License $license): string => $license->program?->name ?? 'Unknown')
-            ->map(fn ($group, string $program): array => [
-                'program' => $program,
-                'revenue' => round((float) $group->sum('price'), 2),
-                'activations' => $group->count(),
-            ])
-            ->sortByDesc('revenue')
-            ->values();
+                    return $row;
+                })
+                ->values()
+                ->all();
 
-        $breakdownPrograms = $licenses
-            ->map(fn (License $license): string => $license->program?->name ?? 'Unknown')
-            ->unique()
-            ->values();
-
-        $revenueBreakdown = $licenses
-            ->groupBy(fn (License $license): string => $license->tenant?->name ?? 'Unknown')
-            ->map(function ($group, string $tenant) use ($breakdownPrograms): array {
-                $row = ['tenant' => $tenant];
-
-                foreach ($breakdownPrograms as $program) {
-                    $row[$program] = round((float) $group
-                        ->filter(fn (License $license): bool => ($license->program?->name ?? 'Unknown') === $program)
-                        ->sum('price'), 2);
-                }
-
-                return $row;
-            })
-            ->values();
-
-        return response()->json([
-            'data' => [
-                'summary' => $summary,
+            return [
+                'summary' => [
+                    'total_platform_revenue' => round((float) ($summary?->total_platform_revenue ?? 0), 2),
+                    'total_customers' => $totalCustomers,
+                    'total_activations' => (int) ($summary?->total_activations ?? 0),
+                    'active_licenses' => $activeCustomers,
+                    'avg_revenue_per_tenant' => round((float) ($summary?->total_platform_revenue ?? 0) / $tenantCount, 2),
+                ],
                 'revenue_by_tenant' => $revenueByTenant,
                 'revenue_by_program' => $revenueByProgram,
                 'revenue_breakdown' => $revenueBreakdown,
                 'revenue_breakdown_series' => $breakdownPrograms,
-                'monthly_revenue' => $this->monthlyRevenue($licenses),
-                'reseller_balances' => $this->resellerBalances($licenses),
-            ],
-        ]);
+                'monthly_revenue' => $this->monthlyRevenue($this->baseQuery($validated)),
+                'reseller_balances' => $this->resellerBalances($this->baseQuery($validated)),
+            ];
+        });
+
+        return response()->json(['data' => $data]);
     }
 
     public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
@@ -120,49 +144,62 @@ class FinancialReportController extends BaseSuperAdminController
         return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
-    private function filteredLicenses(Request $request)
+    private function baseQuery(array $validated): Builder
     {
-        $validated = $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date'],
-        ]);
-
         return License::query()
-            ->with(['tenant:id,name', 'program:id,name', 'reseller:id,name'])
-            ->when(! empty($validated['from']), fn ($query) => $query->whereDate('activated_at', '>=', $validated['from']))
-            ->when(! empty($validated['to']), fn ($query) => $query->whereDate('activated_at', '<=', $validated['to']))
-            ->get();
+            ->from('licenses')
+            ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
+            ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']));
     }
 
-    private function monthlyRevenue($licenses)
+    private function monthlyRevenue(Builder $baseQuery)
     {
         $months = collect(range(11, 0))
             ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
 
-        $grouped = $licenses
-            ->groupBy(fn (License $license): string => $license->activated_at?->format('Y-m') ?? '');
+        $grouped = (clone $baseQuery)
+            ->whereNotNull('licenses.activated_at')
+            ->where('licenses.activated_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(11))
+            ->selectRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m') as month_key, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue")
+            ->groupByRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m')")
+            ->pluck('revenue', 'month_key');
 
         return $months->map(fn (CarbonImmutable $month): array => [
             'month' => $month->format('M Y'),
-            'revenue' => round((float) ($grouped->get($month->format('Y-m'))?->sum('price') ?? 0), 2),
+            'revenue' => round((float) ($grouped->get($month->format('Y-m')) ?? 0), 2),
         ])->values();
     }
 
-    private function resellerBalances($licenses)
+    private function resellerBalances(Builder $baseQuery)
     {
-        return $licenses
-            ->groupBy(fn (License $license): string => $license->reseller?->name ?? 'Unassigned')
-            ->map(fn ($group, string $seller): array => [
-                'id' => md5($seller),
-                'reseller' => $seller,
-                'tenant' => $group->first()?->tenant?->name,
-                'total_revenue' => round((float) $group->sum('price'), 2),
-                'total_activations' => $group->count(),
-                'avg_price' => $group->count() > 0 ? round((float) $group->sum('price') / $group->count(), 2) : 0,
-                'balance' => round((float) $group->sum('price'), 2),
+        return (clone $baseQuery)
+            ->leftJoin('users as resellers', 'resellers.id', '=', 'licenses.reseller_id')
+            ->leftJoin('tenants', 'tenants.id', '=', 'licenses.tenant_id')
+            ->selectRaw("COALESCE(resellers.id, 0) as seller_id, COALESCE(resellers.name, 'Unassigned') as reseller, COALESCE(tenants.name, 'Unknown') as tenant, ROUND(COALESCE(SUM(licenses.price), 0), 2) as total_revenue, COUNT(*) as total_activations")
+            ->groupBy('licenses.reseller_id', 'resellers.id', 'resellers.name', 'licenses.tenant_id', 'tenants.name')
+            ->orderByDesc('total_revenue')
+            ->get()
+            ->map(fn ($row): array => [
+                'id' => (int) $row->seller_id > 0 ? (int) $row->seller_id : md5(sprintf('%s|%s', $row->reseller, $row->tenant)),
+                'reseller' => (string) $row->reseller,
+                'tenant' => (string) $row->tenant,
+                'total_revenue' => round((float) $row->total_revenue, 2),
+                'total_activations' => (int) $row->total_activations,
+                'avg_price' => (int) $row->total_activations > 0 ? round((float) $row->total_revenue / (int) $row->total_activations, 2) : 0,
+                'balance' => round((float) $row->total_revenue, 2),
             ])
-            ->sortByDesc('total_revenue')
-            ->values();
+            ->values()
+            ->all();
+    }
+
+    private function cacheKey(string $type, array $validated): string
+    {
+        return sprintf(
+            'super-admin:%s:v%d:%s',
+            $type,
+            LicenseCacheInvalidation::reportVersion('super-admin:reports:version'),
+            md5(json_encode($validated))
+        );
     }
 
     /**
