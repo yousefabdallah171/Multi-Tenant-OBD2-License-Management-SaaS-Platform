@@ -8,7 +8,6 @@ import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
-import { LockStateBadge } from '@/components/shared/LockStateBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -222,12 +221,7 @@ export function TeamPage() {
         label: t('common.username'),
         sortable: true,
         sortValue: (row) => row.username ?? '',
-        render: (row) => (
-          <div className="space-y-1">
-            <p className="font-medium text-slate-950 dark:text-white">{row.username ?? '-'}</p>
-            <LockStateBadge locked={Boolean(row.username_locked)} />
-          </div>
-        ),
+        render: (row) => <p className="font-medium text-slate-950 dark:text-white">{row.username ?? '-'}</p>,
       },
       {
         key: 'email',

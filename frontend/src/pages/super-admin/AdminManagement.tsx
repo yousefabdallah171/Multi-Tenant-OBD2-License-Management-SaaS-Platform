@@ -7,7 +7,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import type { AxiosError } from 'axios'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
-import { LockStateBadge } from '@/components/shared/LockStateBadge'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -294,23 +293,20 @@ export function AdminManagementPage() {
         sortable: true,
         sortValue: (row) => row.username ?? '',
         render: (row) => (
-          <div className="space-y-1">
-            {row.username ? (
-              <button
-                type="button"
-                className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  navigate(routePaths.superAdmin.userDetail(lang, row.id), { state: detailState })
-                }}
-              >
-                {row.username}
-              </button>
-            ) : (
-              <p className="font-medium text-slate-950 dark:text-white">-</p>
-            )}
-            <LockStateBadge locked={Boolean(row.username_locked)} />
-          </div>
+          row.username ? (
+            <button
+              type="button"
+              className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
+              onClick={(event) => {
+                event.stopPropagation()
+                navigate(routePaths.superAdmin.userDetail(lang, row.id), { state: detailState })
+              }}
+            >
+              {row.username}
+            </button>
+          ) : (
+            <p className="font-medium text-slate-950 dark:text-white">-</p>
+          )
         ),
       },
       { key: 'role', label: t('common.role'), sortable: true, sortValue: (row) => row.role, render: (row) => <RoleBadge role={row.role} /> },
