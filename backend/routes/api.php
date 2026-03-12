@@ -317,6 +317,10 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/users/{user}', [SuperAdminUserController::class, 'show']);
         Route::put('/users/{user}/status', [SuperAdminUserController::class, 'updateStatus']);
         Route::delete('/users/{user}', [SuperAdminUserController::class, 'destroy']);
+        Route::get('/username-management', [\App\Http\Controllers\SuperAdmin\UsernameManagementController::class, 'index']);
+        Route::post('/username-management/{user}/unlock', [\App\Http\Controllers\SuperAdmin\UsernameManagementController::class, 'unlock']);
+        Route::put('/username-management/{user}/username', [\App\Http\Controllers\SuperAdmin\UsernameManagementController::class, 'changeUsername']);
+        Route::post('/username-management/{user}/reset-password', [\App\Http\Controllers\SuperAdmin\UsernameManagementController::class, 'resetPassword']);
         Route::get('/customers', [SuperAdminCustomerController::class, 'index']);
         Route::post('/customers', [SuperAdminCustomerController::class, 'store']);
         Route::get('/customers/{user}', [SuperAdminCustomerController::class, 'show']);
