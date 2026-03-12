@@ -1,36 +1,100 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate, isCustomerLicenseHistoryAction, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import type { ManagerTeamResellerDetail } from '@/types/manager-reseller.types'
 import type { UserRole } from '@/types/user.types'
 
 type DetailStatus = 'active' | 'suspended' | 'cancelled' | 'inactive' | 'expired' | 'pending' | 'scheduled' | 'scheduled_failed' | 'removed' | 'online' | 'offline' | 'degraded' | 'unknown'
+interface EditFormState {
+  name: string
+  email: string
+  phone: string
+  username: string
+}
 
 export function TeamMemberDetailPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const navigate = useNavigate()
+  const location = useLocation()
+  const queryClient = useQueryClient()
   const params = useParams()
   const id = Number(params.id)
+  const navigationState = location.state as { returnTo?: string; restore?: Record<string, unknown> } | null
+  const returnTo = navigationState?.returnTo ?? routePaths.manager.team(lang)
+  const restoreState = navigationState?.restore
+  const [editOpen, setEditOpen] = useState(false)
+  const [form, setForm] = useState<EditFormState>({ name: '', email: '', phone: '', username: '' })
 
   const detailQuery = useQuery({
-    queryKey: ['manager', 'team', 'detail-page', id],
+    queryKey: ['manager', 'team', 'detail', id],
     queryFn: () => managerService.getTeamMember(id),
     enabled: Number.isFinite(id) && id > 0,
   })
 
   const member = detailQuery.data?.data
   const role = normalizeRole(member?.role)
+  const customerLicenseHistory = useMemo(
+    () => (member?.seller_log_history ?? []).filter((entry) => isCustomerLicenseHistoryAction(entry.action)),
+    [member?.seller_log_history],
+  )
+
+  const editMutation = useMutation({
+    mutationFn: async () => {
+      await managerService.updateTeamMember(id, {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: normalizePhoneInput(form.phone.trim()) || null,
+      })
+
+      const currentUsername = member?.username?.trim() ?? ''
+      const desiredUsername = form.username.trim()
+
+      if (desiredUsername && desiredUsername !== currentUsername) {
+        try {
+          await managerService.changeUsername(id, desiredUsername)
+          return { usernameUpdated: true, usernameErrorMessage: null as string | null }
+        } catch (error) {
+          return {
+            usernameUpdated: false,
+            usernameErrorMessage: getApiErrorMessage(error, t('manager.pages.usernameManagement.usernameRequired')),
+          }
+        }
+      }
+
+      return { usernameUpdated: true, usernameErrorMessage: null as string | null }
+    },
+    onSuccess: ({ usernameUpdated, usernameErrorMessage }) => {
+      setEditOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['manager', 'team'] })
+      void queryClient.invalidateQueries({ queryKey: ['manager', 'team', 'detail', id] })
+
+      if (usernameUpdated) {
+        toast.success(t('manager.pages.team.updateSuccess'))
+        return
+      }
+
+      toast.error(usernameErrorMessage ?? t('common.partialUsernameUpdate', { defaultValue: 'Account details were saved, but the username could not be updated.' }))
+    },
+  })
 
   const historyColumns: Array<DataTableColumn<ManagerTeamResellerDetail['seller_log_history'][number]>> = [
     {
@@ -41,7 +105,7 @@ export function TeamMemberDetailPage() {
     {
       key: 'action',
       label: t('common.action'),
-      render: (row) => row.action,
+      render: (row) => formatActivityActionLabel(row.action),
     },
     {
       key: 'customer',
@@ -84,10 +148,29 @@ export function TeamMemberDetailPage() {
 
   return (
     <div className="space-y-6">
+      <Button type="button" variant="outline" onClick={() => navigate(returnTo, restoreState ? { state: { restore: restoreState } } : undefined)}>
+        {t('common.back')}
+      </Button>
       <PageHeader
         eyebrow={t('manager.layout.eyebrow')}
         title={member?.name ?? t('manager.pages.team.title')}
         description={member?.email ?? t('manager.pages.team.description')}
+        actions={member ? (
+          <Button
+            type="button"
+            onClick={() => {
+              setForm({
+                name: member.name,
+                email: member.email,
+                phone: member.phone ?? '',
+                username: member.username ?? '',
+              })
+              setEditOpen(true)
+            }}
+          >
+            {t('common.edit')}
+          </Button>
+        ) : null}
       />
 
       {member ? (
@@ -153,12 +236,12 @@ export function TeamMemberDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Reseller Activation History</CardTitle>
+              <CardTitle className="text-lg">{t('common.customerLicenseHistory', { defaultValue: 'Customer & License History' })}</CardTitle>
             </CardHeader>
             <CardContent>
               <DataTable
                 columns={historyColumns}
-                data={member.seller_log_history}
+                data={customerLicenseHistory}
                 rowKey={(row) => row.id}
                 emptyMessage={t('manager.pages.activity.noMatches')}
               />
@@ -166,6 +249,69 @@ export function TeamMemberDetailPage() {
           </Card>
         </>
       ) : null}
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('manager.pages.team.editTitle')}</DialogTitle>
+            <DialogDescription>{t('manager.pages.team.editDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="detail-team-name">{t('common.name')}</Label>
+              <Input id="detail-team-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="detail-team-email">{t('common.email')}</Label>
+              <Input id="detail-team-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="detail-team-username">{t('common.username')}</Label>
+              <Input id="detail-team-username" value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="detail-team-phone">{t('common.phone')}</Label>
+              <Input
+                id="detail-team-phone"
+                type="tel"
+                inputMode="tel"
+                placeholder="+966..."
+                value={form.phone}
+                onChange={(event) => setForm((current) => ({ ...current, phone: normalizePhoneInput(event.target.value) }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setEditOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (form.name.trim().length < 2) {
+                  toast.error(t('manager.pages.team.nameValidation'))
+                  return
+                }
+
+                if (!form.username.trim()) {
+                  toast.error(t('manager.pages.usernameManagement.usernameRequired'))
+                  return
+                }
+
+                if (form.phone.trim() && !isValidPhoneNumber(form.phone)) {
+                  toast.error(t('validation.invalidPhone', { defaultValue: 'Invalid phone number' }))
+                  return
+                }
+
+                editMutation.mutate()
+              }}
+              disabled={editMutation.isPending}
+            >
+              {editMutation.isPending ? t('common.saving') : t('manager.pages.team.saveChanges')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -192,4 +338,16 @@ function normalizeRole(role?: string | null): UserRole | null {
   }
 
   return null
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message && error.message !== 'Request failed with status code 422') {
+    return error.message
+  }
+
+  const response = (error as AxiosError<{ message?: string; errors?: Record<string, string[]> }>).response
+
+  return response?.data?.message
+    ?? Object.values(response?.data?.errors ?? {})[0]?.[0]
+    ?? fallback
 }

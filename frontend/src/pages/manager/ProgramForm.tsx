@@ -59,7 +59,6 @@ export function ProgramFormPage() {
   const editingId = id ? Number(id) : null
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [showApiKey, setShowApiKey] = useState(false)
-  const [showApiBaseUrl, setShowApiBaseUrl] = useState(false)
   const [hasConfiguredApi, setHasConfiguredApi] = useState(false)
 
   const programQuery = useQuery({
@@ -143,6 +142,7 @@ export function ProgramFormPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow={t('manager.layout.eyebrow')}
         title={editingId ? t('manager.pages.softwareManagement.editProgram') : t('manager.pages.softwareManagement.addProgram')}
         description={editingId ? t('manager.pages.softwareManagement.editDescription') : t('manager.pages.softwareManagement.formDescription')}
         actions={(
@@ -155,42 +155,38 @@ export function ProgramFormPage() {
       <Card>
         <CardContent className="grid gap-6 p-6 lg:grid-cols-2">
           <div className="space-y-4">
-            <Field label={t('manager.pages.softwareManagement.programName')}><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.version')}><Input value={form.version} onChange={(event) => setForm((current) => ({ ...current, version: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.programDescription')}><Textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.downloadLink')}><Input value={form.download_link} onChange={(event) => setForm((current) => ({ ...current, download_link: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.programName')} hint={t('software.fieldHints.programName', { defaultValue: 'Public program name shown in your tenant catalog and activation screens.' })}><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.version')} hint={t('software.fieldHints.version', { defaultValue: 'Use the release version your team will recognize, such as 1.0 or 2026.03.' })}><Input value={form.version} onChange={(event) => setForm((current) => ({ ...current, version: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.programDescription')} hint={t('software.fieldHints.description', { defaultValue: 'Short summary for managers and resellers so they know what this software is for.' })}><Textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.downloadLink')} hint={t('software.fieldHints.downloadLink', { defaultValue: 'Direct installer or download page URL used when the software is opened from the dashboard.' })}><Input value={form.download_link} onChange={(event) => setForm((current) => ({ ...current, download_link: event.target.value }))} /></Field>
             <Field label={t('manager.pages.softwareManagement.iconUrl')}><Input value={form.icon} onChange={(event) => setForm((current) => ({ ...current, icon: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.fileSize')}><Input value={form.file_size} onChange={(event) => setForm((current) => ({ ...current, file_size: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.systemRequirements')}><Textarea value={form.system_requirements} onChange={(event) => setForm((current) => ({ ...current, system_requirements: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.fileSize', { defaultValue: 'File Size' })} hint={t('software.fieldHints.fileSize', { defaultValue: 'Optional display value such as 245 MB so the team knows how large the download is.' })}><Input value={form.file_size} onChange={(event) => setForm((current) => ({ ...current, file_size: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.systemRequirements', { defaultValue: 'System Requirements' })} hint={t('software.fieldHints.systemRequirements', { defaultValue: 'Optional OS, hardware, or dependency requirements shown before installation.' })}><Textarea value={form.system_requirements} onChange={(event) => setForm((current) => ({ ...current, system_requirements: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.installationGuideUrl', { defaultValue: 'Installation Guide URL' })} hint={t('software.fieldHints.installationGuideUrl', { defaultValue: 'Optional documentation page that explains setup, drivers, or activation steps.' })}><Input value={form.installation_guide_url} onChange={(event) => setForm((current) => ({ ...current, installation_guide_url: event.target.value }))} /></Field>
           </div>
 
           <div className="space-y-4">
-            <Field label={t('manager.pages.softwareManagement.price')}><Input type="number" min={0} step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} /></Field>
-            <Field label={t('common.status')}>
+            <Field label={t('manager.pages.softwareManagement.basePrice', { defaultValue: t('manager.pages.softwareManagement.price') })} hint={t('software.fieldHints.basePrice', { defaultValue: 'Default sale price used when a reseller does not override it manually.' })}><Input type="number" min={0} step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} /></Field>
+            <Field label={t('common.status')} hint={t('software.fieldHints.status', { defaultValue: 'Active programs can be selected for new activations. Inactive programs stay hidden from normal sales.' })}>
               <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as 'active' | 'inactive' }))} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
                 <option value="active">{t('common.active')}</option>
                 <option value="inactive">{t('common.inactive')}</option>
               </select>
             </Field>
-            <Field label={t('software.externalSoftwareId')}>
+            <Field label={t('software.externalSoftwareId')} hint={t('software.fieldHints.externalSoftwareId', { defaultValue: 'Numeric software ID used by the external API for user add/remove and logs.' })}>
               <Input type="number" min={1} placeholder={t('software.externalSoftwareIdPlaceholder')} value={form.external_software_id} onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))} />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
             </Field>
-            <Field label={t('software.externalApiBaseUrl')}>
-              <div className="flex gap-2">
-                <Input
-                  type={showApiBaseUrl ? 'url' : 'password'}
-                  placeholder={editingId ? t('software.externalApiBaseUrlReplacePlaceholder') : t('software.externalApiBaseUrlPlaceholder')}
-                  value={form.external_api_base_url}
-                  onChange={(event) => setForm((current) => ({ ...current, external_api_base_url: event.target.value }))}
-                />
-                <Button type="button" variant="outline" size="icon" onClick={() => setShowApiBaseUrl((value) => !value)}>
-                  {showApiBaseUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
+            <Field label={t('software.externalApiBaseUrl')} hint={t('software.fieldHints.externalApiBaseUrl', { defaultValue: 'Base host for the software API. Enter only the main host, without endpoint paths.' })}>
+              <Input
+                type="url"
+                placeholder={editingId ? t('software.externalApiBaseUrlReplacePlaceholder') : t('software.externalApiBaseUrlPlaceholder')}
+                value={form.external_api_base_url}
+                onChange={(event) => setForm((current) => ({ ...current, external_api_base_url: event.target.value }))}
+              />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiBaseUrlHint')}</p>
             </Field>
-            <Field label={t('software.externalLogsEndpoint')}>
+            <Field label={t('software.externalLogsEndpoint')} hint={t('software.fieldHints.externalLogsEndpoint', { defaultValue: 'Path used to read external activity logs for this software, for example apilogs.' })}>
               <Input
                 placeholder={t('software.externalLogsEndpointPlaceholder')}
                 value={form.external_logs_endpoint}
@@ -198,7 +194,7 @@ export function ProgramFormPage() {
               />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.logsEndpointHint')}</p>
             </Field>
-            <Field label={t('software.externalApiKey')}>
+            <Field label={t('software.externalApiKey')} hint={t('software.fieldHints.externalApiKey', { defaultValue: 'Secret API key used for external add-user and delete-user requests.' })}>
               <div className="flex gap-2">
                 <Input type={showApiKey ? 'text' : 'password'} maxLength={50} placeholder={editingId ? t('software.apiKeyReplacePlaceholder') : t('software.externalApiKeyPlaceholder')} value={form.external_api_key} onChange={(event) => setForm((current) => ({ ...current, external_api_key: event.target.value }))} />
                 <Button type="button" variant="outline" size="icon" onClick={() => setShowApiKey((value) => !value)}>
@@ -238,11 +234,12 @@ function getApiErrorMessage(error: unknown, fallback: string) {
     ?? fallback
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
+      {hint ? <p className="text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
     </div>
   )
 }

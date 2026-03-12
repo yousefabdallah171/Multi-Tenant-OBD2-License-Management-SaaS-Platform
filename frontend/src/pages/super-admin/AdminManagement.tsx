@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff, MoreHorizontal, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import type { AxiosError } from 'axios'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
@@ -28,6 +29,7 @@ const emptyForm = {
   name: '',
   email: '',
   password: '',
+  username: '',
   role: 'manager_parent' as 'super_admin' | 'manager_parent' | 'manager' | 'reseller',
   tenant_id: '' as number | '',
   phone: '',
@@ -39,14 +41,26 @@ export function AdminManagementPage() {
   const { lang } = useLanguage()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const queryClient = useQueryClient()
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
-  const [role, setRole] = useState('')
-  const [tenantId, setTenantId] = useState<number | ''>('')
-  const [status, setStatus] = useState('')
-  const [search, setSearch] = useState('')
+  const returnTo = `${location.pathname}${location.search}`
+  const restoreState = (location.state as {
+    restore?: {
+      page?: number
+      perPage?: number
+      role?: string
+      tenantId?: number | ''
+      status?: string
+      search?: string
+    }
+  } | null)?.restore
+  const [page, setPage] = useState(() => restoreState?.page ?? 1)
+  const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 10)
+  const [role, setRole] = useState(() => restoreState?.role ?? '')
+  const [tenantId, setTenantId] = useState<number | ''>(() => restoreState?.tenantId ?? '')
+  const [status, setStatus] = useState(() => restoreState?.status ?? '')
+  const [search, setSearch] = useState(() => restoreState?.search ?? '')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ManagedUser | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null)
@@ -55,9 +69,6 @@ export function AdminManagementPage() {
   const [form, setForm] = useState(emptyForm)
   const [unlockTarget, setUnlockTarget] = useState<ManagedUser | null>(null)
   const [unlockReason, setUnlockReason] = useState('')
-  const [usernameTarget, setUsernameTarget] = useState<ManagedUser | null>(null)
-  const [newUsername, setNewUsername] = useState('')
-  const [changeReason, setChangeReason] = useState('')
   const [passwordTarget, setPasswordTarget] = useState<ManagedUser | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [showCreatePassword, setShowCreatePassword] = useState(false)
@@ -74,12 +85,20 @@ export function AdminManagementPage() {
     queryFn: () => tenantService.getAll({ per_page: 100 }),
   })
 
+  function invalidateUserQueries(userId?: number) {
+    void queryClient.invalidateQueries({ queryKey: ['super-admin', 'admin-management'] })
+    void queryClient.invalidateQueries({ queryKey: ['super-admin', 'users'] })
+    if (userId) {
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'users', 'detail', userId] })
+    }
+  }
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const normalizedPhone = normalizePhoneInput(form.phone.trim())
 
       if (editing) {
-        return adminService.update(editing.id, {
+        await adminService.update(editing.id, {
           name: form.name,
           email: form.email,
           role: form.role,
@@ -87,9 +106,26 @@ export function AdminManagementPage() {
           phone: normalizedPhone || null,
           status: form.status,
         })
+
+        const desiredUsername = form.username.trim()
+        const currentUsername = editing.username?.trim() ?? ''
+
+        if (desiredUsername && desiredUsername !== currentUsername) {
+          try {
+            await biosService.changeUsername(editing.id, desiredUsername)
+            return { usernameUpdated: true, usernameErrorMessage: null as string | null }
+          } catch (error) {
+            return {
+              usernameUpdated: false,
+              usernameErrorMessage: getApiErrorMessage(error, t('superAdmin.pages.usernameManagement.usernameRequired')),
+            }
+          }
+        }
+
+        return { usernameUpdated: true, usernameErrorMessage: null as string | null }
       }
 
-      return adminService.create({
+      await adminService.create({
         name: form.name,
         email: form.email,
         password: form.password,
@@ -98,14 +134,22 @@ export function AdminManagementPage() {
         phone: normalizedPhone || null,
         status: form.status,
       })
+
+      return { usernameUpdated: true, usernameErrorMessage: null as string | null }
     },
-    onSuccess: () => {
-      toast.success(t('superAdmin.pages.adminManagement.saveSuccess'))
+    onSuccess: ({ usernameUpdated, usernameErrorMessage }) => {
       setFormOpen(false)
       setEditing(null)
       setForm(emptyForm)
       setShowCreatePassword(false)
-      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'admin-management'] })
+      invalidateUserQueries(editing?.id)
+
+      if (usernameUpdated) {
+        toast.success(t('superAdmin.pages.adminManagement.saveSuccess'))
+        return
+      }
+
+      toast.error(usernameErrorMessage ?? t('common.partialUsernameUpdate', { defaultValue: 'Account details were saved, but the username could not be updated.' }))
     },
   })
 
@@ -113,7 +157,7 @@ export function AdminManagementPage() {
     mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'suspended' }) => adminService.update(id, { status: nextStatus }),
     onSuccess: () => {
       toast.success(t('superAdmin.pages.adminManagement.statusUpdated'))
-      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'admin-management'] })
+      invalidateUserQueries()
     },
   })
 
@@ -123,7 +167,7 @@ export function AdminManagementPage() {
       toast.success(t('superAdmin.pages.adminManagement.deleteSuccess'))
       setDeleteTarget(null)
       setSelectedIds((current) => current.filter((id) => id !== deleteTarget?.id))
-      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'admin-management'] })
+      invalidateUserQueries(deleteTarget?.id)
     },
   })
 
@@ -134,7 +178,7 @@ export function AdminManagementPage() {
     onSuccess: () => {
       toast.success(t('superAdmin.pages.adminManagement.bulkSuspendSuccess'))
       setSelectedIds([])
-      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'admin-management'] })
+      invalidateUserQueries()
     },
   })
 
@@ -146,7 +190,7 @@ export function AdminManagementPage() {
       toast.success(t('superAdmin.pages.adminManagement.bulkDeleteSuccess'))
       setSelectedIds([])
       setBulkDeleteOpen(false)
-      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'admin-management'] })
+      invalidateUserQueries()
     },
   })
 
@@ -156,18 +200,7 @@ export function AdminManagementPage() {
       toast.success(t('superAdmin.pages.usernameManagement.unlockSuccess'))
       setUnlockTarget(null)
       setUnlockReason('')
-      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'admin-management'] })
-    },
-  })
-
-  const usernameMutation = useMutation({
-    mutationFn: () => biosService.changeUsername(usernameTarget?.id ?? 0, newUsername, changeReason),
-    onSuccess: () => {
-      toast.success(t('superAdmin.pages.usernameManagement.renameSuccess'))
-      setUsernameTarget(null)
-      setNewUsername('')
-      setChangeReason('')
-      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'admin-management'] })
+      invalidateUserQueries(unlockTarget?.id)
     },
   })
 
@@ -179,6 +212,7 @@ export function AdminManagementPage() {
       setNewPassword('')
       setShowResetPassword(false)
       setRevokeTokensOnReset(true)
+      invalidateUserQueries(passwordTarget?.id)
     },
   })
 
@@ -186,11 +220,27 @@ export function AdminManagementPage() {
   const allVisibleSelected = visibleAdminIds.length > 0 && visibleAdminIds.every((id) => selectedIds.includes(id))
   const activeSuperAdminCount = (adminsQuery.data?.data ?? []).filter((admin) => admin.role === 'super_admin' && admin.status === 'active').length
   const currentUserId = user?.id ?? null
+  const detailState = {
+    returnTo,
+    restore: {
+      page,
+      perPage,
+      role,
+      tenantId,
+      status,
+      search,
+    },
+  }
 
   const isProtectedSuperAdmin = (row: ManagedUser) =>
     row.role === 'super_admin' && (row.id === currentUserId || (row.status === 'active' && activeSuperAdminCount <= 1))
 
   function validateForm() {
+    if (editing && !form.username.trim()) {
+      toast.error(t('superAdmin.pages.usernameManagement.usernameRequired'))
+      return false
+    }
+
     if (form.phone.trim() && !isValidPhoneNumber(form.phone)) {
       toast.error(t('validation.invalidPhone', { defaultValue: 'Invalid phone number' }))
       return false
@@ -224,7 +274,7 @@ export function AdminManagementPage() {
               className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
               onClick={(event) => {
                 event.stopPropagation()
-                navigate(routePaths.superAdmin.userDetail(lang, row.id))
+                navigate(routePaths.superAdmin.userDetail(lang, row.id), { state: detailState })
               }}
             >
               {row.name}
@@ -246,7 +296,7 @@ export function AdminManagementPage() {
                 className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
                 onClick={(event) => {
                   event.stopPropagation()
-                  navigate(routePaths.superAdmin.userDetail(lang, row.id))
+                  navigate(routePaths.superAdmin.userDetail(lang, row.id), { state: detailState })
                 }}
               >
                 {row.username}
@@ -281,6 +331,7 @@ export function AdminManagementPage() {
                     name: row.name,
                     email: row.email,
                     password: '',
+                    username: row.username ?? '',
                     role: row.role === 'customer' ? 'reseller' : row.role,
                     tenant_id: row.tenant?.id ?? '',
                     phone: row.phone ?? '',
@@ -292,7 +343,7 @@ export function AdminManagementPage() {
               >
                 {t('common.edit')}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.userDetail(lang, row.id))}>
+              <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.userDetail(lang, row.id), { state: detailState })}>
                 {t('common.view')}
               </DropdownMenuItem>
               <DropdownMenuItem disabled={isProtectedSuperAdmin(row)} onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
@@ -306,15 +357,6 @@ export function AdminManagementPage() {
                 }}
               >
                 {t('superAdmin.pages.usernameManagement.unlock')}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => {
-                  setUsernameTarget(row)
-                  setNewUsername(row.username ?? '')
-                  setChangeReason('')
-                }}
-              >
-                {t('superAdmin.pages.usernameManagement.changeUsername')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => {
@@ -335,7 +377,7 @@ export function AdminManagementPage() {
         ),
       },
     ],
-    [activeSuperAdminCount, currentUserId, lang, locale, navigate, selectedIds, statusMutation, t],
+    [activeSuperAdminCount, currentUserId, detailState, lang, locale, navigate, selectedIds, statusMutation, t],
   )
 
   return (
@@ -455,7 +497,7 @@ export function AdminManagementPage() {
         columns={columns}
         data={adminsQuery.data?.data ?? []}
         rowKey={(row) => row.id}
-        onRowClick={(row) => navigate(routePaths.superAdmin.userDetail(lang, row.id))}
+        onRowClick={(row) => navigate(routePaths.superAdmin.userDetail(lang, row.id), { state: detailState })}
         isLoading={adminsQuery.isLoading}
         pagination={{
           page: adminsQuery.data?.meta.current_page ?? 1,
@@ -485,6 +527,12 @@ export function AdminManagementPage() {
               <Label htmlFor="admin-email">{t('common.email')}</Label>
               <Input id="admin-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
             </div>
+            {editing ? (
+              <div className="space-y-2">
+                <Label htmlFor="admin-username">{t('common.username')}</Label>
+                <Input id="admin-username" value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} />
+              </div>
+            ) : null}
             {!editing ? (
               <div className="space-y-2">
                 <Label htmlFor="admin-password">{t('common.password')}</Label>
@@ -588,53 +636,6 @@ export function AdminManagementPage() {
       </ConfirmDialog>
 
       <Dialog
-        open={usernameTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setUsernameTarget(null)
-            setNewUsername('')
-            setChangeReason('')
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('superAdmin.pages.usernameManagement.renameTitle')}</DialogTitle>
-            <DialogDescription>{usernameTarget?.email ?? t('superAdmin.pages.usernameManagement.description')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="admin-new-username">{t('common.username')}</Label>
-              <Input id="admin-new-username" value={newUsername} onChange={(event) => setNewUsername(event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-change-reason">{t('common.reason')}</Label>
-              <Textarea id="admin-change-reason" value={changeReason} onChange={(event) => setChangeReason(event.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setUsernameTarget(null)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                if (!newUsername.trim()) {
-                  toast.error(t('common.username'))
-                  return
-                }
-
-                usernameMutation.mutate()
-              }}
-              disabled={usernameMutation.isPending}
-            >
-              {usernameMutation.isPending ? t('common.saving') : t('common.save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
         open={passwordTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -724,4 +725,16 @@ export function AdminManagementPage() {
       />
     </div>
   )
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message && error.message !== 'Request failed with status code 422') {
+    return error.message
+  }
+
+  const response = (error as AxiosError<{ message?: string; errors?: Record<string, string[]> }>).response
+
+  return response?.data?.message
+    ?? Object.values(response?.data?.errors ?? {})[0]?.[0]
+    ?? fallback
 }

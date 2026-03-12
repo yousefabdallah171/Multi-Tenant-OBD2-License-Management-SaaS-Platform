@@ -112,6 +112,7 @@
     "resetPassword": "Reset password",
     "revokeSessionsOnPasswordReset": "Log out this user from all devices",
     "revokeSessionsOnPasswordResetHelp": "Revokes existing login sessions so the new password takes effect immediately.",
+    "partialUsernameUpdate": "Account details were saved, but the username could not be updated.",
     "addedBy": "Added by",
     "removed": "Removed",
     "reason": "Reason",
@@ -135,6 +136,7 @@
     "back": "Back",
     "date": "Date",
     "timestamp": "Timestamp",
+    "customerLicenseHistory": "Customer & License History",
     "lastChecked": "Last checked",
     "hide": "Hide",
     "show": "Show",
@@ -328,7 +330,7 @@
       },
       "profile": {
         "title": "Profile",
-        "description": "Manage your own profile details, password, and notification preferences.",
+        "description": "Manage your own profile details and password.",
         "profileSaved": "Profile updated successfully.",
         "passwordSaved": "Password updated successfully.",
         "accountCard": "Account summary",
@@ -780,7 +782,7 @@
       },
       "profile": {
         "title": "Profile",
-        "description": "Update your account details, password, and notification preferences.",
+        "description": "Update your account details and password.",
         "accountCard": "Account Card",
         "editProfile": "Edit Profile",
         "saveProfile": "Save Profile",
@@ -949,7 +951,11 @@
         "programName": "Program Name",
         "programDescription": "Program Description",
         "downloadLink": "Download Link",
+        "fileSize": "File Size",
+        "installationGuideUrl": "Installation Guide URL",
+        "systemRequirements": "System Requirements",
         "trialDays": "Trial Days",
+        "basePrice": "Base Price",
         "price": "Price",
         "iconUrl": "Icon URL",
         "version": "Version",
@@ -971,7 +977,7 @@
       },
       "profile": {
         "title": "Profile",
-        "description": "Update your manager account details, password, and notification preferences.",
+        "description": "Update your manager account details and password.",
         "accountCard": "Account Card",
         "editProfile": "Edit Profile",
         "saveProfile": "Save Profile",
@@ -1233,7 +1239,7 @@
       },
       "profile": {
         "title": "Profile",
-        "description": "Update your reseller account details, password, and notification preferences.",
+        "description": "Update your reseller account details and password.",
         "accountCard": "Account Card",
         "editProfile": "Edit Profile",
         "saveProfile": "Save Profile",
@@ -1317,7 +1323,22 @@
     "logsEndpointHint": "Logs path only: apilogs. Full call becomes /apilogs/[ID].",
     "apiKeyUrlHint": "API key value used in /apiuseradd/[KEY] and /apideluser/[KEY].",
     "softwareIdUrlHint": "Software ID used in /apiusers/[ID], /showallapi/[ID], and /apilogs/[ID].",
-    "addUserUrlExample": "Add-user test: /apiuseradd/[KEY]/john_doe/ABC123XYZ"
+    "addUserUrlExample": "Add-user test: /apiuseradd/[KEY]/john_doe/ABC123XYZ",
+    "fieldHints": {
+      "programName": "Public program name shown in your tenant catalog and activation screens.",
+      "version": "Use the release version your team will recognize, such as 1.0 or 2026.03.",
+      "description": "Short summary for managers and resellers so they know what this software is for.",
+      "downloadLink": "Direct installer or download page URL used when the software is opened from the dashboard.",
+      "fileSize": "Optional display value such as 245 MB so the team knows how large the download is.",
+      "systemRequirements": "Optional OS, hardware, or dependency requirements shown before installation.",
+      "installationGuideUrl": "Optional documentation page that explains setup, drivers, or activation steps.",
+      "basePrice": "Default sale price used when a reseller does not override it manually.",
+      "status": "Active programs can be selected for new activations. Inactive programs stay hidden from normal sales.",
+      "externalSoftwareId": "Numeric software ID used by the external API for user add/remove and logs.",
+      "externalApiBaseUrl": "Base host for the software API. Enter only the main host, without endpoint paths.",
+      "externalLogsEndpoint": "Path used to read external activity logs for this software, for example apilogs.",
+      "externalApiKey": "Secret API key used for external add-user and delete-user requests."
+    }
   },
   "programLogs": {
     "title": "User Logs",

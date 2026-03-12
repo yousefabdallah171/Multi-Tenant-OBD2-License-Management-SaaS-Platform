@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/auth.service'
 import { getDashboardPath } from '@/router/routes'
@@ -14,34 +15,34 @@ export function useAuth() {
 
   const isAuthenticated = Boolean(token && user)
 
-  const login = async (email: string, password: string, remember = true) => {
+  const login = useCallback(async (email: string, password: string, remember = true) => {
     const result = await authService.login({ email, password })
     setSession(result.token, result.user, remember)
     return result
-  }
+  }, [setSession])
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authService.logout()
     } finally {
       clearSession()
     }
-  }
+  }, [clearSession])
 
-  const syncCurrentUser = async () => {
+  const syncCurrentUser = useCallback(async () => {
     const result = await authService.getMe()
     setUser(result.user)
     return result.user
-  }
+  }, [setUser])
 
-  const getDefaultRoute = (lang: SupportedLanguage, role?: UserRole) => {
+  const getDefaultRoute = useCallback((lang: SupportedLanguage, role?: UserRole) => {
     const targetRole = role ?? user?.role
     return targetRole ? getDashboardPath(targetRole, lang) : `/${lang}/login`
-  }
+  }, [user?.role])
 
-  const setAuthenticatedUser = (nextUser: User | null) => {
+  const setAuthenticatedUser = useCallback((nextUser: User | null) => {
     setUser(nextUser)
-  }
+  }, [setUser])
 
   return {
     token,

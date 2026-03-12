@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -30,6 +31,7 @@ interface TeamFormState {
   email: string
   password: string
   phone: string
+  username: string
 }
 
 const EMPTY_FORM: TeamFormState = {
@@ -37,6 +39,7 @@ const EMPTY_FORM: TeamFormState = {
   email: '',
   password: '',
   phone: '',
+  username: '',
 }
 
 function isValidEmail(value: string) {
@@ -47,13 +50,24 @@ export function TeamManagementPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const location = useLocation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [role, setRole] = useState<'manager' | 'reseller' | ''>('')
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<'active' | 'suspended' | 'inactive' | ''>('')
+  const returnTo = `${location.pathname}${location.search}`
+  const restoreState = (location.state as {
+    restore?: {
+      role?: 'manager' | 'reseller' | ''
+      page?: number
+      perPage?: number
+      search?: string
+      status?: 'active' | 'suspended' | 'inactive' | ''
+    }
+  } | null)?.restore
+  const [role, setRole] = useState<'manager' | 'reseller' | ''>(() => restoreState?.role ?? '')
+  const [page, setPage] = useState(() => restoreState?.page ?? 1)
+  const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 10)
+  const [search, setSearch] = useState(() => restoreState?.search ?? '')
+  const [status, setStatus] = useState<'active' | 'suspended' | 'inactive' | ''>(() => restoreState?.status ?? '')
   const [formOpen, setFormOpen] = useState(false)
   const [inviteRole, setInviteRole] = useState<'manager' | 'reseller'>('manager')
   const [deleteTarget, setDeleteTarget] = useState<TeamMemberSummary | null>(null)
@@ -61,9 +75,6 @@ export function TeamManagementPage() {
   const [form, setForm] = useState<TeamFormState>(EMPTY_FORM)
   const [unlockTarget, setUnlockTarget] = useState<TeamMemberSummary | null>(null)
   const [unlockReason, setUnlockReason] = useState('')
-  const [usernameTarget, setUsernameTarget] = useState<TeamMemberSummary | null>(null)
-  const [newUsername, setNewUsername] = useState('')
-  const [changeReason, setChangeReason] = useState('')
   const [passwordTarget, setPasswordTarget] = useState<TeamMemberSummary | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [showCreatePassword, setShowCreatePassword] = useState(false)
@@ -75,21 +86,53 @@ export function TeamManagementPage() {
     queryFn: () => teamService.getAll({ role: role || '', page, per_page: perPage, search, status }),
   })
 
+  function invalidateTeamQueries(memberId?: number) {
+    void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
+    if (memberId) {
+      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team', 'detail', memberId] })
+    }
+  }
+
   const createMutation = useMutation({
     mutationFn: (payload: TeamPayload) => teamService.create(payload),
     onSuccess: () => {
       toast.success(t(inviteRole === 'manager' ? 'managerParent.pages.teamManagement.managerInvited' : 'managerParent.pages.teamManagement.resellerInvited'))
       closeForm()
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
+      invalidateTeamQueries()
     },
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Partial<Omit<TeamPayload, 'role' | 'password'>> }) => teamService.update(id, payload),
-    onSuccess: () => {
-      toast.success(t('managerParent.pages.teamManagement.updateSuccess'))
+    mutationFn: async ({ id, payload }: { id: number; payload: Partial<Omit<TeamPayload, 'role' | 'password'>> }) => {
+      await teamService.update(id, payload)
+
+      const desiredUsername = form.username.trim()
+      const currentUsername = editingMember?.username?.trim() ?? ''
+
+      if (desiredUsername && desiredUsername !== currentUsername) {
+        try {
+          await managerParentService.changeUsername(id, desiredUsername)
+          return { usernameUpdated: true, usernameErrorMessage: null as string | null }
+        } catch (error) {
+          return {
+            usernameUpdated: false,
+            usernameErrorMessage: getApiErrorMessage(error, t('managerParent.pages.usernameManagement.usernameRequired')),
+          }
+        }
+      }
+
+      return { usernameUpdated: true, usernameErrorMessage: null as string | null }
+    },
+    onSuccess: ({ usernameUpdated, usernameErrorMessage }) => {
       closeForm()
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
+      invalidateTeamQueries(editingMember?.id)
+
+      if (usernameUpdated) {
+        toast.success(t('managerParent.pages.teamManagement.updateSuccess'))
+        return
+      }
+
+      toast.error(usernameErrorMessage ?? t('common.partialUsernameUpdate', { defaultValue: 'Account details were saved, but the username could not be updated.' }))
     },
   })
 
@@ -97,7 +140,7 @@ export function TeamManagementPage() {
     mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'suspended' | 'inactive' }) => teamService.updateStatus(id, nextStatus),
     onSuccess: () => {
       toast.success(t('managerParent.pages.teamManagement.statusUpdated'))
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
+      invalidateTeamQueries()
     },
   })
 
@@ -106,7 +149,7 @@ export function TeamManagementPage() {
     onSuccess: () => {
       toast.success(t('managerParent.pages.teamManagement.deleteSuccess'))
       setDeleteTarget(null)
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
+      invalidateTeamQueries(deleteTarget?.id)
     },
   })
 
@@ -116,20 +159,7 @@ export function TeamManagementPage() {
       toast.success(t('managerParent.pages.usernameManagement.unlockSuccess'))
       setUnlockTarget(null)
       setUnlockReason('')
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team', 'detail'] })
-    },
-  })
-
-  const usernameMutation = useMutation({
-    mutationFn: () => managerParentService.changeUsername(usernameTarget?.id ?? 0, newUsername, changeReason),
-    onSuccess: () => {
-      toast.success(t('managerParent.pages.usernameManagement.renameSuccess'))
-      setUsernameTarget(null)
-      setNewUsername('')
-      setChangeReason('')
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team'] })
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team', 'detail'] })
+      invalidateTeamQueries(unlockTarget?.id)
     },
   })
 
@@ -141,6 +171,7 @@ export function TeamManagementPage() {
       setNewPassword('')
       setShowResetPassword(false)
       setRevokeTokensOnReset(true)
+      invalidateTeamQueries(passwordTarget?.id)
     },
   })
 
@@ -234,6 +265,7 @@ export function TeamManagementPage() {
                       email: row.email,
                       password: '',
                       phone: row.phone ?? '',
+                      username: row.username ?? '',
                     })
                     setFormOpen(true)
                     setShowCreatePassword(false)
@@ -263,15 +295,6 @@ export function TeamManagementPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    setUsernameTarget(row)
-                    setNewUsername(row.username ?? '')
-                    setChangeReason('')
-                  }}
-                >
-                  {t('managerParent.pages.usernameManagement.changeUsername')}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
                     setPasswordTarget(row)
                     setNewPassword('')
                     setShowResetPassword(false)
@@ -290,6 +313,16 @@ export function TeamManagementPage() {
   )
 
   const list = membersQuery.data?.data ?? []
+  const detailState = {
+    returnTo,
+    restore: {
+      role,
+      page,
+      perPage,
+      search,
+      status,
+    },
+  }
 
   function closeForm() {
     setFormOpen(false)
@@ -307,6 +340,11 @@ export function TeamManagementPage() {
 
     if (!isValidEmail(form.email)) {
       toast.error(t('managerParent.pages.teamManagement.emailValidation'))
+      return
+    }
+
+    if (editingMember && !form.username.trim()) {
+      toast.error(t('managerParent.pages.usernameManagement.usernameRequired'))
       return
     }
 
@@ -406,7 +444,7 @@ export function TeamManagementPage() {
             columns={columns}
             data={list}
             rowKey={(row) => row.id}
-            onRowClick={(row) => navigate(routePaths.managerParent.teamMemberDetail(lang, row.id))}
+            onRowClick={(row) => navigate(routePaths.managerParent.teamMemberDetail(lang, row.id), { state: detailState })}
             isLoading={membersQuery.isLoading}
             pagination={{
               page: membersQuery.data?.meta.current_page ?? 1,
@@ -456,6 +494,12 @@ export function TeamManagementPage() {
               <Label htmlFor="team-email">{t('common.email')}</Label>
               <Input id="team-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
             </div>
+            {editingMember ? (
+              <div className="space-y-2">
+                <Label htmlFor="team-username">{t('common.username')}</Label>
+                <Input id="team-username" value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} />
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="team-phone">{t('common.phone')}</Label>
               <Input
@@ -516,53 +560,6 @@ export function TeamManagementPage() {
           <Textarea id="unlock-reason" value={unlockReason} onChange={(event) => setUnlockReason(event.target.value)} placeholder={t('managerParent.pages.usernameManagement.unlockReasonRequired')} />
         </div>
       </ConfirmDialog>
-
-      <Dialog
-        open={usernameTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setUsernameTarget(null)
-            setNewUsername('')
-            setChangeReason('')
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('managerParent.pages.usernameManagement.renameTitle')}</DialogTitle>
-            <DialogDescription>{usernameTarget ? t('managerParent.pages.usernameManagement.renameDescription', { email: usernameTarget.email }) : t('managerParent.pages.usernameManagement.renameDescriptionFallback')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-username">{t('managerParent.pages.usernameManagement.newUsername')}</Label>
-              <Input id="new-username" value={newUsername} onChange={(event) => setNewUsername(event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="change-reason">{t('common.reason')}</Label>
-              <Textarea id="change-reason" value={changeReason} onChange={(event) => setChangeReason(event.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setUsernameTarget(null)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                if (!newUsername.trim()) {
-                  toast.error(t('managerParent.pages.usernameManagement.usernameRequired'))
-                  return
-                }
-
-                usernameMutation.mutate()
-              }}
-              disabled={usernameMutation.isPending}
-            >
-              {usernameMutation.isPending ? t('common.saving') : t('managerParent.pages.usernameManagement.saveUsername')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog
         open={passwordTarget !== null}
@@ -644,4 +641,16 @@ export function TeamManagementPage() {
       />
     </div>
   )
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message && error.message !== 'Request failed with status code 422') {
+    return error.message
+  }
+
+  const response = (error as AxiosError<{ message?: string; errors?: Record<string, string[]> }>).response
+
+  return response?.data?.message
+    ?? Object.values(response?.data?.errors ?? {})[0]?.[0]
+    ?? fallback
 }

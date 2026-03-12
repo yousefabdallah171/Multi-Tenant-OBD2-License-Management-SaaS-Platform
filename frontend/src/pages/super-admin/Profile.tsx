@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,17 +15,22 @@ import { profileService } from '@/services/profile.service'
 export function ProfilePage() {
   const { t } = useTranslation()
   const { user, setAuthenticatedUser } = useAuth()
-  const [profileForm, setProfileForm] = useState({
-    name: user?.name ?? '',
-    email: user?.email ?? '',
-    phone: user?.phone ?? '',
-    timezone: resolveDisplayTimezone(user?.timezone),
-  })
+  const initialProfileForm = useMemo(
+    () => ({
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+      phone: user?.phone ?? '',
+      timezone: resolveDisplayTimezone(user?.timezone),
+    }),
+    [user?.email, user?.name, user?.phone, user?.timezone],
+  )
+  const [profileForm, setProfileForm] = useState(initialProfileForm)
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
     password: '',
     password_confirmation: '',
   })
+  const [isProfileDirty, setIsProfileDirty] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -33,6 +38,13 @@ export function ProfilePage() {
     mutationFn: () => profileService.updateProfile(profileForm),
     onSuccess: (data) => {
       setAuthenticatedUser(data.user)
+      setProfileForm({
+        name: data.user.name ?? '',
+        email: data.user.email ?? '',
+        phone: data.user.phone ?? '',
+        timezone: resolveDisplayTimezone(data.user.timezone),
+      })
+      setIsProfileDirty(false)
       toast.success(t('superAdmin.pages.profile.profileSaved'))
     },
   })
@@ -47,6 +59,17 @@ export function ProfilePage() {
       setShowConfirmPassword(false)
     },
   })
+
+  useEffect(() => {
+    if (!isProfileDirty) {
+      setProfileForm(initialProfileForm)
+    }
+  }, [initialProfileForm, isProfileDirty])
+
+  function updateProfileField<K extends keyof typeof profileForm>(key: K, value: (typeof profileForm)[K]) {
+    setIsProfileDirty(true)
+    setProfileForm((current) => ({ ...current, [key]: value }))
+  }
 
   return (
     <div className="space-y-6">
@@ -79,22 +102,22 @@ export function ProfilePage() {
           <CardContent className="grid gap-4">
             <div className="space-y-2">
               <Label htmlFor="profile-name">{t('common.name')}</Label>
-              <Input id="profile-name" value={profileForm.name} onChange={(event) => setProfileForm((current) => ({ ...current, name: event.target.value }))} />
+              <Input id="profile-name" value={profileForm.name} onChange={(event) => updateProfileField('name', event.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="profile-email">{t('common.email')}</Label>
-              <Input id="profile-email" type="email" value={profileForm.email} onChange={(event) => setProfileForm((current) => ({ ...current, email: event.target.value }))} />
+              <Input id="profile-email" type="email" value={profileForm.email} onChange={(event) => updateProfileField('email', event.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="profile-phone">{t('common.phone')}</Label>
-              <Input id="profile-phone" value={profileForm.phone ?? ''} onChange={(event) => setProfileForm((current) => ({ ...current, phone: event.target.value }))} />
+              <Input id="profile-phone" value={profileForm.phone ?? ''} onChange={(event) => updateProfileField('phone', event.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="profile-timezone">{t('common.timezone', { defaultValue: 'Timezone' })}</Label>
               <select
                 id="profile-timezone"
                 value={profileForm.timezone ?? 'UTC'}
-                onChange={(event) => setProfileForm((current) => ({ ...current, timezone: event.target.value }))}
+                onChange={(event) => updateProfileField('timezone', event.target.value)}
                 className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
                 {COMMON_TIMEZONES.map((item) => (

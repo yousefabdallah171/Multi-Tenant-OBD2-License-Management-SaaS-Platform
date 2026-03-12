@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, MoreVertical, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -33,13 +33,36 @@ export function UsersPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
-  const [role, setRole] = useState('')
-  const [tenantId, setTenantId] = useState<number | ''>('')
-  const [status, setStatus] = useState('')
-  const [search, setSearch] = useState('')
+  const location = useLocation()
+  const restoreState = (location.state as {
+    restore?: {
+      page?: number
+      perPage?: number
+      role?: string
+      tenantId?: number | ''
+      status?: string
+      search?: string
+    }
+  } | null)?.restore
+  const [page, setPage] = useState(() => restoreState?.page ?? 1)
+  const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 10)
+  const [role, setRole] = useState(() => restoreState?.role ?? '')
+  const [tenantId, setTenantId] = useState<number | ''>(() => restoreState?.tenantId ?? '')
+  const [status, setStatus] = useState(() => restoreState?.status ?? '')
+  const [search, setSearch] = useState(() => restoreState?.search ?? '')
   const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null)
+  const returnTo = `${location.pathname}${location.search}`
+  const detailState = {
+    returnTo,
+    restore: {
+      page,
+      perPage,
+      role,
+      tenantId,
+      status,
+      search,
+    },
+  }
 
   const usersQuery = useQuery({
     queryKey: ['super-admin', 'users', page, perPage, role, tenantId, status, search],
@@ -56,6 +79,7 @@ export function UsersPage() {
     onSuccess: () => {
       toast.success(t('superAdmin.pages.users.statusUpdated'))
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'users'] })
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'users', 'detail'] })
     },
   })
 
@@ -65,6 +89,7 @@ export function UsersPage() {
       toast.success(t('superAdmin.pages.users.deleteSuccess'))
       setDeleteTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'users'] })
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'users', 'detail'] })
     },
   })
 
@@ -100,7 +125,7 @@ export function UsersPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => navigate(resolveDetailPath(row))}>
+              <DropdownMenuItem onSelect={() => navigate(resolveDetailPath(row), { state: detailState })}>
                 <Eye className="me-2 h-4 w-4" />
                 {t('common.view')}
               </DropdownMenuItem>
@@ -116,7 +141,7 @@ export function UsersPage() {
         ),
       },
     ],
-    [lang, locale, navigate, resolveDetailPath, statusMutation, t],
+    [detailState, lang, locale, navigate, resolveDetailPath, statusMutation, t],
   )
 
   return (
@@ -192,7 +217,7 @@ export function UsersPage() {
           columns={columns}
           data={usersQuery.data?.data ?? []}
           rowKey={(row) => row.id}
-          onRowClick={(row) => navigate(resolveDetailPath(row))}
+          onRowClick={(row) => navigate(resolveDetailPath(row), { state: detailState })}
           pagination={{
             page: usersQuery.data?.meta.current_page ?? 1,
             lastPage: usersQuery.data?.meta.last_page ?? 1,

@@ -95,6 +95,15 @@ export function formatActivityActionLabel(action: string) {
     .join(' ')
 }
 
+export function isCustomerLicenseHistoryAction(action: string) {
+  if (!action) {
+    return false
+  }
+
+  const normalized = action.toLowerCase()
+  return normalized.startsWith('customer.') || normalized.startsWith('license.')
+}
+
 export function hasFutureDate(value: string | Date | null | undefined) {
   if (!value) {
     return false
