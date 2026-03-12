@@ -16,13 +16,25 @@ class FinancialReportController extends BaseManagerParentController
     public function index(Request $request): JsonResponse
     {
         $licenses = $this->filteredLicenses($request);
+        $tenantId = $this->currentTenantId($request);
+        $activeCustomers = License::query()
+            ->where('tenant_id', $tenantId)
+            ->whereEffectivelyActive()
+            ->whereNotNull('customer_id')
+            ->distinct('customer_id')
+            ->count('customer_id');
 
         return response()->json([
             'data' => [
                 'summary' => [
                     'total_revenue' => round((float) $licenses->sum('price'), 2),
                     'total_activations' => $licenses->count(),
-                    'active_licenses' => $licenses->filter(fn (License $license): bool => $license->isEffectivelyActive())->count(),
+                    'total_customers' => User::query()
+                        ->where('tenant_id', $tenantId)
+                        ->where('role', UserRole::CUSTOMER->value)
+                        ->count(),
+                    'active_customers' => $activeCustomers,
+                    'active_licenses' => $activeCustomers,
                 ],
                 'revenue_by_reseller' => $licenses
                     ->groupBy(fn (License $license): string => $license->reseller?->name ?? 'Unknown')
@@ -188,8 +200,9 @@ class FinancialReportController extends BaseManagerParentController
     {
         return [
             'Total Revenue' => $summary['total_revenue'],
+            'Total Customers' => $summary['total_customers'],
+            'Active Customers' => $summary['active_customers'],
             'Total Activations' => $summary['total_activations'],
-            'Active Licenses' => $summary['active_licenses'],
         ];
     }
 

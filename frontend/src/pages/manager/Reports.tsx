@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, Banknote, ShieldCheck } from 'lucide-react'
+import { Activity, Banknote, ShieldCheck, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -13,11 +14,13 @@ import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import type { FinancialReportData } from '@/types/manager-parent.types'
 
 export function ReportsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [range, setRange] = useState<DateRangeValue>(() => resolvePresetRange(365))
@@ -40,6 +43,11 @@ export function ReportsPage() {
     ...item,
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
   }))
+  const activationsDetailsUrl = buildQueryUrl(routePaths.manager.resellerLogs(lang), {
+    action: 'license.activated',
+    from: range.from,
+    to: range.to,
+  })
 
   const columns = useMemo<Array<DataTableColumn<FinancialReportData['reseller_balances'][number]>>>(
     () => [
@@ -69,8 +77,15 @@ export function ReportsPage() {
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatsCard title={t('managerParent.pages.financialReports.totalTenantRevenue')} value={formatCurrency(report?.summary.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
-        <StatsCard title={t('managerParent.pages.financialReports.totalActivations')} value={report?.summary.total_activations ?? 0} icon={Activity} color="sky" />
-        <StatsCard title={t('managerParent.pages.financialReports.activeLicenses')} value={report?.summary.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.manager.customers(lang))}>
+          <StatsCard title={t('managerParent.pages.financialReports.totalCustomers')} value={report?.summary.total_customers ?? 0} icon={Users} color="sky" />
+        </button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(`${routePaths.manager.customers(lang)}?status=active`)}>
+          <StatsCard title={t('managerParent.pages.financialReports.activeCustomers')} value={report?.summary.active_customers ?? report?.summary.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+        </button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(activationsDetailsUrl)}>
+          <StatsCard title={t('managerParent.pages.financialReports.totalActivations')} value={report?.summary.total_activations ?? 0} icon={Activity} color="rose" />
+        </button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -150,4 +165,17 @@ function formatDateInput(value: Date) {
   const day = String(value.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
+}
+
+function buildQueryUrl(basePath: string, params: Record<string, string | undefined>) {
+  const search = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      search.set(key, value)
+    }
+  })
+
+  const query = search.toString()
+  return query === '' ? basePath : `${basePath}?${query}`
 }

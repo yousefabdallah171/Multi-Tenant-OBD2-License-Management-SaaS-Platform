@@ -529,6 +529,8 @@
         "title": "Reports",
         "description": "Analyze reseller and program revenue, activation quality, and customer retention for the selected date range.",
         "totalRevenue": "Total Revenue",
+        "totalCustomers": "Total Customers",
+        "activeCustomers": "Active Customers",
         "totalActivations": "Total Activations",
         "successRate": "Success Rate",
         "revenueByReseller": "Revenue by Reseller",
@@ -545,6 +547,8 @@
         "title": "Reports",
         "description": "Review tenant revenue, reseller balances, activation quality, retention, and export the current reporting view.",
         "totalTenantRevenue": "Total Tenant Revenue",
+        "totalCustomers": "Total Customers",
+        "activeCustomers": "Active Customers",
         "totalActivations": "Total Activations",
         "activeLicenses": "Active Licenses",
         "revenueByReseller": "Revenue by Reseller",
@@ -859,7 +863,7 @@
     "pages": {
       "dashboard": {
         "title": "Dashboard",
-        "description": "Track your reseller team, customer base, active licenses, and revenue without crossing into reseller-only workflows.",
+        "description": "Track your reseller team, customer base, active customers, and revenue without crossing into reseller-only workflows.",
         "teamResellers": "Team Resellers",
         "teamCustomers": "Team Customers",
         "activeLicenses": "Active Licenses",
@@ -1078,7 +1082,7 @@
     "pages": {
       "dashboard": {
         "title": "Dashboard",
-        "description": "Track your customers, active licenses, current revenue, and the latest activation work from your personal reseller scope.",
+        "description": "Track your customer base, active customers, current revenue, and the latest activation work from your personal reseller scope.",
         "customers": "Customers",
         "activeLicenses": "Active Licenses",
         "activeCustomers": "Active Customers",
@@ -1244,8 +1248,11 @@
         "weekly": "Weekly",
         "monthly": "Monthly",
         "totalRevenue": "Total Revenue",
+        "totalCustomers": "Total Customers",
+        "activeCustomers": "Active Customers",
         "totalActivations": "Total Activations",
         "avgPrice": "Avg Price",
+        "avgPriceHint": "Activation revenue divided by activation volume in the selected range.",
         "successRate": "Success Rate",
         "activationCount": "Activation Count",
         "topPrograms": "Top Programs by Sales"

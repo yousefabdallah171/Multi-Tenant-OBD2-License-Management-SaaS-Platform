@@ -10,6 +10,7 @@ import type {
   ResellerDashboardStats,
   ResellerReportFilters,
   ResellerReportPoint,
+  ResellerReportSummary,
   ResellerSoftwareProgram,
   RoleActivityEntry,
   RoleActivityFilters,
@@ -105,6 +106,16 @@ export const resellerService = {
     if (cached) return cached
 
     const { data } = await api.get<{ data: ResellerReportPoint[] }>('/reseller/reports/revenue', { params })
+    apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
+    return data
+  },
+  async getReportSummary(params: ResellerReportFilters) {
+    const paramKey = JSON.stringify(params)
+    const cacheKey = `reseller:reports:summary:${paramKey}`
+    const cached = apiCache.get<{ data: ResellerReportSummary }>(cacheKey)
+    if (cached) return cached
+
+    const { data } = await api.get<{ data: ResellerReportSummary }>('/reseller/reports/summary', { params })
     apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
     return data
   },

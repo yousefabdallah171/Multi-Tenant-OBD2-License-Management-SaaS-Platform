@@ -432,6 +432,15 @@ export interface ResellerReportPoint {
   count: number
 }
 
+export interface ResellerReportSummary {
+  total_revenue: number
+  total_activations: number
+  total_customers: number
+  active_customers: number
+  active_licenses: number
+  avg_price: number
+}
+
 export interface TopProgramRow {
   program: string
   count: number

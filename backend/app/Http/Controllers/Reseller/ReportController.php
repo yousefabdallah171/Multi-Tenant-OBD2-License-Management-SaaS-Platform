@@ -10,6 +10,38 @@ use Illuminate\Support\Facades\Cache;
 
 class ReportController extends BaseResellerController
 {
+    public function summary(Request $request): JsonResponse
+    {
+        $validated = $this->validatedFilters($request);
+        $resellerId = $this->currentReseller($request)->id;
+        $cacheKey = $this->cacheKey($resellerId, 'summary', $validated);
+
+        return response()->json([
+            'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
+                $summary = $this->baseQuery($request, $validated)
+                    ->selectRaw('ROUND(COALESCE(SUM(licenses.price), 0), 2) as total_revenue, COUNT(*) as total_activations')
+                    ->first();
+
+                $totalRevenue = round((float) ($summary?->total_revenue ?? 0), 2);
+                $totalActivations = (int) ($summary?->total_activations ?? 0);
+                $activeCustomers = (int) $this->licenseQuery($request)
+                    ->whereEffectivelyActive()
+                    ->whereNotNull('customer_id')
+                    ->distinct('customer_id')
+                    ->count('customer_id');
+
+                return [
+                    'total_revenue' => $totalRevenue,
+                    'total_activations' => $totalActivations,
+                    'total_customers' => $this->customerQuery($request)->count(),
+                    'active_customers' => $activeCustomers,
+                    'active_licenses' => $activeCustomers,
+                    'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,
+                ];
+            }),
+        ]);
+    }
+
     public function revenue(Request $request): JsonResponse
     {
         $validated = $this->validatedFilters($request);
@@ -167,11 +199,20 @@ class ReportController extends BaseResellerController
      */
     private function exportSections(Request $request): array
     {
+        $summary = $this->summary($request)->getData(true)['data'];
         $revenueRows = collect($this->revenue($request)->getData(true)['data']);
         $activationRows = collect($this->activations($request)->getData(true)['data']);
         $programRows = collect($this->topPrograms($request)->getData(true)['data']);
 
         return [
+            [
+                'title' => 'Summary',
+                'headers' => ['Metric', 'Value'],
+                'rows' => collect($this->summaryLabels($summary))
+                    ->map(fn ($value, $label): array => [$label, $value])
+                    ->values()
+                    ->all(),
+            ],
             [
                 'title' => 'Revenue',
                 'headers' => ['Period', 'Revenue'],
@@ -207,6 +248,21 @@ class ReportController extends BaseResellerController
         }
 
         return $period !== '' ? sprintf('%s | Period: %s', $range, $period) : $range;
+    }
+
+    /**
+     * @param array<string, int|float> $summary
+     * @return array<string, int|float>
+     */
+    private function summaryLabels(array $summary): array
+    {
+        return [
+            'Total Revenue' => $summary['total_revenue'],
+            'Total Customers' => $summary['total_customers'],
+            'Active Customers' => $summary['active_customers'],
+            'Total Activations' => $summary['total_activations'],
+            'Average Price' => $summary['avg_price'],
+        ];
     }
 
     private function reportLanguage(Request $request): string

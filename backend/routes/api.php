@@ -270,6 +270,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/online-users', [OnlineUsersController::class, 'index']);
 
         Route::prefix('reports')->group(function (): void {
+            Route::get('/summary', [ResellerReportController::class, 'summary']);
             Route::get('/revenue', [ResellerReportController::class, 'revenue']);
             Route::get('/activations', [ResellerReportController::class, 'activations']);
             Route::get('/top-programs', [ResellerReportController::class, 'topPrograms']);

@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -36,11 +36,47 @@ export function ResellerLogsPage() {
   const { user } = useAuth()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(15)
-  const [sellerId, setSellerId] = useState<number | ''>('')
-  const [action, setAction] = useState<string>('')
-  const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [page, setPage] = useState(() => parsePositiveInt(searchParams.get('page'), 1))
+  const [perPage, setPerPage] = useState(() => parsePositiveInt(searchParams.get('per_page'), 15))
+  const [sellerId, setSellerId] = useState<number | ''>(() => parseOptionalNumber(searchParams.get('seller_id')))
+  const [action, setAction] = useState<string>(() => searchParams.get('action') ?? '')
+  const [range, setRange] = useState<DateRangeValue>(() => ({
+    from: searchParams.get('from') ?? '',
+    to: searchParams.get('to') ?? '',
+  }))
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+
+    if (page > 1) {
+      next.set('page', String(page))
+    }
+
+    if (perPage !== 15) {
+      next.set('per_page', String(perPage))
+    }
+
+    if (sellerId !== '') {
+      next.set('seller_id', String(sellerId))
+    }
+
+    if (action !== '') {
+      next.set('action', action)
+    }
+
+    if (range.from) {
+      next.set('from', range.from)
+    }
+
+    if (range.to) {
+      next.set('to', range.to)
+    }
+
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [action, page, perPage, range.from, range.to, searchParams, sellerId, setSearchParams])
 
   const logsQuery = useQuery({
     queryKey: ['manager', 'seller-logs', page, perPage, sellerId, action, range.from, range.to],
@@ -340,4 +376,16 @@ function getMetadataNumber(metadata: Record<string, unknown>, key: string) {
   }
 
   return null
+}
+
+function parsePositiveInt(value: string | null, fallback: number) {
+  const parsed = Number(value)
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+function parseOptionalNumber(value: string | null): number | '' {
+  const parsed = Number(value)
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : ''
 }

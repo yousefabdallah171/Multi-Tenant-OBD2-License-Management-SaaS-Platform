@@ -20,14 +20,23 @@ class ReportController extends BaseManagerController
         $validated = $this->validatedFilters($request);
         $tenantId = $this->currentTenantId($request);
         $managerId = $this->currentManager($request)->id;
+        $sellerIds = $this->teamSellerIds($request);
 
         return response()->json([
-            'data' => Cache::remember($this->cacheKey($managerId, 'index', $validated), now()->addSeconds(90), function () use ($request, $tenantId, $validated): array {
-                $summary = $this->baseQuery($tenantId, $validated)
-                    ->selectRaw("ROUND(COALESCE(SUM(price), 0), 2) as total_revenue, COUNT(*) as total_activations, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_licenses")
+            'data' => Cache::remember($this->cacheKey($managerId, 'index', $validated), now()->addSeconds(90), function () use ($request, $tenantId, $sellerIds, $validated): array {
+                $summary = $this->baseQuery($tenantId, $sellerIds, $validated)
+                    ->selectRaw('ROUND(COALESCE(SUM(price), 0), 2) as total_revenue, COUNT(*) as total_activations')
                     ->first();
 
-                $revenueByReseller = $this->baseQuery($tenantId, $validated)
+                $activeCustomers = (int) License::query()
+                    ->where('tenant_id', $tenantId)
+                    ->whereIn('reseller_id', $sellerIds)
+                    ->whereEffectivelyActive()
+                    ->whereNotNull('customer_id')
+                    ->distinct('customer_id')
+                    ->count('customer_id');
+
+                $revenueByReseller = $this->baseQuery($tenantId, $sellerIds, $validated)
                     ->leftJoin('users as resellers', 'resellers.id', '=', 'licenses.reseller_id')
                     ->selectRaw("COALESCE(resellers.name, 'Unknown') as reseller, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue, COUNT(*) as activations")
                     ->groupBy('licenses.reseller_id', 'resellers.name')
@@ -41,7 +50,7 @@ class ReportController extends BaseManagerController
                     ->values()
                     ->all();
 
-                $revenueByProgram = $this->baseQuery($tenantId, $validated)
+                $revenueByProgram = $this->baseQuery($tenantId, $sellerIds, $validated)
                     ->leftJoin('programs', 'programs.id', '=', 'licenses.program_id')
                     ->selectRaw("COALESCE(programs.name, 'Unknown') as program, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue, COUNT(*) as activations")
                     ->groupBy('licenses.program_id', 'programs.name')
@@ -59,12 +68,14 @@ class ReportController extends BaseManagerController
                     'summary' => [
                         'total_revenue' => round((float) ($summary?->total_revenue ?? 0), 2),
                         'total_activations' => (int) ($summary?->total_activations ?? 0),
-                        'active_licenses' => (int) ($summary?->active_licenses ?? 0),
+                        'total_customers' => $this->teamCustomersQuery($request)->count(),
+                        'active_customers' => $activeCustomers,
+                        'active_licenses' => $activeCustomers,
                     ],
                     'revenue_by_reseller' => $revenueByReseller,
                     'revenue_by_program' => $revenueByProgram,
-                    'monthly_revenue' => $this->monthlyRevenue($tenantId, $validated),
-                    'reseller_balances' => $this->resellerBalances($tenantId, $validated, $request),
+                    'monthly_revenue' => $this->monthlyRevenue($tenantId, $sellerIds, $validated),
+                    'reseller_balances' => $this->resellerBalances($tenantId, $sellerIds, $validated),
                 ];
             }),
         ]);
@@ -75,9 +86,10 @@ class ReportController extends BaseManagerController
         $validated = $this->validatedFilters($request);
         $tenantId = $this->currentTenantId($request);
         $managerId = $this->currentManager($request)->id;
+        $sellerIds = $this->teamSellerIds($request);
 
-        $totals = Cache::remember($this->cacheKey($managerId, 'activation-rate', $validated), now()->addSeconds(90), function () use ($tenantId, $validated) {
-            return $this->baseQuery($tenantId, $validated)
+        $totals = Cache::remember($this->cacheKey($managerId, 'activation-rate', $validated), now()->addSeconds(90), function () use ($tenantId, $sellerIds, $validated) {
+            return $this->baseQuery($tenantId, $sellerIds, $validated)
                 ->selectRaw("COUNT(*) as total, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as success, SUM(CASE WHEN status IN ('pending', 'suspended') THEN 1 ELSE 0 END) as failure")
                 ->first();
         });
@@ -99,11 +111,12 @@ class ReportController extends BaseManagerController
         $validated = $this->validatedFilters($request);
         $tenantId = $this->currentTenantId($request);
         $managerId = $this->currentManager($request)->id;
+        $sellerIds = $this->teamSellerIds($request);
         $months = collect(range(5, 0))
             ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
 
-        $grouped = Cache::remember($this->cacheKey($managerId, 'retention', $validated), now()->addSeconds(90), function () use ($tenantId, $validated): array {
-            return $this->baseQuery($tenantId, $validated)
+        $grouped = Cache::remember($this->cacheKey($managerId, 'retention', $validated), now()->addSeconds(90), function () use ($tenantId, $sellerIds, $validated): array {
+            return $this->baseQuery($tenantId, $sellerIds, $validated)
                 ->whereNotNull('licenses.activated_at')
                 ->where('licenses.activated_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(5))
                 ->selectRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m') as month_key, COUNT(DISTINCT licenses.customer_id) as customers, COUNT(*) as activations")
@@ -181,21 +194,22 @@ class ReportController extends BaseManagerController
         ];
     }
 
-    private function baseQuery(int $tenantId, array $validated)
+    private function baseQuery(int $tenantId, array $sellerIds, array $validated)
     {
         return License::query()
             ->from('licenses')
             ->where('licenses.tenant_id', $tenantId)
+            ->whereIn('licenses.reseller_id', $sellerIds)
             ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
             ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']));
     }
 
-    private function monthlyRevenue(int $tenantId, array $validated): array
+    private function monthlyRevenue(int $tenantId, array $sellerIds, array $validated): array
     {
         $months = collect(range(5, 0))
             ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
 
-        $grouped = $this->baseQuery($tenantId, $validated)
+        $grouped = $this->baseQuery($tenantId, $sellerIds, $validated)
             ->whereNotNull('licenses.activated_at')
             ->where('licenses.activated_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(5))
             ->selectRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m') as month_key, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue")
@@ -208,12 +222,12 @@ class ReportController extends BaseManagerController
         ])->values()->all();
     }
 
-    private function resellerBalances(int $tenantId, array $validated, Request $request): array
+    private function resellerBalances(int $tenantId, array $sellerIds, array $validated): array
     {
         $balances = UserBalance::query()
             ->with('user:id,name')
             ->where('tenant_id', $tenantId)
-            ->whereHas('user', fn ($query) => $query->whereIn('role', ['manager_parent', 'manager', 'reseller']))
+            ->whereIn('user_id', $sellerIds)
             ->get();
 
         if ($balances->isNotEmpty()) {
@@ -228,11 +242,10 @@ class ReportController extends BaseManagerController
         }
 
         return User::query()
-            ->where('tenant_id', $tenantId)
-            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->whereIn('id', $sellerIds)
             ->get()
             ->map(function (User $seller) use ($tenantId, $validated): array {
-                $totals = $this->baseQuery($tenantId, $validated)
+                $totals = $this->baseQuery($tenantId, [$seller->id], $validated)
                     ->where('licenses.reseller_id', $seller->id)
                     ->selectRaw('ROUND(COALESCE(SUM(licenses.price), 0), 2) as total_revenue, COUNT(*) as total_activations')
                     ->first();
@@ -312,8 +325,9 @@ class ReportController extends BaseManagerController
     {
         return [
             'Total Revenue' => $summary['total_revenue'],
+            'Total Customers' => $summary['total_customers'],
+            'Active Customers' => $summary['active_customers'],
             'Total Activations' => $summary['total_activations'],
-            'Active Licenses' => $summary['active_licenses'],
         ];
     }
 

@@ -408,6 +408,8 @@ export interface FinancialReportData {
   summary: {
     total_revenue: number
     total_activations: number
+    total_customers: number
+    active_customers: number
     active_licenses: number
   }
   revenue_by_reseller: Array<{ reseller: string; revenue: number; activations: number }>

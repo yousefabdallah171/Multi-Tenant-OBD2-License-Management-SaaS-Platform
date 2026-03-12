@@ -16,14 +16,11 @@ class DashboardController extends BaseResellerController
         $resellerId = $this->currentReseller($request)->id;
         $currentMonth = now()->startOfMonth();
 
-        $result = Cache::remember("reseller:{$resellerId}:dashboard:stats", 45, function () use ($resellerId, $currentMonth): array {
+        $result = Cache::remember("reseller:{$resellerId}:dashboard:stats", 45, function () use ($request, $resellerId, $currentMonth): array {
             $licenseQuery = License::query()->where('reseller_id', $resellerId);
 
             return [
-                'customers' => (int) (clone $licenseQuery)
-                    ->whereNotNull('customer_id')
-                    ->distinct('customer_id')
-                    ->count('customer_id'),
+                'customers' => $this->customerQuery($request)->count(),
                 'active_licenses' => (int) (clone $licenseQuery)
                     ->whereEffectivelyActive()
                     ->whereNotNull('customer_id')
