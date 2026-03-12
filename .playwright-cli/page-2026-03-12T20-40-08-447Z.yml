@@ -1,0 +1,208 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e40]:
+    - link "Skip to content" [ref=e41] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e42]:
+      - generic [ref=e43]:
+        - generic [ref=e45]:
+          - paragraph [ref=e46]: Tenant Operations
+          - generic [ref=e47]:
+            - heading "Manager Parent Console" [level=1] [ref=e48]
+            - generic [ref=e49]: "Server Timezone: UTC"
+        - generic [ref=e50]:
+          - button "Toggle theme" [ref=e51] [cursor=pointer]:
+            - img [ref=e52]
+            - generic [ref=e54]: Dark mode
+          - button "Switch language" [ref=e55] [cursor=pointer]:
+            - img [ref=e56]
+            - generic [ref=e59]: AR
+          - button "Open user menu" [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]:
+              - generic [ref=e62]: Main Manager
+              - generic [ref=e63]: manager@obd2sw.com
+            - generic [ref=e65]: Manager Parent
+    - generic [ref=e66]:
+      - complementary [ref=e68]:
+        - navigation [ref=e69]:
+          - link "Dashboard" [ref=e70] [cursor=pointer]:
+            - /url: /en/dashboard
+            - img [ref=e71]
+            - generic [ref=e76]: Dashboard
+          - link "Team Management" [ref=e77] [cursor=pointer]:
+            - /url: /en/team-management
+            - img [ref=e78]
+            - generic [ref=e83]: Team Management
+          - link "Customers" [ref=e84] [cursor=pointer]:
+            - /url: /en/customers
+            - img [ref=e85]
+            - generic [ref=e90]: Customers
+          - link "Software" [ref=e91] [cursor=pointer]:
+            - /url: /en/software
+            - img [ref=e92]
+            - generic [ref=e96]: Software
+          - link "Software Management" [ref=e97] [cursor=pointer]:
+            - /url: /en/software-management
+            - img [ref=e98]
+            - generic [ref=e102]: Software Management
+          - link "Reports" [ref=e103] [cursor=pointer]:
+            - /url: /en/reports
+            - img [ref=e104]
+            - generic [ref=e106]: Reports
+          - link "User Logs" [ref=e107] [cursor=pointer]:
+            - /url: /en/program-logs
+            - img [ref=e108]
+            - generic [ref=e111]: User Logs
+          - button "BIOS Blacklist" [ref=e113] [cursor=pointer]:
+            - img [ref=e114]
+            - generic [ref=e117]: BIOS Blacklist
+            - img [ref=e118]
+          - link "IP Analytics" [ref=e120] [cursor=pointer]:
+            - /url: /en/ip-analytics
+            - img [ref=e121]
+            - generic [ref=e123]: IP Analytics
+          - button "Logs" [ref=e125] [cursor=pointer]:
+            - img [ref=e126]
+            - generic [ref=e129]: Logs
+            - img [ref=e130]
+          - button "Settings" [ref=e133] [cursor=pointer]:
+            - img [ref=e134]
+            - generic [ref=e137]: Settings
+            - img [ref=e138]
+      - generic [ref=e140]:
+        - main [ref=e141]:
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - generic [ref=e145]:
+                - paragraph [ref=e146]: Manager Parent
+                - heading "Dashboard" [level=2] [ref=e147]
+                - paragraph [ref=e148]: Tenant-level overview for your team, customer base, activations, and current revenue momentum.
+              - generic [ref=e149]:
+                - button "Team Management" [ref=e150] [cursor=pointer]
+                - button "Review customers" [ref=e151] [cursor=pointer]
+                - button "Open reports" [ref=e152] [cursor=pointer]
+            - generic [ref=e153]:
+              - button "Team Members 2" [ref=e154] [cursor=pointer]:
+                - generic [ref=e156]:
+                  - generic [ref=e157]:
+                    - paragraph [ref=e158]: Team Members
+                    - paragraph [ref=e159]: "2"
+                  - img [ref=e161]
+              - button "Customers 7" [ref=e166] [cursor=pointer]:
+                - generic [ref=e168]:
+                  - generic [ref=e169]:
+                    - paragraph [ref=e170]: Customers
+                    - paragraph [ref=e171]: "7"
+                  - img [ref=e173]
+              - button "Active Customers 2" [ref=e177] [cursor=pointer]:
+                - generic [ref=e179]:
+                  - generic [ref=e180]:
+                    - paragraph [ref=e181]: Active Customers
+                    - paragraph [ref=e182]: "2"
+                  - img [ref=e184]
+              - button "Monthly Revenue $70.01" [ref=e187] [cursor=pointer]:
+                - generic [ref=e189]:
+                  - generic [ref=e190]:
+                    - paragraph [ref=e191]: Monthly Revenue
+                    - paragraph [ref=e192]: $70.01
+                  - img [ref=e194]
+            - generic [ref=e197]:
+              - generic [ref=e198]:
+                - heading "Monthly Revenue" [level=2] [ref=e201]
+                - generic [ref=e205]:
+                  - generic:
+                    - status:
+                      - paragraph: Dec 2025
+                      - list:
+                        - listitem: "Revenue : $0.00"
+                  - application [ref=e206]:
+                    - generic [ref=e216]:
+                      - generic [ref=e217]:
+                        - generic [ref=e219]: Jun 2025
+                        - generic [ref=e221]: Sep 2025
+                        - generic [ref=e223]: Dec 2025
+                        - generic [ref=e225]: Mar 2026
+                      - generic [ref=e226]:
+                        - generic [ref=e228]: "0"
+                        - generic [ref=e230]: "20"
+                        - generic [ref=e232]: "40"
+                        - generic [ref=e234]: "60"
+                        - generic [ref=e236]: "80"
+              - generic [ref=e237]:
+                - heading "License Expiry Forecast" [level=2] [ref=e240]
+                - application [ref=e245]:
+                  - generic [ref=e250]:
+                    - generic [ref=e251]:
+                      - generic [ref=e253]: 0-30
+                      - generic [ref=e255]: 31-60
+                      - generic [ref=e257]: 61-90
+                    - generic [ref=e258]:
+                      - generic [ref=e260]: "0"
+                      - generic [ref=e262]: "1"
+                      - generic [ref=e264]: "2"
+                      - generic [ref=e266]: "3"
+                      - generic [ref=e268]: "4"
+            - generic [ref=e269]:
+              - generic [ref=e270]:
+                - heading "Team Performance" [level=2] [ref=e273]
+                - application [ref=e278]:
+                  - generic [ref=e282]:
+                    - generic [ref=e283]:
+                      - generic [ref=e285]: "0"
+                      - generic [ref=e287]: "2"
+                      - generic [ref=e289]: "4"
+                      - generic [ref=e291]: "6"
+                      - generic [ref=e293]: "8"
+                    - generic [ref=e294]:
+                      - generic [ref=e296]: AhmedReseller
+                      - generic [ref=e298]: MohamedReseller
+              - generic [ref=e299]:
+                - generic [ref=e301]:
+                  - heading "BIOS Conflict Rate" [level=2] [ref=e302]
+                  - paragraph [ref=e303]: Conflict attempts recorded across the tenant.
+                - application [ref=e308]:
+                  - generic [ref=e315]:
+                    - generic [ref=e316]:
+                      - generic [ref=e318]: Jun 2025
+                      - generic [ref=e320]: Sep 2025
+                      - generic [ref=e322]: Dec 2025
+                      - generic [ref=e324]: Mar 2026
+                    - generic [ref=e325]:
+                      - generic [ref=e327]: "0"
+                      - generic [ref=e329]: "0.5"
+                      - generic [ref=e331]: "1"
+                      - generic [ref=e333]: "1.5"
+                      - generic [ref=e335]: "2"
+            - generic [ref=e336]:
+              - generic [ref=e337]:
+                - heading "Quick Actions" [level=2] [ref=e339]
+                - generic [ref=e341]:
+                  - button "Invite team member" [ref=e342] [cursor=pointer]
+                  - button "Review customers" [ref=e343] [cursor=pointer]
+                  - button "Open reports" [ref=e344] [cursor=pointer]
+              - generic [ref=e345]:
+                - heading "Top performers" [level=2] [ref=e347]
+                - generic [ref=e348]:
+                  - generic [ref=e349]:
+                    - img [ref=e350]
+                    - text: Top performers
+                  - generic [ref=e356]:
+                    - generic [ref=e357]:
+                      - paragraph [ref=e358]: Ahmed Reseller
+                      - paragraph [ref=e359]: Reseller
+                    - generic [ref=e360]:
+                      - paragraph [ref=e361]: $95.01
+                      - paragraph [ref=e362]: 6 activations
+                  - generic [ref=e364]:
+                    - generic [ref=e365]:
+                      - paragraph [ref=e366]: Mohamed Reseller
+                      - paragraph [ref=e367]: Manager
+                    - generic [ref=e368]:
+                      - paragraph [ref=e369]: $50.00
+                      - paragraph [ref=e370]: 2 activations
+        - contentinfo [ref=e371]: 2026 OBD2SW License Platform
+    - button "1 online" [ref=e373] [cursor=pointer]:
+      - img [ref=e374]
+      - text: 1 online
+    - generic:
+      - region "Notifications alt+T"
+  - generic [ref=e376]: "0.5"

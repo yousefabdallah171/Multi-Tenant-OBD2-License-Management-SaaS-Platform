@@ -1,0 +1,291 @@
+- generic [ref=e1]:
+  - generic [ref=e33]:
+    - link "Skip to content" [ref=e34] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e38]:
+          - paragraph [ref=e39]: OBD2SW
+          - generic [ref=e40]:
+            - heading "Super Admin Control Center" [level=1] [ref=e41]
+            - generic [ref=e42]: "Server Timezone: UTC"
+        - generic [ref=e43]:
+          - button "Toggle theme" [ref=e44] [cursor=pointer]:
+            - img [ref=e45]
+            - generic [ref=e47]: Dark mode
+          - button "Switch language" [ref=e48] [cursor=pointer]:
+            - img [ref=e49]
+            - generic [ref=e52]: AR
+          - button "Open user menu" [ref=e53] [cursor=pointer]:
+            - generic [ref=e54]:
+              - generic [ref=e55]: Super Admin
+              - generic [ref=e56]: admin@obd2sw.com
+            - generic [ref=e58]: Super Admin
+    - generic [ref=e59]:
+      - complementary [ref=e61]:
+        - navigation [ref=e62]:
+          - link "Dashboard" [ref=e63] [cursor=pointer]:
+            - /url: /en/super-admin/dashboard
+            - img [ref=e64]
+            - generic [ref=e69]: Dashboard
+          - link "Tenants" [ref=e70] [cursor=pointer]:
+            - /url: /en/super-admin/tenants
+            - img [ref=e71]
+            - generic [ref=e75]: Tenants
+          - link "Customers" [ref=e76] [cursor=pointer]:
+            - /url: /en/super-admin/customers
+            - img [ref=e77]
+            - generic [ref=e80]: Customers
+          - button "Admin Mgmt" [ref=e82] [cursor=pointer]:
+            - img [ref=e83]
+            - generic [ref=e88]: Admin Mgmt
+            - img [ref=e89]
+          - button "BIOS Blacklist" [ref=e92] [cursor=pointer]:
+            - img [ref=e93]
+            - generic [ref=e96]: BIOS Blacklist
+            - img [ref=e97]
+          - link "Security Locks" [ref=e99] [cursor=pointer]:
+            - /url: /en/super-admin/security-locks
+            - img [ref=e100]
+            - generic [ref=e103]: Security Locks
+          - link "Reports" [active] [ref=e104] [cursor=pointer]:
+            - /url: /en/super-admin/reports
+            - img [ref=e105]
+            - generic [ref=e107]: Reports
+          - link "Logs" [ref=e108] [cursor=pointer]:
+            - /url: /en/super-admin/logs
+            - img [ref=e109]
+            - generic [ref=e112]: Logs
+          - link "API Status" [ref=e113] [cursor=pointer]:
+            - /url: /en/super-admin/api-status
+            - img [ref=e114]
+            - generic [ref=e116]: API Status
+          - button "Settings" [ref=e118] [cursor=pointer]:
+            - img [ref=e119]
+            - generic [ref=e122]: Settings
+            - img [ref=e123]
+      - generic [ref=e125]:
+        - main [ref=e126]:
+          - generic [ref=e324]:
+            - generic [ref=e325]:
+              - generic [ref=e326]:
+                - heading "Cross-Tenant Reports" [level=2] [ref=e327]
+                - paragraph [ref=e328]: Review revenue, activations, user growth, and top-performing resellers across the platform.
+              - generic [ref=e329]:
+                - button "CSV" [ref=e330] [cursor=pointer]:
+                  - img [ref=e331]
+                  - text: CSV
+                - button "PDF" [ref=e334] [cursor=pointer]:
+                  - img [ref=e335]
+                  - text: PDF
+            - generic [ref=e340]:
+              - generic [ref=e341]:
+                - button "Last 7 Days" [ref=e342] [cursor=pointer]
+                - button "Last 30 Days" [ref=e343] [cursor=pointer]
+                - button "Last 3 Months" [ref=e344] [cursor=pointer]
+                - button "Last Year" [ref=e345] [cursor=pointer]
+                - button "Custom" [ref=e346] [cursor=pointer]
+              - generic [ref=e347]:
+                - generic [ref=e348]:
+                  - generic [ref=e349]: From
+                  - textbox "From" [ref=e350]: 2025-03-13
+                - generic [ref=e351]:
+                  - generic [ref=e352]: To
+                  - textbox "To" [ref=e353]: 2026-03-12
+                - button "Clear" [ref=e354] [cursor=pointer]
+            - generic [ref=e355]:
+              - button "Total platform revenue $145.01" [ref=e356] [cursor=pointer]:
+                - generic [ref=e358]:
+                  - generic [ref=e359]:
+                    - paragraph [ref=e360]: Total platform revenue
+                    - paragraph [ref=e361]: $145.01
+                  - img [ref=e363]
+              - button "Total customers 7" [ref=e366] [cursor=pointer]:
+                - generic [ref=e368]:
+                  - generic [ref=e369]:
+                    - paragraph [ref=e370]: Total customers
+                    - paragraph [ref=e371]: "7"
+                  - img [ref=e373]
+              - button "Active customers 2" [ref=e378] [cursor=pointer]:
+                - generic [ref=e380]:
+                  - generic [ref=e381]:
+                    - paragraph [ref=e382]: Active customers
+                    - paragraph [ref=e383]: "2"
+                  - img [ref=e385]
+              - button "Avg revenue per tenant $145.01" [ref=e390] [cursor=pointer]:
+                - generic [ref=e392]:
+                  - generic [ref=e393]:
+                    - paragraph [ref=e394]: Avg revenue per tenant
+                    - paragraph [ref=e395]: $145.01
+                  - img [ref=e397]
+            - generic [ref=e400]:
+              - generic [ref=e401]:
+                - generic [ref=e403]:
+                  - heading "Financial Revenue Breakdown" [level=2] [ref=e404]
+                  - paragraph [ref=e405]: Stacked tenant revenue split by program.
+                - generic [ref=e409]:
+                  - list [ref=e411]:
+                    - listitem [ref=e412]:
+                      - img "OBD2SW Pro legend icon" [ref=e413]
+                      - text: OBD2SW Pro
+                  - application [ref=e415]:
+                    - generic [ref=e426]:
+                      - generic [ref=e429]: OBD2SW Main
+                      - generic [ref=e430]:
+                        - generic [ref=e432]: "0"
+                        - generic [ref=e434]: "40"
+                        - generic [ref=e436]: "80"
+                        - generic [ref=e438]: "120"
+                        - generic [ref=e440]: "160"
+              - generic [ref=e441]:
+                - generic [ref=e443]:
+                  - heading "Reseller Balances" [level=2] [ref=e444]
+                  - paragraph [ref=e445]: Top reseller balances across tenants.
+                - application [ref=e450]:
+                  - generic [ref=e462]:
+                    - generic [ref=e463]:
+                      - generic [ref=e465]: "0"
+                      - generic [ref=e467]: "25"
+                      - generic [ref=e469]: "50"
+                      - generic [ref=e471]: "75"
+                      - generic [ref=e473]: "100"
+                    - generic [ref=e474]:
+                      - generic [ref=e476]: Ahmed Reseller
+                      - generic [ref=e478]: MohamedReseller
+                    - generic [ref=e479]:
+                      - generic [ref=e480]: "95.01"
+                      - generic [ref=e481]: "50"
+            - generic [ref=e482]:
+              - generic [ref=e483]:
+                - heading "Revenue by tenant" [level=2] [ref=e486]
+                - application [ref=e491]:
+                  - generic [ref=e501]:
+                    - generic [ref=e502]:
+                      - generic [ref=e504]: "0"
+                      - generic [ref=e506]: "40"
+                      - generic [ref=e508]: "80"
+                      - generic [ref=e510]: "120"
+                      - generic [ref=e512]: "160"
+                    - generic [ref=e515]: OBD2SW Main
+                    - generic [ref=e517]: "145.01"
+              - generic [ref=e518]:
+                - heading "Activations by tenant" [level=2] [ref=e521]
+                - application [ref=e526]:
+                  - generic [ref=e537]:
+                    - generic [ref=e540]: OBD2SW Main
+                    - generic [ref=e541]:
+                      - generic [ref=e543]: "0"
+                      - generic [ref=e545]: "2"
+                      - generic [ref=e547]: "4"
+                      - generic [ref=e549]: "6"
+                      - generic [ref=e551]: "8"
+            - generic [ref=e552]:
+              - generic [ref=e553]:
+                - heading "Monthly revenue" [level=2] [ref=e556]
+                - application [ref=e561]:
+                  - generic [ref=e568]:
+                    - generic [ref=e569]:
+                      - generic [ref=e571]: Jun 2025
+                      - generic [ref=e573]: Sep 2025
+                      - generic [ref=e575]: Dec 2025
+                      - generic [ref=e577]: Mar 2026
+                    - generic [ref=e578]:
+                      - generic [ref=e580]: "0"
+                      - generic [ref=e582]: "20"
+                      - generic [ref=e584]: "40"
+                      - generic [ref=e586]: "60"
+                      - generic [ref=e588]: "80"
+              - generic [ref=e589]:
+                - heading "Growth trend" [level=2] [ref=e592]
+                - application [ref=e597]:
+                  - generic [ref=e604]:
+                    - generic [ref=e605]:
+                      - generic [ref=e607]: May 2025
+                      - generic [ref=e609]: Aug 2025
+                      - generic [ref=e611]: Nov 2025
+                      - generic [ref=e613]: Mar 2026
+                    - generic [ref=e614]:
+                      - generic [ref=e616]: "0"
+                      - generic [ref=e618]: "3"
+                      - generic [ref=e620]: "6"
+                      - generic [ref=e622]: "9"
+                      - generic [ref=e624]: "12"
+            - table [ref=e628]:
+              - rowgroup [ref=e629]:
+                - row "Reseller Tenant Revenue Activations Average price Balance" [ref=e630]:
+                  - columnheader "Reseller" [ref=e631]:
+                    - button "Reseller" [ref=e632] [cursor=pointer]:
+                      - generic [ref=e633]: Reseller
+                      - img [ref=e634]
+                  - columnheader "Tenant" [ref=e637]:
+                    - button "Tenant" [ref=e638] [cursor=pointer]:
+                      - generic [ref=e639]: Tenant
+                      - img [ref=e640]
+                  - columnheader "Revenue" [ref=e643]:
+                    - button "Revenue" [ref=e644] [cursor=pointer]:
+                      - generic [ref=e645]: Revenue
+                      - img [ref=e646]
+                  - columnheader "Activations" [ref=e649]:
+                    - button "Activations" [ref=e650] [cursor=pointer]:
+                      - generic [ref=e651]: Activations
+                      - img [ref=e652]
+                  - columnheader "Average price" [ref=e655]:
+                    - button "Average price" [ref=e656] [cursor=pointer]:
+                      - generic [ref=e657]: Average price
+                      - img [ref=e658]
+                  - columnheader "Balance" [ref=e661]:
+                    - button "Balance" [ref=e662] [cursor=pointer]:
+                      - generic [ref=e663]: Balance
+                      - img [ref=e664]
+              - rowgroup [ref=e667]:
+                - row "Ahmed Reseller OBD2SW Main $95.01 6 $15.84 $95.01" [ref=e668]:
+                  - cell "Ahmed Reseller" [ref=e669]
+                  - cell "OBD2SW Main" [ref=e670]
+                  - cell "$95.01" [ref=e671]
+                  - cell "6" [ref=e672]
+                  - cell "$15.84" [ref=e673]
+                  - cell "$95.01" [ref=e674]
+                - row "Mohamed Reseller OBD2SW Main $50.00 2 $25.00 $50.00" [ref=e675]:
+                  - cell "Mohamed Reseller" [ref=e676]
+                  - cell "OBD2SW Main" [ref=e677]
+                  - cell "$50.00" [ref=e678]
+                  - cell "2" [ref=e679]
+                  - cell "$25.00" [ref=e680]
+                  - cell "$50.00" [ref=e681]
+            - table [ref=e685]:
+              - rowgroup [ref=e686]:
+                - row "Top resellers Tenant Activations Revenue" [ref=e687]:
+                  - columnheader "Top resellers" [ref=e688]:
+                    - button "Top resellers" [ref=e689] [cursor=pointer]:
+                      - generic [ref=e690]: Top resellers
+                      - img [ref=e691]
+                  - columnheader "Tenant" [ref=e694]:
+                    - button "Tenant" [ref=e695] [cursor=pointer]:
+                      - generic [ref=e696]: Tenant
+                      - img [ref=e697]
+                  - columnheader "Activations" [ref=e700]:
+                    - button "Activations" [ref=e701] [cursor=pointer]:
+                      - generic [ref=e702]: Activations
+                      - img [ref=e703]
+                  - columnheader "Revenue" [ref=e706]:
+                    - button "Revenue" [ref=e707] [cursor=pointer]:
+                      - generic [ref=e708]: Revenue
+                      - img [ref=e709]
+              - rowgroup [ref=e712]:
+                - row "Ahmed Reseller OBD2SW Main 6 $95.01" [ref=e713]:
+                  - cell "Ahmed Reseller" [ref=e714]
+                  - cell "OBD2SW Main" [ref=e715]
+                  - cell "6" [ref=e716]
+                  - cell "$95.01" [ref=e717]
+                - row "Mohamed Reseller OBD2SW Main 2 $50.00" [ref=e718]:
+                  - cell "Mohamed Reseller" [ref=e719]
+                  - cell "OBD2SW Main" [ref=e720]
+                  - cell "2" [ref=e721]
+                  - cell "$50.00" [ref=e722]
+        - contentinfo [ref=e317]: 2026 OBD2SW License Platform
+    - button "4 online" [ref=e723] [cursor=pointer]:
+      - img [ref=e320]
+      - text: 4 online
+    - generic:
+      - region "Notifications alt+T"
+  - generic [ref=e322]: "3"

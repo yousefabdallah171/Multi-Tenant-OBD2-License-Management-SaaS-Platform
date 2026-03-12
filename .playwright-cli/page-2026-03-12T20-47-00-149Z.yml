@@ -1,0 +1,333 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - link "Skip to content" [ref=e5] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e9]:
+          - paragraph [ref=e10]: Manager
+          - generic [ref=e11]:
+            - heading "Manager Workspace" [level=1] [ref=e12]
+            - generic [ref=e13]: "Server Timezone: UTC"
+        - generic [ref=e14]:
+          - button "Toggle theme" [ref=e15] [cursor=pointer]:
+            - img [ref=e16]
+            - generic [ref=e18]: Dark mode
+          - button "Switch language" [ref=e19] [cursor=pointer]:
+            - img [ref=e20]
+            - generic [ref=e23]: AR
+          - button "Open user menu" [ref=e24] [cursor=pointer]:
+            - generic [ref=e25]:
+              - generic [ref=e26]: Mohamed Reseller
+              - generic [ref=e27]: reseller2@obd2sw.com
+            - generic [ref=e29]: Manager
+    - generic [ref=e30]:
+      - complementary [ref=e32]:
+        - navigation [ref=e33]:
+          - link "Dashboard" [ref=e34] [cursor=pointer]:
+            - /url: /en/manager/dashboard
+            - img [ref=e35]
+            - generic [ref=e40]: Dashboard
+          - link "Team" [ref=e41] [cursor=pointer]:
+            - /url: /en/manager/team
+            - img [ref=e42]
+            - generic [ref=e47]: Team
+          - link "Customers" [ref=e48] [cursor=pointer]:
+            - /url: /en/manager/customers
+            - img [ref=e49]
+            - generic [ref=e52]: Customers
+          - link "Software" [ref=e53] [cursor=pointer]:
+            - /url: /en/manager/software
+            - img [ref=e54]
+            - generic [ref=e58]: Software
+          - link "Software Management" [ref=e59] [cursor=pointer]:
+            - /url: /en/manager/software-management
+            - img [ref=e60]
+            - generic [ref=e64]: Software Management
+          - link "Reports" [ref=e65] [cursor=pointer]:
+            - /url: /en/manager/reports
+            - img [ref=e66]
+            - generic [ref=e68]: Reports
+          - link "Panel Activity" [ref=e69] [cursor=pointer]:
+            - /url: /en/manager/activity
+            - img [ref=e70]
+            - generic [ref=e73]: Panel Activity
+          - link "Reseller Logs" [ref=e74] [cursor=pointer]:
+            - /url: /en/manager/reseller-logs
+            - img [ref=e75]
+            - generic [ref=e78]: Reseller Logs
+          - link "Profile" [ref=e79] [cursor=pointer]:
+            - /url: /en/manager/profile
+            - img [ref=e80]
+            - generic [ref=e83]: Profile
+      - generic [ref=e84]:
+        - main [ref=e85]:
+          - generic [ref=e410]:
+            - generic [ref=e411]:
+              - generic [ref=e412]:
+                - paragraph [ref=e413]: Manager
+                - heading "Customers" [level=2] [ref=e414]
+                - paragraph [ref=e415]: Review all customers across your reseller team with read-only filters for reseller, program, status, and BIOS search.
+              - button "Add Customer" [ref=e417] [cursor=pointer]:
+                - img [ref=e418]
+                - text: Add Customer
+            - generic [ref=e419]:
+              - button "All 7" [ref=e420] [cursor=pointer]:
+                - generic [ref=e422]:
+                  - paragraph [ref=e423]: All
+                  - paragraph [ref=e424]: "7"
+              - button "Active 2 Live and usable right now." [ref=e425] [cursor=pointer]:
+                - generic [ref=e427]:
+                  - paragraph [ref=e428]: Active
+                  - paragraph [ref=e429]: "2"
+                  - paragraph [ref=e430]: Live and usable right now.
+              - button "Scheduled 0 Will activate automatically later." [ref=e431] [cursor=pointer]:
+                - generic [ref=e433]:
+                  - paragraph [ref=e434]: Scheduled
+                  - paragraph [ref=e435]: "0"
+                  - paragraph [ref=e436]: Will activate automatically later.
+              - button "Expired 2 Time ended automatically." [ref=e437] [cursor=pointer]:
+                - generic [ref=e439]:
+                  - paragraph [ref=e440]: Expired
+                  - paragraph [ref=e441]: "2"
+                  - paragraph [ref=e442]: Time ended automatically.
+              - button "Cancelled 2 Stopped and removed from the software until renewed or reactivated." [ref=e443] [cursor=pointer]:
+                - generic [ref=e445]:
+                  - paragraph [ref=e446]: Cancelled
+                  - paragraph [ref=e447]: "2"
+                  - paragraph [ref=e448]: Stopped and removed from the software until renewed or reactivated.
+              - button "Pending 1 Saved or created, but not active yet." [ref=e449] [cursor=pointer]:
+                - generic [ref=e451]:
+                  - paragraph [ref=e452]: Pending
+                  - paragraph [ref=e453]: "1"
+                  - paragraph [ref=e454]: Saved or created, but not active yet.
+            - generic [ref=e455]:
+              - generic [ref=e457]:
+                - textbox "Search by customer, email, or BIOS ID" [ref=e458]
+                - combobox [ref=e459]:
+                  - option "All resellers" [selected]
+                  - option "Ahmed Reseller"
+                - combobox [ref=e460]:
+                  - option "All programs" [selected]
+                  - option "OBD2SW Pro"
+              - generic [ref=e461]:
+                - table [ref=e464]:
+                  - rowgroup [ref=e465]:
+                    - row "Name Username Phone BIOS ID Reseller Program Status Start Expiry Actions" [ref=e466]:
+                      - columnheader [ref=e467]:
+                        - button [ref=e468]:
+                          - checkbox [ref=e470]
+                      - columnheader "Name" [ref=e471]:
+                        - button "Name" [ref=e472] [cursor=pointer]:
+                          - generic [ref=e473]: Name
+                          - img [ref=e474]
+                      - columnheader "Username" [ref=e477]:
+                        - button "Username" [ref=e478] [cursor=pointer]:
+                          - generic [ref=e479]: Username
+                          - img [ref=e480]
+                      - columnheader "Phone" [ref=e483]:
+                        - button "Phone" [ref=e484] [cursor=pointer]:
+                          - generic [ref=e485]: Phone
+                          - img [ref=e486]
+                      - columnheader "BIOS ID" [ref=e489]:
+                        - button "BIOS ID" [ref=e490] [cursor=pointer]:
+                          - generic [ref=e491]: BIOS ID
+                          - img [ref=e492]
+                      - columnheader "Reseller" [ref=e495]:
+                        - button "Reseller" [ref=e496] [cursor=pointer]:
+                          - generic [ref=e497]: Reseller
+                          - img [ref=e498]
+                      - columnheader "Program" [ref=e501]:
+                        - button "Program" [ref=e502] [cursor=pointer]:
+                          - generic [ref=e503]: Program
+                          - img [ref=e504]
+                      - columnheader "Status" [ref=e507]:
+                        - button "Status" [ref=e508] [cursor=pointer]:
+                          - generic [ref=e509]: Status
+                          - img [ref=e510]
+                      - columnheader "Start" [ref=e513]:
+                        - button "Start" [ref=e514] [cursor=pointer]:
+                          - generic [ref=e515]: Start
+                          - img [ref=e516]
+                      - columnheader "Expiry" [ref=e519]:
+                        - button "Expiry" [ref=e520] [cursor=pointer]:
+                          - generic [ref=e521]: Expiry
+                          - img [ref=e522]
+                      - columnheader "Actions" [ref=e525]:
+                        - button "Actions" [ref=e526]:
+                          - generic [ref=e527]: Actions
+                  - rowgroup [ref=e528]:
+                    - row "toea toea - toea Ahmed Reseller OBD2SW Pro Cancelled Mar 11, 2026, 8:50 PM Mar 12, 2026, 8:49 PM" [ref=e529]:
+                      - cell [ref=e530]:
+                        - checkbox [ref=e531]
+                      - cell "toea" [ref=e532]:
+                        - link "toea" [ref=e533] [cursor=pointer]:
+                          - /url: /en/manager/customers/23
+                      - cell "toea" [ref=e534]:
+                        - link "toea" [ref=e535] [cursor=pointer]:
+                          - /url: /en/manager/customers/23
+                      - cell "-" [ref=e536]
+                      - cell "toea" [ref=e537]:
+                        - link "toea" [ref=e538] [cursor=pointer]:
+                          - /url: /en/manager/bios-details/toea
+                      - cell "Ahmed Reseller" [ref=e539]
+                      - cell "OBD2SW Pro" [ref=e540]
+                      - cell "Cancelled" [ref=e541]:
+                        - 'generic "Cancelled: Stopped and removed from the software until renewed or reactivated." [ref=e542]': Cancelled
+                      - cell "Mar 11, 2026, 8:50 PM" [ref=e543]
+                      - cell "Mar 12, 2026, 8:49 PM" [ref=e544]
+                      - cell [ref=e545]:
+                        - button [ref=e546] [cursor=pointer]:
+                          - img [ref=e547]
+                    - row "tester tester - oooooooooooooo Ahmed Reseller OBD2SW Pro Expired Mar 11, 2026, 7:51 AM Mar 11, 2026, 7:52 AM" [ref=e551]:
+                      - cell [ref=e552]:
+                        - checkbox [ref=e553]
+                      - cell "tester" [ref=e554]:
+                        - link "tester" [ref=e555] [cursor=pointer]:
+                          - /url: /en/manager/customers/22
+                      - cell "tester" [ref=e556]:
+                        - link "tester" [ref=e557] [cursor=pointer]:
+                          - /url: /en/manager/customers/22
+                      - cell "-" [ref=e558]
+                      - cell "oooooooooooooo" [ref=e559]:
+                        - link "oooooooooooooo" [ref=e560] [cursor=pointer]:
+                          - /url: /en/manager/bios-details/oooooooooooooo
+                      - cell "Ahmed Reseller" [ref=e561]
+                      - cell "OBD2SW Pro" [ref=e562]
+                      - cell "Expired" [ref=e563]:
+                        - 'generic "Expired: Time ended automatically." [ref=e564]': Expired
+                      - cell "Mar 11, 2026, 7:51 AM" [ref=e565]
+                      - cell "Mar 11, 2026, 7:52 AM" [ref=e566]
+                      - cell [ref=e567]:
+                        - button [ref=e568] [cursor=pointer]:
+                          - img [ref=e569]
+                    - row "yousef_abdallah yousef_abdallah - ooooooooooooo Ahmed Reseller OBD2SW Pro Cancelled Mar 11, 2026, 8:43 PM Mar 14, 2026, 8:39 PM" [ref=e573]:
+                      - cell [ref=e574]:
+                        - checkbox [ref=e575]
+                      - cell "yousef_abdallah" [ref=e576]:
+                        - link "yousef_abdallah" [ref=e577] [cursor=pointer]:
+                          - /url: /en/manager/customers/21
+                      - cell "yousef_abdallah" [ref=e578]:
+                        - link "yousef_abdallah" [ref=e579] [cursor=pointer]:
+                          - /url: /en/manager/customers/21
+                      - cell "-" [ref=e580]
+                      - cell "ooooooooooooo" [ref=e581]:
+                        - link "ooooooooooooo" [ref=e582] [cursor=pointer]:
+                          - /url: /en/manager/bios-details/ooooooooooooo
+                      - cell "Ahmed Reseller" [ref=e583]
+                      - cell "OBD2SW Pro" [ref=e584]
+                      - cell "Cancelled" [ref=e585]:
+                        - 'generic "Cancelled: Stopped and removed from the software until renewed or reactivated." [ref=e586]': Cancelled
+                      - cell "Mar 11, 2026, 8:43 PM" [ref=e587]
+                      - cell "Mar 14, 2026, 8:39 PM" [ref=e588]
+                      - cell [ref=e589]:
+                        - button [ref=e590] [cursor=pointer]:
+                          - img [ref=e591]
+                    - row "Customer Three DEMO-BIOS-003 - DEMO-BIOS-003 Mohamed Reseller OBD2SW Pro Active Nov 26, 2025, 6:55 PM May 30, 2026, 7:55 PM" [ref=e595]:
+                      - cell [ref=e596]:
+                        - checkbox [ref=e597]
+                      - cell "Customer Three" [ref=e598]:
+                        - link "Customer Three" [ref=e599] [cursor=pointer]:
+                          - /url: /en/manager/customers/7
+                      - cell "DEMO-BIOS-003" [ref=e600]:
+                        - link "DEMO-BIOS-003" [ref=e601] [cursor=pointer]:
+                          - /url: /en/manager/customers/7
+                      - cell "-" [ref=e602]
+                      - cell "DEMO-BIOS-003" [ref=e603]:
+                        - link "DEMO-BIOS-003" [ref=e604] [cursor=pointer]:
+                          - /url: /en/manager/bios-details/DEMO-BIOS-003
+                      - cell "Mohamed Reseller" [ref=e605]
+                      - cell "OBD2SW Pro" [ref=e606]
+                      - cell "Active" [ref=e607]:
+                        - 'generic "Active: Live and usable right now." [ref=e608]': Active
+                      - cell "Nov 26, 2025, 6:55 PM" [ref=e609]
+                      - cell "May 30, 2026, 7:55 PM" [ref=e610]
+                      - cell [ref=e611]:
+                        - button [ref=e612] [cursor=pointer]:
+                          - img [ref=e613]
+                    - row "Customer Four DEMO-BIOS-004 - DEMO-BIOS-004 Mohamed Reseller OBD2SW Pro Active Feb 10, 2026, 6:55 PM Mar 15, 2026, 6:55 PM" [ref=e617]:
+                      - cell [ref=e618]:
+                        - checkbox [ref=e619]
+                      - cell "Customer Four" [ref=e620]:
+                        - link "Customer Four" [ref=e621] [cursor=pointer]:
+                          - /url: /en/manager/customers/8
+                      - cell "DEMO-BIOS-004" [ref=e622]:
+                        - link "DEMO-BIOS-004" [ref=e623] [cursor=pointer]:
+                          - /url: /en/manager/customers/8
+                      - cell "-" [ref=e624]
+                      - cell "DEMO-BIOS-004" [ref=e625]:
+                        - link "DEMO-BIOS-004" [ref=e626] [cursor=pointer]:
+                          - /url: /en/manager/bios-details/DEMO-BIOS-004
+                      - cell "Mohamed Reseller" [ref=e627]
+                      - cell "OBD2SW Pro" [ref=e628]
+                      - cell "Active" [ref=e629]:
+                        - 'generic "Active: Live and usable right now." [ref=e630]': Active
+                      - cell "Feb 10, 2026, 6:55 PM" [ref=e631]
+                      - cell "Mar 15, 2026, 6:55 PM" [ref=e632]
+                      - cell [ref=e633]:
+                        - button [ref=e634] [cursor=pointer]:
+                          - img [ref=e635]
+                    - row "Customer One DEMO-BIOS-001 - DEMO-BIOS-001 Ahmed Reseller OBD2SW Pro Pending Jan 25, 2026, 6:55 PM Mar 31, 2026, 6:55 PM" [ref=e639]:
+                      - cell [ref=e640]:
+                        - checkbox [ref=e641]
+                      - cell "Customer One" [ref=e642]:
+                        - link "Customer One" [ref=e643] [cursor=pointer]:
+                          - /url: /en/manager/customers/5
+                      - cell "DEMO-BIOS-001" [ref=e644]:
+                        - link "DEMO-BIOS-001" [ref=e645] [cursor=pointer]:
+                          - /url: /en/manager/customers/5
+                      - cell "-" [ref=e646]
+                      - cell "DEMO-BIOS-001" [ref=e647]:
+                        - link "DEMO-BIOS-001" [ref=e648] [cursor=pointer]:
+                          - /url: /en/manager/bios-details/DEMO-BIOS-001
+                      - cell "Ahmed Reseller" [ref=e649]
+                      - cell "OBD2SW Pro" [ref=e650]
+                      - cell "Pending" [ref=e651]:
+                        - 'generic "Pending: Saved or created, but not active yet." [ref=e652]': Pending
+                      - cell "Jan 25, 2026, 6:55 PM" [ref=e653]
+                      - cell "Mar 31, 2026, 6:55 PM" [ref=e654]
+                      - cell [ref=e655]:
+                        - button [ref=e656] [cursor=pointer]:
+                          - img [ref=e657]
+                    - row "Customer Two DEMO-BIOS-002 - DEMO-BIOS-002 Ahmed Reseller OBD2SW Pro Expired Mar 10, 2026, 7:00 AM Mar 11, 2026, 6:59 AM" [ref=e661]:
+                      - cell [ref=e662]:
+                        - checkbox [ref=e663]
+                      - cell "Customer Two" [ref=e664]:
+                        - link "Customer Two" [ref=e665] [cursor=pointer]:
+                          - /url: /en/manager/customers/6
+                      - cell "DEMO-BIOS-002" [ref=e666]:
+                        - link "DEMO-BIOS-002" [ref=e667] [cursor=pointer]:
+                          - /url: /en/manager/customers/6
+                      - cell "-" [ref=e668]
+                      - cell "DEMO-BIOS-002" [ref=e669]:
+                        - link "DEMO-BIOS-002" [ref=e670] [cursor=pointer]:
+                          - /url: /en/manager/bios-details/DEMO-BIOS-002
+                      - cell "Ahmed Reseller" [ref=e671]
+                      - cell "OBD2SW Pro" [ref=e672]
+                      - cell "Expired" [ref=e673]:
+                        - 'generic "Expired: Time ended automatically." [ref=e674]': Expired
+                      - cell "Mar 10, 2026, 7:00 AM" [ref=e675]
+                      - cell "Mar 11, 2026, 6:59 AM" [ref=e676]
+                      - cell [ref=e677]:
+                        - button [ref=e678] [cursor=pointer]:
+                          - img [ref=e679]
+                - generic [ref=e683]:
+                  - generic [ref=e684]: 7 total
+                  - generic [ref=e685]:
+                    - generic [ref=e686]:
+                      - generic [ref=e687]: Rows per page
+                      - combobox "Rows per page" [ref=e688]:
+                        - option "10"
+                        - option "25" [selected]
+                        - option "50"
+                    - generic [ref=e689]:
+                      - button "Previous" [disabled]
+                      - generic [ref=e690]: 1 / 1
+                      - button "Next" [disabled]
+        - contentinfo [ref=e403]: 2026 OBD2SW License Platform
+    - button "1 online" [ref=e405] [cursor=pointer]:
+      - img [ref=e406]
+      - text: 1 online
+    - generic:
+      - region "Notifications alt+T"
+  - generic [ref=e408]: "70"
