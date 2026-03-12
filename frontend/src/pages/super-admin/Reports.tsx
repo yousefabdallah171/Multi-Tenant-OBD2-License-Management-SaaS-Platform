@@ -97,7 +97,7 @@ export function ReportsPage() {
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalPlatformRevenue')} value={formatCurrency(financialData?.summary.total_platform_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" /></button>
-        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.customers(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalActivations')} value={financialData?.summary.total_activations ?? 0} icon={Globe2} color="sky" /></button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.customers(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalCustomers')} value={financialData?.summary.total_customers ?? 0} icon={Globe2} color="sky" /></button>
         <button type="button" className="w-full text-start" onClick={() => navigate(`${routePaths.superAdmin.customers(lang)}?status=active`)}><StatsCard title={t('superAdmin.pages.financialReports.activeCustomers')} value={financialData?.summary.active_licenses ?? 0} icon={Users} color="amber" /></button>
         <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.avgRevenuePerTenant')} value={formatCurrency(financialData?.summary.avg_revenue_per_tenant ?? 0, 'USD', locale)} icon={CircleDollarSign} color="rose" /></button>
       </div>

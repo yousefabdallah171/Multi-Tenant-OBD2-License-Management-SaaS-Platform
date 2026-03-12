@@ -418,6 +418,7 @@
         "title": "التقارير المالية",
         "description": "تتبع إيرادات المنصة وتوزيع البرامج وحجم التفعيلات وأرصدة الموزعين من شاشة واحدة.",
         "totalPlatformRevenue": "إجمالي إيراد المنصة",
+        "totalCustomers": "إجمالي العملاء",
         "totalActivations": "إجمالي التفعيلات",
         "activeLicenses": "التراخيص النشطة",
         "activeCustomers": "العملاء النشطون",

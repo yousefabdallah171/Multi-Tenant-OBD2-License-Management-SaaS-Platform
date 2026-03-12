@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+use App\Enums\UserRole;
 use App\Models\License;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\ExportTaskService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -15,11 +17,20 @@ class FinancialReportController extends BaseSuperAdminController
     {
         $licenses = $this->filteredLicenses($request);
         $tenantCount = max(Tenant::query()->count(), 1);
+        $totalCustomers = User::query()
+            ->where('role', UserRole::CUSTOMER->value)
+            ->count();
+        $activeCustomers = License::query()
+            ->whereEffectivelyActive()
+            ->whereNotNull('customer_id')
+            ->distinct('customer_id')
+            ->count('customer_id');
 
         $summary = [
             'total_platform_revenue' => round((float) $licenses->sum('price'), 2),
+            'total_customers' => $totalCustomers,
             'total_activations' => $licenses->count(),
-            'active_licenses' => $licenses->filter(fn (License $license): bool => $license->isEffectivelyActive())->count(),
+            'active_licenses' => $activeCustomers,
             'avg_revenue_per_tenant' => round((float) $licenses->sum('price') / $tenantCount, 2),
         ];
 
@@ -202,8 +213,9 @@ class FinancialReportController extends BaseSuperAdminController
     {
         return [
             'Total Platform Revenue' => $summary['total_platform_revenue'],
+            'Total Customers' => $summary['total_customers'],
             'Total Activations' => $summary['total_activations'],
-            'Active Licenses' => $summary['active_licenses'],
+            'Active Customers' => $summary['active_licenses'],
             'Average Revenue per Tenant' => $summary['avg_revenue_per_tenant'],
         ];
     }

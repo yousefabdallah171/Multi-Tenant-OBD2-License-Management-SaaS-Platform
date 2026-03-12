@@ -267,6 +267,7 @@ export interface BiosConflictItem {
 export interface FinancialReportPayload {
   summary: {
     total_platform_revenue: number
+    total_customers: number
     total_activations: number
     active_licenses: number
     avg_revenue_per_tenant: number

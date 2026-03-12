@@ -452,6 +452,7 @@
         "title": "Financial Reports",
         "description": "Track platform revenue, program mix, activation volume, and reseller balances from a single report surface.",
         "totalPlatformRevenue": "Total platform revenue",
+        "totalCustomers": "Total customers",
         "totalActivations": "Total activations",
         "activeLicenses": "Active licenses",
         "activeCustomers": "Active customers",
