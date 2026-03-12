@@ -45,6 +45,7 @@ use App\Http\Controllers\Reseller\DashboardController as ResellerDashboardContro
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
 use App\Http\Controllers\Reseller\ReportController as ResellerReportController;
 use App\Http\Controllers\Reseller\SoftwareController as ResellerSoftwareController;
+use App\Http\Middleware\ActiveRoleMiddleware;
 use App\Http\Controllers\SuperAdmin\ApiStatusController;
 use App\Http\Controllers\SuperAdmin\BiosBlacklistController as SuperAdminBiosBlacklistController;
 use App\Http\Controllers\SuperAdmin\BiosConflictController as SuperAdminBiosConflictController;
@@ -76,7 +77,7 @@ Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login']);
 });
 
-Route::middleware(['auth:sanctum', 'tenant.scope', 'ip.tracker', 'update.last_seen', 'track.online', ProcessDueScheduledLicenses::class])->group(function (): void {
+Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 'ip.tracker', 'update.last_seen', 'track.online', ProcessDueScheduledLicenses::class])->group(function (): void {
     Route::prefix('auth')->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);

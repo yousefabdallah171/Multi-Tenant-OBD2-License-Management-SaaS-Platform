@@ -2,6 +2,7 @@ import axios from 'axios'
 import { toast } from 'sonner'
 import type { SupportedLanguage } from '@/hooks/useLanguage'
 import i18n from '@/i18n'
+import { extractAccountDisabledState, storeAccountDisabledState } from '@/lib/account-disabled'
 import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY } from '@/lib/constants'
 import { getDashboardPath, routePaths } from '@/router/routes'
 import { useAuthStore } from '@/stores/authStore'
@@ -93,6 +94,18 @@ api.interceptors.response.use(
     const status = error?.response?.status
     const requestUrl = String(error?.config?.url ?? '')
     const isAuthLoginRequest = /\/auth\/login(?:\?.*)?$/.test(requestUrl)
+    const accountDisabledState = extractAccountDisabledState(error?.response?.data)
+
+    if (status === 403 && accountDisabledState && typeof window !== 'undefined') {
+      storeAccountDisabledState(accountDisabledState)
+      useAuthStore.getState().clearSession()
+
+      if (!window.location.pathname.includes('/account-disabled')) {
+        window.location.assign(routePaths.errors.accountDisabled(resolveCurrentLanguage()))
+      }
+
+      return Promise.reject(error)
+    }
 
     if (status === 401) {
       useAuthStore.getState().clearSession()

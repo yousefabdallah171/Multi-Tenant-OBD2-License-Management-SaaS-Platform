@@ -2,7 +2,6 @@
 
 use App\Http\Middleware\ApiLogger;
 use App\Http\Middleware\ApiSecurityHeaders;
-use App\Http\Middleware\ActiveRoleMiddleware;
 use App\Http\Middleware\BiosBlacklistCheck;
 use App\Http\Middleware\IpTracker;
 use App\Http\Middleware\RoleMiddleware;
@@ -24,7 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(ApiSecurityHeaders::class);
-        $middleware->appendToGroup('api', ActiveRoleMiddleware::class);
 
         $middleware->alias([
             'role' => RoleMiddleware::class,

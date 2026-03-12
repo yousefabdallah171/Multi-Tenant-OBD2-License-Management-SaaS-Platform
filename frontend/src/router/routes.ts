@@ -8,6 +8,7 @@ export const routePaths = {
   errors: {
     notFound: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/not-found`,
     accessDenied: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/access-denied`,
+    accountDisabled: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/account-disabled`,
     serverError: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/server-error`,
   },
   managerParent: {

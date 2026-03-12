@@ -10,11 +10,13 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { useTheme } from '@/hooks/useTheme'
+import { clearAccountDisabledState, extractAccountDisabledState, storeAccountDisabledState } from '@/lib/account-disabled'
 import { isRequired, isValidEmail } from '@/lib/validators'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { routePaths } from '@/router/routes'
 
 interface LockState {
   reason: 'account_locked' | 'ip_blocked'
@@ -58,16 +60,25 @@ export function LoginPage() {
     try {
       setIsSubmitting(true)
       const result = await login(email, password, rememberMe)
+      clearAccountDisabledState()
       navigate(getDefaultRoute(lang, result.user.role), { replace: true })
     } catch (error) {
       if (axios.isAxiosError(error)) {
+        const payload = error.response?.data as { reason?: unknown; message?: string; unlocks_at?: number | null; seconds_remaining?: number | null } | undefined
+        const accountDisabledState = extractAccountDisabledState(payload)
+
+        if (accountDisabledState) {
+          storeAccountDisabledState(accountDisabledState)
+          navigate(routePaths.errors.accountDisabled(lang), { replace: true })
+          return
+        }
+
         if (!error.response) {
           setNotice({ tone: 'warning', message: t('login.networkError') })
         } else if (error.response.status === 429) {
-          const payload = error.response.data as { reason?: LockState['reason']; unlocks_at?: number | null; seconds_remaining?: number | null; message?: string } | undefined
           if (payload?.reason === 'account_locked' || payload?.reason === 'ip_blocked') {
             setLockState({
-              reason: payload.reason,
+              reason: payload.reason as LockState['reason'],
               unlocks_at: payload.unlocks_at ?? null,
               seconds_remaining: payload.seconds_remaining ?? null,
             })

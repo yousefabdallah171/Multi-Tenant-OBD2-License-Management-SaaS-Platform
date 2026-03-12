@@ -1,6 +1,7 @@
 import { type ComponentType, Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AccessDeniedPage } from '@/pages/errors/AccessDenied'
+import { AccountDisabledPage } from '@/pages/errors/AccountDisabled'
 import { NotFoundPage } from '@/pages/errors/NotFound'
 import { ServerErrorPage } from '@/pages/errors/ServerError'
 import { DEFAULT_LANGUAGE } from '@/lib/constants'
@@ -111,6 +112,7 @@ export function AppRouter() {
           <Route index element={<Navigate to="login" replace />} />
           <Route path="not-found" element={<NotFoundPage />} />
           <Route path="access-denied" element={<AccessDeniedPage />} />
+          <Route path="account-disabled" element={<AccountDisabledPage />} />
           <Route path="server-error" element={<ServerErrorPage />} />
           <Route element={<GuestRoute />}>
             <Route path="login" element={<LoginPage />} />

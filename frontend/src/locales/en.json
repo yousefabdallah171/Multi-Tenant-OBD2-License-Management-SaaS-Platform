@@ -196,6 +196,15 @@
         "title": "Access denied",
         "description": "You do not have permission to view this content. If this looks incorrect, return to your dashboard or contact an administrator."
       },
+      "accountDisabled": {
+        "title": "Account disabled",
+        "reasons": {
+          "account_inactive": "This account is currently deactivated. Please contact your manager or administrator.",
+          "account_suspended": "This account is currently suspended. Please contact your manager or administrator.",
+          "tenant_inactive": "This workspace is currently deactivated. Please contact your manager or administrator.",
+          "tenant_suspended": "This workspace is currently suspended. Please contact your manager or administrator."
+        }
+      },
       "serverError": {
         "title": "Server error",
         "description": "An unexpected error occurred while processing the request. Retry now or return to your dashboard."

@@ -284,15 +284,16 @@ export function TeamManagementPage() {
                   {row.status === 'active' ? t('common.suspend') : t('common.activate')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setDeleteTarget(row)}>{t('common.delete')}</DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={!row.username_locked}
-                  onClick={() => {
-                    setUnlockTarget(row)
-                    setUnlockReason('')
-                  }}
-                >
-                  {t('managerParent.pages.usernameManagement.unlock')}
-                </DropdownMenuItem>
+                {row.username_locked ? (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setUnlockTarget(row)
+                      setUnlockReason('')
+                    }}
+                  >
+                    {t('managerParent.pages.usernameManagement.unlock')}
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem
                   onClick={() => {
                     setPasswordTarget(row)

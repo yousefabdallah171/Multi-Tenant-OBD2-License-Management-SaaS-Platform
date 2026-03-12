@@ -8,6 +8,7 @@ use App\Mail\SuspiciousLoginMail;
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\LoginSecurityService;
+use App\Enums\UserRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -81,7 +82,21 @@ class AuthController extends Controller
         }
 
         if ($user->status !== 'active') {
-            return response()->json(['message' => 'User account is not active.'], Response::HTTP_FORBIDDEN);
+            return $this->inactiveAccountResponse(
+                $user->status === 'suspended' ? 'account_suspended' : 'account_inactive',
+                $user->status === 'suspended'
+                    ? 'This account is currently suspended.'
+                    : 'This account is currently inactive.',
+            );
+        }
+
+        if ($userRole !== UserRole::SUPER_ADMIN->value && $user->tenant && $user->tenant->status !== 'active') {
+            return $this->inactiveAccountResponse(
+                $user->tenant->status === 'suspended' ? 'tenant_suspended' : 'tenant_inactive',
+                $user->tenant->status === 'suspended'
+                    ? 'This workspace is currently suspended.'
+                    : 'This workspace is currently inactive.',
+            );
         }
 
         $knownIp = $user->ipLogs()
@@ -237,5 +252,13 @@ class AuthController extends Controller
             ],
             'ip_address' => $ip,
         ]);
+    }
+
+    private function inactiveAccountResponse(string $reason, string $message): JsonResponse
+    {
+        return response()->json([
+            'message' => $message,
+            'reason' => $reason,
+        ], Response::HTTP_FORBIDDEN);
     }
 }

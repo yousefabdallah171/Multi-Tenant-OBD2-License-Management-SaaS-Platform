@@ -349,15 +349,16 @@ export function AdminManagementPage() {
               <DropdownMenuItem disabled={isProtectedSuperAdmin(row)} onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
                 {row.status === 'active' ? t('common.suspend') : t('common.activate')}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={!row.username_locked}
-                onSelect={() => {
-                  setUnlockTarget(row)
-                  setUnlockReason('')
-                }}
-              >
-                {t('superAdmin.pages.usernameManagement.unlock')}
-              </DropdownMenuItem>
+              {row.username_locked ? (
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setUnlockTarget(row)
+                    setUnlockReason('')
+                  }}
+                >
+                  {t('superAdmin.pages.usernameManagement.unlock')}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 onSelect={() => {
                   setPasswordTarget(row)

@@ -77,10 +77,17 @@ export function DashboardLayout() {
       }
     }
 
+    const heartbeat = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void refreshCurrentUser()
+      }
+    }, 10000)
+
     window.addEventListener('focus', handleFocus)
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
+      window.clearInterval(heartbeat)
       window.removeEventListener('focus', handleFocus)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
