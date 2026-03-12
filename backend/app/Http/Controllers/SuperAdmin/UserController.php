@@ -188,21 +188,27 @@ class UserController extends BaseSuperAdminController
         $query = License::query()->when($user->tenant_id, fn ($builder) => $builder->where('tenant_id', $user->tenant_id));
 
         if (($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value) {
-            $licenses = $query->where('customer_id', $user->id)->get();
+            $stats = $query
+                ->where('customer_id', $user->id)
+                ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_licenses, ROUND(COALESCE(SUM(price), 0), 2) as revenue', ['active'])
+                ->first();
 
             return [
                 'customers' => 0,
-                'active_licenses' => $licenses->where('status', 'active')->count(),
-                'revenue' => round((float) $licenses->sum('price'), 2),
+                'active_licenses' => (int) ($stats?->active_licenses ?? 0),
+                'revenue' => round((float) ($stats?->revenue ?? 0), 2),
             ];
         }
 
-        $licenses = $query->where('reseller_id', $user->id)->get();
+        $stats = $query
+            ->where('reseller_id', $user->id)
+            ->selectRaw('COUNT(DISTINCT customer_id) as customers, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_licenses, ROUND(COALESCE(SUM(price), 0), 2) as revenue', ['active'])
+            ->first();
 
         return [
-            'customers' => $licenses->pluck('customer_id')->filter()->unique()->count(),
-            'active_licenses' => $licenses->where('status', 'active')->count(),
-            'revenue' => round((float) $licenses->sum('price'), 2),
+            'customers' => (int) ($stats?->customers ?? 0),
+            'active_licenses' => (int) ($stats?->active_licenses ?? 0),
+            'revenue' => round((float) ($stats?->revenue ?? 0), 2),
         ];
     }
 }

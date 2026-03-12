@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\Response;
 
 class TeamController extends BaseManagerParentController
@@ -23,10 +24,9 @@ class TeamController extends BaseManagerParentController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $page = (int) ($validated['page'] ?? 1);
         $perPage = (int) ($validated['per_page'] ?? 10);
 
-        $items = User::query()
+        $paginator = User::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->when(! empty($validated['role']), fn ($query) => $query->where('role', $validated['role']))
@@ -40,14 +40,14 @@ class TeamController extends BaseManagerParentController
                 });
             })
             ->latest()
-            ->get()
-            ->each(fn (User $user) => $user->ensureUsername())
-            ->map(fn (User $user): array => $this->serializeUser($user));
+            ->paginate($perPage);
 
-        $paginator = $this->paginateCollection($items, $page, $perPage);
+        $items = collect($paginator->items());
+        $items->each(fn (User $user) => $user->ensureUsername());
+        $stats = $this->memberStatsMap($items->pluck('id')->all());
 
         return response()->json([
-            'data' => $paginator->items(),
+            'data' => $items->map(fn (User $user): array => $this->serializeUser($user, $stats))->values(),
             'meta' => $this->paginationMeta($paginator),
         ]);
     }
@@ -80,7 +80,7 @@ class TeamController extends BaseManagerParentController
             'role' => $validated['role'],
         ]);
 
-        return response()->json(['data' => $this->serializeUser($user)], 201);
+        return response()->json(['data' => $this->serializeUser($user, collect([$user->id => $this->memberStats($user)]))], 201);
     }
 
     public function update(Request $request, User $user): JsonResponse
@@ -100,7 +100,7 @@ class TeamController extends BaseManagerParentController
             'target_user_id' => $user->id,
         ]);
 
-        return response()->json(['data' => $this->serializeUser($user->fresh())]);
+        return response()->json(['data' => $this->serializeUser($user->fresh(), collect([$user->id => $this->memberStats($user)]))]);
     }
 
     public function destroy(Request $request, User $user): JsonResponse
@@ -137,7 +137,7 @@ class TeamController extends BaseManagerParentController
             'status' => $validated['status'],
         ]);
 
-        return response()->json(['data' => $this->serializeUser($user->fresh())]);
+        return response()->json(['data' => $this->serializeUser($user->fresh(), collect([$user->id => $this->memberStats($user)]))]);
     }
 
     public function stats(Request $request, User $user): JsonResponse
@@ -153,11 +153,15 @@ class TeamController extends BaseManagerParentController
     {
         $member = $this->resolveTeamUser($request, $user);
         $member->ensureUsername();
+        $stats = $this->memberStats($member);
 
-        $memberLicenses = License::query()
+        $memberLicensesQuery = License::query()
             ->with(['customer:id,name,email', 'program:id,name'])
             ->where('reseller_id', $member->id)
-            ->latest('activated_at')
+            ->latest('activated_at');
+
+        $memberLicenses = (clone $memberLicensesQuery)
+            ->limit(10)
             ->get();
 
         $recentLicenses = $memberLicenses
@@ -177,7 +181,12 @@ class TeamController extends BaseManagerParentController
             ])
             ->values();
 
-        $memberLicenseIds = $memberLicenses->pluck('id')->filter()->values()->all();
+        $memberLicenseIds = License::query()
+            ->where('reseller_id', $member->id)
+            ->pluck('id')
+            ->filter()
+            ->values()
+            ->all();
 
         $activityQuery = ActivityLog::query()
             ->where('tenant_id', $this->currentTenantId($request))
@@ -246,7 +255,7 @@ class TeamController extends BaseManagerParentController
 
         return response()->json([
             'data' => [
-                ...$this->serializeUser($member),
+                ...$this->serializeUser($member, collect([$member->id => $stats])),
                 'recent_licenses' => $recentLicenses,
                 'recent_activity' => $recentActivity,
                 'seller_log_history' => $sellerLogHistory,
@@ -256,18 +265,29 @@ class TeamController extends BaseManagerParentController
 
     private function memberStats(User $user): array
     {
-        $licenses = License::query()->where('reseller_id', $user->id)->get();
+        $stats = $this->memberStatsMap([$user->id])->get($user->id);
 
-        return [
-            'customers' => $licenses->pluck('customer_id')->filter()->unique()->count(),
-            'active_licenses' => $licenses->where('status', 'active')->count(),
-            'revenue' => round((float) $licenses->sum('price'), 2),
-        ];
+        return is_array($stats)
+            ? [
+                'customers' => (int) ($stats['customers'] ?? 0),
+                'active_licenses' => (int) ($stats['active_licenses'] ?? 0),
+                'revenue' => round((float) ($stats['revenue'] ?? 0), 2),
+                'licenses_count' => (int) ($stats['licenses_count'] ?? 0),
+            ]
+            : [
+                'customers' => 0,
+                'active_licenses' => 0,
+                'revenue' => 0,
+                'licenses_count' => 0,
+            ];
     }
 
-    private function serializeUser(User $user): array
+    private function serializeUser(User $user, ?Collection $statsMap = null): array
     {
-        $stats = $this->memberStats($user);
+        $stats = $statsMap?->get($user->id);
+        if (! is_array($stats)) {
+            $stats = $this->memberStats($user);
+        }
 
         return [
             'id' => $user->id,
@@ -278,11 +298,32 @@ class TeamController extends BaseManagerParentController
             'role' => $user->role?->value ?? (string) $user->role,
             'status' => $user->status,
             'username_locked' => $user->username_locked,
-            'customers_count' => $stats['customers'],
-            'active_licenses_count' => $stats['active_licenses'],
-            'revenue' => $stats['revenue'],
-            'can_delete' => $user->canBePermanentlyDeleted(),
+            'customers_count' => (int) ($stats['customers'] ?? 0),
+            'active_licenses_count' => (int) ($stats['active_licenses'] ?? 0),
+            'revenue' => round((float) ($stats['revenue'] ?? 0), 2),
+            'can_delete' => $user->canBePermanentlyDeleted() && ((int) ($stats['licenses_count'] ?? 0) === 0),
             'created_at' => $user->created_at?->toIso8601String(),
         ];
+    }
+
+    private function memberStatsMap(array $userIds): Collection
+    {
+        if ($userIds === []) {
+            return collect();
+        }
+
+        return License::query()
+            ->whereIn('reseller_id', $userIds)
+            ->selectRaw('reseller_id, COUNT(*) as licenses_count, COUNT(DISTINCT customer_id) as customers, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_licenses, ROUND(COALESCE(SUM(price), 0), 2) as revenue', ['active'])
+            ->groupBy('reseller_id')
+            ->get()
+            ->mapWithKeys(fn (License $license): array => [
+                (int) $license->reseller_id => [
+                    'licenses_count' => (int) ($license->licenses_count ?? 0),
+                    'customers' => (int) ($license->customers ?? 0),
+                    'active_licenses' => (int) ($license->active_licenses ?? 0),
+                    'revenue' => round((float) ($license->revenue ?? 0), 2),
+                ],
+            ]);
     }
 }
