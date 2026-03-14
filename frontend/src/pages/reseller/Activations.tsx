@@ -28,6 +28,16 @@ export function ActivationsPage() {
     to: searchParams.get('to') || '',
   })
 
+  // Reset all filters when navigating to clean URL (e.g. sidebar click)
+  useEffect(() => {
+    if (searchParams.toString() === '') {
+      setPage(1)
+      setPerPage(10)
+      setSearch('')
+      setRange({ from: '', to: '' })
+    }
+  }, [searchParams])
+
   useEffect(() => {
     const next = new URLSearchParams()
     if (page > 1) next.set('page', String(page))

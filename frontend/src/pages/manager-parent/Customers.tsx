@@ -122,7 +122,7 @@ export function CustomersPage() {
   )
 
   const customersQuery = useQuery({
-    queryKey: ['manager-parent', 'customers', page, perPage, search, status, resellerId, programId],
+    queryKey: ['manager-parent', 'customers', page, perPage, search, status, managerParentId, managerId, resellerId, programId],
     queryFn: () =>
       customerService.getAll({
         page,
@@ -479,6 +479,20 @@ export function CustomersPage() {
       },
     },
   ], [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectableIds, selectedLicenseIds, someVisibleSelected, t, retryScheduledMutation.isPending])
+
+  // Reset all filters when navigating to clean URL (e.g. sidebar click)
+  useEffect(() => {
+    if (searchParams.toString() === '') {
+      setPage(1)
+      setPerPage(25)
+      setSearch('')
+      setStatus('all')
+      setManagerParentId('')
+      setManagerId('')
+      setResellerId('')
+      setProgramId('')
+    }
+  }, [searchParams])
 
   useEffect(() => {
     const next = new URLSearchParams()

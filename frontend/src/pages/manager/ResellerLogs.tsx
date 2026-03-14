@@ -46,6 +46,17 @@ export function ResellerLogsPage() {
     to: searchParams.get('to') ?? '',
   }))
 
+  // Reset all filters when navigating to clean URL (e.g. sidebar click)
+  useEffect(() => {
+    if (searchParams.toString() === '') {
+      setPage(1)
+      setPerPage(15)
+      setSellerId('')
+      setAction('')
+      setRange({ from: '', to: '' })
+    }
+  }, [searchParams])
+
   useEffect(() => {
     const next = new URLSearchParams()
 

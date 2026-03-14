@@ -791,6 +791,17 @@ export function CustomersPage() {
     [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectedLicenseIds, selectableIds, someVisibleSelected, text, retryScheduledMutation.isPending, t],
   )
 
+  // Reset all filters when navigating to clean URL (e.g. sidebar click)
+  useEffect(() => {
+    if (searchParams.toString() === '') {
+      setPage(1)
+      setPerPage(25)
+      setSearch('')
+      setStatus('all')
+      setProgramFilter('')
+    }
+  }, [searchParams])
+
   useEffect(() => {
     const next = new URLSearchParams()
     if (page > 1) next.set('page', String(page))
