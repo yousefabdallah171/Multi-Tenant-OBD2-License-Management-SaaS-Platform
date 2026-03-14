@@ -36,6 +36,7 @@ class User extends Authenticatable
         'created_by',
         'username_locked',
         'last_seen_at',
+        'branding',
     ];
 
     /**
@@ -61,6 +62,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'username_locked' => 'boolean',
+            'branding' => 'json',
         ];
     }
 
@@ -117,6 +119,36 @@ class User extends Authenticatable
     public function biosAccessLogs(): HasMany
     {
         return $this->hasMany(BiosAccessLog::class);
+    }
+
+    public function biosChangeRequests(): HasMany
+    {
+        return $this->hasMany(BiosChangeRequest::class, 'reseller_id');
+    }
+
+    public function reviewedBiosChangeRequests(): HasMany
+    {
+        return $this->hasMany(BiosChangeRequest::class, 'reviewer_id');
+    }
+
+    public function resellerCommissions(): HasMany
+    {
+        return $this->hasMany(ResellerCommission::class, 'reseller_id');
+    }
+
+    public function managedResellerCommissions(): HasMany
+    {
+        return $this->hasMany(ResellerCommission::class, 'manager_id');
+    }
+
+    public function resellerPayments(): HasMany
+    {
+        return $this->hasMany(ResellerPayment::class, 'reseller_id');
+    }
+
+    public function managedResellerPayments(): HasMany
+    {
+        return $this->hasMany(ResellerPayment::class, 'manager_id');
     }
 
     public function balance(): HasOne

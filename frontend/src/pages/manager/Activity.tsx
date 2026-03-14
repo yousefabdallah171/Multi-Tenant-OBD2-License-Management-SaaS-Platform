@@ -107,11 +107,14 @@ export function ActivityPage() {
                   <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {Object.entries(entry.metadata ?? {}).slice(0, 6).map(([key, value]) => (
-                    <span key={key} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                      {key}: {String(value)}
-                    </span>
-                  ))}
+                  {Object.entries(entry.metadata ?? {})
+                    .filter(([key]) => !['license_id', 'program_id', 'customer_id', 'request_id', 'bios_conflict_id', 'bios_change_id', 'reviewer_id', 'reseller_id'].includes(key))
+                    .slice(0, 6)
+                    .map(([key, value]) => (
+                      <span key={key} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {key}: {String(value)}
+                      </span>
+                    ))}
                   {entry.ip_address ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">{entry.ip_address}</span> : null}
                 </div>
               </div>

@@ -17,14 +17,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
-import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
+import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { customerService } from '@/services/customer.service'
 import { licenseService } from '@/services/license.service'
+import { managerParentService } from '@/services/manager-parent.service'
 import { programService } from '@/services/program.service'
 import { teamService } from '@/services/team.service'
 import type { CustomerSummary } from '@/types/manager-parent.types'
@@ -76,6 +78,7 @@ const EMPTY_ACTIVATION_FORM: ActivationFormState = {
 
 export function CustomersPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const { lang } = useLanguage()
   const queryClient = useQueryClient()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -89,6 +92,8 @@ export function CustomersPage() {
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
     STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
   )
+  const [managerParentId, setManagerParentId] = useState<number | ''>(searchParams.get('manager_parent_id') ? Number(searchParams.get('manager_parent_id')) : '')
+  const [managerId, setManagerId] = useState<number | ''>(searchParams.get('manager_id') ? Number(searchParams.get('manager_id')) : '')
   const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
   const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [activationOpen, setActivationOpen] = useState(false)
@@ -100,10 +105,21 @@ export function CustomersPage() {
   const [pauseTarget, setPauseTarget] = useState<CustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<CustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CustomerSummary | null>(null)
+  const [pauseReason, setPauseReason] = useState('')
   const [selectedLicenseIds, setSelectedLicenseIds] = useState<number[]>([])
   const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const customerFilterParams = useMemo(
+    () => ({
+      search: search || undefined,
+      manager_parent_id: managerParentId || undefined,
+      manager_id: managerId || undefined,
+      reseller_id: resellerId || undefined,
+      program_id: programId || undefined,
+    }),
+    [managerId, managerParentId, programId, resellerId, search],
+  )
 
   const customersQuery = useQuery({
     queryKey: ['manager-parent', 'customers', page, perPage, search, status, resellerId, programId],
@@ -111,9 +127,7 @@ export function CustomersPage() {
       customerService.getAll({
         page,
         per_page: perPage,
-        search,
-        reseller_id: resellerId,
-        program_id: programId,
+        ...customerFilterParams,
         status: status === 'all' ? '' : status,
       }),
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
@@ -124,19 +138,43 @@ export function CustomersPage() {
     queryFn: () => teamService.getAll({ role: 'reseller', per_page: 100 }),
   })
 
+  const userOptionsQuery = useQuery({
+    queryKey: ['manager-parent', 'customers', 'user-options'],
+    queryFn: () => managerParentService.getUsernameManagement({ per_page: 100 }),
+  })
+
   const programsQuery = useQuery({
     queryKey: ['manager-parent', 'customers', 'programs'],
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
+  const managerParentOptions = useMemo(() => {
+    const options = (userOptionsQuery.data?.data ?? [])
+      .filter((member) => member.role === 'manager_parent')
+      .map((member) => ({ id: member.id, name: member.name }))
+
+    if (user && user.role === 'manager_parent' && !options.some((member) => member.id === user.id)) {
+      options.unshift({ id: user.id, name: user.name })
+    }
+
+    return options
+  }, [user, userOptionsQuery.data?.data])
+
+  const managerOptions = useMemo(
+    () => (userOptionsQuery.data?.data ?? [])
+      .filter((member) => member.role === 'manager')
+      .map((member) => ({ id: member.id, name: member.name })),
+    [userOptionsQuery.data?.data],
+  )
+
   const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
-      { queryKey: ['manager-parent', 'customers', 'count', 'all', search, resellerId, programId], queryFn: () => customerService.getAll({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
-      { queryKey: ['manager-parent', 'customers', 'count', 'active', search, resellerId, programId], queryFn: () => customerService.getAll({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
-      { queryKey: ['manager-parent', 'customers', 'count', 'scheduled', search, resellerId, programId], queryFn: () => customerService.getAll({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'scheduled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
-      { queryKey: ['manager-parent', 'customers', 'count', 'expired', search, resellerId, programId], queryFn: () => customerService.getAll({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
-      { queryKey: ['manager-parent', 'customers', 'count', 'cancelled', search, resellerId, programId], queryFn: () => customerService.getAll({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
-      { queryKey: ['manager-parent', 'customers', 'count', 'pending', search, resellerId, programId], queryFn: () => customerService.getAll({ page: 1, per_page: 1, search, reseller_id: resellerId, program_id: programId, status: 'pending' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager-parent', 'customers', 'count', 'all', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager-parent', 'customers', 'count', 'active', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager-parent', 'customers', 'count', 'scheduled', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'scheduled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager-parent', 'customers', 'count', 'expired', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager-parent', 'customers', 'count', 'cancelled', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager-parent', 'customers', 'count', 'pending', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'pending' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
     ],
   })
 
@@ -187,10 +225,11 @@ export function CustomersPage() {
   })
 
   const pauseMutation = useMutation({
-    mutationFn: (licenseId: number) => licenseService.pause(licenseId),
+    mutationFn: (licenseId: number) => licenseService.pause(licenseId, { pause_reason: pauseReason.trim() || undefined }),
     onSuccess: () => {
       toast.success(t('common.paused'))
       setPauseTarget(null)
+      setPauseReason('')
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -349,7 +388,23 @@ export function CustomersPage() {
     { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
     { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
     { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale) : '-') },
-    { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => getLicenseDisplayStatus(row), render: (row) => (row.status ? <StatusBadge status={getLicenseDisplayStatus(row)} /> : '-') },
+    {
+      key: 'status',
+      label: t('common.status'),
+      sortable: true,
+      sortValue: (row) => getLicenseDisplayStatus(row),
+      render: (row) => (row.status ? (
+        <div className="relative inline-flex">
+          <StatusBadge status={getLicenseDisplayStatus(row)} />
+          {isPlainPendingLicense(row) ? (
+            <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
+              New
+            </span>
+          ) : null}
+        </div>
+      ) : '-'),
+    },
+    { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
     { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
     {
       key: 'actions',
@@ -357,11 +412,15 @@ export function CustomersPage() {
       render: (row) => {
         const displayStatus = getLicenseDisplayStatus(row)
         const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+        const isPausedPending = isPausedPendingLicense(row)
+        const isPlainPending = isPlainPendingLicense(row)
         const renewActionLabel = displayStatus === 'active'
           ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
           : isScheduleEditable
             ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-            : t('common.renew')
+            : isPlainPending
+              ? t('common.activate', { defaultValue: 'Activate' })
+              : t('common.renew')
 
         return (
         <DropdownMenu>
@@ -407,7 +466,7 @@ export function CustomersPage() {
             {typeof row.license_id === 'number' && canReactivateLicense(row) ? (
               <DropdownMenuItem onClick={() => setResumeTarget(row)}>
                 <Play className="me-2 h-4 w-4" />
-                {t('common.reactivate')}
+                {isPausedPending ? t('common.continue', { defaultValue: 'Continue' }) : t('common.reactivate')}
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
@@ -427,10 +486,12 @@ export function CustomersPage() {
     if (perPage !== 25) next.set('per_page', String(perPage))
     if (search) next.set('search', search)
     if (status !== 'all') next.set('status', status)
+    if (managerParentId) next.set('manager_parent_id', String(managerParentId))
+    if (managerId) next.set('manager_id', String(managerId))
     if (resellerId) next.set('reseller_id', String(resellerId))
     if (programId) next.set('program_id', String(programId))
     setSearchParams(next, { replace: true })
-  }, [page, perPage, programId, resellerId, search, setSearchParams, status])
+  }, [managerId, managerParentId, page, perPage, programId, resellerId, search, setSearchParams, status])
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
   const durationDays = useMemo(() => {
@@ -525,16 +586,28 @@ export function CustomersPage() {
       </div>
 
       <div className="space-y-4">
-          <Card>
-            <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('managerParent.pages.customers.searchPlaceholder')} />
-              <select value={resellerId} onChange={(event) => setResellerId(event.target.value ? Number(event.target.value) : '')} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                <option value="">{t('managerParent.pages.customers.allResellers')}</option>
-                {(resellerQuery.data?.data ?? []).map((reseller) => (
+            <Card>
+              <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px_220px_220px_220px]">
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('managerParent.pages.customers.searchPlaceholder')} />
+                <select value={managerParentId} onChange={(event) => { setManagerParentId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                  <option value="">{t('customers.filterByManagerParent', { defaultValue: 'Filter by Manager Parent' })}</option>
+                  {managerParentOptions.map((member) => (
+                    <option key={member.id} value={member.id}>{member.name}</option>
+                  ))}
+                </select>
+                <select value={managerId} onChange={(event) => { setManagerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                  <option value="">{t('customers.filterByManager', { defaultValue: 'Filter by Manager' })}</option>
+                  {managerOptions.map((member) => (
+                    <option key={member.id} value={member.id}>{member.name}</option>
+                  ))}
+                </select>
+                <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                  <option value="">{t('managerParent.pages.customers.allResellers')}</option>
+                  {(resellerQuery.data?.data ?? []).map((reseller) => (
                   <option key={reseller.id} value={reseller.id}>{reseller.name}</option>
                 ))}
               </select>
-              <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
                 <option value="">{t('managerParent.pages.customers.allPrograms')}</option>
                 {(programsQuery.data?.data ?? []).map((program) => (
                   <option key={program.id} value={program.id}>{program.name}</option>
@@ -809,6 +882,7 @@ export function CustomersPage() {
         onOpenChange={(open) => {
           if (!open) {
             setPauseTarget(null)
+            setPauseReason('')
           }
         }}
         title={t('common.pause')}
@@ -819,7 +893,18 @@ export function CustomersPage() {
             pauseMutation.mutate(pauseTarget.license_id)
           }
         }}
-      />
+      >
+        <div className="space-y-2">
+          <Label>{t('common.reason')}</Label>
+          <textarea
+            className="min-h-24 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            value={pauseReason}
+            onChange={(event) => setPauseReason(event.target.value)}
+            placeholder={t('common.reason')}
+            maxLength={500}
+          />
+        </div>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={resumeTarget !== null}
@@ -828,9 +913,9 @@ export function CustomersPage() {
             setResumeTarget(null)
           }
         }}
-        title={t('common.reactivate')}
+        title={isPausedPendingLicense(resumeTarget) ? t('common.continue', { defaultValue: 'Continue' }) : t('common.reactivate')}
         description={resumeTarget?.bios_id ?? undefined}
-        confirmLabel={t('common.reactivate')}
+        confirmLabel={isPausedPendingLicense(resumeTarget) ? t('common.continue', { defaultValue: 'Continue' }) : t('common.reactivate')}
         onConfirm={() => {
           if (resumeTarget?.license_id) {
             resumeMutation.mutate(resumeTarget.license_id)

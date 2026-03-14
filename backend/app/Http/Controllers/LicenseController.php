@@ -21,6 +21,9 @@ class LicenseController extends Controller
 
     public function activateLicense(Request $request): JsonResponse
     {
+        $role = $request->user()?->role?->value ?? (string) $request->user()?->role;
+        $isReseller = $role === UserRole::RESELLER->value;
+
         $validated = $request->validate([
             'program_id' => ['required', 'integer'],
             'seller_id' => ['nullable', 'integer', 'exists:users,id'],
@@ -29,8 +32,18 @@ class LicenseController extends Controller
             'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'bios_id' => ['required', 'string', 'max:255'],
-            'duration_days' => ['required', 'numeric', 'min:0.0001', 'max:36500'],
-            'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'preset_id' => [
+                Rule::requiredIf($isReseller),
+                'nullable',
+                'integer',
+                Rule::exists('program_duration_presets', 'id')->where(function ($query) use ($request): void {
+                    $query
+                        ->where('program_id', (int) $request->input('program_id'))
+                        ->where('is_active', true);
+                }),
+            ],
+            'duration_days' => [$isReseller ? 'nullable' : 'required', 'numeric', 'min:0.0001', 'max:36500'],
+            'price' => [$isReseller ? 'nullable' : 'required', 'numeric', 'min:0', 'max:99999999.99'],
             'is_scheduled' => ['nullable', 'boolean'],
             'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
             'scheduled_timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
@@ -67,6 +80,7 @@ class LicenseController extends Controller
                 'scheduled_failure_message' => $license->scheduled_failure_message,
                 'paused_at' => $license->paused_at?->toIso8601String(),
                 'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+                'pause_reason' => $license->pause_reason,
             ],
         ], 201);
     }
@@ -129,8 +143,12 @@ class LicenseController extends Controller
 
     public function pause(Request $request, License $license): JsonResponse
     {
+        $validated = $request->validate([
+            'pause_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
         $resolved = $this->resolveAccessibleLicense($request, $license);
-        $paused = $this->licenseService->pause($resolved);
+        $paused = $this->licenseService->pause($resolved, $validated);
         LicenseCacheInvalidation::invalidateForLicense($paused);
 
         return response()->json([
@@ -303,6 +321,7 @@ class LicenseController extends Controller
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license->pause_reason,
             'status' => $license->status,
         ];
     }

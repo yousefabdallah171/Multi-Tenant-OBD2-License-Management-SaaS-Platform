@@ -111,6 +111,7 @@ class BiosConflictController extends BaseManagerParentController
             'bios_id' => $conflict->bios_id,
             'conflict_type' => $conflict->conflict_type,
             'attempted_by_name' => $conflict->attemptedBy?->name,
+            'reseller_name' => $conflict->attemptedBy?->name,
             'program_name' => $conflict->program?->name,
             'affected_customers' => $affectedCustomers,
             'status' => $conflict->resolved ? 'resolved' : 'open',

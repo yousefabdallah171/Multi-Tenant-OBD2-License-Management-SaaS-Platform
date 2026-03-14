@@ -1,5 +1,6 @@
 import { api } from '@/services/api'
 import type { PaginatedResponse, ProgramStats, ProgramSummary } from '@/types/manager-parent.types'
+import type { ProgramDurationPreset } from '@/types/manager-reseller.types'
 
 export interface ProgramListParams {
   page?: number
@@ -24,6 +25,7 @@ export interface ProgramPayload {
   external_api_base_url?: string | null
   external_logs_endpoint?: string | null
   status?: 'active' | 'inactive'
+  presets?: Array<Partial<ProgramDurationPreset> & { label: string; duration_days: number; price: number }>
 }
 
 function buildProgramPayload(payload: Partial<ProgramPayload>, includeEmptyKeys: string[] = []) {
@@ -47,7 +49,25 @@ function buildProgramPayload(payload: Partial<ProgramPayload>, includeEmptyKeys:
       continue
     }
 
-    formData.append(key, String(value))
+    if (key === 'presets' && Array.isArray(value)) {
+      value.forEach((preset, index) => {
+        Object.entries(preset)
+          .filter(([presetKey]) => ['id', 'label', 'duration_days', 'price', 'sort_order', 'is_active'].includes(presetKey))
+          .forEach(([presetKey, presetValue]) => {
+          if (presetValue === undefined || presetValue === null || presetValue === '') {
+            return
+          }
+
+          formData.append(
+            `presets[${index}][${presetKey}]`,
+            typeof presetValue === 'boolean' ? (presetValue ? '1' : '0') : String(presetValue),
+          )
+          })
+      })
+      continue
+    }
+
+    formData.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value))
   }
 
   return formData

@@ -83,6 +83,8 @@ class BiosDetailsService
                 'last_activity' => $lastActivity,
                 'total_activations' => 0,
                 'total_licenses' => 0,
+                'avg_duration_days' => 0,
+                'total_revenue' => 0,
                 'avg_days_between_purchases' => 0,
                 'latest_license' => $latestActivity ? [
                     'id' => (int) ($activityMetadata['license_id'] ?? 0),
@@ -150,6 +152,8 @@ class BiosDetailsService
             'last_activity' => $last?->activated_at?->toIso8601String(),
             'total_activations' => $licenses->count(),
             'total_licenses' => $licenses->count(),
+            'avg_duration_days' => (float) round((float) $licenses->avg('duration_days'), 2),
+            'total_revenue' => (float) round((float) $licenses->sum('price'), 2),
             'avg_days_between_purchases' => empty($intervals) ? 0 : (int) round(array_sum($intervals) / count($intervals)),
             'latest_license' => $last ? [
                 'id' => $last->id,
@@ -238,7 +242,7 @@ class BiosDetailsService
     public function getResellerBreakdown(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
-            ->with('reseller:id,name,email')
+            ->with(['reseller:id,name,email', 'program:id,name'])
             ->where('bios_id', $biosId);
 
         $this->applyTenantScope($query, $tenantId);
@@ -254,6 +258,13 @@ class BiosDetailsService
                     'email' => $first?->reseller?->email,
                     'activation_count' => $licenses->count(),
                     'total_revenue' => (float) $licenses->sum('price'),
+                    'last_activity_at' => $licenses->sortByDesc('activated_at')->first()?->activated_at?->toIso8601String(),
+                    'programs_sold' => $licenses
+                        ->map(fn (License $license): ?string => $license->program?->name)
+                        ->filter()
+                        ->unique()
+                        ->values()
+                        ->all(),
                 ];
             })
             ->values()
@@ -280,6 +291,7 @@ class BiosDetailsService
     public function getBiosActivity(string $biosId, ?int $tenantId = null): array
     {
         $activityQuery = ActivityLog::query()
+            ->with('user:id,name')
             ->where(function ($query) use ($biosId): void {
                 $query
                     ->where('description', 'like', '%'.$biosId.'%')
@@ -297,9 +309,11 @@ class BiosDetailsService
             'action' => $log->action,
             'description' => $log->description,
             'created_at' => $log->created_at?->toIso8601String(),
+            'reseller_name' => $log->user?->name,
         ]);
 
         $accessLogs = $this->biosAccessLogsQuery($biosId, $tenantId)
+            ->with('user:id,name')
             ->latest()
             ->limit(100)
             ->get()
@@ -308,6 +322,7 @@ class BiosDetailsService
                 'action' => 'bios.'.$log->action,
                 'description' => (string) ($log->metadata['description'] ?? sprintf('BIOS %s action %s.', $log->bios_id, $log->action)),
                 'created_at' => $log->created_at?->toIso8601String(),
+                'reseller_name' => $log->user?->name,
             ]);
 
         $conflicts = $this->biosConflictsQuery($biosId, $tenantId)
@@ -319,6 +334,7 @@ class BiosDetailsService
             'action' => 'bios.conflict',
             'description' => sprintf('Conflict type: %s', $conflict->conflict_type),
             'created_at' => $conflict->created_at?->toIso8601String(),
+            'reseller_name' => null,
         ]);
 
         $blacklistEvents = $this->biosBlacklistQuery($biosId, $tenantId)
@@ -330,6 +346,7 @@ class BiosDetailsService
                 'action' => 'bios.blacklist',
                 'description' => $entry->reason !== '' ? $entry->reason : 'BIOS added to blacklist.',
                 'created_at' => $entry->created_at?->toIso8601String(),
+                'reseller_name' => null,
             ]);
 
         return $activities

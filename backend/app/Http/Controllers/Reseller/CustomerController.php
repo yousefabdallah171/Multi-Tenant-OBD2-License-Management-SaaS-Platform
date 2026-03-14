@@ -135,7 +135,7 @@ class CustomerController extends BaseResellerController
     {
         $columns = [];
 
-        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'] as $column) {
+        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes', 'pause_reason'] as $column) {
             if (Schema::hasColumn('licenses', $column)) {
                 $columns[] = $column;
             }
@@ -300,6 +300,7 @@ class CustomerController extends BaseResellerController
                 'scheduled_failure_message' => $license->scheduled_failure_message,
                 'paused_at' => $license->paused_at?->toIso8601String(),
                 'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+                'pause_reason' => $license->pause_reason,
             ])->values(),
             ],
         ]);
@@ -375,6 +376,7 @@ class CustomerController extends BaseResellerController
             'scheduled_failure_message' => $license?->scheduled_failure_message,
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license?->pause_reason,
             'license_count' => $user->customerLicenses->count(),
         ];
     }

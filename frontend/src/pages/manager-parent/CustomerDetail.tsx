@@ -12,6 +12,8 @@ import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { customerService } from '@/services/customer.service'
+import { managerParentService } from '@/services/manager-parent.service'
+import type { CustomerLicenseHistoryEntry } from '@/types/manager-parent.types'
 import { IpLocationCell } from '@/utils/countryFlag'
 
 export function CustomerDetailPage() {
@@ -29,7 +31,20 @@ export function CustomerDetailPage() {
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_DETAIL),
   })
 
+  const licenseHistoryQuery = useQuery({
+    queryKey: ['manager-parent', 'customer-license-history', customerId],
+    queryFn: () => managerParentService.getCustomerLicenseHistory(customerId),
+    enabled: Number.isFinite(customerId),
+  })
+
+  const biosChangeHistoryQuery = useQuery({
+    queryKey: ['manager-parent', 'customer-bios-change-history', customerId],
+    queryFn: () => managerParentService.getCustomerBiosChangeHistory(customerId),
+    enabled: Number.isFinite(customerId),
+  })
+
   const customer = query.data?.data
+  const licenseHistoryGroups = groupCustomerLicenseHistoryByReseller(licenseHistoryQuery.data?.data ?? [])
 
   return (
     <div className="space-y-6">
@@ -61,29 +76,44 @@ export function CustomerDetailPage() {
               <TabsTrigger value="bios">{t('managerParent.pages.customers.biosId')}</TabsTrigger>
               <TabsTrigger value="ips">{t('managerParent.pages.ipAnalytics.title')}</TabsTrigger>
               <TabsTrigger value="activity">{t('managerParent.nav.activity')}</TabsTrigger>
+              <TabsTrigger value="bios-changes">BIOS Changes</TabsTrigger>
             </TabsList>
 
             <TabsContent value="licenses">
               <Card>
                 <CardHeader><CardTitle>{t('managerParent.pages.customers.licenseHistory')}</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  {(customer.licenses ?? []).map((license) => (
-                    <div key={license.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                      <div className="grid gap-2 md:grid-cols-4">
-                        <Info label={t('common.program')} value={license.program ?? '-'} />
-                        <Info
-                          label={t('managerParent.pages.customers.biosId')}
-                          value={(
-                            <Link className="text-sky-600 hover:underline" to={routePaths.managerParent.biosDetail(lang, license.bios_id)}>
-                              {license.bios_id}
-                            </Link>
-                          )}
-                        />
-                        <Info label={t('common.username')} value={resolveLicenseUsername(customer, license.external_username) ?? '-'} />
-                        <Info label={t('common.reseller')} value={license.reseller ?? '-'} />
-                        <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
+                  {licenseHistoryGroups.map((group) => (
+                    <details key={group.key} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800" open>
+                      <summary className="cursor-pointer list-none">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="font-medium">{t('customerDetail.resellerTimeline')}: {group.name}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              {group.items.length} {t('common.activations')} | {group.period}
+                            </p>
+                          </div>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{group.email}</p>
+                        </div>
+                      </summary>
+                      <div className="mt-4 space-y-3">
+                        {group.items.map((license) => (
+                          <div key={license.id} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40">
+                            <div className="grid gap-3 md:grid-cols-5">
+                              <Info label={t('common.program')} value={license.program_name ?? '-'} />
+                              <Info label={t('customerDetail.soldBy')} value={group.name} />
+                              <Info label={t('customerDetail.period')} value={formatCustomerLicensePeriod(license, locale)} />
+                              <Info label={t('common.price')} value={`$${Number(license.price).toFixed(2)}`} />
+                              <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
+                              <span>{t('managerParent.pages.customers.biosId')}: <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link></span>
+                              <span>{t('common.username')}: {resolveLicenseUsername(customer, license.external_username) ?? '-'}</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
+                    </details>
                   ))}
                 </CardContent>
               </Card>
@@ -122,11 +152,53 @@ export function CustomerDetailPage() {
                 <CardContent className="space-y-2">
                   {(customer.activity ?? []).map((entry) => (
                     <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                      <p className="font-medium">{entry.action}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="font-medium">{entry.action}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
+                        </div>
+                        <div className="text-right">
+                          {entry.performed_by ? <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{entry.performed_by}</p> : null}
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                        </div>
+                      </div>
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="bios-changes">
+              <Card>
+                <CardHeader><CardTitle>BIOS Change Requests</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {(biosChangeHistoryQuery.data?.data ?? []).map((change) => (
+                    <div key={change.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="flex-1 space-y-1">
+                          <p className="font-medium">{change.old_bios_id} → {change.new_bios_id}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{change.reason || '-'}</p>
+                          {change.requested_by ? <p className="text-xs text-slate-600 dark:text-slate-300">Requested by: {change.requested_by}</p> : null}
+                          {change.reviewed_by ? <p className="text-xs text-slate-600 dark:text-slate-300">Approved by: {change.reviewed_by}</p> : null}
+                        </div>
+                        <div className="text-right">
+                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                            change.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                            : change.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                            : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
+                          }`}>
+                            {change.status}
+                          </span>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{change.created_at ? formatDate(change.created_at, locale) : '-'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {biosChangeHistoryQuery.data?.data?.length === 0 && !biosChangeHistoryQuery.isLoading ? (
+                    <div className="rounded-2xl border border-slate-200 p-4 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                      No BIOS change requests
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -150,6 +222,52 @@ function resolveLicenseUsername(customer: { name?: string | null; client_name?: 
   }
 
   return storedUsername || candidate || null
+}
+
+function groupCustomerLicenseHistoryByReseller(entries: CustomerLicenseHistoryEntry[]) {
+  const groups = new Map<string, { key: string; name: string; email: string; items: CustomerLicenseHistoryEntry[] }>()
+
+  for (const entry of entries) {
+    const key = String(entry.reseller_id ?? `unknown-${entry.reseller_name ?? 'unknown'}`)
+    const existing = groups.get(key)
+    if (existing) {
+      existing.items.push(entry)
+      continue
+    }
+
+    groups.set(key, {
+      key,
+      name: entry.reseller_name ?? 'Unknown',
+      email: entry.reseller_email ?? '-',
+      items: [entry],
+    })
+  }
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    period: formatCustomerGroupPeriod(group.items),
+  }))
+}
+
+function formatCustomerGroupPeriod(entries: CustomerLicenseHistoryEntry[]) {
+  const timestamps = entries
+    .map((entry) => entry.activated_at)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((value) => Number.isFinite(value))
+    .sort((left, right) => left - right)
+
+  if (timestamps.length === 0) {
+    return '-'
+  }
+
+  return `${new Date(timestamps[0]).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - ${new Date(timestamps[timestamps.length - 1]).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
+}
+
+function formatCustomerLicensePeriod(entry: CustomerLicenseHistoryEntry, locale: string) {
+  const start = entry.start_at ? formatDate(entry.start_at, locale) : '-'
+  const end = entry.expires_at ? formatDate(entry.expires_at, locale) : '-'
+  return `${start} -> ${end}`
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {

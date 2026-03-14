@@ -195,6 +195,7 @@ class CustomerController extends BaseSuperAdminController
                     'scheduled_failure_message' => $license->scheduled_failure_message,
                     'paused_at' => $license->paused_at?->toIso8601String(),
                     'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+                    'pause_reason' => $license->pause_reason,
                 ])->values(),
                 'resellers_summary' => $resellersSummary,
                 'ip_logs' => $ipLogs,
@@ -362,6 +363,7 @@ class CustomerController extends BaseSuperAdminController
             'is_scheduled',
             'paused_at',
             'pause_remaining_minutes',
+            'pause_reason',
             'external_username',
         ];
     }
@@ -392,6 +394,7 @@ class CustomerController extends BaseSuperAdminController
             'is_scheduled',
             'paused_at',
             'pause_remaining_minutes',
+            'pause_reason',
         ];
     }
 
@@ -437,6 +440,7 @@ class CustomerController extends BaseSuperAdminController
             'scheduled_failure_message' => $license?->scheduled_failure_message,
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license?->pause_reason,
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
         ];

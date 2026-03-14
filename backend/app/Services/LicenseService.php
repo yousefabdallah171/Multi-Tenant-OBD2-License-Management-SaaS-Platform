@@ -12,6 +12,7 @@ use App\Models\BiosBlacklist;
 use App\Models\BiosConflict;
 use App\Models\License;
 use App\Models\Program;
+use App\Models\ProgramDurationPreset;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -86,10 +87,12 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($data, $externalUsername, $reseller, $program, $biosId, $apiResponse, $isScheduled, $scheduledTimezone, $scheduledAt): License {
+        return DB::transaction(function () use ($actor, $data, $externalUsername, $reseller, $program, $biosId, $apiResponse, $isScheduled, $scheduledTimezone, $scheduledAt): License {
             $customer = $this->upsertCustomer($reseller, $data, $externalUsername);
-            $durationDays = (float) $data['duration_days'];
+            $preset = $this->resolveActivationPreset($actor, $program, $data);
+            $durationDays = $preset ? (float) $preset->duration_days : (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
+            $price = $preset ? (float) $preset->price : (float) $data['price'];
             $activationAnchor = $scheduledAt ?? $this->currentMinute();
             $activatedAt = $isScheduled ? null : $this->currentMinute();
 
@@ -102,7 +105,7 @@ class LicenseService
                 'external_username' => $externalUsername,
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'duration_days' => $durationDays,
-                'price' => (float) $data['price'],
+                'price' => $price,
                 'activated_at' => $activatedAt,
                 'expires_at' => $activationAnchor->copy()->addMinutes($durationMinutes),
                 'scheduled_at' => $scheduledAt,
@@ -114,6 +117,7 @@ class LicenseService
                 'activated_at_scheduled' => null,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
+                'pause_reason' => null,
                 'status' => $isScheduled ? 'pending' : 'active',
             ]);
 
@@ -131,6 +135,7 @@ class LicenseService
                     'bios_id' => $biosId,
                     'external_username' => $externalUsername,
                     'price' => (float) $license->price,
+                    'preset_id' => $preset?->id,
                     'is_scheduled' => $isScheduled,
                 ],
             );
@@ -219,6 +224,7 @@ class LicenseService
                 'activated_at_scheduled' => $isScheduled ? null : $license->activated_at_scheduled,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
+                'pause_reason' => null,
             ])->save();
 
             $this->balanceService->recordRevenue($reseller, (float) $license->price);
@@ -278,6 +284,7 @@ class LicenseService
                 'scheduled_failure_message' => null,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
+                'pause_reason' => null,
             ])->save();
 
             $this->logActivity(
@@ -304,7 +311,7 @@ class LicenseService
         return $deactivatedLicense;
     }
 
-    public function pause(License $license): License
+    public function pause(License $license, array $data = []): License
     {
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
@@ -337,14 +344,16 @@ class LicenseService
             'external' => $apiResponse,
         ]);
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse): License {
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $data): License {
             $remainingMinutes = max(1, $this->currentMinute()->diffInMinutes($license->expires_at, false));
+            $pauseReason = Str::limit(trim((string) ($data['pause_reason'] ?? '')), 500, '...');
 
             $license->forceFill([
                 'status' => 'pending',
                 'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Paused locally.'),
                 'paused_at' => $this->currentMinute(),
                 'pause_remaining_minutes' => $remainingMinutes,
+                'pause_reason' => $pauseReason !== '' ? $pauseReason : null,
                 'scheduled_at' => null,
                 'scheduled_timezone' => null,
                 'scheduled_last_attempt_at' => null,
@@ -363,6 +372,7 @@ class LicenseService
                     'program_id' => $license->program_id,
                     'bios_id' => $license->bios_id,
                     'external_username' => $license->external_username,
+                    'pause_reason' => $pauseReason !== '' ? $pauseReason : null,
                 ],
             );
 
@@ -430,6 +440,7 @@ class LicenseService
                 'expires_at' => $remainingMinutes !== null ? $this->currentMinute()->addMinutes($remainingMinutes) : $license->expires_at,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
+                'pause_reason' => null,
                 'scheduled_at' => null,
                 'scheduled_timezone' => null,
                 'scheduled_last_attempt_at' => null,
@@ -610,6 +621,132 @@ class LicenseService
         }
 
         return $result['license'];
+    }
+
+    /**
+     * @return array{success: bool, message: string|null, response: array<string, mixed>}
+     */
+    public function changeBiosId(License $license, string $newBiosId): array
+    {
+        $actor = $this->currentActor();
+        $reseller = $this->resolveReseller($actor, $license->reseller);
+        $license->loadMissing(['customer', 'reseller']);
+        $program = Program::query()->find($license->program_id);
+        $apiKey = $program?->getDecryptedApiKey();
+        $trimmedBiosId = trim($newBiosId);
+
+        if ($trimmedBiosId === '') {
+            throw ValidationException::withMessages([
+                'new_bios_id' => 'The new BIOS ID field is required.',
+            ]);
+        }
+
+        if ($trimmedBiosId === (string) $license->bios_id) {
+            throw ValidationException::withMessages([
+                'new_bios_id' => 'The new BIOS ID must be different from the current BIOS ID.',
+            ]);
+        }
+
+        if ($apiKey === null) {
+            return DB::transaction(function () use ($license, $trimmedBiosId, $reseller): array {
+                $oldBiosId = (string) $license->bios_id;
+
+                $license->forceFill([
+                    'bios_id' => $trimmedBiosId,
+                ])->save();
+
+                $this->logActivity(
+                    $reseller,
+                    'license.bios_changed',
+                    sprintf('Changed BIOS ID on license %d from %s to %s.', $license->id, $oldBiosId, $trimmedBiosId),
+                    [
+                        'license_id' => $license->id,
+                        'customer_id' => $license->customer_id,
+                        'program_id' => $license->program_id,
+                        'bios_id' => $trimmedBiosId,
+                        'old_bios_id' => $oldBiosId,
+                        'new_bios_id' => $trimmedBiosId,
+                        'external_username' => $license->external_username,
+                    ],
+                );
+
+                $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+
+                return [
+                    'success' => true,
+                    'message' => null,
+                    'response' => ['response' => 'BIOS updated locally.'],
+                ];
+            });
+        }
+
+        $externalUsername = (string) ($license->external_username ?: $license->customer?->username ?: $license->bios_id);
+        $apiResponse = $this->externalApiService->changeBiosId($apiKey, $externalUsername, (string) $license->bios_id, $trimmedBiosId, $program?->external_api_base_url);
+
+        $this->logBiosAccess($reseller, $trimmedBiosId, 'change', [
+            'license_id' => $license->id,
+            'old_bios_id' => $license->bios_id,
+            'new_bios_id' => $trimmedBiosId,
+            'external' => $apiResponse,
+        ]);
+
+        if (! ($apiResponse['success'] ?? false)) {
+            return [
+                'success' => false,
+                'message' => $this->extractExternalMessage($apiResponse, 'The external service rejected the BIOS change request.'),
+                'response' => $apiResponse['data'] ?? [],
+            ];
+        }
+
+        if ($program?->external_software_id) {
+            $verification = $this->externalApiService->getActiveUsers((int) $program->external_software_id, $program->external_api_base_url);
+            $verifiedUsers = is_array($verification['data']['users'] ?? null) ? $verification['data']['users'] : [];
+            $verifiedBiosId = $verifiedUsers[$externalUsername] ?? null;
+
+            if (! ($verification['success'] ?? false) || $verifiedBiosId !== $trimmedBiosId) {
+                return [
+                    'success' => false,
+                    'message' => ! ($verification['success'] ?? false)
+                        ? 'The BIOS change was sent, but the external API could not be verified yet.'
+                        : 'The BIOS change was sent, but the external API still reports the old BIOS ID.',
+                    'response' => [
+                        ...($apiResponse['data'] ?? []),
+                        'verification' => $verification['data'] ?? [],
+                    ],
+                ];
+            }
+        }
+
+        DB::transaction(function () use ($license, $trimmedBiosId, $reseller): void {
+            $oldBiosId = (string) $license->bios_id;
+
+            $license->forceFill([
+                'bios_id' => $trimmedBiosId,
+            ])->save();
+
+            $this->logActivity(
+                $reseller,
+                'license.bios_changed',
+                sprintf('Changed BIOS ID on license %d from %s to %s.', $license->id, $oldBiosId, $trimmedBiosId),
+                [
+                    'license_id' => $license->id,
+                    'customer_id' => $license->customer_id,
+                    'program_id' => $license->program_id,
+                    'bios_id' => $trimmedBiosId,
+                    'old_bios_id' => $oldBiosId,
+                    'new_bios_id' => $trimmedBiosId,
+                    'external_username' => $license->external_username,
+                ],
+            );
+
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+        });
+
+        return [
+            'success' => true,
+            'message' => null,
+            'response' => $apiResponse['data'] ?? [],
+        ];
     }
 
     private function assertBiosAvailable(User $reseller, Program $program, string $biosId, string $externalUsername): void
@@ -970,5 +1107,35 @@ class LicenseService
                 Cache::forget($key);
             }
         }
+    }
+
+    private function resolveActivationPreset(User $actor, Program $program, array $data): ?ProgramDurationPreset
+    {
+        $role = $actor->role?->value ?? (string) $actor->role;
+
+        if ($role !== UserRole::RESELLER->value) {
+            return null;
+        }
+
+        $presetId = (int) ($data['preset_id'] ?? 0);
+
+        if ($presetId <= 0) {
+            throw ValidationException::withMessages([
+                'preset_id' => 'A valid duration preset is required.',
+            ]);
+        }
+
+        $preset = ProgramDurationPreset::query()
+            ->where('program_id', $program->id)
+            ->where('is_active', true)
+            ->find($presetId);
+
+        if (! $preset) {
+            throw ValidationException::withMessages([
+                'preset_id' => 'The selected duration preset is invalid.',
+            ]);
+        }
+
+        return $preset;
     }
 }

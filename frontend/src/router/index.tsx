@@ -28,9 +28,12 @@ const CustomerSoftwarePage = lazyNamed(() => import('@/pages/customer/Software')
 const ManagerActivityPage = lazyNamed(() => import('@/pages/manager/Activity'), 'ActivityPage')
 const ActivateLicensePageForManager = lazyNamed(() => import('@/pages/manager/ActivateLicense'), 'ActivateLicensePageForManager')
 const ManagerBiosDetailsPage = lazyNamed(() => import('@/pages/manager/BiosDetails'), 'BiosDetailsPage')
+const ManagerBiosChangeRequestsPage = lazyNamed(() => import('@/pages/manager/BiosChangeRequests'), 'BiosChangeRequestsPage')
 const ManagerCustomersPage = lazyNamed(() => import('@/pages/manager/Customers'), 'CustomersPage')
 const ManagerCreateCustomerPage = lazyNamed(() => import('@/pages/manager/CreateCustomer'), 'CreateCustomerPageForManager')
 const ManagerCustomerDetailPage = lazyNamed(() => import('@/pages/manager/CustomerDetail'), 'CustomerDetailPage')
+const ManagerResellerPaymentDetailPage = lazyNamed(() => import('@/pages/manager/ResellerPaymentDetail'), 'ResellerPaymentDetailPage')
+const ManagerResellerPaymentsPage = lazyNamed(() => import('@/pages/manager/ResellerPayments'), 'ResellerPaymentsPage')
 const ManagerRenewLicensePage = lazyNamed(() => import('@/pages/manager/RenewLicense'), 'RenewLicensePageForManager')
 const ManagerDashboardPage = lazyNamed(() => import('@/pages/manager/Dashboard'), 'DashboardPage')
 const ManagerProfilePage = lazyNamed(() => import('@/pages/manager/Profile'), 'ProfilePage')
@@ -46,11 +49,14 @@ const ManagerParentActivityPage = lazyNamed(() => import('@/pages/manager-parent
 const ActivateLicensePageForManagerParent = lazyNamed(() => import('@/pages/manager-parent/ActivateLicense'), 'ActivateLicensePageForManagerParent')
 const ManagerParentApiStatusPage = lazyNamed(() => import('@/pages/manager-parent/ApiStatus'), 'ApiStatusPage')
 const ManagerParentBiosBlacklistPage = lazyNamed(() => import('@/pages/manager-parent/BiosBlacklist'), 'BiosBlacklistPage')
+const ManagerParentBiosChangeRequestsPage = lazyNamed(() => import('@/pages/manager-parent/BiosChangeRequests'), 'BiosChangeRequestsPage')
 const ManagerParentBiosConflictsPage = lazyNamed(() => import('@/pages/manager-parent/BiosConflicts'), 'BiosConflictsPage')
 const ManagerParentBiosDetailsPage = lazyNamed(() => import('@/pages/manager-parent/BiosDetails'), 'BiosDetailsPage')
 const ManagerParentCustomersPage = lazyNamed(() => import('@/pages/manager-parent/Customers'), 'CustomersPage')
 const ManagerParentCreateCustomerPage = lazyNamed(() => import('@/pages/manager-parent/CreateCustomer'), 'CreateCustomerPageForManagerParent')
 const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-parent/CustomerDetail'), 'CustomerDetailPage')
+const ManagerParentResellerPaymentDetailPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPaymentDetail'), 'ResellerPaymentDetailPage')
+const ManagerParentResellerPaymentsPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPayments'), 'ResellerPaymentsPage')
 const ManagerParentRenewLicensePage = lazyNamed(() => import('@/pages/manager-parent/RenewLicense'), 'RenewLicensePageForManagerParent')
 const ManagerParentDashboardPage = lazyNamed(() => import('@/pages/manager-parent/Dashboard'), 'DashboardPage')
 const ManagerParentFinancialReportsPage = lazyNamed(() => import('@/pages/manager-parent/FinancialReports'), 'FinancialReportsPage')
@@ -91,6 +97,7 @@ const ResellerRenewLicensePage = lazyNamed(() => import('@/pages/reseller/RenewL
 const ResellerDashboardPage = lazyNamed(() => import('@/pages/reseller/Dashboard'), 'DashboardPage')
 const ActivateLicensePageForReseller = lazyNamed(() => import('@/pages/reseller/ActivateLicense'), 'ActivateLicensePageForReseller')
 const ResellerActivationsPage = lazyNamed(() => import('@/pages/reseller/Activations'), 'ActivationsPage')
+const ResellerPaymentStatusPage = lazyNamed(() => import('@/pages/reseller/PaymentStatus'), 'PaymentStatusPage')
 const ResellerProfilePage = lazyNamed(() => import('@/pages/reseller/Profile'), 'ProfilePage')
 const ResellerReportsPage = lazyNamed(() => import('@/pages/reseller/Reports'), 'ReportsPage')
 const ResellerSoftwarePage = lazyNamed(() => import('@/pages/reseller/Software'), 'SoftwarePage')
@@ -161,6 +168,9 @@ export function AppRouter() {
                   <Route path="bios-history" element={<Navigate to="../bios-conflicts" replace />} />
                   <Route path="bios-details" element={<ManagerParentBiosDetailsPage />} />
                   <Route path="bios-details/:biosId" element={<ManagerParentBiosDetailsPage />} />
+                  <Route path="bios-change-requests" element={<ManagerParentBiosChangeRequestsPage />} />
+                  <Route path="reseller-payments" element={<ManagerParentResellerPaymentsPage />} />
+                  <Route path="reseller-payments/:resellerId" element={<ManagerParentResellerPaymentDetailPage />} />
                   <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
                   <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />
                   <Route path="logs" element={<Navigate to="../activity" replace />} />
@@ -199,6 +209,9 @@ export function AppRouter() {
                   <Route path="software-management/:id/edit" element={<ManagerProgramFormPage />} />
                   <Route path="bios-details" element={<ManagerBiosDetailsPage />} />
                   <Route path="bios-details/:biosId" element={<ManagerBiosDetailsPage />} />
+                  <Route path="bios-change-requests" element={<ManagerBiosChangeRequestsPage />} />
+                  <Route path="reseller-payments" element={<ManagerResellerPaymentsPage />} />
+                  <Route path="reseller-payments/:resellerId" element={<ManagerResellerPaymentDetailPage />} />
                   <Route path="reports" element={<ManagerReportsPage />} />
                   <Route path="activity" element={<ManagerActivityPage />} />
                   <Route path="reseller-logs" element={<ManagerResellerLogsPage />} />
@@ -217,6 +230,7 @@ export function AppRouter() {
                   <Route path="activations" element={<ResellerActivationsPage />} />
                   <Route path="software" element={<ResellerSoftwarePage />} />
                   <Route path="software/:id/activate" element={<ActivateLicensePageForReseller />} />
+                  <Route path="payment-status" element={<ResellerPaymentStatusPage />} />
                   <Route path="reports" element={<ResellerReportsPage />} />
                   <Route path="profile" element={<ResellerProfilePage />} />
                   <Route path="*" element={<Navigate to="dashboard" replace />} />

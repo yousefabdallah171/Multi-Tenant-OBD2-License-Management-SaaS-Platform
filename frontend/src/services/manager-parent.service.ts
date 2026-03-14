@@ -13,6 +13,8 @@ import type {
   ManagerParentDashboardPayload,
   ManagerParentDashboardStats,
   ManagerParentLogEntry,
+  CustomerLicenseHistoryEntry,
+  ManagerParentBiosChangeRequest,
   PaginatedResponse,
   ProgramLog,
   ProgramLogSummary,
@@ -26,6 +28,7 @@ import type {
   UsernameManagedUser,
 } from '@/types/manager-parent.types'
 import type { LicenseFilters, LicenseSummary } from '@/types/manager-reseller.types'
+import type { RecordPaymentPayload, ResellerPaymentDetailData, ResellerPaymentFilters, ResellerPaymentListData, StoreCommissionPayload } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
 /**
@@ -121,6 +124,14 @@ export const managerParentService = {
     apiCache.clearPattern(/^manager-parent:reports:/)
     return data
   },
+  async uploadLogo(file: File) {
+    const formData = new FormData()
+    formData.append('logo', file)
+    const { data } = await api.post<{ data: { logo: string }; message: string }>('/settings/logo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data
+  },
   async getBiosHistory(params?: { page?: number; per_page?: number; bios_id?: string; action?: string; reseller_id?: number | ''; from?: string; to?: string }) {
     const { data } = await api.get<PaginatedResponse<BiosHistoryEntry>>('/bios-history', { params })
     return data
@@ -203,7 +214,51 @@ export const managerParentService = {
     return data.data.filter((program) => program.has_external_api)
   },
   async getTeamMember(id: number) {
-    const { data } = await api.get<{ data: TeamMemberDetail }>(`/team/${id}`)
+      const { data } = await api.get<{ data: TeamMemberDetail }>(`/team/${id}`)
+      return data
+    },
+    async getCustomerLicenseHistory(id: number) {
+      const { data } = await api.get<{ data: CustomerLicenseHistoryEntry[] }>(`/customers/${id}/license-history`)
+      return data
+    },
+    async getCustomerBiosChangeHistory(id: number) {
+      const { data } = await api.get<{ data: Array<{ id: number; old_bios_id: string; new_bios_id: string; reason: string; status: string; requested_by: string | null; reviewed_by: string | null; created_at: string; reviewed_at: string | null }> }>(`/customers/${id}/bios-change-history`)
+      return data
+    },
+  async getBiosChangeRequests(params?: { page?: number; per_page?: number; status?: '' | 'pending' | 'approved' | 'rejected' | 'approved_pending_sync'; count_only?: boolean }) {
+    const { data } = await api.get<PaginatedResponse<ManagerParentBiosChangeRequest>>('/bios-change-requests', { params })
+    return data
+  },
+  async getPendingBiosChangeRequestCount() {
+    const { data } = await api.get<{ count: number }>('/bios-change-requests', { params: { status: 'pending', count_only: true } })
+    return data
+  },
+  async approveBiosChangeRequest(id: number) {
+    const { data } = await api.put<{ data: ManagerParentBiosChangeRequest; message: string }>(`/bios-change-requests/${id}/approve`)
+    return data
+  },
+  async rejectBiosChangeRequest(id: number, reviewerNotes: string) {
+    const { data } = await api.put<{ data: ManagerParentBiosChangeRequest; message: string }>(`/bios-change-requests/${id}/reject`, { reviewer_notes: reviewerNotes })
+    return data
+  },
+  async getResellerPayments(filters?: ResellerPaymentFilters) {
+    const { data } = await api.get<ResellerPaymentListData>('/reseller-payments', { params: filters })
+    return data
+  },
+  async getResellerPaymentDetail(resellerId: number) {
+    const { data } = await api.get<{ data: ResellerPaymentDetailData }>(`/reseller-payments/${resellerId}`)
+    return data
+  },
+  async recordPayment(payload: RecordPaymentPayload) {
+    const { data } = await api.post<{ data: unknown; message: string }>('/reseller-payments', payload)
+    return data
+  },
+  async updatePayment(paymentId: number, payload: RecordPaymentPayload) {
+    const { data } = await api.put<{ data: unknown; message: string }>(`/reseller-payments/${paymentId}`, payload)
+    return data
+  },
+  async storeCommission(payload: StoreCommissionPayload) {
+    const { data } = await api.post<{ data: unknown; message: string }>('/reseller-commissions', payload)
     return data
   },
   async getProgramLogs(programId: number, params?: { page?: number; per_page?: number; seller_id?: number | ''; action?: string }): Promise<{ raw: string; rows?: ProgramLog[]; user_rows?: ProgramUserLogEntry[]; users?: ProgramLogUserOption[]; summary?: ProgramLogSummary; external_available?: boolean; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }> {

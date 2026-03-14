@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { ProgramPresetEditor, createDefaultEditablePresets, mapProgramPresetsToEditable, type EditableProgramPreset } from '@/components/software/ProgramPresetEditor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -54,6 +55,7 @@ export function ProgramFormPage() {
   const { id } = useParams<{ id: string }>()
   const editingId = id ? Number(id) : null
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  const [presets, setPresets] = useState<EditableProgramPreset[]>(createDefaultEditablePresets())
   const [showApiKey, setShowApiKey] = useState(false)
   const [hasConfiguredApi, setHasConfiguredApi] = useState(false)
 
@@ -85,6 +87,7 @@ export function ProgramFormPage() {
       external_api_base_url: '',
       external_logs_endpoint: program.external_logs_endpoint || 'apilogs',
     })
+    setPresets(mapProgramPresetsToEditable(program.duration_presets))
   }, [programQuery.data])
 
   const mutation = useMutation({
@@ -108,6 +111,16 @@ export function ProgramFormPage() {
         status: form.status,
         external_software_id: Number.isFinite(parsedExternalSoftwareId) && parsedExternalSoftwareId > 0 ? parsedExternalSoftwareId : null,
         external_logs_endpoint: form.external_logs_endpoint.trim() || 'apilogs',
+        presets: presets
+          .filter((preset) => preset.label.trim() !== '')
+          .map((preset, index) => ({
+            id: preset.id,
+            label: preset.label.trim(),
+            duration_days: Number(preset.duration_days),
+            price: Number(preset.price),
+            sort_order: index + 1,
+            is_active: preset.is_active,
+          })),
       }
 
       if (form.external_api_key.trim()) {
@@ -146,8 +159,9 @@ export function ProgramFormPage() {
       />
 
       <Card>
-        <CardContent className="grid gap-6 p-6 lg:grid-cols-2">
-          <div className="space-y-4">
+        <CardContent className="space-y-6 p-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-4">
             <Field label={t('managerParent.pages.softwareManagement.programName')} hint={t('software.fieldHints.programName', { defaultValue: 'Public program name shown in your tenant catalog and activation screens.' })}><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></Field>
             <Field label={t('managerParent.pages.softwareManagement.version')} hint={t('software.fieldHints.version', { defaultValue: 'Use the release version your team will recognize, such as 1.0 or 2026.03.' })}><Input value={form.version} onChange={(event) => setForm((current) => ({ ...current, version: event.target.value }))} /></Field>
             <Field label={t('managerParent.pages.softwareManagement.programDescription')} hint={t('software.fieldHints.description', { defaultValue: 'Short summary for managers and resellers so they know what this software is for.' })}><Textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></Field>
@@ -155,9 +169,9 @@ export function ProgramFormPage() {
             <Field label={t('managerParent.pages.softwareManagement.fileSize')} hint={t('software.fieldHints.fileSize', { defaultValue: 'Optional display value such as 245 MB so the team knows how large the download is.' })}><Input value={form.file_size} onChange={(event) => setForm((current) => ({ ...current, file_size: event.target.value }))} /></Field>
             <Field label={t('managerParent.pages.softwareManagement.systemRequirements')} hint={t('software.fieldHints.systemRequirements', { defaultValue: 'Optional OS, hardware, or dependency requirements shown before installation.' })}><Textarea value={form.system_requirements} onChange={(event) => setForm((current) => ({ ...current, system_requirements: event.target.value }))} /></Field>
             <Field label={t('managerParent.pages.softwareManagement.installationGuideUrl')} hint={t('software.fieldHints.installationGuideUrl', { defaultValue: 'Optional documentation page that explains setup, drivers, or activation steps.' })}><Input value={form.installation_guide_url} onChange={(event) => setForm((current) => ({ ...current, installation_guide_url: event.target.value }))} /></Field>
-          </div>
+            </div>
 
-          <div className="space-y-4">
+            <div className="space-y-4">
             <Field label={t('managerParent.pages.softwareManagement.basePrice')} hint={t('software.fieldHints.basePrice', { defaultValue: 'Default sale price used when a reseller does not override it manually.' })}><Input type="number" min={0} step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} /></Field>
             <Field label={t('common.status')} hint={t('software.fieldHints.status', { defaultValue: 'Active programs can be selected for new activations. Inactive programs stay hidden from normal sales.' })}>
               <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as 'active' | 'inactive' }))} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
@@ -198,7 +212,10 @@ export function ProgramFormPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.addUserUrlExample')}</p>
               {editingId && hasConfiguredApi ? <p className="text-xs text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p> : null}
             </Field>
+            </div>
           </div>
+
+          <ProgramPresetEditor presets={presets} onChange={setPresets} />
         </CardContent>
       </Card>
 

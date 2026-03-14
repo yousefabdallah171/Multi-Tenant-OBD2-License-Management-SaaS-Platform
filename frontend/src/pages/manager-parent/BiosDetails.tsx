@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -10,6 +11,7 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentBiosDetailsService } from '@/services/bios-details.service'
+import type { BiosActivity, BiosReseller } from '@/types/bios-details.types'
 
 export function BiosDetailsPage() {
   const { t } = useTranslation()
@@ -62,144 +64,102 @@ export function BiosDetailsPage() {
     enabled: biosId !== '',
   })
 
-  const overviewRows = useMemo(() => {
-    const overview = overviewQuery.data
-    if (!overview) {
-      return []
-    }
-    return [
-      [t('biosDetails.originalBios'), overview.original_bios_id || '-'],
-      [t('biosDetails.username'), overview.username || '-'],
-      [t('biosDetails.status'), overview.status || '-'],
-      [t('biosDetails.firstActivation'), overview.first_activation ? formatDate(overview.first_activation, locale) : '-'],
-      [t('biosDetails.lastActivity'), overview.last_activity ? formatDate(overview.last_activity, locale) : '-'],
-      [t('biosDetails.totalActivations'), String(overview.total_activations ?? 0)],
-      [t('biosDetails.avgDaysBetween'), String(overview.avg_days_between_purchases ?? 0)],
-    ] as Array<[string, string]>
-  }, [locale, overviewQuery.data, t])
-
   const visibleBiosList = search.trim().length >= 2 ? (searchQuery.data ?? []) : (biosId ? [] : (recentQuery.data ?? []))
   const latestLicense = overviewQuery.data?.latest_license
   const latestCustomer = latestLicense?.customer ?? overviewQuery.data?.customer
   const latestReseller = latestLicense?.reseller ?? overviewQuery.data?.reseller
+  const normalizedActivity = useMemo(() => dedupeParentBiosActivity(activityQuery.data ?? []), [activityQuery.data])
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('biosDetails.title')} description={biosId || t('biosDetails.search')} />
+      <PageHeader title={t('biosDetails.title')} description={biosId || t('biosDetails.description')} />
 
       <Card>
-        <CardContent className="space-y-3 p-4">
-          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('biosDetails.search')} />
+        <CardContent className="space-y-4 p-4">
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('biosDetails.searchPlaceholder')} />
           {visibleBiosList.length > 0 ? (
-            <div className="grid gap-2">
-              {visibleBiosList.map((item) => (
+            <div className="flex flex-wrap gap-2">
+              {visibleBiosList.map((candidate) => (
                 <button
-                  key={item}
+                  key={candidate}
                   type="button"
-                  onClick={() => navigate(routePaths.managerParent.biosDetail(lang, item))}
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-start text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
+                  className="rounded-full border border-slate-300 px-3 py-1 text-sm hover:border-sky-400 hover:text-sky-600 dark:border-slate-700 dark:hover:text-sky-300"
+                  onClick={() => navigate(routePaths.managerParent.biosDetail(lang, candidate))}
                 >
-                  {item}
+                  {candidate}
                 </button>
               ))}
             </div>
-          ) : biosId ? null : (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {search.trim().length >= 2 ? t('common.noData') : 'Recent BIOS IDs will appear here.'}
-            </p>
-          )}
+          ) : null}
         </CardContent>
       </Card>
 
       {biosId ? (
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
+          <TabsList className="flex flex-wrap">
             <TabsTrigger value="overview">{t('biosDetails.overview')}</TabsTrigger>
-            <TabsTrigger value="licenses">{t('biosDetails.licenses')}</TabsTrigger>
+            <TabsTrigger value="licenses">{t('common.licenses')}</TabsTrigger>
             <TabsTrigger value="resellers">{t('biosDetails.resellers')}</TabsTrigger>
-            <TabsTrigger value="ips">{t('biosDetails.ips')}</TabsTrigger>
-            <TabsTrigger value="activity">{t('biosDetails.activity')}</TabsTrigger>
+            <TabsTrigger value="ips">{t('managerParent.pages.ipAnalytics.title')}</TabsTrigger>
+            <TabsTrigger value="activity">{t('managerParent.nav.activity')}</TabsTrigger>
             <TabsTrigger value="blacklist">{t('biosDetails.blacklist')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
             <Card>
               <CardHeader><CardTitle>{t('biosDetails.overview')}</CardTitle></CardHeader>
-              <CardContent className="grid gap-3 md:grid-cols-2">
-                {overviewRows.map(([label, value]) => (
-                  <div key={label} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
-                    <p className="font-medium">{value}</p>
-                  </div>
-                ))}
-                {latestCustomer ? (
-                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.customer')}</p>
-                    <Link className="font-medium text-sky-600" to={routePaths.managerParent.customerDetail(lang, latestCustomer.id)}>
-                      {latestCustomer.name}
-                    </Link>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{latestCustomer.email ?? '-'}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{latestCustomer.phone ?? '-'}</p>
-                  </div>
-                ) : null}
-                {latestReseller ? (
-                  <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.resellers')}</p>
-                    <p className="font-medium">{latestReseller.name}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{latestReseller.email ?? '-'}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{latestReseller.phone ?? '-'}</p>
-                  </div>
-                ) : null}
-                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Program</p>
-                  <p className="font-medium">{latestLicense?.program?.name ?? '-'}</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Duration</p>
-                  <p className="font-medium">{latestLicense ? `${latestLicense.duration_days} days` : '-'}</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Price</p>
-                  <p className="font-medium">{latestLicense ? `$${Number(latestLicense.price).toFixed(2)}` : '-'}</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Activated</p>
-                  <p className="font-medium">{latestLicense?.activated_at ? formatDate(latestLicense.activated_at, locale) : '-'}</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Expires</p>
-                  <p className="font-medium">{latestLicense?.expires_at ? formatDate(latestLicense.expires_at, locale) : '-'}</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">External Username</p>
-                  <p className="font-medium">{latestLicense?.external_username ?? '-'}</p>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Latest License Status</p>
-                  <p className="font-medium">{latestLicense?.status ?? '-'}</p>
-                </div>
-                {latestCustomer && latestLicense ? (
-                  <div className="rounded-xl bg-slate-50 p-3 md:col-span-2 dark:bg-slate-900/40">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Sale Summary</p>
-                    <p className="font-medium">
-                      {`${latestReseller?.name ?? '-'} sold ${latestLicense.program?.name ?? '-'} to ${latestCustomer.name}`}
-                    </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {`${latestLicense.duration_days} days | $${Number(latestLicense.price).toFixed(2)} | ${latestLicense.activated_at ? formatDate(latestLicense.activated_at, locale) : '-'}`}
-                    </p>
-                  </div>
-                ) : null}
+              <CardContent className="space-y-4">
+                <SectionCard title={t('biosDetails.overviewSections.biosInfo')}>
+                  <InfoGrid items={[
+                    [t('biosDetails.originalBios'), overviewQuery.data?.original_bios_id || '-'],
+                    [t('biosDetails.username'), overviewQuery.data?.username || '-'],
+                    [t('biosDetails.status'), overviewQuery.data?.status ? <StatusBadge status={overviewQuery.data.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-'],
+                    [t('biosDetails.firstActivation'), overviewQuery.data?.first_activation ? formatDate(overviewQuery.data.first_activation, locale) : '-'],
+                    [t('biosDetails.lastActivity'), overviewQuery.data?.last_activity ? formatDate(overviewQuery.data.last_activity, locale) : '-'],
+                  ]} />
+                </SectionCard>
+                <SectionCard title={t('biosDetails.overviewSections.currentLicense')}>
+                  <InfoGrid items={[
+                    [t('common.program'), latestLicense?.program?.name ?? '-'],
+                    [t('common.duration'), latestLicense ? `${latestLicense.duration_days} ${t('common.days')}` : '-'],
+                    [t('common.price'), latestLicense ? `$${Number(latestLicense.price).toFixed(2)}` : '-'],
+                    [t('common.start'), latestLicense?.activated_at ? formatDate(latestLicense.activated_at, locale) : '-'],
+                    [t('common.expiry'), latestLicense?.expires_at ? formatDate(latestLicense.expires_at, locale) : '-'],
+                    [t('common.status'), latestLicense?.status ? <StatusBadge status={latestLicense.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-'],
+                  ]} />
+                </SectionCard>
+                <SectionCard title={t('biosDetails.customer')}>
+                  <InfoGrid items={[
+                    [t('common.customer'), latestCustomer?.id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, latestCustomer.id)}>{latestCustomer.name}</Link> : (latestCustomer?.name ?? '-')],
+                    [t('common.email'), latestCustomer?.email ?? '-'],
+                    [t('common.reseller'), latestReseller?.id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.teamMemberDetail(lang, latestReseller.id)}>{latestReseller.name}</Link> : (latestReseller?.name ?? '-')],
+                    [t('customerDetail.soldBy'), latestReseller?.email ?? '-'],
+                  ]} />
+                </SectionCard>
+                <SectionCard title={t('biosDetails.overviewSections.saleSummary')}>
+                  <InfoGrid items={[
+                    [t('biosDetails.totalActivations'), String(overviewQuery.data?.total_activations ?? 0)],
+                    [t('common.duration'), `${overviewQuery.data?.avg_duration_days ?? 0} ${t('common.days')}`],
+                    [t('common.price'), `$${Number(overviewQuery.data?.total_revenue ?? 0).toFixed(2)}`],
+                    [t('biosDetails.avgDaysBetween'), String(overviewQuery.data?.avg_days_between_purchases ?? 0)],
+                  ]} />
+                </SectionCard>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="licenses">
             <Card>
-              <CardContent className="space-y-2 p-4">
+              <CardContent className="space-y-3 p-4">
                 {(licensesQuery.data?.data ?? []).map((license) => (
-                  <div key={license.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                    <p className="font-medium">{license.program?.name ?? '-'}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{license.status} | {license.price}</p>
+                  <div key={license.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <div className="grid gap-3 md:grid-cols-5">
+                      <MiniInfo label={t('common.program')} value={license.program?.name ?? '-'} />
+                      <MiniInfo label={t('common.reseller')} value={license.reseller?.name ?? '-'} />
+                      <MiniInfo label={t('common.duration')} value={`${license.duration_days} ${t('common.days')}`} />
+                      <MiniInfo label={t('common.price')} value={`$${Number(license.price).toFixed(2)}`} />
+                      <MiniInfo label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
+                    </div>
                   </div>
                 ))}
               </CardContent>
@@ -208,14 +168,9 @@ export function BiosDetailsPage() {
 
           <TabsContent value="resellers">
             <Card>
-              <CardContent className="space-y-2 p-4">
+              <CardContent className="space-y-3 p-4">
                 {(resellersQuery.data ?? []).map((reseller) => (
-                  <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                    <p className="font-medium">{reseller.name ?? '-'}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Activations: {reseller.activation_count}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Revenue: ${Number(reseller.total_revenue).toFixed(2)}</p>
-                  </div>
+                  <ResellerCard key={`${reseller.id}-${reseller.email}`} reseller={reseller} locale={locale} lang={lang} t={t} />
                 ))}
               </CardContent>
             </Card>
@@ -236,11 +191,17 @@ export function BiosDetailsPage() {
 
           <TabsContent value="activity">
             <Card>
-              <CardContent className="space-y-2 p-4">
-                {(activityQuery.data ?? []).map((item) => (
-                  <div key={`${item.id}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                    <p className="font-medium">{item.action}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{item.description ?? '-'}</p>
+              <CardContent className="space-y-3 p-4">
+                {normalizedActivity.map((item) => (
+                  <div key={`${item.id}`} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.badgeClassName}`}>{item.label.startsWith('biosDetails.') ? t(item.label) : item.label}</span>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{item.reseller_name ?? '-'}</p>
+                      </div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</p>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{item.description ?? '-'}</p>
                   </div>
                 ))}
               </CardContent>
@@ -256,6 +217,55 @@ export function BiosDetailsPage() {
           </TabsContent>
         </Tabs>
       ) : null}
+    </div>
+  )
+}
+
+function dedupeParentBiosActivity(items: BiosActivity[]) {
+  const seen = new Set<string>()
+  return items.flatMap((item) => {
+    const family = resolveParentActivityFamily(item.action)
+    const timestamp = item.created_at ? new Date(item.created_at).toISOString() : String(item.id)
+    const key = `${family.label}:${timestamp}`
+    if (seen.has(key)) return []
+    seen.add(key)
+    return [{ ...item, label: family.label, badgeClassName: family.badgeClassName }]
+  })
+}
+
+function resolveParentActivityFamily(action: string) {
+  if (action.includes('activate')) return { label: 'biosDetails.activityTypes.activate', badgeClassName: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300' }
+  if (action.includes('renew')) return { label: 'biosDetails.activityTypes.renew', badgeClassName: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' }
+  if (action.includes('pause')) return { label: 'biosDetails.activityTypes.pause', badgeClassName: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300' }
+  if (action.includes('deactivate') || action.includes('delete') || action.includes('blacklist') || action.includes('conflict')) return { label: 'biosDetails.activityTypes.deactivate', badgeClassName: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' }
+  return { label: action, badgeClassName: 'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300' }
+}
+
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"><p className="mb-3 text-sm font-semibold">{title}</p>{children}</div>
+}
+
+function InfoGrid({ items }: { items: Array<[string, React.ReactNode]> }) {
+  return <div className="grid gap-3 md:grid-cols-2">{items.map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><div className="font-medium">{value}</div></div>)}</div>
+}
+
+function MiniInfo({ label, value }: { label: string; value: React.ReactNode }) {
+  return <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><div className="font-medium">{value}</div></div>
+}
+
+function ResellerCard({ reseller, locale, lang, t }: { reseller: BiosReseller; locale: string; lang: 'ar' | 'en'; t: (key: string) => string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {reseller.id ? <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.teamMemberDetail(lang, reseller.id)}>{reseller.name ?? '-'}</Link> : <p className="font-medium">{reseller.name ?? '-'}</p>}
+        <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p>
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-4">
+        <MiniInfo label={t('common.activations')} value={reseller.activation_count} />
+        <MiniInfo label={t('common.revenue')} value={`$${Number(reseller.total_revenue).toFixed(2)}`} />
+        <MiniInfo label={t('biosDetails.resellerMetrics.lastActivity')} value={reseller.last_activity_at ? formatDate(reseller.last_activity_at, locale) : '-'} />
+        <MiniInfo label={t('biosDetails.resellerMetrics.programsSold')} value={(reseller.programs_sold ?? []).join(', ') || '-'} />
+      </div>
     </div>
   )
 }

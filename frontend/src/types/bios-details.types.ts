@@ -9,6 +9,8 @@ export interface BiosOverview {
   last_activity: string | null
   total_activations: number
   total_licenses: number
+  avg_duration_days: number
+  total_revenue: number
   avg_days_between_purchases: number
   latest_license: {
     id: number
@@ -43,6 +45,8 @@ export interface BiosReseller {
   email: string | null
   activation_count: number
   total_revenue: number
+  last_activity_at?: string | null
+  programs_sold?: string[]
 }
 
 export interface BiosIp {
@@ -56,6 +60,7 @@ export interface BiosActivity {
   action: string
   description: string | null
   created_at: string | null
+  reseller_name?: string | null
 }
 
 export interface BiosBlacklist {

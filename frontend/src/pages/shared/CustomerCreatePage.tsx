@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
+import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { activateLicense } from '@/services/activation.service'
@@ -70,8 +71,10 @@ function buildRelativeSchedule(value: number, unit: DurationUnit) {
 
 export function CustomerCreatePage({ title, description, backPath, createCustomer }: CustomerCreatePageProps) {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const isReseller = user?.role === 'reseller'
   const displayTimezone = useMemo(() => resolveDisplayTimezone(), [])
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [customerName, setCustomerName] = useState('')
@@ -93,6 +96,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [scheduleTimezone, setScheduleTimezone] = useState(displayTimezone)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
+  const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null)
   const [submitError, setSubmitError] = useState('')
 
   const programsQuery = useQuery({
@@ -114,6 +118,29 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   }, [scheduleAfterUnit, scheduleAfterValue, scheduleEnabled, scheduleMode, scheduleTimezone])
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === programId)
+  const availablePresets = useMemo(
+    () => (selectedProgram?.duration_presets ?? []).filter((preset) => preset.is_active),
+    [selectedProgram?.duration_presets],
+  )
+  const selectedPreset = useMemo(
+    () => availablePresets.find((preset) => preset.id === selectedPresetId) ?? availablePresets[0] ?? null,
+    [availablePresets, selectedPresetId],
+  )
+
+  useEffect(() => {
+    if (!isReseller) {
+      setSelectedPresetId(null)
+      return
+    }
+
+    setSelectedPresetId((current) => {
+      if (current && availablePresets.some((preset) => preset.id === current)) {
+        return current
+      }
+
+      return availablePresets[0]?.id ?? null
+    })
+  }, [availablePresets, isReseller])
 
   const effectiveStartDate = useMemo(() => {
     if (!createLicenseNow || !scheduleEnabled) {
@@ -128,6 +155,10 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       return 0
     }
 
+    if (isReseller) {
+      return selectedPreset?.duration_days ?? 0
+    }
+
     if (mode === 'end_date') {
       if (!endDate) return 0
       const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, displayTimezone)
@@ -137,12 +168,13 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }
 
     return durationToDays(Number(durationValue), durationUnit)
-  }, [createLicenseNow, displayTimezone, durationUnit, durationValue, effectiveStartDate, endDate, mode])
+  }, [createLicenseNow, displayTimezone, durationUnit, durationValue, effectiveStartDate, endDate, isReseller, mode, selectedPreset?.duration_days])
 
   const autoPrice = useMemo(() => {
     if (!selectedProgram || !createLicenseNow) return 0
+    if (isReseller) return Number((selectedPreset?.price ?? 0).toFixed(2))
     return Number((Math.max(durationDays, 0) * Number(selectedProgram.base_price ?? 0)).toFixed(2))
-  }, [createLicenseNow, durationDays, selectedProgram])
+  }, [createLicenseNow, durationDays, isReseller, selectedPreset?.price, selectedProgram])
 
   useEffect(() => {
     if (priceMode === 'auto') {
@@ -151,19 +183,22 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   }, [autoPrice, priceMode])
 
   const totalPrice = useMemo(() => {
-    if (priceMode === 'auto') return autoPrice
+    if (isReseller || priceMode === 'auto') return autoPrice
     const parsed = Number(priceInput)
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
-  }, [autoPrice, priceInput, priceMode])
+  }, [autoPrice, isReseller, priceInput, priceMode])
 
   const expiryPreview = useMemo(() => {
     if (!createLicenseNow || durationDays <= 0) return ''
+    if (isReseller) {
+      return new Date(effectiveStartDate.getTime() + durationDays * 86400000).toISOString()
+    }
     if (mode === 'end_date') {
       const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, displayTimezone)
       return zonedEndDate ? zonedEndDate.toISOString() : ''
     }
     return new Date(effectiveStartDate.getTime() + durationDays * 86400000).toISOString()
-  }, [createLicenseNow, displayTimezone, durationDays, effectiveStartDate, endDate, mode])
+  }, [createLicenseNow, displayTimezone, durationDays, effectiveStartDate, endDate, isReseller, mode])
 
   const startSummary = useMemo(() => {
     if (!createLicenseNow) {
@@ -203,7 +238,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     if (!programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
 
     if (createLicenseNow) {
-      if (durationDays < MIN_DURATION_DAYS) next.duration = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
+      if (isReseller) {
+        if (!selectedPreset) next.duration = t('validation.required', { defaultValue: 'Field required' })
+      } else if (durationDays < MIN_DURATION_DAYS) {
+        next.duration = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
+      }
       if (scheduleEnabled) {
         const scheduledAt = zonedDateTimeInputToUtcDate(scheduleAt, scheduleTimezone)?.getTime() ?? Number.NaN
         if (!scheduleAt || !Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
@@ -213,7 +252,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }
 
     return next
-  }, [biosId, createLicenseNow, customerName, durationDays, email, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, t])
+  }, [biosId, createLicenseNow, customerName, durationDays, email, isReseller, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t])
 
   const createOnlyMutation = useMutation({
     mutationFn: () => createCustomer({
@@ -246,8 +285,9 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       customer_phone: phone.trim() || undefined,
       bios_id: biosId.trim(),
       program_id: Number(programId),
-      duration_days: Number(durationDays.toFixed(6)),
-      price: totalPrice,
+      preset_id: isReseller ? selectedPreset?.id : undefined,
+      duration_days: isReseller ? undefined : Number(durationDays.toFixed(6)),
+      price: isReseller ? undefined : totalPrice,
       is_scheduled: scheduleEnabled || undefined,
       scheduled_date_time: scheduleEnabled ? scheduleAt : undefined,
       scheduled_timezone: scheduleEnabled ? scheduleTimezone : undefined,
@@ -410,45 +450,77 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                   </p>
                   <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{endSummary}</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Label>{t('common.duration')}</Label>
-                  <Button type="button" size="sm" variant={mode === 'duration' ? 'default' : 'outline'} onClick={() => setMode('duration')}>{t('activate.durationMode', { defaultValue: 'Duration' })}</Button>
-                  <Button type="button" size="sm" variant={mode === 'end_date' ? 'default' : 'outline'} onClick={() => setMode('end_date')}>{t('common.endDate', { defaultValue: 'End Date' })}</Button>
-                </div>
-                {mode === 'duration' ? (
-                  <>
-                    <div className="grid gap-3 md:grid-cols-[140px_180px_1fr]">
-                      <Input value={durationValue} onChange={(event) => setDurationValue(event.target.value.replace(/[^\d.]/g, ''))} />
-                      <select value={durationUnit} onChange={(event) => setDurationUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                        <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
-                        <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
-                        <option value="days">{t('common.days')}</option>
-                      </select>
-                      <div className="flex flex-wrap gap-2">
-                        {durationPresets.map((preset) => (
-                          <Button key={preset.label} type="button" size="sm" variant="outline" onClick={() => { setMode('duration'); setDurationValue(preset.value); setDurationUnit(preset.unit as DurationUnit) }}>{preset.label}</Button>
-                        ))}
-                      </div>
+                {isReseller ? (
+                  <div className="space-y-2">
+                    <Label>{t('software.durationPresetsTitle', { defaultValue: 'Duration Presets (for Resellers)' })}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {availablePresets.map((preset) => (
+                        <Button
+                          key={preset.id}
+                          type="button"
+                          size="sm"
+                          variant={selectedPreset?.id === preset.id ? 'default' : 'outline'}
+                          onClick={() => setSelectedPresetId(preset.id)}
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
                     </div>
-                    {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
-                  </>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {selectedPreset
+                        ? `${t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • ${t('activate.presetPriceSummary', { price: selectedPreset.price.toFixed(2), defaultValue: '$ {{price}}' })}`
+                        : t('validation.required', { defaultValue: 'Field required' })}
+                    </p>
+                  </div>
                 ) : (
-                  <Field label={t('activate.endDateTime', { defaultValue: 'End Date & Time' })} error={errors.duration}>
-                    <Input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-                  </Field>
+                  <>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Label>{t('common.duration')}</Label>
+                      <Button type="button" size="sm" variant={mode === 'duration' ? 'default' : 'outline'} onClick={() => setMode('duration')}>{t('activate.durationMode', { defaultValue: 'Duration' })}</Button>
+                      <Button type="button" size="sm" variant={mode === 'end_date' ? 'default' : 'outline'} onClick={() => setMode('end_date')}>{t('common.endDate', { defaultValue: 'End Date' })}</Button>
+                    </div>
+                    {mode === 'duration' ? (
+                      <div className="grid gap-3 md:grid-cols-[140px_180px_1fr]">
+                        <Input value={durationValue} onChange={(event) => setDurationValue(event.target.value.replace(/[^\d.]/g, ''))} />
+                        <select value={durationUnit} onChange={(event) => setDurationUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                          <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
+                          <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
+                          <option value="days">{t('common.days')}</option>
+                        </select>
+                        <div className="flex flex-wrap gap-2">
+                          {durationPresets.map((preset) => (
+                            <Button key={preset.label} type="button" size="sm" variant="outline" onClick={() => { setMode('duration'); setDurationValue(preset.value); setDurationUnit(preset.unit as DurationUnit) }}>{preset.label}</Button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <Field label={t('activate.endDateTime', { defaultValue: 'End Date & Time' })} error={errors.duration}>
+                        <Input type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+                      </Field>
+                    )}
+                  </>
                 )}
+                {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
               </div>
 
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <div className="flex items-center justify-between gap-3">
                   <Label>{t('activate.price', { defaultValue: 'Total Price' })}</Label>
-                  <div className="flex gap-2">
-                    <Button type="button" size="sm" variant={priceMode === 'auto' ? 'default' : 'outline'} onClick={() => setPriceMode('auto')}>{t('activate.priceModeAuto', { defaultValue: 'Auto' })}</Button>
-                    <Button type="button" size="sm" variant={priceMode === 'manual' ? 'default' : 'outline'} onClick={() => setPriceMode('manual')}>{t('activate.priceModeManual', { defaultValue: 'Manual' })}</Button>
-                  </div>
+                  {isReseller ? null : (
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant={priceMode === 'auto' ? 'default' : 'outline'} onClick={() => setPriceMode('auto')}>{t('activate.priceModeAuto', { defaultValue: 'Auto' })}</Button>
+                      <Button type="button" size="sm" variant={priceMode === 'manual' ? 'default' : 'outline'} onClick={() => setPriceMode('manual')}>{t('activate.priceModeManual', { defaultValue: 'Manual' })}</Button>
+                    </div>
+                  )}
                 </div>
-                <Input value={priceInput} readOnly={priceMode === 'auto'} onChange={(event) => setPriceInput(event.target.value.replace(/[^\d.]/g, ''))} />
-                <p className="text-xs text-slate-500 dark:text-slate-400">{priceMode === 'auto' ? t('activate.priceAuto', { defaultValue: 'Auto-calculated' }) : t('activate.priceManualHint', { defaultValue: 'Enter custom price' })}</p>
+                <Input value={priceInput} readOnly={isReseller || priceMode === 'auto'} onChange={(event) => setPriceInput(event.target.value.replace(/[^\d.]/g, ''))} />
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {isReseller
+                    ? t('activate.pricePresetLocked', { defaultValue: 'Price is controlled by the selected preset.' })
+                    : priceMode === 'auto'
+                      ? t('activate.priceAuto', { defaultValue: 'Auto-calculated' })
+                      : t('activate.priceManualHint', { defaultValue: 'Enter custom price' })}
+                </p>
                 <div className="grid gap-3 md:grid-cols-3">
                   <Summary label={t('activate.durationDays', { defaultValue: 'Duration in Days' })} value={durationDays > 0 ? durationDays.toFixed(3) : '0'} />
                   <Summary label={t('activate.expiryPreview', { defaultValue: 'Expiry Preview' })} value={expiryPreview ? formatDate(expiryPreview, lang === 'ar' ? 'ar-EG' : 'en-US') : '-'} />

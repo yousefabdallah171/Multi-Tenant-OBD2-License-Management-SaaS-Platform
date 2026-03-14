@@ -11,17 +11,20 @@ use App\Http\Controllers\BiosConflictController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\Manager\ActivityController as ManagerActivityController;
+use App\Http\Controllers\Manager\BiosChangeRequestController as ManagerBiosChangeRequestController;
 use App\Http\Controllers\Manager\BiosDetailsController as ManagerBiosDetailsController;
 use App\Http\Controllers\Manager\CustomerController as ManagerCustomerController;
 use App\Http\Controllers\Manager\DashboardController as ManagerDashboardController;
 use App\Http\Controllers\Manager\LicenseController as ManagerLicenseController;
 use App\Http\Controllers\Manager\ReportController as ManagerReportController;
+use App\Http\Controllers\Manager\ResellerPaymentController as ManagerResellerPaymentController;
 use App\Http\Controllers\Manager\ResellerLogController as ManagerResellerLogController;
 use App\Http\Controllers\Manager\SoftwareController as ManagerSoftwareController;
 use App\Http\Controllers\Manager\TeamController as ManagerTeamController;
 use App\Http\Controllers\Manager\UsernameManagementController as ManagerUsernameManagementController;
 use App\Http\Controllers\ManagerParent\ActivityController as ManagerParentActivityController;
 use App\Http\Controllers\ManagerParent\ApiStatusController as ManagerParentApiStatusController;
+use App\Http\Controllers\ManagerParent\BiosChangeRequestController as ManagerParentBiosChangeRequestController;
 use App\Http\Controllers\ManagerParent\BiosHistoryController as ManagerParentBiosHistoryController;
 use App\Http\Controllers\ManagerParent\BiosDetailsController as ManagerParentBiosDetailsController;
 use App\Http\Controllers\ManagerParent\BiosConflictController as ManagerParentBiosConflictController;
@@ -34,6 +37,7 @@ use App\Http\Controllers\ManagerParent\LogController as ManagerParentLogControll
 use App\Http\Controllers\ManagerParent\ProgramController as ManagerParentProgramController;
 use App\Http\Controllers\ManagerParent\ProgramLogsController as ManagerParentProgramLogsController;
 use App\Http\Controllers\ManagerParent\ReportController as ManagerParentReportController;
+use App\Http\Controllers\ManagerParent\ResellerPaymentController as ManagerParentResellerPaymentController;
 use App\Http\Controllers\ManagerParent\ResellerLogController as ManagerParentResellerLogController;
 use App\Http\Controllers\ManagerParent\SettingsController as ManagerParentSettingsController;
 use App\Http\Controllers\ManagerParent\TeamController as ManagerParentTeamController;
@@ -42,7 +46,9 @@ use App\Http\Controllers\OnlineUsersController;
 use App\Http\Controllers\ExportTaskController;
 use App\Http\Controllers\Reseller\CustomerController as ResellerCustomerController;
 use App\Http\Controllers\Reseller\DashboardController as ResellerDashboardController;
+use App\Http\Controllers\Reseller\BiosChangeRequestController as ResellerBiosChangeRequestController;
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
+use App\Http\Controllers\Reseller\PaymentStatusController as ResellerPaymentStatusController;
 use App\Http\Controllers\Reseller\ReportController as ResellerReportController;
 use App\Http\Controllers\Reseller\SoftwareController as ResellerSoftwareController;
 use App\Http\Middleware\ActiveRoleMiddleware;
@@ -139,6 +145,11 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
             Route::get('/export/csv', [ManagerParentReportController::class, 'exportCsv']);
             Route::get('/export/pdf', [ManagerParentReportController::class, 'exportPdf']);
         });
+        Route::get('/reseller-payments', [ManagerParentResellerPaymentController::class, 'index']);
+        Route::get('/reseller-payments/{user}', [ManagerParentResellerPaymentController::class, 'show']);
+        Route::post('/reseller-payments', [ManagerParentResellerPaymentController::class, 'storePayment']);
+        Route::put('/reseller-payments/{resellerPayment}', [ManagerParentResellerPaymentController::class, 'updatePayment']);
+        Route::post('/reseller-commissions', [ManagerParentResellerPaymentController::class, 'storeCommission']);
 
         Route::get('/activity/export', [ManagerParentActivityController::class, 'export']);
         Route::get('/activity', [ManagerParentActivityController::class, 'index']);
@@ -147,6 +158,8 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/customers', [ManagerParentCustomerController::class, 'index']);
         Route::post('/customers', [ManagerParentCustomerController::class, 'store']);
         Route::put('/customers/{user}', [ManagerParentCustomerController::class, 'update']);
+        Route::get('/customers/{user}/license-history', [ManagerParentCustomerController::class, 'licenseHistory']);
+        Route::get('/customers/{user}/bios-change-history', [ManagerParentCustomerController::class, 'biosChangeHistory']);
         Route::get('/customers/{user}', [ManagerParentCustomerController::class, 'show']);
         Route::delete('/customers/{user}', [ManagerParentCustomerController::class, 'destroy']);
         Route::get('/licenses', [ManagerParentLicenseController::class, 'index']);
@@ -156,6 +169,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
 
         Route::get('/settings', [ManagerParentSettingsController::class, 'index']);
         Route::put('/settings', [ManagerParentSettingsController::class, 'update']);
+        Route::post('/settings/logo', [ManagerParentSettingsController::class, 'uploadLogo']);
 
         Route::get('/bios-history', [ManagerParentBiosHistoryController::class, 'index']);
         Route::get('/bios-history/{biosId}', [ManagerParentBiosHistoryController::class, 'show']);
@@ -168,6 +182,9 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/bios/{biosId}/activity', [ManagerParentBiosDetailsController::class, 'activity']);
         Route::get('/bios-conflicts', [ManagerParentBiosConflictController::class, 'index']);
         Route::put('/bios-conflicts/{id}/resolve', [ManagerParentBiosConflictController::class, 'resolve']);
+        Route::get('/bios-change-requests', [ManagerParentBiosChangeRequestController::class, 'index']);
+        Route::put('/bios-change-requests/{biosChangeRequest}/approve', [ManagerParentBiosChangeRequestController::class, 'approve']);
+        Route::put('/bios-change-requests/{biosChangeRequest}/reject', [ManagerParentBiosChangeRequestController::class, 'reject']);
 
         Route::get('/ip-analytics/stats', [ManagerParentIpAnalyticsController::class, 'stats']);
         Route::get('/ip-analytics', [ManagerParentIpAnalyticsController::class, 'index']);
@@ -212,6 +229,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/customers', [ManagerCustomerController::class, 'index']);
         Route::post('/customers', [ManagerCustomerController::class, 'store']);
         Route::put('/customers/{user}', [ManagerCustomerController::class, 'update']);
+        Route::get('/customers/{user}/license-history', [ManagerCustomerController::class, 'licenseHistory']);
         Route::get('/customers/{user}', [ManagerCustomerController::class, 'show']);
         Route::delete('/customers/{user}', [ManagerCustomerController::class, 'destroy']);
         Route::get('/licenses', [ManagerLicenseController::class, 'index']);
@@ -230,6 +248,9 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/bios/{biosId}/resellers', [ManagerBiosDetailsController::class, 'resellers']);
         Route::get('/bios/{biosId}/ips', [ManagerBiosDetailsController::class, 'ips']);
         Route::get('/bios/{biosId}/activity', [ManagerBiosDetailsController::class, 'activity']);
+        Route::get('/bios-change-requests', [ManagerBiosChangeRequestController::class, 'index']);
+        Route::put('/bios-change-requests/{biosChangeRequest}/approve', [ManagerBiosChangeRequestController::class, 'approve']);
+        Route::put('/bios-change-requests/{biosChangeRequest}/reject', [ManagerBiosChangeRequestController::class, 'reject']);
 
         Route::prefix('reports')->group(function (): void {
             Route::get('/financial', [ManagerReportController::class, 'index']);
@@ -238,6 +259,11 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
             Route::get('/export/csv', [ManagerReportController::class, 'exportCsv']);
             Route::get('/export/pdf', [ManagerReportController::class, 'exportPdf']);
         });
+        Route::get('/reseller-payments', [ManagerResellerPaymentController::class, 'index']);
+        Route::get('/reseller-payments/{user}', [ManagerResellerPaymentController::class, 'show']);
+        Route::post('/reseller-payments', [ManagerResellerPaymentController::class, 'storePayment']);
+        Route::put('/reseller-payments/{resellerPayment}', [ManagerResellerPaymentController::class, 'updatePayment']);
+        Route::post('/reseller-commissions', [ManagerResellerPaymentController::class, 'storeCommission']);
 
         Route::get('/activity', [ManagerActivityController::class, 'index']);
         Route::get('/activity/export', [ManagerActivityController::class, 'export']);
@@ -250,6 +276,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/dashboard/activations-chart', [ResellerDashboardController::class, 'activationsChart']);
         Route::get('/dashboard/revenue-chart', [ResellerDashboardController::class, 'revenueChart']);
         Route::get('/dashboard/recent-activity', [ResellerDashboardController::class, 'recentActivity']);
+        Route::get('/payment-status', [ResellerPaymentStatusController::class, 'index']);
 
         Route::get('/customers', [ResellerCustomerController::class, 'index']);
         Route::post('/customers', [ResellerCustomerController::class, 'store']);
@@ -267,6 +294,8 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/licenses/{license}/pause', [ResellerLicenseController::class, 'pause']);
         Route::post('/licenses/{license}/resume', [ResellerLicenseController::class, 'resume']);
         Route::get('/software', [ResellerSoftwareController::class, 'index']);
+        Route::get('/bios-change-requests', [ResellerBiosChangeRequestController::class, 'index']);
+        Route::post('/bios-change-requests', [ResellerBiosChangeRequestController::class, 'store']);
         Route::get('/online-users', [OnlineUsersController::class, 'index']);
 
         Route::prefix('reports')->group(function (): void {

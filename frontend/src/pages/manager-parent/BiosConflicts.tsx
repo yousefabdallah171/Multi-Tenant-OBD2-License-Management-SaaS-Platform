@@ -1,16 +1,12 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
-import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
 import { managerParentService } from '@/services/manager-parent.service'
@@ -26,44 +22,29 @@ function StatusPill({ status, label }: { status: BiosConflictItem['status']; lab
 
 export function BiosConflictsPage() {
   const { t } = useTranslation()
-  const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(15)
-  const [status, setStatus] = useState<BiosConflictFilters['status']>('')
   const [conflictType, setConflictType] = useState('')
   const [dateRange, setDateRange] = useState({ from: '', to: '' })
   const [selectedConflict, setSelectedConflict] = useState<BiosConflictItem | null>(null)
-  const [resolveTarget, setResolveTarget] = useState<BiosConflictItem | null>(null)
-  const [resolutionNotes, setResolutionNotes] = useState('')
 
   const params: BiosConflictFilters = useMemo(
     () => ({
       page,
       per_page: perPage,
-      status,
       conflict_type: conflictType || undefined,
       from: dateRange.from || undefined,
       to: dateRange.to || undefined,
     }),
-    [conflictType, dateRange.from, dateRange.to, page, perPage, status],
+    [conflictType, dateRange.from, dateRange.to, page, perPage],
   )
 
   const conflictsQuery = useQuery({
     queryKey: ['manager-parent', 'bios-conflicts', params],
     queryFn: () => managerParentService.getBiosConflicts(params),
-  })
-
-  const resolveMutation = useMutation({
-    mutationFn: ({ id, notes }: { id: number; notes: string }) => managerParentService.resolveBiosConflict(id, { resolution_notes: notes }),
-    onSuccess: () => {
-      toast.success(t('managerParent.pages.biosConflicts.resolveSuccess'))
-      setResolveTarget(null)
-      setResolutionNotes('')
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'bios-conflicts'] })
-    },
   })
 
   const columns: Array<DataTableColumn<BiosConflictItem>> = [
@@ -106,6 +87,11 @@ export function BiosConflictsPage() {
         : t('managerParent.pages.biosConflicts.noCustomers')),
     },
     {
+      key: 'reseller',
+      label: t('common.reseller'),
+      render: (row) => row.reseller_name || '-',
+    },
+    {
       key: 'date',
       label: t('managerParent.pages.biosConflicts.columns.dateDetected'),
       sortable: true,
@@ -127,11 +113,6 @@ export function BiosConflictsPage() {
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedConflict(row)}>
             {t('common.view')}
           </Button>
-          {!row.resolved ? (
-            <Button type="button" size="sm" variant="outline" onClick={() => setResolveTarget(row)}>
-              {t('managerParent.pages.biosConflicts.resolve')}
-            </Button>
-          ) : null}
         </div>
       ),
     },
@@ -146,11 +127,6 @@ export function BiosConflictsPage() {
 
       <Card>
         <CardContent className="space-y-4 p-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <StatusFilterCard label={t('common.all')} count={conflictsQuery.data?.status_counts.all ?? 0} isActive={status === ''} onClick={() => { setStatus(''); setPage(1) }} color="sky" />
-            <StatusFilterCard label={t('managerParent.pages.biosConflicts.status.open')} count={conflictsQuery.data?.status_counts.open ?? 0} isActive={status === 'open'} onClick={() => { setStatus('open'); setPage(1) }} color="rose" />
-            <StatusFilterCard label={t('managerParent.pages.biosConflicts.status.resolved')} count={conflictsQuery.data?.status_counts.resolved ?? 0} isActive={status === 'resolved'} onClick={() => { setStatus('resolved'); setPage(1) }} color="emerald" />
-          </div>
           <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
             <select
               value={conflictType}
@@ -221,36 +197,6 @@ export function BiosConflictsPage() {
           ) : null}
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={resolveTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setResolveTarget(null)
-            setResolutionNotes('')
-          }
-        }}
-        title={t('managerParent.pages.biosConflicts.resolveTitle')}
-        description={resolveTarget ? t('managerParent.pages.biosConflicts.resolveDescription', { biosId: resolveTarget.bios_id }) : undefined}
-        confirmLabel={t('managerParent.pages.biosConflicts.resolve')}
-        onConfirm={() => {
-          if (!resolveTarget) {
-            return
-          }
-
-          if (!resolutionNotes.trim()) {
-            toast.error(t('managerParent.pages.biosConflicts.notesRequired'))
-            return
-          }
-
-          resolveMutation.mutate({ id: resolveTarget.id, notes: resolutionNotes.trim() })
-        }}
-      >
-        <div className="space-y-2">
-          <p className="text-sm text-slate-600 dark:text-slate-300">{t('managerParent.pages.biosConflicts.notesLabel')}</p>
-          <Textarea value={resolutionNotes} onChange={(event) => setResolutionNotes(event.target.value)} />
-        </div>
-      </ConfirmDialog>
     </div>
   )
 }

@@ -52,7 +52,7 @@
       "programs": "البرامج",
       "licenses": "التراخيص",
       "activeLicenses": "التراخيص النشطة",
-      "activeCustomers": "العملاء النشطون",
+      "activeCustomers": "العملاء النشطين حالياً",
       "revenue": "الإيراد"
     }
   },
@@ -91,6 +91,7 @@
     "cancelled": "ملغي",
     "pause": "إيقاف",
     "resume": "استئناف",
+    "continue": "متابعة",
     "reactivate": "إعادة تفعيل",
     "pauseSuccess": "تم إيقاف الترخيص بنجاح.",
     "resumeSuccess": "تم استئناف الترخيص بنجاح.",
@@ -212,7 +213,9 @@
         "title": "خطأ في الخادم",
         "description": "حدث خطأ غير متوقع أثناء معالجة الطلب. أعد المحاولة الآن أو عد إلى لوحة التحكم."
       }
-    }
+    },
+    "licenses": "????????",
+    "start": "???????"
   },
   "superAdmin": {
     "layout": {
@@ -241,7 +244,7 @@
       "totalTenants": "إجمالي الشركاء",
       "totalRevenue": "إجمالي الإيرادات",
       "activeLicenses": "التراخيص النشطة",
-      "activeCustomers": "العملاء النشطون",
+      "activeCustomers": "العملاء النشطين حالياً",
       "totalUsers": "إجمالي المستخدمين",
       "countryCoverage": "الدول المتتبعة"
     },
@@ -421,7 +424,7 @@
         "totalCustomers": "إجمالي العملاء",
         "totalActivations": "إجمالي التفعيلات",
         "activeLicenses": "التراخيص النشطة",
-        "activeCustomers": "العملاء النشطون",
+        "activeCustomers": "العملاء النشطين حالياً",
         "avgRevenuePerTenant": "متوسط الإيراد لكل شريك",
         "revenueByTenant": "الإيراد حسب الشريك",
         "revenueByProgram": "الإيراد حسب البرنامج",
@@ -492,7 +495,9 @@
       "licenses": "التراخيص",
       "logsGroup": "السجلات",
       "biosDetails": "تفاصيل BIOS",
-      "resellerLogs": "سجلات الموزعين"
+      "resellerLogs": "سجلات الموزعين",
+      "biosChangeRequests": "????? ????? BIOS",
+      "resellerPayments": "Reseller Payments"
     },
     "pages": {
       "dashboard": {
@@ -501,7 +506,7 @@
         "teamMembers": "أعضاء الفريق",
         "customers": "العملاء",
         "activeLicenses": "التراخيص النشطة",
-        "activeCustomers": "العملاء النشطون",
+        "activeCustomers": "العملاء النشطين حالياً",
         "monthlyRevenue": "الإيراد الشهري",
         "licenseExpiryForecast": "توقع انتهاء التراخيص",
         "licenseCount": "عدد التراخيص",
@@ -527,7 +532,7 @@
         "description": "حلل إيراد الموزعين والبرامج وجودة التفعيل واحتفاظ العملاء للنطاق الزمني المحدد.",
         "totalRevenue": "إجمالي الإيراد",
         "totalCustomers": "إجمالي العملاء",
-        "activeCustomers": "العملاء النشطون",
+        "activeCustomers": "العملاء النشطين حالياً",
         "totalActivations": "إجمالي التفعيلات",
         "successRate": "معدل النجاح",
         "revenueByReseller": "الإيراد حسب الموزع",
@@ -545,7 +550,7 @@
         "description": "راجع إيرادات الشريك وأرصدة الموزعين وجودة التفعيل والاحتفاظ وصدّر العرض الحالي للتقارير.",
         "totalTenantRevenue": "إجمالي إيراد الشريك",
         "totalCustomers": "إجمالي العملاء",
-        "activeCustomers": "العملاء النشطون",
+        "activeCustomers": "العملاء النشطين حالياً",
         "totalActivations": "إجمالي التفعيلات",
         "activeLicenses": "التراخيص النشطة",
         "revenueByReseller": "الإيراد حسب الموزع",
@@ -578,7 +583,18 @@
         "defaultPricing": "التسعير الافتراضي",
         "notifications": "الإشعارات",
         "newActivationsAlerts": "تنبيهات بريدية للتفعيلات الجديدة",
-        "expiryWarningsAlerts": "تنبيهات بريدية لانتهاء الصلاحية"
+        "expiryWarningsAlerts": "تنبيهات بريدية لانتهاء الصلاحية",
+        "branding": "العلامة التجارية",
+        "brandingDescription": "تخصيص شعار لوحة التحكم ولون النقاش الأساسي.",
+        "logo": "الشعار",
+        "logoHint": "صور PNG أو SVG، بحد أقصى 2 ميجابايت. معروض في الزاوية العلوية اليسرى من جميع لوحات التحكم.",
+        "logoPreview": "معاينة الشعار",
+        "uploadLogo": "تحميل الشعار",
+        "removeLogo": "إزالة الشعار",
+        "primaryColor": "لون النقاش الأساسي",
+        "primaryColorHint": "ينطبق على تمييزات التنقل والنبرات.",
+        "logoUploaded": "تم تحديث الشعار بنجاح.",
+        "logoRemoved": "تم إزالة الشعار."
       },
       "customers": {
         "title": "العملاء",
@@ -653,7 +669,7 @@
         "customers": "العملاء",
         "activeLicenses": "التراخيص النشطة",
         "inviteManager": "دعوة مدير",
-        "inviteReseller": "دعوة موزع",
+        "inviteReseller": "إنشاء موزع",
         "visibleTeamMembers": "أعضاء الفريق الظاهرون",
         "customersRepresented": "العملاء المخدومون",
         "visibleRevenue": "الإيراد الظاهر",
@@ -859,7 +875,10 @@
       "profile": "الملف الشخصي",
       "softwareManagement": "إدارة البرامج",
       "licenses": "التراخيص",
-      "resellerLogs": "سجلات الموزعين"
+      "resellerLogs": "سجلات الموزعين",
+      "biosChangeRequests": "????? ????? BIOS",
+      "biosDetails": "BIOS",
+      "resellerPayments": "Reseller Payments"
     },
     "pages": {
       "dashboard": {
@@ -868,7 +887,7 @@
         "teamResellers": "موزعو الفريق",
         "teamCustomers": "عملاء الفريق",
         "activeLicenses": "التراخيص النشطة",
-        "activeCustomers": "العملاء النشطون",
+        "activeCustomers": "العملاء النشطين حالياً",
         "teamRevenue": "إيراد الفريق",
         "teamActivations": "تفعيلات الفريق",
         "recentTeamActivity": "أحدث نشاطات الفريق",
@@ -1078,7 +1097,8 @@
       "licenses": "التراخيص",
       "reports": "التقارير",
       "activity": "نشاط اللوحة",
-      "profile": "الملف الشخصي"
+      "profile": "الملف الشخصي",
+      "paymentStatus": "Payment Status"
     },
     "pages": {
       "dashboard": {
@@ -1086,7 +1106,7 @@
         "description": "تابع قاعدة العملاء والعملاء النشطين والإيراد الحالي وأحدث أعمال التفعيل ضمن نطاق حسابك كموزع.",
         "customers": "العملاء",
         "activeLicenses": "التراخيص النشطة",
-        "activeCustomers": "العملاء النشطون",
+        "activeCustomers": "العملاء النشطين حالياً",
         "monthlyActivations": "التفعيلات الشهرية",
         "activationTrend": "اتجاه التفعيل",
         "revenueTrend": "اتجاه الإيراد",
@@ -1250,7 +1270,7 @@
         "monthly": "شهري",
         "totalRevenue": "إجمالي الإيراد",
         "totalCustomers": "إجمالي العملاء",
-        "activeCustomers": "العملاء النشطون",
+        "activeCustomers": "العملاء النشطين حالياً",
         "totalActivations": "إجمالي التفعيلات",
         "avgPrice": "متوسط السعر",
         "avgPriceHint": "إيراد التفعيل مقسوم على عدد التفعيلات داخل النطاق الزمني المحدد.",
@@ -1358,7 +1378,13 @@
     "externalLogsEndpoint": "مسار سجلات API الخارجي",
     "externalLogsEndpointPlaceholder": "مثال: apilogs",
     "externalSoftwareIdPlaceholder": "مثال: 8",
-    "logsEndpointHint": "مسار السجلات فقط: apilogs. سيصبح الطلب الكامل /apilogs/[ID]."
+    "logsEndpointHint": "مسار السجلات فقط: apilogs. سيصبح الطلب الكامل /apilogs/[ID].",
+    "durationPresetsTitle": "??????? ??????? ????????",
+    "durationPresetsHint": "????? ???????? ????? ??????? ??? ????? ????? ?????? ??????.",
+    "presetLabel": "?????",
+    "presetLabelPlaceholder": "????: ?????",
+    "presetDurationDays": "??????",
+    "addPreset": "????? ????"
   },
   "programLogs": {
     "title": "سجلات المستخدمين",
@@ -1461,7 +1487,10 @@
     "quickPreset1Day": "1 يوم",
     "quickPreset7Days": "7 أيام",
     "quickPreset30Days": "30 يوماً",
-    "quickPreset90Days": "90 يوماً"
+    "quickPreset90Days": "90 يوماً",
+    "presetDurationSummary": "{{days}} ???",
+    "presetPriceSummary": "$ {{price}}",
+    "pricePresetLocked": "????? ??? ?????? ?? ?????? ????????."
   },
   "customerPortal": {
     "layout": {
@@ -1568,14 +1597,147 @@
     "avgDaysBetween": "متوسط الأيام بين عمليات الشراء",
     "customer": "العميل",
     "notBlacklisted": "غير مدرج في القائمة السوداء",
-    "reseller": "الموزع"
+    "reseller": "الموزع",
+    "searchPlaceholder": "???? ?????? BIOS ID",
+    "overviewSections": {
+      "biosInfo": "??????? BIOS",
+      "currentLicense": "??????? ??????",
+      "saleSummary": "???? ?????"
+    },
+    "resellerMetrics": {
+      "lastActivity": "??? ????",
+      "programsSold": "??????? ???????"
+    },
+    "activityTypes": {
+      "activate": "?????",
+      "renew": "?????",
+      "pause": "?????",
+      "deactivate": "?????"
+    }
   },
   "settings": {
     "error": "فشل حفظ الإعدادات",
     "saved": "تم تحديث الإعدادات بنجاح",
     "serverTimezone": "المنطقة الزمنية للخادم",
     "timezonePurpose": "حدد المنطقة الزمنية لكل عروض لوحة التحكم والمهام المجدولة."
+  },
+  "customerDetail": {
+    "resellerTimeline": "??????? ?????? ??????",
+    "soldBy": "?? ????? ??????",
+    "period": "??????"
+  },
+  "customers": {
+    "filterByManagerParent": "????? ??? ?????? ???????",
+    "filterByManager": "????? ??? ??????"
+  },
+  "biosChangeRequests": {
+    "title": "????? ????? BIOS",
+    "description": "???? ????? ????? BIOS ?? ???????? ????? ????? ?? ?????? ?? ??? ????.",
+    "requestAction": "??? ????? BIOS ID",
+    "submitted": "?? ????? ??? ????? BIOS.",
+    "approved": "??? ???????? ??? ??? ????? BIOS.",
+    "rejected": "?? ??? ??? ????? BIOS.",
+    "empty": "?? ???? ????? ????? BIOS.",
+    "currentBios": "????? BIOS ??????",
+    "oldBios": "BIOS ??????",
+    "newBios": "BIOS ??????",
+    "newBiosPlaceholder": "???? ????? BIOS ??????",
+    "reasonPlaceholder": "??? ????? BIOS",
+    "newBiosValidation": "???? ????? BIOS ???? ????.",
+    "reasonValidation": "???? ??? ????? BIOS.",
+    "approve": "??????",
+    "reject": "???",
+    "rejectTitle": "??? ??? ????? BIOS",
+    "rejectPlaceholder": "???? ??? ?????",
+    "rejectValidation": "???? ??? ?????.",
+    "status": {
+      "pending": "??? ????????",
+      "approved": "??? ????????",
+      "rejected": "?????",
+      "approvedPendingSync": "??? ????????? ???????? ?????"
+    }
+  },
+  "payments": {
+    "title": "Reseller Payments",
+    "description": "Review reseller commission balances, record payments, and keep monthly commission periods updated.",
+    "statusTitle": "Payment Status",
+    "statusDescription": "Track your sales, commission totals, payment history, and current outstanding balance.",
+    "summary": {
+      "totalSales": "Total Sales",
+      "commissionRate": "Commission Rate",
+      "totalOwed": "Total Owed",
+      "totalPaid": "Total Paid",
+      "outstanding": "Outstanding Balance"
+    },
+    "filters": {
+      "period": "Period"
+    },
+    "columns": {
+      "reseller": "Reseller",
+      "period": "Period",
+      "sales": "Sales",
+      "rate": "Rate",
+      "owed": "Commission Owed",
+      "paid": "Amount Paid",
+      "outstanding": "Outstanding",
+      "date": "Date",
+      "amount": "Amount",
+      "method": "Method",
+      "reference": "Reference",
+      "notes": "Notes"
+    },
+    "status": {
+      "unpaid": "Unpaid",
+      "partial": "Partial",
+      "paid": "Paid"
+    },
+    "sections": {
+      "commissions": "Commission Periods",
+      "history": "Payment History",
+      "monthlyBreakdown": "Monthly Breakdown"
+    },
+    "actions": {
+      "view": "View",
+      "recordPayment": "Record Payment",
+      "addCommission": "Add Commission",
+      "editCommission": "Edit Commission",
+      "editPayment": "Edit Payment"
+    },
+    "dialogs": {
+      "recordPayment": "Record Payment",
+      "editPayment": "Edit Payment",
+      "addCommission": "Add Commission",
+      "editCommission": "Edit Commission"
+    },
+    "fields": {
+      "commission": "Commission Period",
+      "amount": "Amount",
+      "paymentDate": "Payment Date",
+      "paymentMethod": "Payment Method",
+      "reference": "Reference",
+      "notes": "Notes",
+      "period": "Period",
+      "totalSales": "Total Sales",
+      "commissionRate": "Commission Rate (%)",
+      "commissionOwed": "Commission Owed"
+    },
+    "methods": {
+      "bank_transfer": "Bank Transfer",
+      "cash": "Cash",
+      "other": "Other"
+    },
+    "empty": {
+      "resellers": "No reseller payment rows found for the current filters.",
+      "payments": "No payment history found yet.",
+      "commissions": "No commission periods found yet."
+    },
+    "validation": {
+      "payment": "Select a commission period, payment date, and a valid amount.",
+      "commission": "Enter a valid period, commission rate, and commission owed amount."
+    },
+    "messages": {
+      "paymentSaved": "Payment saved successfully.",
+      "commissionSaved": "Commission saved successfully."
+    }
   }
 }
-
-

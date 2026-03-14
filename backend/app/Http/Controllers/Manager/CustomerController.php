@@ -26,6 +26,7 @@ class CustomerController extends BaseManagerController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'manager_id' => ['nullable', 'integer'],
             'reseller_id' => ['nullable', 'integer'],
             'program_id' => ['nullable', 'integer'],
             'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
@@ -42,6 +43,10 @@ class CustomerController extends BaseManagerController
                 ->select($this->licenseListColumns())
                 ->with(['program:id,name', 'reseller:id,name'])])
             ->latest();
+
+        if (! empty($validated['manager_id'])) {
+            $query->where('created_by', (int) $validated['manager_id']);
+        }
 
         if (! empty($validated['search'])) {
             $query->where(function ($builder) use ($validated, $sellerIds): void {
@@ -114,6 +119,26 @@ class CustomerController extends BaseManagerController
         return response()->json([
             'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user, $validated))->values(),
             'meta' => $this->paginationMeta($customers),
+        ]);
+    }
+
+    public function licenseHistory(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveTeamUser($request, $user);
+        $sellerIds = $this->teamSellerIds($request);
+
+        $licenses = License::query()
+            ->with(['program:id,name', 'reseller:id,name,email'])
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('customer_id', $customer->id)
+            ->whereIn('reseller_id', $sellerIds)
+            ->orderByDesc('activated_at')
+            ->get()
+            ->map(fn (License $license): array => $this->serializeLicenseHistoryEntry($license))
+            ->values();
+
+        return response()->json([
+            'data' => $licenses,
         ]);
     }
 
@@ -222,6 +247,7 @@ class CustomerController extends BaseManagerController
                     'scheduled_failure_message' => $license->scheduled_failure_message,
                     'paused_at' => $license->paused_at?->toIso8601String(),
                     'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+                    'pause_reason' => $license->pause_reason,
                 ])->values(),
                 'resellers_summary' => $sellersSummary,
                 'ip_logs' => $ipLogs,
@@ -505,7 +531,7 @@ class CustomerController extends BaseManagerController
     {
         $columns = [];
 
-        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'] as $column) {
+        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes', 'pause_reason'] as $column) {
             if (Schema::hasColumn('licenses', $column)) {
                 $columns[] = $column;
             }
@@ -554,8 +580,30 @@ class CustomerController extends BaseManagerController
             'scheduled_failure_message' => $license?->scheduled_failure_message,
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license?->pause_reason,
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
+        ];
+    }
+
+    private function serializeLicenseHistoryEntry(License $license): array
+    {
+        return [
+            'id' => $license->id,
+            'program_name' => $license->program?->name,
+            'reseller_id' => $license->reseller_id,
+            'reseller_name' => $license->reseller?->name,
+            'reseller_email' => $license->reseller?->email,
+            'bios_id' => $license->bios_id,
+            'external_username' => $license->external_username,
+            'activated_at' => $license->activated_at?->toIso8601String(),
+            'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
+            'expires_at' => $license->expires_at?->toIso8601String(),
+            'duration_days' => (float) $license->duration_days,
+            'price' => (float) $license->price,
+            'status' => $license->effectiveStatus(),
+            'paused_at' => $license->paused_at?->toIso8601String(),
+            'pause_reason' => $license->pause_reason,
         ];
     }
 

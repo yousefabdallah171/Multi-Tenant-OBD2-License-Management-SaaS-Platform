@@ -57,6 +57,28 @@ class ExternalApiService
         );
     }
 
+    public function changeBiosId(string $apiKey, string $username, string $oldBiosId, string $newBiosId, ?string $baseUrl = null): array
+    {
+        $deactivateResponse = $this->deactivateUser($apiKey, $username, $baseUrl);
+        if (! ($deactivateResponse['success'] ?? false)) {
+            return $deactivateResponse;
+        }
+
+        $activateResponse = $this->activateUser($apiKey, $username, $newBiosId, $baseUrl);
+        if ($activateResponse['success'] ?? false) {
+            return $activateResponse;
+        }
+
+        return [
+            'success' => false,
+            'data' => [
+                ...($activateResponse['data'] ?? []),
+                'rollback' => $this->activateUser($apiKey, $username, $oldBiosId, $baseUrl),
+            ],
+            'status_code' => (int) ($activateResponse['status_code'] ?? 503),
+        ];
+    }
+
     public function getActiveUsers(int $softwareId, ?string $baseUrl = null): array
     {
         return $this->sendPlainText(

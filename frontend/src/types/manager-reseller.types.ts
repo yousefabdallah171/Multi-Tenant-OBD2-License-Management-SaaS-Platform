@@ -3,6 +3,16 @@ import type { PaginatedResponse } from '@/types/manager-parent.types'
 export type PeriodFilter = 'daily' | 'weekly' | 'monthly'
 export type DurationUnit = 'days' | 'months' | 'years'
 
+export interface ProgramDurationPreset {
+  id: number
+  program_id: number
+  label: string
+  duration_days: number
+  price: number
+  sort_order: number
+  is_active: boolean
+}
+
 export interface DashboardSeriesPoint {
   month?: string
   reseller?: string
@@ -137,6 +147,7 @@ export interface ManagerCustomerSummary {
   is_scheduled?: boolean
   paused_at?: string | null
   pause_remaining_minutes?: number | null
+  pause_reason?: string | null
   license_count: number
   has_active_license?: boolean
 }
@@ -169,6 +180,7 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
     is_scheduled?: boolean
     paused_at?: string | null
     pause_remaining_minutes?: number | null
+    pause_reason?: string | null
   }>
   resellers_summary?: Array<{
     reseller_id: number | null
@@ -223,6 +235,7 @@ export interface ResellerCustomerSummary {
   is_scheduled?: boolean
   paused_at?: string | null
   pause_remaining_minutes?: number | null
+  pause_reason?: string | null
   license_count: number
 }
 
@@ -231,6 +244,7 @@ export interface ResellerCustomerDetails extends ResellerCustomerSummary {
     id: number
     bios_id: string
     program: string | null
+    program_id?: number | null
     status: string
     price: number
     activated_at: string | null
@@ -244,6 +258,7 @@ export interface ResellerCustomerDetails extends ResellerCustomerSummary {
     is_scheduled?: boolean
     paused_at?: string | null
     pause_remaining_minutes?: number | null
+    pause_reason?: string | null
   }>
 }
 
@@ -271,7 +286,12 @@ export interface LicenseSummary {
   is_scheduled?: boolean
   paused_at?: string | null
   pause_remaining_minutes?: number | null
+  pause_reason?: string | null
   status: 'active' | 'expired' | 'suspended' | 'cancelled' | 'pending'
+}
+
+export interface PauseLicenseData {
+  pause_reason?: string
 }
 
 export interface LicenseDetails extends LicenseSummary {
@@ -298,8 +318,9 @@ export interface ActivateLicenseData {
   customer_phone?: string
   bios_id: string
   program_id: number
-  duration_days: number
-  price: number
+  preset_id?: number
+  duration_days?: number
+  price?: number
   is_scheduled?: boolean
   scheduled_date_time?: string
   scheduled_timezone?: string
@@ -338,10 +359,175 @@ export interface TeamManagedUserFilters {
 export interface ManagerCustomerFilters {
   page?: number
   per_page?: number
+  manager_id?: number | ''
   reseller_id?: number | ''
   program_id?: number | ''
   status?: string
   search?: string
+}
+
+export interface LicenseHistoryEntry {
+  id: number
+  program_name: string | null
+  reseller_id: number | null
+  reseller_name: string | null
+  reseller_email?: string | null
+  bios_id: string
+  external_username?: string | null
+  activated_at: string | null
+  start_at?: string | null
+  expires_at: string | null
+  duration_days: number
+  price: number
+  status: string
+  paused_at?: string | null
+  pause_reason?: string | null
+}
+
+export interface BiosChangeRequest {
+  id: number
+  license_id: number
+  customer_id: number | null
+  customer_name: string | null
+  program_name: string | null
+  old_bios_id: string
+  new_bios_id: string
+  reason: string
+  status: 'pending' | 'approved' | 'rejected' | 'approved_pending_sync'
+  reseller_id?: number | null
+  reseller_name?: string | null
+  reseller_email?: string | null
+  reviewer_id?: number | null
+  reviewer_name?: string | null
+  reviewer_notes?: string | null
+  reviewed_at?: string | null
+  created_at: string | null
+}
+
+export interface BiosChangeRequestFilters {
+  page?: number
+  per_page?: number
+  status?: '' | 'pending' | 'approved' | 'rejected' | 'approved_pending_sync'
+  count_only?: boolean
+}
+
+export interface SubmitBiosChangeRequestData {
+  license_id: number
+  new_bios_id: string
+  reason: string
+}
+
+export interface ResellerCommission {
+  id: number
+  reseller_id: number
+  reseller_name?: string | null
+  period: string
+  total_sales: number
+  commission_rate: number
+  commission_owed: number
+  amount_paid: number
+  outstanding: number
+  status: 'unpaid' | 'partial' | 'paid'
+  notes?: string | null
+  manager_name?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface ResellerPayment {
+  id: number
+  commission_id: number
+  period?: string | null
+  reseller_id: number
+  reseller_name?: string | null
+  amount: number
+  payment_date: string | null
+  payment_method: 'bank_transfer' | 'cash' | 'other'
+  reference?: string | null
+  notes?: string | null
+  manager_name?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export interface ResellerPaymentStatusSummary {
+  total_sales: number
+  commission_rate: number
+  total_owed: number
+  total_paid: number
+  outstanding_balance: number
+}
+
+export interface ResellerPaymentStatusData {
+  summary: ResellerPaymentStatusSummary
+  monthly_breakdown: ResellerCommission[]
+  payment_history: ResellerPayment[]
+}
+
+export interface ResellerPaymentRow {
+  reseller_id: number
+  reseller_name: string
+  reseller_email: string
+  period: string
+  commission_id?: number | null
+  total_sales: number
+  commission_rate: number
+  commission_owed: number
+  amount_paid: number
+  outstanding: number
+  status: 'unpaid' | 'partial' | 'paid'
+  created_at?: string | null
+}
+
+export interface ResellerPaymentListData {
+  data: ResellerPaymentRow[]
+  summary: {
+    total_owed: number
+    total_paid: number
+    total_outstanding: number
+    period: string
+  }
+}
+
+export interface ResellerPaymentDetailData {
+  reseller: {
+    id: number
+    name: string
+    email: string
+    created_at: string | null
+  }
+  summary: {
+    total_sales: number
+    total_owed: number
+    total_paid: number
+    total_outstanding: number
+  }
+  commissions: ResellerCommission[]
+  payments: ResellerPayment[]
+}
+
+export interface ResellerPaymentFilters {
+  period?: string
+  status?: '' | 'unpaid' | 'partial' | 'paid'
+}
+
+export interface RecordPaymentPayload {
+  commission_id: number
+  reseller_id: number
+  amount: number
+  payment_date: string
+  payment_method: 'bank_transfer' | 'cash' | 'other'
+  reference?: string
+  notes?: string
+}
+
+export interface StoreCommissionPayload {
+  reseller_id: number
+  period: string
+  total_sales: number
+  commission_rate: number
+  commission_owed: number
+  notes?: string
 }
 
 export interface ResellerCustomerFilters {
@@ -455,6 +641,7 @@ export interface ResellerSoftwareProgram {
   is_active: boolean
   has_external_api?: boolean
   external_software_id?: number | null
+  duration_presets?: ProgramDurationPreset[]
 }
 
 export type PaginatedRoleActivity = PaginatedResponse<RoleActivityEntry>
@@ -480,6 +667,7 @@ export interface ManagerSoftwareProgram {
   active_licenses_count: number
   revenue: number
   created_at: string | null
+  duration_presets?: ProgramDurationPreset[]
 }
 
 export interface ManagerSoftwareFilters {
@@ -505,6 +693,14 @@ export interface CreateManagerSoftwareData {
   external_api_base_url?: string | null
   external_logs_endpoint?: string | null
   active?: boolean
+  presets?: Array<{
+    id?: number
+    label: string
+    duration_days: number
+    price: number
+    sort_order?: number
+    is_active?: boolean
+  }>
 }
 
 export interface UpdateManagerSoftwareData extends Partial<CreateManagerSoftwareData> {

@@ -12,7 +12,7 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { apiCache } from '@/lib/apiCache'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
-import { getLicenseDisplayStatus } from '@/lib/utils'
+import { getLicenseDisplayStatus, isPausedPendingLicense, isPlainPendingLicense } from '@/lib/utils'
 import { licenseService } from '@/services/license.service'
 import type { RenewLicenseData } from '@/types/manager-reseller.types'
 
@@ -55,7 +55,11 @@ export function RenewLicensePage({
     ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
     : displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
       ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-      : t('common.renew')
+      : license && isPausedPendingLicense(license)
+        ? t('common.continue', { defaultValue: 'Continue' })
+        : license && isPlainPendingLicense(license)
+          ? t('common.activate', { defaultValue: 'Activate' })
+          : t('common.renew')
   const description = license
     ? t('reseller.pages.licenses.renewDialog.description', {
         defaultValue: 'Renew {{program}} for BIOS ID {{biosId}}.',

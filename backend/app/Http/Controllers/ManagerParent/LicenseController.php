@@ -176,6 +176,7 @@ class LicenseController extends BaseManagerParentController
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license->pause_reason,
             'status' => $license->effectiveStatus(),
         ];
     }

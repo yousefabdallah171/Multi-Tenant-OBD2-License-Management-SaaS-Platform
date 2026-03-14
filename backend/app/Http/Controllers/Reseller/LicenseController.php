@@ -167,8 +167,12 @@ class LicenseController extends BaseResellerController
 
     public function pause(Request $request, License $license): JsonResponse
     {
+        $validated = $request->validate([
+            'pause_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
         $resolved = $this->resolveLicense($request, $license);
-        $paused = $this->licenseService->pause($resolved);
+        $paused = $this->licenseService->pause($resolved, $validated);
         LicenseCacheInvalidation::invalidateForLicense($paused);
 
         return response()->json([
@@ -315,6 +319,7 @@ class LicenseController extends BaseResellerController
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license->pause_reason,
             'status' => $license->effectiveStatus(),
         ];
     }

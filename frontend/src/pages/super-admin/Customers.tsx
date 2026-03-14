@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
-import { canReactivateLicense, canRetryScheduledLicense, formatDate, getLicenseDisplayStatus, getStatusMeaning, shouldRenewLicense } from '@/lib/utils'
+import { canReactivateLicense, canRetryScheduledLicense, formatDate, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -49,6 +49,16 @@ export function CustomersPage() {
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SuperAdminCustomerSummary | null>(null)
+  const [pauseReason, setPauseReason] = useState('')
+  const customerFilterParams = useMemo(
+    () => ({
+      search: search || undefined,
+      tenant_id: tenantId || undefined,
+      reseller_id: resellerId || undefined,
+      program_id: programId || undefined,
+    }),
+    [programId, resellerId, search, tenantId],
+  )
 
   const customersQuery = useQuery({
     queryKey: ['super-admin', 'customers', page, perPage, search, status, tenantId, resellerId, programId],
@@ -56,10 +66,7 @@ export function CustomersPage() {
       superAdminCustomerService.getAll({
         page,
         per_page: perPage,
-        search,
-        tenant_id: tenantId,
-        reseller_id: resellerId,
-        program_id: programId,
+        ...customerFilterParams,
         status: status === 'all' ? '' : status,
       }),
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
@@ -83,33 +90,33 @@ export function CustomersPage() {
   const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
       {
-        queryKey: ['super-admin', 'customers', 'count', 'all', search, tenantId, resellerId, programId],
-        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId }),
+        queryKey: ['super-admin', 'customers', 'count', 'all', customerFilterParams],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams }),
         ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
-        queryKey: ['super-admin', 'customers', 'count', 'active', search, tenantId, resellerId, programId],
-        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'active' }),
+        queryKey: ['super-admin', 'customers', 'count', 'active', customerFilterParams],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }),
         ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
-        queryKey: ['super-admin', 'customers', 'count', 'scheduled', search, tenantId, resellerId, programId],
-        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'scheduled' }),
+        queryKey: ['super-admin', 'customers', 'count', 'scheduled', customerFilterParams],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'scheduled' }),
         ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
-        queryKey: ['super-admin', 'customers', 'count', 'expired', search, tenantId, resellerId, programId],
-        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'expired' }),
+        queryKey: ['super-admin', 'customers', 'count', 'expired', customerFilterParams],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'expired' }),
         ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
-        queryKey: ['super-admin', 'customers', 'count', 'cancelled', search, tenantId, resellerId, programId],
-        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'cancelled' }),
+        queryKey: ['super-admin', 'customers', 'count', 'cancelled', customerFilterParams],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'cancelled' }),
         ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
-        queryKey: ['super-admin', 'customers', 'count', 'pending', search, tenantId, resellerId, programId],
-        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, search, tenant_id: tenantId, reseller_id: resellerId, program_id: programId, status: 'pending' }),
+        queryKey: ['super-admin', 'customers', 'count', 'pending', customerFilterParams],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'pending' }),
         ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
     ],
@@ -149,10 +156,11 @@ export function CustomersPage() {
   })
 
   const pauseMutation = useMutation({
-    mutationFn: (licenseId: number) => licenseService.pause(licenseId),
+    mutationFn: (licenseId: number) => licenseService.pause(licenseId, { pause_reason: pauseReason.trim() || undefined }),
     onSuccess: () => {
       toast.success(t('common.paused'))
       setPauseTarget(null)
+      setPauseReason('')
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -225,7 +233,23 @@ export function CustomersPage() {
       { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
       { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => row.start_at ?? '', render: (row) => (row.start_at ? formatDate(row.start_at, locale) : '-') },
-      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status ? getLicenseDisplayStatus(row) : '', render: (row) => row.status ? <StatusBadge status={getLicenseDisplayStatus(row)} /> : '-' },
+      {
+        key: 'status',
+        label: t('common.status'),
+        sortable: true,
+        sortValue: (row) => row.status ? getLicenseDisplayStatus(row) : '',
+        render: (row) => row.status ? (
+          <div className="relative inline-flex">
+            <StatusBadge status={getLicenseDisplayStatus(row)} />
+            {isPlainPendingLicense(row) ? (
+              <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
+                New
+              </span>
+            ) : null}
+          </div>
+        ) : '-',
+      },
+      { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
       { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
       {
         key: 'actions',
@@ -233,11 +257,15 @@ export function CustomersPage() {
         render: (row) => {
           const displayStatus = row.status ? getLicenseDisplayStatus(row) : null
           const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+          const isPausedPending = isPausedPendingLicense(row)
+          const isPlainPending = isPlainPendingLicense(row)
           const renewActionLabel = displayStatus === 'active'
             ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
             : isScheduleEditable
               ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : t('common.renew')
+              : isPlainPending
+                ? t('common.activate', { defaultValue: 'Activate' })
+                : t('common.renew')
 
           return (
           <div onClick={(event) => event.stopPropagation()}>
@@ -274,7 +302,7 @@ export function CustomersPage() {
                 {row.license_id && canReactivateLicense(row) ? (
                   <DropdownMenuItem onSelect={() => setResumeTarget(row)}>
                     <Play className="me-2 h-4 w-4" />
-                    {t('common.resume')}
+                    {isPausedPending ? t('common.continue', { defaultValue: 'Continue' }) : t('common.resume')}
                   </DropdownMenuItem>
                 ) : null}
                 {row.license_id && canRetryScheduledLicense(row) ? (
@@ -428,8 +456,38 @@ export function CustomersPage() {
       />
 
       <ConfirmDialog open={deactivateTarget !== null} onOpenChange={(open) => !open && setDeactivateTarget(null)} title={t('common.deactivate')} description={deactivateTarget?.name ?? ''} confirmLabel={t('common.deactivate')} onConfirm={() => deactivateTarget?.license_id && deactivateMutation.mutate(deactivateTarget.license_id)} />
-      <ConfirmDialog open={pauseTarget !== null} onOpenChange={(open) => !open && setPauseTarget(null)} title={t('common.pause')} description={pauseTarget?.name ?? ''} confirmLabel={t('common.pause')} onConfirm={() => pauseTarget?.license_id && pauseMutation.mutate(pauseTarget.license_id)} />
-      <ConfirmDialog open={resumeTarget !== null} onOpenChange={(open) => !open && setResumeTarget(null)} title={t('common.resume')} description={resumeTarget?.name ?? ''} confirmLabel={t('common.resume')} onConfirm={() => resumeTarget?.license_id && resumeMutation.mutate(resumeTarget.license_id)} />
+      <ConfirmDialog
+        open={pauseTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPauseTarget(null)
+            setPauseReason('')
+          }
+        }}
+        title={t('common.pause')}
+        description={pauseTarget?.name ?? ''}
+        confirmLabel={t('common.pause')}
+        onConfirm={() => pauseTarget?.license_id && pauseMutation.mutate(pauseTarget.license_id)}
+      >
+        <div className="space-y-2">
+          <label className="text-sm font-medium">{t('common.reason')}</label>
+          <textarea
+            className="min-h-24 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            value={pauseReason}
+            onChange={(event) => setPauseReason(event.target.value)}
+            placeholder={t('common.reason')}
+            maxLength={500}
+          />
+        </div>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={resumeTarget !== null}
+        onOpenChange={(open) => !open && setResumeTarget(null)}
+        title={isPausedPendingLicense(resumeTarget) ? t('common.continue', { defaultValue: 'Continue' }) : t('common.resume')}
+        description={resumeTarget?.name ?? ''}
+        confirmLabel={isPausedPendingLicense(resumeTarget) ? t('common.continue', { defaultValue: 'Continue' }) : t('common.resume')}
+        onConfirm={() => resumeTarget?.license_id && resumeMutation.mutate(resumeTarget.license_id)}
+      />
       <ConfirmDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)} title={t('common.delete')} description={deleteTarget?.name ?? ''} confirmLabel={t('common.delete')} isDestructive onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} />
     </div>
   )

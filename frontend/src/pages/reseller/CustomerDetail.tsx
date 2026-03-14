@@ -1,12 +1,18 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
+import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -16,9 +22,14 @@ export function CustomerDetailPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const queryClient = useQueryClient()
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false)
+  const [newBiosId, setNewBiosId] = useState('')
+  const [requestReason, setRequestReason] = useState('')
 
   const query = useQuery({
     queryKey: ['reseller', 'customer-detail', customerId],
@@ -28,6 +39,34 @@ export function CustomerDetailPage() {
   })
 
   const customer = query.data?.data
+  const requestableLicense = customer?.licenses?.[0] ?? null
+
+  useEffect(() => {
+    if (searchParams.get('request-bios') !== '1' || !requestableLicense) {
+      return
+    }
+
+    setRequestDialogOpen(true)
+    const next = new URLSearchParams(searchParams)
+    next.delete('request-bios')
+    setSearchParams(next, { replace: true })
+  }, [requestableLicense, searchParams, setSearchParams])
+
+  const submitRequestMutation = useMutation({
+    mutationFn: () => resellerService.submitBiosChangeRequest({
+      license_id: requestableLicense?.id ?? 0,
+      new_bios_id: newBiosId.trim(),
+      reason: requestReason.trim(),
+    }),
+    onSuccess: (response) => {
+      toast.success(response.message ?? t('biosChangeRequests.submitted'))
+      setRequestDialogOpen(false)
+      setNewBiosId('')
+      setRequestReason('')
+      void queryClient.invalidateQueries({ queryKey: ['reseller', 'customer-detail', customerId] })
+    },
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
+  })
 
   return (
     <div className="space-y-6">
@@ -41,6 +80,11 @@ export function CustomerDetailPage() {
         eyebrow={t('roles.reseller')}
         title={customer?.name ?? t('reseller.pages.customers.title')}
         description={resolveCustomerDetailUsername(customer) ?? customer?.phone ?? t('reseller.pages.customers.description')}
+        actions={requestableLicense ? (
+          <Button type="button" onClick={() => setRequestDialogOpen(true)}>
+            {t('biosChangeRequests.requestAction')}
+          </Button>
+        ) : null}
       />
 
       {customer ? (
@@ -89,6 +133,62 @@ export function CustomerDetailPage() {
           </Card>
         </>
       ) : null}
+
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('biosChangeRequests.requestAction')}</DialogTitle>
+            <DialogDescription>
+              {requestableLicense?.bios_id ?? t('biosChangeRequests.description')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosChangeRequests.currentBios')}</p>
+              <p className="font-medium">{requestableLicense?.bios_id ?? '-'}</p>
+            </div>
+            <Input
+              value={newBiosId}
+              onChange={(event) => setNewBiosId(event.target.value)}
+              placeholder={t('biosChangeRequests.newBiosPlaceholder')}
+            />
+            <Textarea
+              value={requestReason}
+              onChange={(event) => setRequestReason(event.target.value)}
+              placeholder={t('biosChangeRequests.reasonPlaceholder')}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setRequestDialogOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              disabled={submitRequestMutation.isPending}
+              onClick={() => {
+                if (!requestableLicense) {
+                  toast.error(t('common.error'))
+                  return
+                }
+
+                if (newBiosId.trim().length < 5) {
+                  toast.error(t('biosChangeRequests.newBiosValidation'))
+                  return
+                }
+
+                if (requestReason.trim().length < 5) {
+                  toast.error(t('biosChangeRequests.reasonValidation'))
+                  return
+                }
+
+                submitRequestMutation.mutate()
+              }}
+            >
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

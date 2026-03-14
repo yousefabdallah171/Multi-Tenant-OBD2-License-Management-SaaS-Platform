@@ -11,6 +11,7 @@ import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
+import type { LicenseHistoryEntry } from '@/types/manager-reseller.types'
 import { IpLocationCell } from '@/utils/countryFlag'
 
 export function CustomerDetailPage() {
@@ -28,7 +29,14 @@ export function CustomerDetailPage() {
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_DETAIL),
   })
 
+  const licenseHistoryQuery = useQuery({
+    queryKey: ['manager', 'customer-license-history', customerId],
+    queryFn: () => managerService.getCustomerLicenseHistory(customerId),
+    enabled: Number.isFinite(customerId),
+  })
+
   const customer = query.data?.data
+  const licenseHistoryGroups = groupLicenseHistoryByReseller(licenseHistoryQuery.data?.data ?? [])
 
   return (
     <div className="space-y-6">
@@ -57,16 +65,37 @@ export function CustomerDetailPage() {
           <Card>
             <CardHeader><CardTitle>{t('manager.pages.customers.licenseHistory')}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {(customer.licenses ?? []).map((license) => (
-                <div key={license.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                  <div className="grid gap-2 md:grid-cols-4">
-                    <Info label={t('common.program')} value={license.program ?? '-'} />
-                    <Info label={t('manager.pages.customers.biosId')} value={<Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link>} />
-                    <Info label={t('common.username')} value={resolveLicenseUsername(customer, license.external_username) ?? '-'} />
-                    <Info label={t('common.reseller')} value={license.reseller ?? '-'} />
-                    <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
+              {licenseHistoryGroups.map((group) => (
+                <details key={group.key} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800" open>
+                  <summary className="cursor-pointer list-none">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium">{t('customerDetail.resellerTimeline')}: {group.name}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {group.items.length} {t('common.activations')} | {group.period}
+                        </p>
+                      </div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{group.email}</p>
+                    </div>
+                  </summary>
+                  <div className="mt-4 space-y-3">
+                    {group.items.map((license) => (
+                      <div key={license.id} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40">
+                        <div className="grid gap-3 md:grid-cols-5">
+                          <Info label={t('common.program')} value={license.program_name ?? '-'} />
+                          <Info label={t('customerDetail.soldBy')} value={group.name} />
+                          <Info label={t('customerDetail.period')} value={formatLicensePeriod(license, locale)} />
+                          <Info label={t('common.price')} value={`$${Number(license.price).toFixed(2)}`} />
+                          <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
+                          <span>{t('manager.pages.customers.biosId')}: <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link></span>
+                          <span>{t('common.username')}: {resolveLicenseUsername(customer, license.external_username) ?? '-'}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                </details>
               ))}
             </CardContent>
           </Card>
@@ -128,6 +157,52 @@ function resolveLicenseUsername(customer: { name?: string | null; client_name?: 
   }
 
   return storedUsername || candidate || null
+}
+
+function groupLicenseHistoryByReseller(entries: LicenseHistoryEntry[]) {
+  const groups = new Map<string, { key: string; name: string; email: string; items: LicenseHistoryEntry[] }>()
+
+  for (const entry of entries) {
+    const key = String(entry.reseller_id ?? `unknown-${entry.reseller_name ?? 'unknown'}`)
+    const existing = groups.get(key)
+    if (existing) {
+      existing.items.push(entry)
+      continue
+    }
+
+    groups.set(key, {
+      key,
+      name: entry.reseller_name ?? 'Unknown',
+      email: entry.reseller_email ?? '-',
+      items: [entry],
+    })
+  }
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    period: formatGroupPeriod(group.items),
+  }))
+}
+
+function formatGroupPeriod(entries: LicenseHistoryEntry[]) {
+  const timestamps = entries
+    .map((entry) => entry.activated_at)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((value) => Number.isFinite(value))
+    .sort((left, right) => left - right)
+
+  if (timestamps.length === 0) {
+    return '-'
+  }
+
+  return `${new Date(timestamps[0]).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - ${new Date(timestamps[timestamps.length - 1]).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
+}
+
+function formatLicensePeriod(entry: LicenseHistoryEntry, locale: string) {
+  const start = entry.start_at ? formatDate(entry.start_at, locale) : '-'
+  const end = entry.expires_at ? formatDate(entry.expires_at, locale) : '-'
+  return `${start} -> ${end}`
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {

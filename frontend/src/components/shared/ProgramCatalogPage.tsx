@@ -106,13 +106,6 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                       </p>
                       <p className="mt-1 font-semibold">{program.licenses_sold}</p>
                     </div>
-                    <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <Activity className="h-3.5 w-3.5 rounded-full bg-indigo-200/60 p-0.5 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" />
-                        {t(`${translationPrefix}.activeLicenses`)}
-                      </p>
-                      <p className="mt-1 font-semibold">{program.active_licenses_count}</p>
-                    </div>
                   </div>
 
                   <div className="flex gap-2">

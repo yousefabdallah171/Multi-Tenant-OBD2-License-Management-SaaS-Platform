@@ -4,6 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
+import { useBranding } from '@/hooks/useBranding'
 import { useLanguage } from '@/hooks/useLanguage'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { queryClient } from '@/lib/queryClient'
@@ -42,6 +43,7 @@ const managerParentItems: NavItem[] = [
   { key: 'reports', icon: BarChart3, href: routePaths.managerParent.reports, translationKey: 'managerParent.nav.financialReports' },
   { key: 'programLogs', icon: FileText, href: routePaths.managerParent.programLogs, translationKey: 'managerParent.nav.programLogs' },
   { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
+  { key: 'resellerPayments', icon: BarChart3, href: routePaths.managerParent.resellerPayments, translationKey: 'managerParent.nav.resellerPayments' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, translationKey: 'managerParent.nav.ipAnalytics' },
   { key: 'logsGroup', icon: FileText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logsGroup' },
   { key: 'settingsGroup', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
@@ -53,6 +55,8 @@ const managerItems: NavItem[] = [
   { key: 'customers', icon: UserRound, href: routePaths.manager.customers, translationKey: 'manager.nav.customers' },
   { key: 'software', icon: Package, href: routePaths.manager.software, translationKey: 'manager.nav.software' },
   { key: 'softwareManagement', icon: PackagePlus, href: routePaths.manager.softwareManagement, translationKey: 'manager.nav.softwareManagement' },
+  { key: 'biosGroup', icon: History, href: routePaths.manager.biosDetails, translationKey: 'manager.nav.biosDetails' },
+  { key: 'resellerPayments', icon: BarChart3, href: routePaths.manager.resellerPayments, translationKey: 'manager.nav.resellerPayments' },
   { key: 'reports', icon: BarChart3, href: routePaths.manager.reports, translationKey: 'manager.nav.reports' },
   { key: 'activity', icon: ScrollText, href: routePaths.manager.activity, translationKey: 'manager.nav.activity' },
   { key: 'resellerLogs', icon: ScrollText, href: routePaths.manager.resellerLogs, translationKey: 'manager.nav.resellerLogs' },
@@ -63,6 +67,7 @@ const resellerItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.reseller.dashboard, translationKey: 'reseller.nav.dashboard' },
   { key: 'customers', icon: Users, href: routePaths.reseller.customers, translationKey: 'reseller.nav.customers' },
   { key: 'software', icon: Package, href: routePaths.reseller.software, translationKey: 'reseller.nav.software' },
+  { key: 'paymentStatus', icon: BarChart3, href: routePaths.reseller.paymentStatus, translationKey: 'reseller.nav.paymentStatus' },
   { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, translationKey: 'reseller.nav.reports' },
   { key: 'profile', icon: User, href: routePaths.reseller.profile, translationKey: 'reseller.nav.profile' },
 ]
@@ -76,6 +81,7 @@ const customerItems: NavItem[] = [
 export function Sidebar() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const { primaryColor } = useBranding()
   const { lang, isRtl } = useLanguage()
   const { canInstall, isInstalled, promptInstall } = usePwaInstall()
   const location = useLocation()
@@ -96,7 +102,12 @@ export function Sidebar() {
   const managerParentBiosPaths = useMemo(() => ([
     routePaths.managerParent.biosBlacklist(lang),
     routePaths.managerParent.biosDetails(lang),
+    routePaths.managerParent.biosChangeRequests(lang),
     routePaths.managerParent.biosConflicts(lang),
+  ]), [lang])
+  const managerBiosPaths = useMemo(() => ([
+    routePaths.manager.biosDetails(lang),
+    routePaths.manager.biosChangeRequests(lang),
   ]), [lang])
   const superAdminAdminManagementPaths = useMemo(() => ([
     routePaths.superAdmin.adminManagement(lang),
@@ -122,6 +133,8 @@ export function Sidebar() {
   const [settingsOpen, setSettingsOpen] = useState(shouldExpandSettings)
   const shouldExpandManagerParentBios = user?.role === 'manager_parent' && managerParentBiosPaths.some((path) => location.pathname.startsWith(path))
   const [managerParentBiosOpen, setManagerParentBiosOpen] = useState(shouldExpandManagerParentBios)
+  const shouldExpandManagerBios = user?.role === 'manager' && managerBiosPaths.some((path) => location.pathname.startsWith(path))
+  const [managerBiosOpen, setManagerBiosOpen] = useState(shouldExpandManagerBios)
   const shouldExpandSuperAdminAdminManagement = user?.role === 'super_admin' && superAdminAdminManagementPaths.some((path) => location.pathname.startsWith(path))
   const [superAdminAdminManagementOpen, setSuperAdminAdminManagementOpen] = useState(shouldExpandSuperAdminAdminManagement)
   const shouldExpandSuperAdminBios = user?.role === 'super_admin' && superAdminBiosPaths.some((path) => location.pathname.startsWith(path))
@@ -144,6 +157,12 @@ export function Sidebar() {
       setManagerParentBiosOpen(true)
     }
   }, [shouldExpandManagerParentBios])
+
+  useEffect(() => {
+    if (shouldExpandManagerBios) {
+      setManagerBiosOpen(true)
+    }
+  }, [shouldExpandManagerBios])
 
   useEffect(() => {
     if (shouldExpandSuperAdminAdminManagement) {
@@ -178,7 +197,12 @@ export function Sidebar() {
   const managerParentBiosChildren: NavItem[] = [
     { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
     { key: 'biosDetails', icon: History, href: routePaths.managerParent.biosDetails, translationKey: 'managerParent.nav.biosDetails' },
+    { key: 'biosChangeRequests', icon: History, href: routePaths.managerParent.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
     { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.managerParent.biosConflicts, translationKey: 'managerParent.nav.biosConflicts' },
+  ]
+  const managerBiosChildren: NavItem[] = [
+    { key: 'biosDetails', icon: History, href: routePaths.manager.biosDetails, translationKey: 'manager.nav.biosDetails' },
+    { key: 'biosChangeRequests', icon: AlertTriangle, href: routePaths.manager.biosChangeRequests, translationKey: 'manager.nav.biosChangeRequests' },
   ]
   const superAdminSettingsChildren: NavItem[] = [
     { key: 'settings', icon: Settings, href: routePaths.superAdmin.settings, translationKey: 'superAdmin.nav.settings' },
@@ -275,7 +299,7 @@ export function Sidebar() {
                     className={({ isActive }) =>
                       cn(
                         'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
-                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
                       )
                     }
                     onClick={() => {
@@ -324,7 +348,56 @@ export function Sidebar() {
                     className={({ isActive }) =>
                       cn(
                         'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
-                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                      )
+                    }
+                    onClick={() => {
+                      if (window.innerWidth < 1024) {
+                        setCollapsed(true)
+                      }
+                    }}
+                    onMouseEnter={() => prefetchNavData(child.key)}
+                  >
+                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <span>{childLabel}</span>
+                  </NavLink>
+                )
+              }) : null}
+            </div>
+          )
+        }
+
+        if (user?.role === 'manager' && item.key === 'biosGroup') {
+          const Icon = item.icon
+          const label = t(item.translationKey)
+
+          return (
+            <div key={item.key} className="space-y-1">
+              <button
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition',
+                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  collapsed && 'justify-center lg:px-0',
+                )}
+                onClick={() => setManagerBiosOpen((prev) => !prev)}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
+                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', managerBiosOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+              </button>
+              {managerBiosOpen ? managerBiosChildren.map((child) => {
+                const ChildIcon = child.icon
+                const childLabel = t(child.translationKey)
+
+                return (
+                  <NavLink
+                    key={child.key}
+                    to={child.href(lang)}
+                    className={({ isActive }) =>
+                      cn(
+                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
+                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
                       )
                     }
                     onClick={() => {
@@ -374,7 +447,7 @@ export function Sidebar() {
                     className={({ isActive }) =>
                       cn(
                         'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
-                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
                       )
                     }
                     onClick={() => {
@@ -423,7 +496,7 @@ export function Sidebar() {
                     className={({ isActive }) =>
                       cn(
                         'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
-                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
                       )
                     }
                     onClick={() => {
@@ -472,7 +545,7 @@ export function Sidebar() {
                     className={({ isActive }) =>
                       cn(
                         'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition',
-                        isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
                       )
                     }
                     onClick={() => {
@@ -501,7 +574,7 @@ export function Sidebar() {
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition',
-                isActive ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
                 collapsed && 'justify-center lg:px-0',
               )
             }
@@ -566,9 +639,10 @@ export function Sidebar() {
         <aside
           data-testid="desktop-sidebar"
           className={cn(
-            'sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto border-slate-200 bg-white/95 px-3 py-4 shadow-none backdrop-blur dark:border-slate-800 dark:bg-slate-950/95',
-            isRtl ? 'border-l' : 'border-r',
+            'sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto border-l-4 bg-white/95 px-3 py-4 shadow-none backdrop-blur dark:bg-slate-950/95',
+            isRtl ? 'border-r-4' : 'border-l-4',
           )}
+          style={{ borderColor: primaryColor }}
         >
           {navContent}
         </aside>
@@ -576,11 +650,12 @@ export function Sidebar() {
       <aside
         data-testid="mobile-sidebar"
         className={cn(
-          'fixed top-16 z-40 h-[calc(100vh-4rem)] w-72 max-w-[85vw] overflow-y-auto border-slate-200 bg-white/95 px-3 py-4 shadow-2xl backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 lg:hidden',
+          'fixed top-16 z-40 h-[calc(100vh-4rem)] w-72 max-w-[85vw] overflow-y-auto border-l-4 bg-white/95 px-3 py-4 shadow-2xl backdrop-blur dark:bg-slate-950/95 lg:hidden',
           'transition-transform duration-200 ease-out',
           collapsed ? (isRtl ? 'translate-x-full' : '-translate-x-full') : 'translate-x-0',
-          isRtl ? 'right-0 border-l' : 'left-0 border-r',
+          isRtl ? 'right-0 border-r-4' : 'left-0 border-l-4',
         )}
+        style={{ borderColor: primaryColor }}
       >
         {navContent}
       </aside>

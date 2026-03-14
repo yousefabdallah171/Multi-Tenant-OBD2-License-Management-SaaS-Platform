@@ -1,5 +1,7 @@
+import { useBranding } from '@/hooks/useBranding'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useTheme } from '@/hooks/useTheme'
+import { generateColorRamp } from '@/lib/role-branding'
 
 export interface ChartSeries {
   key: string
@@ -8,12 +10,11 @@ export interface ChartSeries {
   stackId?: string
 }
 
-const LIGHT_COLORS = {
+const LIGHT_NEUTRAL = {
   grid: '#dbe4ef',
   axis: '#64748b',
   tooltipBackground: '#ffffff',
   tooltipBorder: '#cbd5e1',
-  primary: '#0284c7',
   secondary: '#0f766e',
   tertiary: '#f59e0b',
   quaternary: '#c026d3',
@@ -21,12 +22,11 @@ const LIGHT_COLORS = {
   negative: '#dc2626',
 }
 
-const DARK_COLORS = {
+const DARK_NEUTRAL = {
   grid: '#334155',
   axis: '#cbd5e1',
   tooltipBackground: '#0f172a',
   tooltipBorder: '#334155',
-  primary: '#38bdf8',
   secondary: '#34d399',
   tertiary: '#fbbf24',
   quaternary: '#c084fc',
@@ -34,18 +34,35 @@ const DARK_COLORS = {
   negative: '#fb7185',
 }
 
-const LIGHT_SERIES_COLORS = ['#0284c7', '#0f766e', '#f59e0b', '#c026d3', '#2563eb', '#e11d48', '#7c3aed']
-const DARK_SERIES_COLORS = ['#38bdf8', '#34d399', '#fbbf24', '#c084fc', '#60a5fa', '#fb7185', '#a78bfa']
-
 export function useChartTheme() {
   const { isDark } = useTheme()
+  const { primaryColor } = useBranding()
   const { lang, isRtl } = useLanguage()
+
+  const ramp = generateColorRamp(primaryColor)
+  const brandPrimary = ramp['--brand-600'] || primaryColor
+  const brandSecondary = ramp['--brand-400'] || primaryColor
+  const brandTertiary = ramp['--brand-700'] || primaryColor
+  const brandLight = ramp['--brand-300'] || primaryColor
+
+  const palette = isDark ? DARK_NEUTRAL : LIGHT_NEUTRAL
 
   return {
     locale: lang === 'ar' ? 'ar-EG' : 'en-US',
     isRtl,
-    palette: isDark ? DARK_COLORS : LIGHT_COLORS,
-    seriesColors: isDark ? DARK_SERIES_COLORS : LIGHT_SERIES_COLORS,
+    palette: {
+      ...palette,
+      primary: isDark ? brandLight : brandPrimary,
+    },
+    seriesColors: [
+      isDark ? brandLight : brandPrimary,
+      isDark ? brandSecondary : brandTertiary,
+      LIGHT_NEUTRAL.secondary,
+      LIGHT_NEUTRAL.tertiary,
+      LIGHT_NEUTRAL.quaternary,
+      LIGHT_NEUTRAL.negative,
+      LIGHT_NEUTRAL.positive,
+    ],
   }
 }
 

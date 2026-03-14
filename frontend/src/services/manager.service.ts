@@ -24,8 +24,17 @@ import type {
   TeamManagedUser,
   TeamManagedUserFilters,
   UpdateManagerSoftwareData,
+  LicenseHistoryEntry,
+  BiosChangeRequest,
+  BiosChangeRequestFilters,
+  RecordPaymentPayload,
+  ResellerPaymentDetailData,
+  ResellerPaymentFilters,
+  ResellerPaymentListData,
+  StoreCommissionPayload,
+  LicenseFilters,
+  LicenseSummary,
 } from '@/types/manager-reseller.types'
-import type { LicenseFilters, LicenseSummary } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
 /**
@@ -135,6 +144,46 @@ export const managerService = {
   },
   async getCustomer(id: number) {
     const { data } = await api.get<{ data: ManagerCustomerDetails }>(`/manager/customers/${id}`)
+    return data
+  },
+  async getCustomerLicenseHistory(id: number) {
+    const { data } = await api.get<{ data: LicenseHistoryEntry[] }>(`/manager/customers/${id}/license-history`)
+    return data
+  },
+  async getBiosChangeRequests(params?: BiosChangeRequestFilters) {
+    const { data } = await api.get<PaginatedResponse<BiosChangeRequest>>('/manager/bios-change-requests', { params })
+    return data
+  },
+  async getPendingBiosChangeRequestCount() {
+    const { data } = await api.get<{ count: number }>('/manager/bios-change-requests', { params: { status: 'pending', count_only: true } })
+    return data
+  },
+  async approveBiosChangeRequest(id: number) {
+    const { data } = await api.put<{ data: BiosChangeRequest; message: string }>(`/manager/bios-change-requests/${id}/approve`)
+    return data
+  },
+  async rejectBiosChangeRequest(id: number, reviewerNotes: string) {
+    const { data } = await api.put<{ data: BiosChangeRequest; message: string }>(`/manager/bios-change-requests/${id}/reject`, { reviewer_notes: reviewerNotes })
+    return data
+  },
+  async getResellerPayments(filters?: ResellerPaymentFilters) {
+    const { data } = await api.get<ResellerPaymentListData>('/manager/reseller-payments', { params: filters })
+    return data
+  },
+  async getResellerPaymentDetail(resellerId: number) {
+    const { data } = await api.get<{ data: ResellerPaymentDetailData }>(`/manager/reseller-payments/${resellerId}`)
+    return data
+  },
+  async recordPayment(payload: RecordPaymentPayload) {
+    const { data } = await api.post<{ data: unknown; message: string }>('/manager/reseller-payments', payload)
+    return data
+  },
+  async updatePayment(paymentId: number, payload: RecordPaymentPayload) {
+    const { data } = await api.put<{ data: unknown; message: string }>(`/manager/reseller-payments/${paymentId}`, payload)
+    return data
+  },
+  async storeCommission(payload: StoreCommissionPayload) {
+    const { data } = await api.post<{ data: unknown; message: string }>('/manager/reseller-commissions', payload)
     return data
   },
   async updateCustomer(id: number, payload: { client_name: string; email?: string; phone?: string }) {

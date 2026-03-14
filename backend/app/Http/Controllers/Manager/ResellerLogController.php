@@ -16,6 +16,9 @@ class ResellerLogController extends BaseManagerController
         'license.renewed',
         'license.deactivated',
         'license.delete',
+        'bios.change_requested',
+        'bios.change_approved',
+        'bios.change_rejected',
     ];
 
     public function index(Request $request): JsonResponse
@@ -33,15 +36,25 @@ class ResellerLogController extends BaseManagerController
         $query = ActivityLog::query()
             ->with('user:id,name,role')
             ->where('tenant_id', $tenantId)
-            ->whereIn('user_id', $sellerIds)
             ->whereIn('action', self::TRACKED_ACTIONS)
+            ->where(function ($builder) use ($sellerIds): void {
+                $builder->whereIn('user_id', $sellerIds);
+
+                foreach ($sellerIds as $sellerId) {
+                    $builder->orWhere('metadata->reseller_id', $sellerId);
+                }
+            })
             ->latest();
 
         if (! empty($validated['seller_id'])) {
             if (! in_array((int) $validated['seller_id'], $sellerIds, true)) {
                 $query->whereRaw('1 = 0');
             } else {
-                $query->where('user_id', (int) $validated['seller_id']);
+                $query->where(function ($builder) use ($validated): void {
+                    $builder
+                        ->where('user_id', (int) $validated['seller_id'])
+                        ->orWhere('metadata->reseller_id', (int) $validated['seller_id']);
+                });
             }
         }
 

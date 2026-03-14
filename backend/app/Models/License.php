@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class License extends Model
 {
@@ -35,6 +36,7 @@ class License extends Model
         'activated_at_scheduled',
         'paused_at',
         'pause_remaining_minutes',
+        'pause_reason',
         'status',
     ];
 
@@ -73,6 +75,11 @@ class License extends Model
     public function program(): BelongsTo
     {
         return $this->belongsTo(Program::class);
+    }
+
+    public function biosChangeRequests(): HasMany
+    {
+        return $this->hasMany(BiosChangeRequest::class);
     }
 
     public function effectiveStatus(?CarbonInterface $referenceTime = null): string

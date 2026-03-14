@@ -5,6 +5,8 @@ import type { CustomerDetails, CustomerSummary, PaginatedResponse } from '@/type
 export interface CustomerParams {
   page?: number
   per_page?: number
+  manager_parent_id?: number | ''
+  manager_id?: number | ''
   reseller_id?: number | ''
   program_id?: number | ''
   status?: string

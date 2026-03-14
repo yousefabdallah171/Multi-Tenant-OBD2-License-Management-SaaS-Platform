@@ -52,7 +52,7 @@
       "programs": "Programs",
       "licenses": "Licenses",
       "activeLicenses": "Active licenses",
-      "activeCustomers": "Active customers",
+      "activeCustomers": "Current active customers",
       "revenue": "Revenue"
     }
   },
@@ -91,6 +91,7 @@
     "cancelled": "Cancelled",
     "pause": "Pause",
     "resume": "Resume",
+    "continue": "Continue",
     "reactivate": "Reactivate",
     "pauseSuccess": "License paused successfully.",
     "resumeSuccess": "License resumed successfully.",
@@ -122,6 +123,7 @@
     "removed": "Removed",
     "reason": "Reason",
     "action": "Action",
+    "licenses": "Licenses",
     "customer": "Customer",
     "user": "User",
     "username": "Username",
@@ -153,6 +155,7 @@
     "activate": "Activate",
     "suspend": "Deactive",
     "createdAt": "Created at",
+    "start": "Start",
     "role": "Role",
     "tenant": "Tenant",
     "reseller": "Reseller",
@@ -229,6 +232,7 @@
       "adminManagement": "Admin Mgmt",
       "biosBlacklist": "BIOS Blacklist",
       "biosDetails": "BIOS Details",
+      "biosChangeRequests": "BIOS Change Requests",
       "biosConflicts": "BIOS Conflicts",
       "usernameManagement": "Username Mgmt",
       "securityLocks": "Security Locks",
@@ -243,7 +247,7 @@
       "totalTenants": "Total tenants",
       "totalRevenue": "Total revenue",
       "activeLicenses": "Active licenses",
-      "activeCustomers": "Active customers",
+      "activeCustomers": "Current active customers",
       "totalUsers": "Total users",
       "countryCoverage": "Tracked countries"
     },
@@ -455,7 +459,7 @@
         "totalCustomers": "Total customers",
         "totalActivations": "Total activations",
         "activeLicenses": "Active licenses",
-        "activeCustomers": "Active customers",
+        "activeCustomers": "Current active customers",
         "avgRevenuePerTenant": "Avg revenue per tenant",
         "revenueByTenant": "Revenue by tenant",
         "revenueByProgram": "Revenue by program",
@@ -480,7 +484,9 @@
       "softwareManagement": "Software Management",
       "biosBlacklist": "BIOS Blacklist",
       "biosDetails": "BIOS Details",
+      "biosChangeRequests": "BIOS Change Requests",
       "biosConflicts": "BIOS Conflicts",
+      "resellerPayments": "Reseller Payments",
       "ipAnalytics": "IP Analytics",
       "logs": "Platform Logs",
       "programLogs": "User Logs",
@@ -504,7 +510,7 @@
         "teamMembers": "Team Members",
         "customers": "Customers",
         "activeLicenses": "Active Licenses",
-        "activeCustomers": "Active Customers",
+        "activeCustomers": "Current Active Customers",
         "monthlyRevenue": "Monthly Revenue",
         "licenseExpiryForecast": "License Expiry Forecast",
         "licenseCount": "Licenses",
@@ -530,7 +536,7 @@
         "description": "Analyze reseller and program revenue, activation quality, and customer retention for the selected date range.",
         "totalRevenue": "Total Revenue",
         "totalCustomers": "Total Customers",
-        "activeCustomers": "Active Customers",
+        "activeCustomers": "Current Active Customers",
         "totalActivations": "Total Activations",
         "successRate": "Success Rate",
         "revenueByReseller": "Revenue by Reseller",
@@ -548,7 +554,7 @@
         "description": "Review tenant revenue, reseller balances, activation quality, retention, and export the current reporting view.",
         "totalTenantRevenue": "Total Tenant Revenue",
         "totalCustomers": "Total Customers",
-        "activeCustomers": "Active Customers",
+        "activeCustomers": "Current Active Customers",
         "totalActivations": "Total Activations",
         "activeLicenses": "Active Licenses",
         "revenueByReseller": "Revenue by Reseller",
@@ -578,7 +584,18 @@
         "defaultPricing": "Default Pricing",
         "notifications": "Notifications",
         "newActivationsAlerts": "Email alerts for new activations",
-        "expiryWarningsAlerts": "Email alerts for expiry warnings"
+        "expiryWarningsAlerts": "Email alerts for expiry warnings",
+        "branding": "Branding",
+        "brandingDescription": "Customize your dashboard logo and accent color.",
+        "logo": "Logo",
+        "logoHint": "PNG or SVG, max 2 MB. Shown in the top-left of all dashboards.",
+        "logoPreview": "Logo preview",
+        "uploadLogo": "Upload Logo",
+        "removeLogo": "Remove Logo",
+        "primaryColor": "Primary Accent Color",
+        "primaryColorHint": "Applies to navigation highlights and accents.",
+        "logoUploaded": "Logo updated successfully.",
+        "logoRemoved": "Logo removed."
       },
       "customers": {
         "title": "Customers",
@@ -653,7 +670,7 @@
         "customers": "Customers",
         "activeLicenses": "Active Licenses",
         "inviteManager": "Invite Manager",
-        "inviteReseller": "Invite Reseller",
+        "inviteReseller": "Create Reseller",
         "visibleTeamMembers": "Visible team members",
         "customersRepresented": "Customers represented",
         "visibleRevenue": "Visible revenue",
@@ -854,6 +871,9 @@
       "customers": "Customers",
       "software": "Software",
       "softwareManagement": "Software Management",
+      "biosDetails": "BIOS",
+      "biosChangeRequests": "BIOS Change Requests",
+      "resellerPayments": "Reseller Payments",
       "reports": "Reports",
       "activity": "Panel Activity",
       "resellerLogs": "Reseller Logs",
@@ -867,7 +887,7 @@
         "teamResellers": "Team Resellers",
         "teamCustomers": "Team Customers",
         "activeLicenses": "Active Licenses",
-        "activeCustomers": "Active Customers",
+        "activeCustomers": "Current Active Customers",
         "teamRevenue": "Team Revenue",
         "teamActivations": "Team Activations",
         "recentTeamActivity": "Recent Team Activity",
@@ -917,8 +937,8 @@
         "columns": {
           "reseller": "Reseller"
         },
-        "inviteReseller": "Invite reseller",
-        "inviteTitle": "Invite reseller",
+        "inviteReseller": "Create reseller",
+        "inviteTitle": "Create reseller",
         "inviteDescription": "Create a new reseller account under your manager scope.",
         "editTitle": "Edit reseller",
         "editDescription": "Update reseller account details.",
@@ -1074,6 +1094,7 @@
       "dashboard": "Dashboard",
       "customers": "Customers",
       "software": "Software",
+      "paymentStatus": "Payment Status",
       "licenses": "Licenses",
       "reports": "Reports",
       "activity": "Panel Activity",
@@ -1085,7 +1106,7 @@
         "description": "Track your customer base, active customers, current revenue, and the latest activation work from your personal reseller scope.",
         "customers": "Customers",
         "activeLicenses": "Active Licenses",
-        "activeCustomers": "Active Customers",
+        "activeCustomers": "Current Active Customers",
         "monthlyActivations": "Monthly Activations",
         "activationTrend": "Activation Trend",
         "revenueTrend": "Revenue Trend",
@@ -1249,7 +1270,7 @@
         "monthly": "Monthly",
         "totalRevenue": "Total Revenue",
         "totalCustomers": "Total Customers",
-        "activeCustomers": "Active Customers",
+        "activeCustomers": "Current Active Customers",
         "totalActivations": "Total Activations",
         "avgPrice": "Avg Price",
         "avgPriceHint": "Activation revenue divided by activation volume in the selected range.",
@@ -1372,7 +1393,13 @@
       "externalApiBaseUrl": "Base host for the software API. Enter only the main host, without endpoint paths.",
       "externalLogsEndpoint": "Path used to read external activity logs for this software, for example apilogs.",
       "externalApiKey": "Secret API key used for external add-user and delete-user requests."
-    }
+    },
+    "durationPresetsTitle": "Duration Presets (for Resellers)",
+    "durationPresetsHint": "Resellers will see these preset buttons instead of manual duration and price fields.",
+    "presetLabel": "Label",
+    "presetLabelPlaceholder": "e.g. Week",
+    "presetDurationDays": "Days",
+    "addPreset": "Add Preset"
   },
   "programLogs": {
     "title": "User Logs",
@@ -1469,7 +1496,10 @@
     "quickPreset1Day": "1 day",
     "quickPreset7Days": "7 days",
     "quickPreset30Days": "30 days",
-    "quickPreset90Days": "90 days"
+    "quickPreset90Days": "90 days",
+    "presetDurationSummary": "{{days}} days",
+    "presetPriceSummary": "$ {{price}}",
+    "pricePresetLocked": "Price is controlled by the selected preset."
   },
   "customerPortal": {
     "layout": {
@@ -1558,6 +1588,7 @@
   "biosDetails": {
     "title": "BIOS ID Details",
     "search": "Search BIOS ID",
+    "searchPlaceholder": "Search by BIOS ID",
     "overview": "Overview",
     "licenses": "License History",
     "resellers": "Resellers",
@@ -1573,7 +1604,141 @@
     "lastActivity": "Last Activity",
     "totalActivations": "Total Activations",
     "avgDaysBetween": "Average Days Between Purchases",
-    "notBlacklisted": "Not blacklisted"
+    "notBlacklisted": "Not blacklisted",
+    "overviewSections": {
+      "biosInfo": "BIOS Information",
+      "currentLicense": "Current License",
+      "saleSummary": "Sale Summary"
+    },
+    "resellerMetrics": {
+      "lastActivity": "Last Activity",
+      "programsSold": "Programs Sold"
+    },
+    "activityTypes": {
+      "activate": "Activate",
+      "renew": "Renew",
+      "pause": "Pause",
+      "deactivate": "Deactivate"
+    }
+  },
+  "customerDetail": {
+    "resellerTimeline": "Reseller Timeline",
+    "soldBy": "Sold by",
+    "period": "Period"
+  },
+  "customers": {
+    "filterByManagerParent": "Filter by Manager Parent",
+    "filterByManager": "Filter by Manager"
+  },
+  "biosChangeRequests": {
+    "title": "BIOS Change Requests",
+    "description": "Review reseller BIOS change requests and approve or reject them with clear audit history.",
+    "requestAction": "Request BIOS ID Change",
+    "submitted": "BIOS change request submitted.",
+    "approved": "BIOS change request approved.",
+    "rejected": "BIOS change request rejected.",
+    "empty": "No BIOS change requests found.",
+    "currentBios": "Current BIOS ID",
+    "oldBios": "Old BIOS",
+    "newBios": "New BIOS",
+    "newBiosPlaceholder": "Enter the new BIOS ID",
+    "reasonPlaceholder": "Reason for BIOS change",
+    "newBiosValidation": "Enter a valid new BIOS ID.",
+    "reasonValidation": "Enter a reason for the BIOS change.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectTitle": "Reject BIOS Change Request",
+    "rejectPlaceholder": "Enter the rejection reason",
+    "rejectValidation": "Enter a rejection reason.",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "approvedPendingSync": "Approved, Sync Pending"
+    }
+  },
+  "payments": {
+    "title": "Reseller Payments",
+    "description": "Review reseller commission balances, record payments, and keep monthly commission periods updated.",
+    "statusTitle": "Payment Status",
+    "statusDescription": "Track your sales, commission totals, payment history, and current outstanding balance.",
+    "summary": {
+      "totalSales": "Total Sales",
+      "commissionRate": "Commission Rate",
+      "totalOwed": "Total Owed",
+      "totalPaid": "Total Paid",
+      "outstanding": "Outstanding Balance"
+    },
+    "filters": {
+      "period": "Period"
+    },
+    "columns": {
+      "reseller": "Reseller",
+      "period": "Period",
+      "sales": "Sales",
+      "rate": "Rate",
+      "owed": "Commission Owed",
+      "paid": "Amount Paid",
+      "outstanding": "Outstanding",
+      "date": "Date",
+      "amount": "Amount",
+      "method": "Method",
+      "reference": "Reference",
+      "notes": "Notes"
+    },
+    "status": {
+      "unpaid": "Unpaid",
+      "partial": "Partial",
+      "paid": "Paid"
+    },
+    "sections": {
+      "commissions": "Commission Periods",
+      "history": "Payment History",
+      "monthlyBreakdown": "Monthly Breakdown"
+    },
+    "actions": {
+      "view": "View",
+      "recordPayment": "Record Payment",
+      "addCommission": "Add Commission",
+      "editCommission": "Edit Commission",
+      "editPayment": "Edit Payment"
+    },
+    "dialogs": {
+      "recordPayment": "Record Payment",
+      "editPayment": "Edit Payment",
+      "addCommission": "Add Commission",
+      "editCommission": "Edit Commission"
+    },
+    "fields": {
+      "commission": "Commission Period",
+      "amount": "Amount",
+      "paymentDate": "Payment Date",
+      "paymentMethod": "Payment Method",
+      "reference": "Reference",
+      "notes": "Notes",
+      "period": "Period",
+      "totalSales": "Total Sales",
+      "commissionRate": "Commission Rate (%)",
+      "commissionOwed": "Commission Owed"
+    },
+    "methods": {
+      "bank_transfer": "Bank Transfer",
+      "cash": "Cash",
+      "other": "Other"
+    },
+    "empty": {
+      "resellers": "No reseller payment rows found for the current filters.",
+      "payments": "No payment history found yet.",
+      "commissions": "No commission periods found yet."
+    },
+    "validation": {
+      "payment": "Select a commission period, payment date, and a valid amount.",
+      "commission": "Enter a valid period, commission rate, and commission owed amount."
+    },
+    "messages": {
+      "paymentSaved": "Payment saved successfully.",
+      "commissionSaved": "Commission saved successfully."
+    }
   },
   "settings": {
     "serverTimezone": "Server Timezone",

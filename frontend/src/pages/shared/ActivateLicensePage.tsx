@@ -41,6 +41,7 @@ export function ActivateLicensePage({ defaultBackPath }: ActivateLicensePageProp
       price_per_day: program.base_price,
       has_external_api: program.has_external_api,
       external_software_id: program.external_software_id,
+      duration_presets: program.duration_presets,
     }
   }, [programQuery.data?.data])
 

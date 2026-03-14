@@ -28,8 +28,11 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
       email: user?.email ?? '',
       phone: user?.phone ?? '',
       timezone: resolveDisplayTimezone(user?.timezone),
+      branding: {
+        primary_color: user?.branding?.primary_color ?? '#0284c7',
+      },
     }),
-    [user?.email, user?.name, user?.phone, user?.timezone],
+    [user?.email, user?.name, user?.phone, user?.timezone, user?.branding?.primary_color],
   )
   const [profileForm, setProfileForm] = useState(initialProfileForm)
   const [passwordForm, setPasswordForm] = useState({
@@ -50,6 +53,9 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
         email: data.user.email ?? '',
         phone: data.user.phone ?? '',
         timezone: resolveDisplayTimezone(data.user.timezone),
+        branding: {
+          primary_color: data.user.branding?.primary_color ?? '#0284c7',
+        },
       })
       setIsProfileDirty(false)
       toast.success(t(`${translationPrefix}.profileSaved`))
@@ -148,6 +154,22 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {t('common.timezoneHint', { defaultValue: 'Used for date display and schedule defaults.' })}
               </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="profile-color">{t('common.personalColor', { defaultValue: 'Personal Dashboard Color' })}</Label>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {t('common.personalColorHint', { defaultValue: 'Customize your dashboard theme color. Leave empty to use role default.' })}
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  id="profile-color"
+                  type="color"
+                  value={profileForm.branding.primary_color}
+                  onChange={(event) => updateProfileField('branding', { primary_color: event.target.value })}
+                  className="h-10 w-16 cursor-pointer rounded-lg border border-slate-300 dark:border-slate-700"
+                />
+                <span className="text-sm font-mono text-slate-600 dark:text-slate-300">{profileForm.branding.primary_color}</span>
+              </div>
             </div>
             <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending}>
               {profileMutation.isPending ? t('common.saving') : t(`${translationPrefix}.saveProfile`)}

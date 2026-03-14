@@ -79,4 +79,16 @@ class Program extends Model
     {
         return $this->hasMany(License::class);
     }
+
+    public function durationPresets(): HasMany
+    {
+        return $this->hasMany(ProgramDurationPreset::class)->orderBy('sort_order');
+    }
+
+    public function activeDurationPresets(): HasMany
+    {
+        return $this->hasMany(ProgramDurationPreset::class)
+            ->where('is_active', true)
+            ->orderBy('sort_order');
+    }
 }

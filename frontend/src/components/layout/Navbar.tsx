@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { useAuth } from '@/hooks/useAuth'
+import { useBranding } from '@/hooks/useBranding'
 import { useLanguage } from '@/hooks/useLanguage'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { useTheme } from '@/hooks/useTheme'
@@ -17,6 +18,7 @@ export function Navbar() {
   const { toggleTheme, isDark } = useTheme()
   const { canInstall, promptInstall } = usePwaInstall()
   const { user, logout } = useAuth()
+  const { logo, primaryColor } = useBranding()
   const toggleSidebar = useSidebarStore((state) => state.toggle)
   const timezoneQuery = useQuery({
     queryKey: ['navbar', 'timezone'],
@@ -45,7 +47,8 @@ export function Navbar() {
     : 'OBD2SW'
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+    <header className="sticky top-0 z-50 border-b bg-white/90 backdrop-blur dark:bg-slate-950/90" style={{ borderBottomColor: primaryColor }}>
+      <div className="h-1 w-full" style={{ backgroundColor: primaryColor }}></div>
       <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-4 md:h-16 md:flex-nowrap md:gap-4 md:px-6 md:py-0">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           <Button
@@ -58,13 +61,25 @@ export function Navbar() {
           >
             <Menu className="h-4 w-4" />
           </Button>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400">{eyebrow}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-sm font-semibold text-slate-950 dark:text-white">{title}</h1>
-              <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                {t('settings.serverTimezone', { defaultValue: 'Server Timezone' })}: {serverTimezone}
-              </span>
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+            {logo ? (
+              logo.startsWith('<svg') ? (
+                <div dangerouslySetInnerHTML={{ __html: logo }} className="h-7 w-8 shrink-0" />
+              ) : (
+                <img src={logo} alt="Logo" className="h-7 w-auto shrink-0 object-contain" />
+              )
+            ) : (
+              <p className="shrink-0 text-xs font-semibold uppercase tracking-[0.24em]" style={{ color: primaryColor }}>
+                {eyebrow}
+              </p>
+            )}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-sm font-semibold text-slate-950 dark:text-white">{title}</h1>
+                <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                  {t('settings.serverTimezone', { defaultValue: 'Server Timezone' })}: {serverTimezone}
+                </span>
+              </div>
             </div>
           </div>
         </div>

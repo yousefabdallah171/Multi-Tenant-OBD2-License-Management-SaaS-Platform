@@ -14,7 +14,9 @@ import type {
   ResellerSoftwareProgram,
   RoleActivityEntry,
   RoleActivityFilters,
+  SubmitBiosChangeRequestData,
   TopProgramRow,
+  ResellerPaymentStatusData,
 } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
@@ -79,6 +81,14 @@ export const resellerService = {
   },
   async getCustomer(id: number) {
     const { data } = await api.get<{ data: ResellerCustomerDetails }>(`/reseller/customers/${id}`)
+    return data
+  },
+  async submitBiosChangeRequest(payload: SubmitBiosChangeRequestData) {
+    const { data } = await api.post<{ data: unknown; message: string }>('/reseller/bios-change-requests', payload)
+    return data
+  },
+  async getPaymentStatus() {
+    const { data } = await api.get<{ data: ResellerPaymentStatusData }>('/reseller/payment-status')
     return data
   },
   async updateCustomer(id: number, payload: { client_name: string; email?: string; phone?: string }) {

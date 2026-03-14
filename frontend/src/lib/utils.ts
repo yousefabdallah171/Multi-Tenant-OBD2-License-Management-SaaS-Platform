@@ -128,6 +128,7 @@ type SchedulableLicense = {
   start_at?: string | Date | null
   paused_at?: string | Date | null
   pause_remaining_minutes?: number | null
+  pause_reason?: string | null
 }
 
 export function isScheduledLicense(value: SchedulableLicense | null | undefined) {

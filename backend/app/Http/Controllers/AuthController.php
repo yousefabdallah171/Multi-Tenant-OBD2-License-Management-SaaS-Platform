@@ -165,7 +165,14 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'phone' => ['nullable', 'string', 'max:20'],
             'timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
+            'branding.primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
+
+        // Handle branding separately for JSON structure
+        if (isset($validated['branding'])) {
+            $user->branding = $validated['branding'];
+            unset($validated['branding']);
+        }
 
         $user->update($validated);
 

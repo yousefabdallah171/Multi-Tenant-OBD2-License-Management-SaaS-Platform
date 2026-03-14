@@ -26,6 +26,8 @@ class CustomerController extends BaseManagerParentController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'manager_parent_id' => ['nullable', 'integer'],
+            'manager_id' => ['nullable', 'integer'],
             'reseller_id' => ['nullable', 'integer'],
             'program_id' => ['nullable', 'integer'],
             'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
@@ -41,6 +43,15 @@ class CustomerController extends BaseManagerParentController
                 ->select($this->licenseListColumns())
                 ->with(['program:id,name', 'reseller:id,name'])])
             ->latest();
+
+        $creatorIds = collect([
+            ! empty($validated['manager_parent_id']) ? (int) $validated['manager_parent_id'] : null,
+            ! empty($validated['manager_id']) ? (int) $validated['manager_id'] : null,
+        ])->filter()->values();
+
+        if ($creatorIds->isNotEmpty()) {
+            $query->whereIn('created_by', $creatorIds->all());
+        }
 
         if (! empty($validated['search'])) {
             $query->where(function ($builder) use ($validated): void {
@@ -106,6 +117,54 @@ class CustomerController extends BaseManagerParentController
         ]);
     }
 
+    public function licenseHistory(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveTenantUser($request, $user);
+        abort_unless(($customer->role?->value ?? (string) $customer->role) === UserRole::CUSTOMER->value, 404);
+
+        $licenses = License::query()
+            ->with(['program:id,name', 'reseller:id,name,email'])
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('customer_id', $customer->id)
+            ->orderByDesc('activated_at')
+            ->get()
+            ->map(fn (License $license): array => $this->serializeLicenseHistoryEntry($license))
+            ->values();
+
+        return response()->json([
+            'data' => $licenses,
+        ]);
+    }
+
+    public function biosChangeHistory(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveTenantUser($request, $user);
+        abort_unless(($customer->role?->value ?? (string) $customer->role) === UserRole::CUSTOMER->value, 404);
+
+        $changes = \App\Models\BiosChangeRequest::query()
+            ->with(['license:id,customer_id', 'reseller:id,name', 'reviewer:id,name'])
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->whereHas('license', fn ($q) => $q->where('customer_id', $customer->id))
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($change): array => [
+                'id' => $change->id,
+                'old_bios_id' => $change->old_bios_id,
+                'new_bios_id' => $change->new_bios_id,
+                'reason' => $change->reason,
+                'status' => $change->status,
+                'requested_by' => $change->reseller?->name,
+                'reviewed_by' => $change->reviewer?->name,
+                'created_at' => $change->created_at?->toIso8601String(),
+                'reviewed_at' => $change->reviewed_at?->toIso8601String(),
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => $changes,
+        ]);
+    }
+
     public function show(Request $request, User $user): JsonResponse
     {
         $user = $this->resolveTenantUser($request, $user);
@@ -154,6 +213,7 @@ class CustomerController extends BaseManagerParentController
 
         $activity = ActivityLog::query()
             ->select(['id', 'tenant_id', 'user_id', 'action', 'description', 'metadata', 'ip_address', 'created_at'])
+            ->with('user:id,name')
             ->where('tenant_id', $this->currentTenantId($request))
             ->where(function ($query) use ($user): void {
                 $query->where('user_id', $user->id)->orWhere('metadata->customer_id', $user->id);
@@ -167,6 +227,7 @@ class CustomerController extends BaseManagerParentController
                 'description' => $log->description,
                 'metadata' => $log->metadata ?? [],
                 'ip_address' => $log->ip_address,
+                'performed_by' => $log->user?->name,
                 'created_at' => $log->created_at?->toIso8601String(),
             ])
             ->values();
@@ -204,6 +265,7 @@ class CustomerController extends BaseManagerParentController
                     'scheduled_failure_message' => $license->scheduled_failure_message,
                     'paused_at' => $license->paused_at?->toIso8601String(),
                     'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+                    'pause_reason' => $license->pause_reason,
                 ])->values(),
                 'resellers_summary' => $resellersSummary,
                 'ip_logs' => $ipLogs,
@@ -485,7 +547,7 @@ class CustomerController extends BaseManagerParentController
     {
         $columns = [];
 
-        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'] as $column) {
+        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes', 'pause_reason'] as $column) {
             if (Schema::hasColumn('licenses', $column)) {
                 $columns[] = $column;
             }
@@ -533,8 +595,30 @@ class CustomerController extends BaseManagerParentController
             'scheduled_failure_message' => $license?->scheduled_failure_message,
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license?->pause_reason,
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
+        ];
+    }
+
+    private function serializeLicenseHistoryEntry(License $license): array
+    {
+        return [
+            'id' => $license->id,
+            'program_name' => $license->program?->name,
+            'reseller_id' => $license->reseller_id,
+            'reseller_name' => $license->reseller?->name,
+            'reseller_email' => $license->reseller?->email,
+            'bios_id' => $license->bios_id,
+            'external_username' => $license->external_username,
+            'activated_at' => $license->activated_at?->toIso8601String(),
+            'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
+            'expires_at' => $license->expires_at?->toIso8601String(),
+            'duration_days' => (float) $license->duration_days,
+            'price' => (float) $license->price,
+            'status' => $license->effectiveStatus(),
+            'paused_at' => $license->paused_at?->toIso8601String(),
+            'pause_reason' => $license->pause_reason,
         ];
     }
 

@@ -1,7 +1,7 @@
 import { api } from '@/services/api'
 import { apiCache } from '@/lib/apiCache'
 import type { PaginatedResponse } from '@/types/manager-parent.types'
-import type { ActivateLicenseData, LicenseDetails, LicenseFilters, LicenseSummary, RenewLicenseData } from '@/types/manager-reseller.types'
+import type { ActivateLicenseData, LicenseDetails, LicenseFilters, LicenseSummary, PauseLicenseData, RenewLicenseData } from '@/types/manager-reseller.types'
 
 function clearRoleCaches() {
   apiCache.clearPattern(/^(reseller|manager|manager-parent|super-admin):/)
@@ -64,8 +64,8 @@ export const licenseService = {
     clearRoleCaches()
     return response.data
   },
-  async pause(id: number) {
-    const response = await api.post<{ message: string; data: LicenseSummary }>(`/licenses/${id}/pause`)
+  async pause(id: number, data: PauseLicenseData = {}) {
+    const response = await api.post<{ message: string; data: LicenseSummary }>(`/licenses/${id}/pause`, data)
     clearRoleCaches()
     return response.data
   },

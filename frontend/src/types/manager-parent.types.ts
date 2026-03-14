@@ -1,4 +1,5 @@
 import type { LogEntry, PaginationMeta } from '@/types/super-admin.types'
+import type { ProgramDurationPreset } from '@/types/manager-reseller.types'
 
 export interface ManagerParentDashboardStats {
   users: number
@@ -119,6 +120,7 @@ export interface ProgramSummary {
   active_licenses_count: number
   revenue: number
   created_at: string | null
+  duration_presets?: ProgramDurationPreset[]
 }
 
 export interface ProgramLog {
@@ -262,6 +264,7 @@ export interface CustomerSummary {
   is_scheduled?: boolean
   paused_at?: string | null
   pause_remaining_minutes?: number | null
+  pause_reason?: string | null
   license_count: number
   has_active_license?: boolean
 }
@@ -294,6 +297,7 @@ export interface CustomerDetails extends CustomerSummary {
     is_scheduled?: boolean
     paused_at?: string | null
     pause_remaining_minutes?: number | null
+    pause_reason?: string | null
   }>
   resellers_summary?: Array<{
     reseller_id: number | null
@@ -323,6 +327,44 @@ export interface CustomerDetails extends CustomerSummary {
   }>
 }
 
+export interface CustomerLicenseHistoryEntry {
+  id: number
+  program_name: string | null
+  reseller_id: number | null
+  reseller_name: string | null
+  reseller_email?: string | null
+  bios_id: string
+  external_username?: string | null
+  activated_at: string | null
+  start_at?: string | null
+  expires_at: string | null
+  duration_days: number
+  price: number
+  status: string
+  paused_at?: string | null
+  pause_reason?: string | null
+}
+
+export interface ManagerParentBiosChangeRequest {
+  id: number
+  license_id: number
+  customer_id: number | null
+  customer_name: string | null
+  program_name: string | null
+  old_bios_id: string
+  new_bios_id: string
+  reason: string
+  status: 'pending' | 'approved' | 'rejected' | 'approved_pending_sync'
+  reseller_id: number | null
+  reseller_name: string | null
+  reseller_email: string | null
+  reviewer_id?: number | null
+  reviewer_name?: string | null
+  reviewer_notes?: string | null
+  reviewed_at?: string | null
+  created_at: string | null
+}
+
 export interface TenantSettings {
   business: {
     company_name: string
@@ -340,6 +382,7 @@ export interface TenantSettings {
   }
   branding: {
     logo: string | null
+    primary_color: string | null
   }
 }
 
@@ -467,6 +510,7 @@ export interface BiosConflictItem {
   bios_id: string
   conflict_type: string
   attempted_by_name: string | null
+  reseller_name?: string | null
   program_name: string | null
   affected_customers: Array<{ id: number | null; name: string; username?: string | null }>
   status: 'open' | 'resolved'
