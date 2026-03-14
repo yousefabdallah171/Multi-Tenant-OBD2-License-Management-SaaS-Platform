@@ -116,7 +116,7 @@ export function DataTable<T>({
   }
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-clip">
       <ResponsiveTable>
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
           <thead className="sticky top-0 z-20 border-b border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-950/70">
