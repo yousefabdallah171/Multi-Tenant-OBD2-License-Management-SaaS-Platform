@@ -1,5 +1,5 @@
 import { api } from '@/services/api'
-import type { PaginationMeta, TenantStats, TenantSummary } from '@/types/super-admin.types'
+import type { PaginationMeta, TenantBackup, TenantStats, TenantSummary } from '@/types/super-admin.types'
 import type { User } from '@/types/user.types'
 
 export interface TenantListParams {
@@ -54,6 +54,40 @@ export const tenantService = {
   },
   async getStats(id: number) {
     const { data } = await api.get<{ data: TenantStats }>(`/super-admin/tenants/${id}/stats`)
+    return data
+  },
+  async getBackups(tenantId: number) {
+    const { data } = await api.get<{ data: TenantBackup[] }>(`/super-admin/tenants/${tenantId}/backups`)
+    return data
+  },
+  async resetTenant(tenantId: number, payload: { confirm_name: string; label?: string }) {
+    const { data } = await api.post<{ message: string; data: TenantBackup }>(`/super-admin/tenants/${tenantId}/reset`, payload)
+    return data
+  },
+  async restoreBackup(tenantId: number, backupId: number, payload: { confirm_name: string }) {
+    const { data } = await api.post<{ message: string }>(`/super-admin/tenants/${tenantId}/backups/${backupId}/restore`, payload)
+    return data
+  },
+  async deleteBackup(tenantId: number, backupId: number) {
+    const { data } = await api.delete<{ message: string }>(`/super-admin/tenants/${tenantId}/backups/${backupId}`)
+    return data
+  },
+  async downloadBackup(tenantId: number, backupId: number): Promise<{ blob: Blob; filename: string }> {
+    const response = await api.get(`/super-admin/tenants/${tenantId}/backups/${backupId}/download`, { responseType: 'blob' })
+    const disposition = response.headers['content-disposition'] as string | undefined
+    const match = disposition?.match(/filename="?([^"]+)"?/)
+    const filename = match?.[1] ?? `backup-${tenantId}-${backupId}.json`
+    return { blob: response.data as Blob, filename }
+  },
+  async importBackup(tenantId: number, file: File, label?: string) {
+    const form = new FormData()
+    form.append('file', file)
+    if (label) form.append('label', label)
+    const { data } = await api.post<{ message: string; data: TenantBackup }>(
+      `/super-admin/tenants/${tenantId}/backups/import`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
     return data
   },
 }

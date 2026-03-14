@@ -66,6 +66,7 @@ use App\Http\Controllers\SuperAdmin\ReportController;
 use App\Http\Controllers\SuperAdmin\SecurityController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
+use App\Http\Controllers\SuperAdmin\TenantResetController as SuperAdminTenantResetController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
 use App\Http\Middleware\ProcessDueScheduledLicenses;
 use Illuminate\Http\JsonResponse;
@@ -341,6 +342,12 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/dashboard/recent-activity', [SuperAdminDashboardController::class, 'recentActivity']);
 
         Route::get('/tenants/{tenant}/stats', [SuperAdminTenantController::class, 'stats']);
+        Route::get('/tenants/{tenant}/backups', [SuperAdminTenantResetController::class, 'index']);
+        Route::post('/tenants/{tenant}/reset', [SuperAdminTenantResetController::class, 'reset']);
+        Route::post('/tenants/{tenant}/backups/import', [SuperAdminTenantResetController::class, 'import']);
+        Route::get('/tenants/{tenant}/backups/{backup}/download', [SuperAdminTenantResetController::class, 'download']);
+        Route::post('/tenants/{tenant}/backups/{backup}/restore', [SuperAdminTenantResetController::class, 'restore']);
+        Route::delete('/tenants/{tenant}/backups/{backup}', [SuperAdminTenantResetController::class, 'destroy']);
         Route::apiResource('tenants', SuperAdminTenantController::class);
 
         Route::get('/users', [SuperAdminUserController::class, 'index']);

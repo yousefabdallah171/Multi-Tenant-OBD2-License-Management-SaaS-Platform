@@ -290,6 +290,31 @@ export interface FinancialReportPayload {
   }>
 }
 
+export interface TenantBackupStats {
+  customers: number
+  licenses: number
+  bios_change_requests: number
+  bios_access_logs: number
+  bios_conflicts: number
+  activity_logs: number
+  api_logs: number
+  user_ip_logs: number
+  reseller_commissions: number
+  reseller_payments: number
+  financial_reports: number
+  user_balances: number
+  [key: string]: number
+}
+
+export interface TenantBackup {
+  id: number
+  tenant_id: number
+  label: string | null
+  stats: TenantBackupStats
+  created_by: { id: number; name: string; email: string } | null
+  created_at: string | null
+}
+
 export interface SystemSettings {
   general: {
     platform_name: string
