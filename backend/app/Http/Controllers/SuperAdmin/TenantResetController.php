@@ -8,6 +8,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class TenantResetController extends BaseSuperAdminController
 {
@@ -51,15 +53,14 @@ class TenantResetController extends BaseSuperAdminController
             $customerIds   = $this->customerIds($tenant->id);
             $commissionIds = $this->commissionIds($tenant->id);
 
-            $payload = $this->collectPayload($tenant->id, $customerIds, $commissionIds);
-            $stats   = array_map('count', $payload);
+            [$payload, $stats] = $this->buildPayloadJson($tenant->id, $customerIds, $commissionIds);
 
             $backup = TenantBackup::query()->create([
                 'tenant_id'  => $tenant->id,
                 'created_by' => $request->user()->id,
                 'label'      => $validated['label'] ?? null,
                 'stats'      => $stats,
-                'payload'    => json_encode($payload, JSON_UNESCAPED_UNICODE),
+                'payload'    => $payload,
             ]);
 
             $this->deleteOperationalData($tenant->id, $customerIds, $commissionIds);
@@ -251,37 +252,145 @@ class TenantResetController extends BaseSuperAdminController
     }
 
     /**
-     * Collect all operational rows using raw DB queries.
-     * DB::table() returns native PHP types without Eloquent datetime casting,
-     * so values are directly safe for re-insertion.
+     * Build the backup JSON payload without materializing the full dataset in PHP memory.
      *
      * @param list<int> $customerIds
      * @param list<int> $commissionIds
-     * @return array<string, list<array<string, mixed>>>
+     * @return array{0:string,1:array<string,int>}
      */
-    private function collectPayload(int $tenantId, array $customerIds, array $commissionIds): array
+    private function buildPayloadJson(int $tenantId, array $customerIds, array $commissionIds): array
     {
-        $raw = fn (string $table, callable $cb): array => DB::table($table)
-            ->tap($cb)
-            ->get()
-            ->map(fn (object $r): array => (array) $r)
-            ->toArray();
+        $path = tempnam(sys_get_temp_dir(), 'tenant-backup-');
 
-        return [
-            'customers'            => $raw('users', fn ($q) => $q->where('tenant_id', $tenantId)->where('role', 'customer')),
-            'licenses'             => $raw('licenses', fn ($q) => $q->where('tenant_id', $tenantId)),
-            'bios_change_requests' => $raw('bios_change_requests', fn ($q) => $q->where('tenant_id', $tenantId)),
-            'bios_access_logs'     => $raw('bios_access_logs', fn ($q) => $q->where('tenant_id', $tenantId)),
-            'bios_conflicts'       => $raw('bios_conflicts', fn ($q) => $q->where('tenant_id', $tenantId)),
-            'activity_logs'        => $raw('activity_logs', fn ($q) => $q->where('tenant_id', $tenantId)),
-            'api_logs'             => $raw('api_logs', fn ($q) => $q->where('tenant_id', $tenantId)),
-            'user_ip_logs'         => empty($customerIds) ? [] : $raw('user_ip_logs', fn ($q) => $q->whereIn('user_id', $customerIds)),
-            'user_balances'        => empty($customerIds) ? [] : $raw('user_balances', fn ($q) => $q->whereIn('user_id', $customerIds)),
-            'user_online_statuses' => empty($customerIds) ? [] : $raw('user_online_status', fn ($q) => $q->whereIn('user_id', $customerIds)),
-            'reseller_commissions' => $raw('reseller_commissions', fn ($q) => $q->where('tenant_id', $tenantId)),
-            'reseller_payments'    => empty($commissionIds) ? [] : $raw('reseller_payments', fn ($q) => $q->whereIn('commission_id', $commissionIds)),
-            'financial_reports'    => $raw('financial_reports', fn ($q) => $q->where('tenant_id', $tenantId)),
+        if ($path === false) {
+            throw new \RuntimeException('Could not allocate a temporary file for tenant backup.');
+        }
+
+        $handle = fopen($path, 'wb');
+
+        if ($handle === false) {
+            @unlink($path);
+            throw new \RuntimeException('Could not open the temporary tenant backup file for writing.');
+        }
+
+        $stats = [];
+
+        $specs = [
+            'customers' => [
+                'query' => fn () => DB::table('users')->where('tenant_id', $tenantId)->where('role', 'customer'),
+                'order' => 'id',
+            ],
+            'licenses' => [
+                'query' => fn () => DB::table('licenses')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
+            'bios_change_requests' => [
+                'query' => fn () => DB::table('bios_change_requests')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
+            'bios_access_logs' => [
+                'query' => fn () => DB::table('bios_access_logs')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
+            'bios_conflicts' => [
+                'query' => fn () => DB::table('bios_conflicts')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
+            'activity_logs' => [
+                'query' => fn () => DB::table('activity_logs')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
+            'api_logs' => [
+                'query' => fn () => DB::table('api_logs')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
+            'user_ip_logs' => [
+                'query' => fn () => empty($customerIds) ? null : DB::table('user_ip_logs')->whereIn('user_id', $customerIds),
+                'order' => 'id',
+            ],
+            'user_balances' => [
+                'query' => fn () => empty($customerIds) ? null : DB::table('user_balances')->whereIn('user_id', $customerIds),
+                'order' => 'id',
+            ],
+            'user_online_statuses' => [
+                'query' => fn () => empty($customerIds) ? null : DB::table('user_online_status')->whereIn('user_id', $customerIds),
+                'order' => 'user_id',
+            ],
+            'reseller_commissions' => [
+                'query' => fn () => DB::table('reseller_commissions')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
+            'reseller_payments' => [
+                'query' => fn () => empty($commissionIds) ? null : DB::table('reseller_payments')->whereIn('commission_id', $commissionIds),
+                'order' => 'id',
+            ],
+            'financial_reports' => [
+                'query' => fn () => DB::table('financial_reports')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
         ];
+
+        try {
+            fwrite($handle, '{');
+
+            $firstSection = true;
+
+            foreach ($specs as $key => $spec) {
+                if (! $firstSection) {
+                    fwrite($handle, ',');
+                }
+
+                $firstSection = false;
+                fwrite($handle, json_encode($key, JSON_UNESCAPED_UNICODE) . ':[');
+
+                $query = $spec['query']();
+                $count = 0;
+                $firstRow = true;
+
+                Log::info('tenant-backup table start', ['tenant_id' => $tenantId, 'table' => $key]);
+
+                if ($query !== null) {
+                    foreach ($query->orderBy($spec['order'])->cursor() as $row) {
+                        if (! $firstRow) {
+                            fwrite($handle, ',');
+                        }
+
+                        $firstRow = false;
+                        fwrite($handle, json_encode((array) $row, JSON_UNESCAPED_UNICODE));
+                        $count++;
+                    }
+                }
+
+                fwrite($handle, ']');
+                $stats[$key] = $count;
+
+                Log::info('tenant-backup table complete', [
+                    'tenant_id' => $tenantId,
+                    'table' => $key,
+                    'rows' => $count,
+                ]);
+            }
+
+            fwrite($handle, '}');
+            fclose($handle);
+
+            $payload = file_get_contents($path);
+
+            if ($payload === false) {
+                throw new \RuntimeException('Could not read the generated tenant backup payload.');
+            }
+
+            return [$payload, $stats];
+        } catch (Throwable $e) {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
+            @unlink($path);
+
+            throw $e;
+        } finally {
+            @unlink($path);
+        }
     }
 
     /**
