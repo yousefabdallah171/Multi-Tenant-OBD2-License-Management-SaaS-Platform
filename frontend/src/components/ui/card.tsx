@@ -14,7 +14,7 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 }
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('space-y-2 p-8 pb-4', className)} {...props} />
+  return <div className={cn('sticky top-16 z-10 space-y-2 bg-white/95 p-8 pb-4 dark:bg-slate-900/95', className)} {...props} />
 }
 
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
