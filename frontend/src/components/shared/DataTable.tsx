@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { ResponsiveTable } from '@/components/shared/ResponsiveTable'
 import { SkeletonTable } from '@/components/shared/SkeletonTable'
 import { cn } from '@/lib/utils'
 
@@ -116,8 +115,8 @@ export function DataTable<T>({
   }
 
   return (
-    <Card className="overflow-clip">
-      <ResponsiveTable>
+    <Card className="overflow-hidden">
+      <div className="max-h-[70vh] overflow-auto">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
           <thead className="sticky top-0 z-20 border-b border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-950/70">
             <tr>
@@ -181,7 +180,7 @@ export function DataTable<T>({
               : null}
           </tbody>
         </table>
-      </ResponsiveTable>
+      </div>
       {pagination && onPageChange ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
           <span>{t('common.totalCount', { count: pagination.total })}</span>
