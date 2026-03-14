@@ -338,7 +338,7 @@ export function CustomersPage() {
         </Button>
       </div>
 
-      <div className="sticky top-24 z-10 grid gap-3 bg-gradient-to-b from-white/95 to-white/80 py-3 dark:from-slate-950/95 dark:to-slate-950/80 md:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}

@@ -14,7 +14,7 @@ export function PageHeader({ title, description, eyebrow = 'Manager Parent', act
   const resolvedEyebrow = eyebrow === 'Manager Parent' ? t('roles.manager_parent') : eyebrow
 
   return (
-    <div className={cn('sticky top-0 z-20 flex flex-wrap items-start justify-between gap-4 bg-white/95 py-4 dark:bg-slate-950/95', className)}>
+    <div className={cn('flex flex-wrap items-start justify-between gap-4', className)}>
       <div className="space-y-2">
         <p className="text-sm uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400">{resolvedEyebrow}</p>
         <h2 className="text-3xl font-semibold">{title}</h2>

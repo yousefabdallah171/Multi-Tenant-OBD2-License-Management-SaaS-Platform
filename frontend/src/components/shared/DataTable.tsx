@@ -119,7 +119,7 @@ export function DataTable<T>({
     <Card className="overflow-hidden">
       <ResponsiveTable>
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
-          <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm dark:bg-slate-950/70 dark:shadow-slate-900/50">
+          <thead className="sticky top-0 z-20 border-b border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-950/70">
             <tr>
               {columns.map((column) => {
                 const isActive = sortKey === column.key
