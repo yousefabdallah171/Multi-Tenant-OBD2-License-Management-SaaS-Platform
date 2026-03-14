@@ -56,6 +56,7 @@ export function SettingsPage() {
           },
           branding: {
             logo: null,
+            primary_color: null,
           },
         }
       }
@@ -66,7 +67,7 @@ export function SettingsPage() {
 
 function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; onSaved: () => void }) {
   const { t } = useTranslation()
-  const { user, setUser } = useAuth()
+  const { user, setAuthenticatedUser } = useAuth()
   const [form, setForm] = useState<TenantSettings>(settings)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -76,7 +77,7 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
       toast.success(t('managerParent.pages.settings.saveSuccess'))
       // Update auth store so branding reflects immediately
       if (user && user.tenant) {
-        setUser({ ...user, tenant: { ...user.tenant, settings: response.data as any } })
+        setAuthenticatedUser({ ...user, tenant: { ...user.tenant, settings: response.data as any } })
       }
       onSaved()
     },
@@ -90,10 +91,10 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
       setForm((current) => ({ ...current, branding: { ...current.branding, logo: newLogo } }))
       // Update auth store immediately
       if (user && user.tenant) {
-        setUser({ ...user, tenant: { ...user.tenant, settings: { ...form, branding: { ...form.branding, logo: newLogo } } as any } })
+        setAuthenticatedUser({ ...user, tenant: { ...user.tenant, settings: { ...form, branding: { ...form.branding, logo: newLogo } } as any } })
       }
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error(t('common.error'))
     },
   })

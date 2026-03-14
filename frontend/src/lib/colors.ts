@@ -75,7 +75,7 @@ export const BRAND_CSS_VARS = {
  */
 export function getBrandColor(shade: keyof typeof BRAND_CSS_VARS): string {
   if (typeof window === 'undefined') return '#0284c7'
-  const varName = shade === '50' ? '--brand-50' : `--brand-${shade}`
+  const varName = String(shade) === '50' ? '--brand-50' : `--brand-${shade}`
   return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || '#0284c7'
 }
 

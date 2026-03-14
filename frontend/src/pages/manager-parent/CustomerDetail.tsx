@@ -158,7 +158,6 @@ export function CustomerDetailPage() {
                           <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
                         </div>
                         <div className="text-right">
-                          {entry.performed_by ? <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{entry.performed_by}</p> : null}
                           <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
                         </div>
                       </div>
