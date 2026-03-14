@@ -54,13 +54,14 @@ class TenantResetController extends BaseSuperAdminController
             $commissionIds = $this->commissionIds($tenant->id);
 
             [$payload, $stats] = $this->buildPayloadJson($tenant->id, $customerIds, $commissionIds);
+            $storedPayload = $this->encodePayloadForStorage($payload);
 
             $backup = TenantBackup::query()->create([
                 'tenant_id'  => $tenant->id,
                 'created_by' => $request->user()->id,
                 'label'      => $validated['label'] ?? null,
                 'stats'      => $stats,
-                'payload'    => $payload,
+                'payload'    => $storedPayload,
             ]);
 
             $this->deleteOperationalData($tenant->id, $customerIds, $commissionIds);
@@ -94,7 +95,7 @@ class TenantResetController extends BaseSuperAdminController
             ], 422);
         }
 
-        $payload = json_decode($backup->payload, true);
+        $payload = $this->decodeStoredPayload($backup->payload);
 
         DB::transaction(function () use ($tenant, $payload): void {
             $currentCustomerIds   = $this->customerIds($tenant->id);
@@ -116,7 +117,7 @@ class TenantResetController extends BaseSuperAdminController
             abort(403, 'Backup does not belong to this tenant.');
         }
 
-        $payload = json_decode($backup->payload, true);
+        $payload = $this->decodeStoredPayload($backup->payload);
 
         $export = [
             'version'    => 2,
@@ -200,12 +201,14 @@ class TenantResetController extends BaseSuperAdminController
             ?? ($decoded['backup']['label'] ?? null)
             ?? 'Imported backup';
 
+        $encodedPayload = $this->encodePayloadForStorage(json_encode($payload, JSON_UNESCAPED_UNICODE));
+
         $backup = TenantBackup::query()->create([
             'tenant_id'  => $tenant->id,
             'created_by' => $request->user()->id,
             'label'      => $label,
             'stats'      => $stats,
-            'payload'    => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            'payload'    => $encodedPayload,
         ]);
 
         return response()->json([
@@ -380,6 +383,11 @@ class TenantResetController extends BaseSuperAdminController
                 throw new \RuntimeException('Could not read the generated tenant backup payload.');
             }
 
+            Log::info('tenant-backup payload built', [
+                'tenant_id' => $tenantId,
+                'bytes' => strlen($payload),
+            ]);
+
             return [$payload, $stats];
         } catch (Throwable $e) {
             if (is_resource($handle)) {
@@ -391,6 +399,67 @@ class TenantResetController extends BaseSuperAdminController
         } finally {
             @unlink($path);
         }
+    }
+
+    private function encodePayloadForStorage(string $payload): string
+    {
+        $compressed = gzencode($payload, 6);
+
+        if ($compressed === false) {
+            throw new \RuntimeException('Could not compress the tenant backup payload.');
+        }
+
+        $envelope = json_encode([
+            'encoding' => 'gzip_base64',
+            'data' => base64_encode($compressed),
+        ], JSON_UNESCAPED_UNICODE);
+
+        if ($envelope === false) {
+            throw new \RuntimeException('Could not encode the compressed tenant backup payload.');
+        }
+
+        Log::info('tenant-backup payload compressed', [
+            'raw_bytes' => strlen($payload),
+            'stored_bytes' => strlen($envelope),
+        ]);
+
+        return $envelope;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeStoredPayload(string $storedPayload): array
+    {
+        $decoded = json_decode($storedPayload, true);
+
+        if (! is_array($decoded)) {
+            throw new \RuntimeException('Stored tenant backup payload is not valid JSON.');
+        }
+
+        if (($decoded['encoding'] ?? null) === 'gzip_base64' && isset($decoded['data']) && is_string($decoded['data'])) {
+            $binary = base64_decode($decoded['data'], true);
+
+            if ($binary === false) {
+                throw new \RuntimeException('Stored tenant backup payload has invalid base64 data.');
+            }
+
+            $json = gzdecode($binary);
+
+            if ($json === false) {
+                throw new \RuntimeException('Stored tenant backup payload could not be decompressed.');
+            }
+
+            $payload = json_decode($json, true);
+
+            if (! is_array($payload)) {
+                throw new \RuntimeException('Decompressed tenant backup payload is not valid JSON.');
+            }
+
+            return $payload;
+        }
+
+        return $decoded;
     }
 
     /**
