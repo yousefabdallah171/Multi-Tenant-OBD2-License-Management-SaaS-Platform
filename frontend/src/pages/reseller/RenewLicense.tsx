@@ -11,6 +11,7 @@ export function RenewLicensePageForReseller() {
       invalidateQueryKey={['reseller']}
       eyebrow={t('roles.reseller')}
       cachePattern={/^reseller:/}
+      activeLicenseTitle={t('text.actions.renew', { defaultValue: 'Renew' })}
     />
   )
 }

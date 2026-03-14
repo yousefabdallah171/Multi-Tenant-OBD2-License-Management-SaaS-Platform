@@ -2,17 +2,27 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+use App\Models\License;
+use App\Models\Program;
 use App\Models\Tenant;
 use App\Models\TenantBackup;
+use App\Services\ExternalApiService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Illuminate\Validation\ValidationException;
 
 class TenantResetController extends BaseSuperAdminController
 {
+    public function __construct(
+        private readonly ExternalApiService $externalApiService,
+    ) {
+    }
+
     // -------------------------------------------------------------------------
     // Public endpoints
     // -------------------------------------------------------------------------
@@ -49,25 +59,34 @@ class TenantResetController extends BaseSuperAdminController
             ], 422);
         }
 
-        $backup = DB::transaction(function () use ($request, $tenant, $validated): TenantBackup {
-            $customerIds   = $this->customerIds($tenant->id);
-            $commissionIds = $this->commissionIds($tenant->id);
+        $externalDeactivationPlan = $this->buildCurrentExternalActivationPlan($tenant->id);
 
-            [$payload, $stats] = $this->buildPayloadJson($tenant->id, $customerIds, $commissionIds);
-            $storedPayload = $this->encodePayloadForStorage($payload);
+        $this->executeExternalSyncPlan($externalDeactivationPlan, 'deactivate', 'tenant-reset');
 
-            $backup = TenantBackup::query()->create([
-                'tenant_id'  => $tenant->id,
-                'created_by' => $request->user()->id,
-                'label'      => $validated['label'] ?? null,
-                'stats'      => $stats,
-                'payload'    => $storedPayload,
-            ]);
+        try {
+            $backup = DB::transaction(function () use ($request, $tenant, $validated): TenantBackup {
+                $customerIds   = $this->customerIds($tenant->id);
+                $commissionIds = $this->commissionIds($tenant->id);
 
-            $this->deleteOperationalData($tenant->id, $customerIds, $commissionIds);
+                [$payload, $stats] = $this->buildPayloadJson($tenant->id, $customerIds, $commissionIds);
+                $storedPayload = $this->encodePayloadForStorage($payload);
 
-            return $backup;
-        });
+                $backup = TenantBackup::query()->create([
+                    'tenant_id'  => $tenant->id,
+                    'created_by' => $request->user()->id,
+                    'label'      => $validated['label'] ?? null,
+                    'stats'      => $stats,
+                    'payload'    => $storedPayload,
+                ]);
+
+                $this->deleteOperationalData($tenant->id, $customerIds, $commissionIds);
+
+                return $backup;
+            });
+        } catch (Throwable $e) {
+            $this->rollbackExternalSyncPlan($externalDeactivationPlan, 'activate', 'tenant-reset');
+            throw $e;
+        }
 
         return response()->json([
             'message' => 'Tenant reset successfully. Backup created.',
@@ -96,14 +115,31 @@ class TenantResetController extends BaseSuperAdminController
         }
 
         $payload = $this->decodeStoredPayload($backup->payload);
+        $this->normalizePayload($payload);
 
-        DB::transaction(function () use ($tenant, $payload): void {
-            $currentCustomerIds   = $this->customerIds($tenant->id);
-            $currentCommissionIds = $this->commissionIds($tenant->id);
+        $currentDeactivationPlan = $this->buildCurrentExternalActivationPlan($tenant->id);
+        $restoreActivationPlan = $this->buildRestoreExternalActivationPlan($tenant->id, $payload);
+        $restorePreparePlan = $this->mergeExternalPlans(
+            $currentDeactivationPlan,
+            $this->buildPrecleanDeactivationPlan($restoreActivationPlan),
+        );
 
-            $this->deleteOperationalData($tenant->id, $currentCustomerIds, $currentCommissionIds);
-            $this->insertPayload($payload);
-        });
+        $this->executeExternalSyncPlan($restorePreparePlan, 'deactivate', 'tenant-restore-prepare');
+
+        try {
+            DB::transaction(function () use ($tenant, $payload): void {
+                $currentCustomerIds   = $this->customerIds($tenant->id);
+                $currentCommissionIds = $this->commissionIds($tenant->id);
+
+                $this->deleteOperationalData($tenant->id, $currentCustomerIds, $currentCommissionIds);
+                $this->insertPayload($payload);
+            });
+        } catch (Throwable $e) {
+            $this->rollbackExternalSyncPlan($currentDeactivationPlan, 'activate', 'tenant-restore');
+            throw $e;
+        }
+
+        $this->executeExternalSyncPlan($restoreActivationPlan, 'activate', 'tenant-restore');
 
         return response()->json(['message' => 'Tenant data restored successfully from backup.']);
     }
@@ -612,6 +648,356 @@ class TenantResetController extends BaseSuperAdminController
             $payload['user_online_statuses'] = $payload['user_online_status'];
             unset($payload['user_online_status']);
         }
+    }
+
+    /**
+     * @return list<array{
+     *   program_id:int,
+     *   program_name:string,
+     *   api_key:string,
+     *   base_url:?string,
+     *   external_username:string,
+     *   bios_id:string,
+     *   license_id:?int,
+     *   status:string
+     * }>
+     */
+    private function buildCurrentExternalActivationPlan(int $tenantId): array
+    {
+        $licenses = License::query()
+            ->where('tenant_id', $tenantId)
+            ->whereEffectivelyActive()
+            ->with([
+                'program:id,name,external_api_key_encrypted,external_api_base_url,external_software_id',
+                'customer:id,username',
+            ])
+            ->get();
+
+        $plan = [];
+
+        foreach ($licenses as $license) {
+            $item = $this->buildExternalSyncItem(
+                $license->program,
+                $license->external_username ?: $license->customer?->username ?: $license->bios_id,
+                (string) $license->bios_id,
+                $license->id,
+                (string) $license->status,
+            );
+
+            if ($item !== null) {
+                $plan[] = $item;
+            }
+        }
+
+        return $this->deduplicateExternalPlan($plan, includeBios: true);
+    }
+
+    /**
+     * @param array<string, list<array<string, mixed>>> $payload
+     * @return list<array{
+     *   program_id:int,
+     *   program_name:string,
+     *   api_key:string,
+     *   base_url:?string,
+     *   external_username:string,
+     *   bios_id:string,
+     *   license_id:?int,
+     *   status:string
+     * }>
+     */
+    private function buildRestoreExternalActivationPlan(int $tenantId, array $payload): array
+    {
+        $licenses = $payload['licenses'] ?? [];
+
+        if ($licenses === []) {
+            return [];
+        }
+
+        $programIds = array_values(array_unique(array_map(
+            static fn (array $license): int => (int) ($license['program_id'] ?? 0),
+            $licenses
+        )));
+
+        $programs = Program::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('id', array_filter($programIds))
+            ->get()
+            ->keyBy('id');
+
+        $customerUsernames = collect($payload['customers'] ?? [])
+            ->filter(static fn (array $customer): bool => isset($customer['id']))
+            ->mapWithKeys(static fn (array $customer): array => [
+                (int) $customer['id'] => (string) ($customer['username'] ?? ''),
+            ]);
+
+        $plan = [];
+
+        foreach ($licenses as $license) {
+            if (! $this->licensePayloadShouldBeExternallyActive($license)) {
+                continue;
+            }
+
+            $program = $programs->get((int) ($license['program_id'] ?? 0));
+            $externalUsername = trim((string) (
+                $license['external_username']
+                ?? $customerUsernames->get((int) ($license['customer_id'] ?? 0))
+                ?? ($license['bios_id'] ?? '')
+            ));
+
+            $item = $this->buildExternalSyncItem(
+                $program,
+                $externalUsername,
+                (string) ($license['bios_id'] ?? ''),
+                isset($license['id']) ? (int) $license['id'] : null,
+                (string) ($license['status'] ?? '')
+            );
+
+            if ($item !== null) {
+                $plan[] = $item;
+            }
+        }
+
+        return $this->deduplicateExternalPlan($plan, includeBios: true);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $activationPlan
+     * @return list<array<string, mixed>>
+     */
+    private function buildPrecleanDeactivationPlan(array $activationPlan): array
+    {
+        return $this->deduplicateExternalPlan($activationPlan, includeBios: false);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $plans
+     * @return list<array<string, mixed>>
+     */
+    private function mergeExternalPlans(array ...$plans): array
+    {
+        $merged = [];
+
+        foreach ($plans as $plan) {
+            array_push($merged, ...$plan);
+        }
+
+        return $this->deduplicateExternalPlan($merged, includeBios: false);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $plan
+     */
+    private function executeExternalSyncPlan(array $plan, string $operation, string $context): void
+    {
+        if ($plan === []) {
+            return;
+        }
+
+        $failures = [];
+
+        foreach ($plan as $item) {
+            $response = $operation === 'activate'
+                ? $this->externalApiService->activateUser($item['api_key'], $item['external_username'], $item['bios_id'], $item['base_url'])
+                : $this->externalApiService->deactivateUser($item['api_key'], $item['external_username'], $item['base_url']);
+
+            if ($operation === 'deactivate' && ! ($response['success'] ?? false) && $this->externalUserIsAlreadyAbsent($item)) {
+                Log::info('tenant-external-sync treated as already absent', [
+                    'context' => $context,
+                    'program_id' => $item['program_id'],
+                    'license_id' => $item['license_id'],
+                    'external_username' => $item['external_username'],
+                ]);
+
+                $response = [
+                    'success' => true,
+                    'data' => ['message' => 'User already absent from external API.'],
+                    'status_code' => 200,
+                ];
+            }
+
+            Log::info('tenant-external-sync attempt', [
+                'context' => $context,
+                'operation' => $operation,
+                'tenant_id' => request()->route('tenant')?->id,
+                'program_id' => $item['program_id'],
+                'license_id' => $item['license_id'],
+                'external_username' => $item['external_username'],
+                'bios_id' => $item['bios_id'],
+                'success' => (bool) ($response['success'] ?? false),
+                'status_code' => $response['status_code'] ?? null,
+            ]);
+
+            if (! ($response['success'] ?? false)) {
+                $failures[] = sprintf(
+                    '%s failed for %s on %s: %s',
+                    ucfirst($operation),
+                    $item['external_username'],
+                    $item['program_name'],
+                    $this->extractExternalSyncMessage($response, $operation)
+                );
+            }
+        }
+
+        if ($failures !== []) {
+            throw ValidationException::withMessages(['external_api' => $failures]);
+        }
+    }
+
+    /**
+     * @param list<array<string, mixed>> $plan
+     */
+    private function rollbackExternalSyncPlan(array $plan, string $operation, string $context): void
+    {
+        foreach ($plan as $item) {
+            if ($operation === 'activate' && $item['bios_id'] === '') {
+                continue;
+            }
+
+            $response = $operation === 'activate'
+                ? $this->externalApiService->activateUser($item['api_key'], $item['external_username'], $item['bios_id'], $item['base_url'])
+                : $this->externalApiService->deactivateUser($item['api_key'], $item['external_username'], $item['base_url']);
+
+            Log::warning('tenant-external-sync rollback', [
+                'context' => $context,
+                'operation' => $operation,
+                'program_id' => $item['program_id'],
+                'license_id' => $item['license_id'],
+                'external_username' => $item['external_username'],
+                'bios_id' => $item['bios_id'],
+                'success' => (bool) ($response['success'] ?? false),
+                'status_code' => $response['status_code'] ?? null,
+            ]);
+        }
+    }
+
+    /**
+     * @param list<array<string, mixed>> $plan
+     * @return list<array<string, mixed>>
+     */
+    private function deduplicateExternalPlan(array $plan, bool $includeBios): array
+    {
+        $deduplicated = [];
+
+        foreach ($plan as $item) {
+            $key = implode('|', [
+                (string) $item['program_id'],
+                (string) $item['external_username'],
+                $includeBios ? (string) $item['bios_id'] : '',
+            ]);
+
+            $deduplicated[$key] = $item;
+        }
+
+        return array_values($deduplicated);
+    }
+
+    /**
+     * @return array{
+     *   program_id:int,
+     *   program_name:string,
+     *   api_key:string,
+     *   base_url:?string,
+     *   external_username:string,
+     *   bios_id:string,
+     *   license_id:?int,
+     *   status:string
+     * }|null
+     */
+    private function buildExternalSyncItem(?Program $program, string $externalUsername, string $biosId, ?int $licenseId, string $status): ?array
+    {
+        $username = trim($externalUsername);
+        $apiKey = $program?->getDecryptedApiKey();
+
+        if ($program === null || $username === '' || $apiKey === null) {
+            return null;
+        }
+
+        return [
+            'program_id' => (int) $program->id,
+            'program_name' => (string) $program->name,
+            'api_key' => $apiKey,
+            'base_url' => $program->external_api_base_url,
+            'software_id' => $program->external_software_id ? (int) $program->external_software_id : null,
+            'external_username' => $username,
+            'bios_id' => trim($biosId),
+            'license_id' => $licenseId,
+            'status' => $status,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $license
+     */
+    private function licensePayloadShouldBeExternallyActive(array $license): bool
+    {
+        if (($license['status'] ?? null) !== 'active') {
+            return false;
+        }
+
+        $expiresAt = $this->parseBackupDateTime($license['expires_at'] ?? null);
+
+        if ($expiresAt !== null && $expiresAt->lt(now()->startOfMinute()->addMinute())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function parseBackupDateTime(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $response
+     */
+    private function extractExternalSyncMessage(array $response, string $operation): string
+    {
+        $message = $response['data']['message']
+            ?? $response['data']['error']
+            ?? $response['data']['response']
+            ?? $response['data']['raw_message']
+            ?? null;
+
+        if (is_string($message) && trim($message) !== '') {
+            $clean = trim(preg_replace('/\s+/', ' ', strip_tags($message)) ?? '');
+
+            if ($clean !== '') {
+                return $clean;
+            }
+        }
+
+        return $operation === 'activate'
+            ? 'The external software activation was rejected.'
+            : 'The external software deletion was rejected.';
+    }
+
+    /**
+     * @param array{software_id:?int,external_username:string,base_url:?string} $item
+     */
+    private function externalUserIsAlreadyAbsent(array $item): bool
+    {
+        if (($item['software_id'] ?? null) === null) {
+            return false;
+        }
+
+        $verification = $this->externalApiService->getActiveUsers((int) $item['software_id'], $item['base_url']);
+
+        if (! ($verification['success'] ?? false)) {
+            return false;
+        }
+
+        $users = $verification['data']['users'] ?? null;
+
+        return is_array($users) && ! array_key_exists($item['external_username'], $users);
     }
 
     private function serializeBackup(TenantBackup $backup): array

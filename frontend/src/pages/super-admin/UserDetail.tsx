@@ -116,8 +116,8 @@ export function UserDetailPage() {
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <h2 className="text-3xl font-semibold">{user?.name ?? t('superAdmin.pages.users.title')}</h2>
-          <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{user?.email ?? t('superAdmin.pages.users.description')}</p>
+          <h2 className="max-w-4xl break-words text-2xl font-semibold leading-tight sm:text-3xl">{user?.name ?? t('superAdmin.pages.users.title')}</h2>
+          <p className="max-w-3xl break-all text-sm text-slate-500 dark:text-slate-400 sm:break-words">{user?.email ?? t('superAdmin.pages.users.description')}</p>
         </div>
         {user ? (
           <Button
@@ -306,9 +306,11 @@ export function UserDetailPage() {
 function MetricCard({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <Card>
-      <CardContent className="p-4">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-        <div className="mt-2 font-semibold text-slate-950 dark:text-white">{value}</div>
+      <CardContent className="p-4 sm:p-5">
+        <p className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 sm:text-xs">{label}</p>
+        <div className="mt-2 break-words text-lg font-semibold leading-snug text-slate-950 dark:text-white sm:text-xl">
+          {value}
+        </div>
       </CardContent>
     </Card>
   )

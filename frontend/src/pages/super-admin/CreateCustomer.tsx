@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -69,7 +70,9 @@ export function CreateCustomerPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
-  const displayTimezone = useMemo(() => resolveDisplayTimezone(), [])
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const { timezone: displayTimezone } = useResolvedTimezone()
+  const previousDisplayTimezoneRef = useRef(displayTimezone)
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [customerName, setCustomerName] = useState('')
   const [clientName, setClientName] = useState('')
@@ -93,6 +96,18 @@ export function CreateCustomerPage() {
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
   const [submitError, setSubmitError] = useState('')
+
+  useEffect(() => {
+    const previousDisplayTimezone = previousDisplayTimezoneRef.current
+    if (previousDisplayTimezone === displayTimezone) {
+      return
+    }
+
+    setEndDate((current) => current === getDefaultEndDate(previousDisplayTimezone) ? getDefaultEndDate(displayTimezone) : current)
+    setScheduleTimezone((current) => current === previousDisplayTimezone ? displayTimezone : current)
+    setScheduleAt((current) => !current || current === getDefaultScheduleDate(previousDisplayTimezone) ? getDefaultScheduleDate(displayTimezone) : current)
+    previousDisplayTimezoneRef.current = displayTimezone
+  }, [displayTimezone])
 
   const tenantsQuery = useQuery({
     queryKey: ['super-admin', 'customer-create', 'tenants'],
@@ -198,8 +213,8 @@ export function CreateCustomerPage() {
       return t('activate.startingFromPending', { defaultValue: 'Starting from the selected date' })
     }
 
-    return `${t('activate.startingFrom', { defaultValue: 'Starting from' })}: ${formatDate(scheduledDate.toISOString(), lang === 'ar' ? 'ar-EG' : 'en-US')} (${scheduleTimezone})`
-  }, [createLicenseNow, lang, scheduleAt, scheduleEnabled, scheduleTimezone, t])
+    return `${t('activate.startingFrom', { defaultValue: 'Starting from' })}: ${formatDate(scheduledDate.toISOString(), locale, scheduleTimezone)} (${scheduleTimezone})`
+  }, [createLicenseNow, locale, scheduleAt, scheduleEnabled, scheduleTimezone, t])
 
   const endSummary = useMemo(() => {
     if (!createLicenseNow) {
@@ -210,8 +225,8 @@ export function CreateCustomerPage() {
       return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
     }
 
-    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(expiryPreview, lang === 'ar' ? 'ar-EG' : 'en-US')}`
-  }, [createLicenseNow, expiryPreview, lang, t])
+    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(expiryPreview, locale, mode === 'end_date' ? displayTimezone : scheduleEnabled ? scheduleTimezone : displayTimezone)}`
+  }, [createLicenseNow, displayTimezone, expiryPreview, locale, mode, scheduleEnabled, scheduleTimezone, t])
 
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
@@ -328,7 +343,9 @@ export function CreateCustomerPage() {
               <select value={sellerId} onChange={(event) => setSellerId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950" disabled={!tenantId}>
                 <option value="">{t('common.selectOption', { defaultValue: 'Select option' })}</option>
                 {sellerOptions.map((seller) => (
-                  <option key={seller.id} value={seller.id}>{seller.name}</option>
+                  <option key={seller.id} value={seller.id}>
+                    {`${seller.name} (${t(`roles.${seller.role}`)})`}
+                  </option>
                 ))}
               </select>
             </Field>
@@ -488,8 +505,8 @@ export function CreateCustomerPage() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">{priceMode === 'auto' ? t('activate.priceAuto', { defaultValue: 'Auto-calculated' }) : t('activate.priceManualHint', { defaultValue: 'Enter custom price' })}</p>
                 <div className="grid gap-3 md:grid-cols-3">
                   <Summary label={t('activate.durationDays', { defaultValue: 'Duration in Days' })} value={durationDays > 0 ? durationDays.toFixed(3) : '0'} />
-                  <Summary label={t('activate.expiryPreview', { defaultValue: 'Expiry Preview' })} value={expiryPreview ? formatDate(expiryPreview, lang === 'ar' ? 'ar-EG' : 'en-US') : '-'} />
-                  <Summary label={t('activate.price', { defaultValue: 'Price' })} value={formatCurrency(totalPrice, 'USD', lang === 'ar' ? 'ar-EG' : 'en-US')} />
+                  <Summary label={t('activate.expiryPreview', { defaultValue: 'Expiry Preview' })} value={expiryPreview ? formatDate(expiryPreview, locale, mode === 'end_date' ? displayTimezone : scheduleEnabled ? scheduleTimezone : displayTimezone) : '-'} />
+                  <Summary label={t('activate.price', { defaultValue: 'Price' })} value={formatCurrency(totalPrice, 'USD', locale)} />
                 </div>
               </div>
             </>

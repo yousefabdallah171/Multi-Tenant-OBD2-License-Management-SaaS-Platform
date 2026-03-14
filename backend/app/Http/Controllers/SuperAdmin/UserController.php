@@ -68,6 +68,8 @@ class UserController extends BaseSuperAdminController
             'status' => ['required', 'in:active,suspended,inactive'],
         ]);
 
+        $this->guardSuperAdminMutation($request, $user, $validated['status'], false);
+
         $user->update(['status' => $validated['status']]);
 
         return response()->json([
@@ -143,9 +145,18 @@ class UserController extends BaseSuperAdminController
 
     public function destroy(Request $request, User $user): JsonResponse
     {
+        $this->guardSuperAdminMutation($request, $user, null, true);
+
         if ($request->user()?->is($user)) {
             return response()->json([
                 'message' => 'You cannot delete the current authenticated user.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $role = $user->role?->value ?? (string) $user->role;
+        if ($role !== UserRole::CUSTOMER->value && ! $user->canBePermanentlyDeleted()) {
+            return response()->json([
+                'message' => $user->permanentDeleteBlockedMessage() ?? 'This account cannot be deleted.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
@@ -176,8 +187,45 @@ class UserController extends BaseSuperAdminController
                 'status' => $user->tenant->status,
             ] : null,
             'username_locked' => $user->username_locked,
+            'can_delete' => ($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value
+                ? true
+                : $user->canBePermanentlyDeleted(),
             'created_at' => $user->created_at?->toIso8601String(),
         ];
+    }
+
+    private function guardSuperAdminMutation(Request $request, User $target, ?string $nextStatus, bool $isDelete): void
+    {
+        $role = $target->role?->value ?? (string) $target->role;
+        if ($role !== UserRole::SUPER_ADMIN->value) {
+            return;
+        }
+
+        if ($request->user()?->is($target)) {
+            $message = $isDelete
+                ? 'You cannot delete the current authenticated super admin.'
+                : 'You cannot deactivate the current authenticated super admin.';
+
+            abort(response()->json(['message' => $message], Response::HTTP_UNPROCESSABLE_ENTITY));
+        }
+
+        $willDeactivate = $isDelete || in_array($nextStatus, ['suspended', 'inactive'], true);
+        if (! $willDeactivate) {
+            return;
+        }
+
+        $activeSuperAdmins = User::query()
+            ->where('role', UserRole::SUPER_ADMIN->value)
+            ->where('status', 'active')
+            ->count();
+
+        if ($target->status === 'active' && $activeSuperAdmins <= 1) {
+            $message = $isDelete
+                ? 'You cannot delete the last active super admin account.'
+                : 'You cannot deactivate the last active super admin account.';
+
+            abort(response()->json(['message' => $message], Response::HTTP_UNPROCESSABLE_ENTITY));
+        }
     }
 
     /**

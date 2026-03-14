@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
-import { COMMON_TIMEZONES, resolveDisplayTimezone } from '@/lib/timezones'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
+import { COMMON_TIMEZONES, persistServerTimezone } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 import { settingsService } from '@/services/settings.service'
 import type { SystemSettings } from '@/types/super-admin.types'
@@ -18,13 +19,14 @@ export function SettingsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { user, setAuthenticatedUser } = useAuth()
+  const { timezone: resolvedTimezone } = useResolvedTimezone(user?.timezone)
   const [showApiKey, setShowApiKey] = useState(false)
   const [draft, setDraft] = useState<SystemSettings | null>(null)
   const [profileForm, setProfileForm] = useState({
     name: user?.name ?? '',
     email: user?.email ?? '',
     phone: user?.phone ?? '',
-    timezone: resolveDisplayTimezone(user?.timezone),
+    timezone: user?.timezone ?? resolvedTimezone,
   })
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
@@ -45,8 +47,10 @@ export function SettingsPage() {
   const saveMutation = useMutation({
     mutationFn: () => settingsService.update(form as SystemSettings),
     onSuccess: () => {
+      persistServerTimezone(form.general.server_timezone)
       toast.success(t('superAdmin.pages.settings.saveSuccess'))
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'settings'] })
+      void queryClient.invalidateQueries({ queryKey: ['settings', 'online-widget'] })
     },
   })
 
@@ -54,6 +58,12 @@ export function SettingsPage() {
     mutationFn: () => profileService.updateProfile(profileForm),
     onSuccess: (data) => {
       setAuthenticatedUser(data.user)
+      setProfileForm({
+        name: data.user.name ?? '',
+        email: data.user.email ?? '',
+        phone: data.user.phone ?? '',
+        timezone: data.user.timezone ?? resolvedTimezone,
+      })
       toast.success(t('superAdmin.pages.profile.profileSaved'))
     },
   })
@@ -68,6 +78,20 @@ export function SettingsPage() {
       setShowConfirmPassword(false)
     },
   })
+
+  const initialProfileForm = useMemo(
+    () => ({
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+      phone: user?.phone ?? '',
+      timezone: user?.timezone ?? resolvedTimezone,
+    }),
+    [resolvedTimezone, user?.email, user?.name, user?.phone, user?.timezone],
+  )
+
+  useEffect(() => {
+    setProfileForm(initialProfileForm)
+  }, [initialProfileForm])
 
   if (!form) {
     return <div className="py-20 text-center text-sm text-slate-500">{t('common.loading')}</div>

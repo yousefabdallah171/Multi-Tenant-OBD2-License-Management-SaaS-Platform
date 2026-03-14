@@ -24,7 +24,19 @@ class LogController extends BaseSuperAdminController
 
         $perPage = (int) ($validated['per_page'] ?? 25);
 
-        $query = ApiLog::query()->with(['tenant:id,name', 'user:id,name'])->latest();
+        $query = ApiLog::query()
+            ->select([
+                'id',
+                'tenant_id',
+                'user_id',
+                'endpoint',
+                'method',
+                'status_code',
+                'response_time_ms',
+                'created_at',
+            ])
+            ->with(['tenant:id,name', 'user:id,name'])
+            ->latest('id');
 
         if (! empty($validated['tenant_id'])) {
             $query->where('tenant_id', $validated['tenant_id']);

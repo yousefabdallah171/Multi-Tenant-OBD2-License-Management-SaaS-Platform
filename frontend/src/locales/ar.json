@@ -497,7 +497,7 @@
       "biosDetails": "تفاصيل BIOS",
       "resellerLogs": "سجلات الموزعين",
       "biosChangeRequests": "????? ????? BIOS",
-      "resellerPayments": "Reseller Payments"
+      "resellerPayments": "مدفوعات الموزعين"
     },
     "pages": {
       "dashboard": {
@@ -878,7 +878,7 @@
       "resellerLogs": "سجلات الموزعين",
       "biosChangeRequests": "????? ????? BIOS",
       "biosDetails": "BIOS",
-      "resellerPayments": "Reseller Payments"
+      "resellerPayments": "مدفوعات الموزعين"
     },
     "pages": {
       "dashboard": {
@@ -1098,7 +1098,7 @@
       "reports": "التقارير",
       "activity": "نشاط اللوحة",
       "profile": "الملف الشخصي",
-      "paymentStatus": "Payment Status"
+      "paymentStatus": "حالة المدفوعات"
     },
     "pages": {
       "dashboard": {
@@ -1658,86 +1658,92 @@
     }
   },
   "payments": {
-    "title": "Reseller Payments",
-    "description": "Review reseller commission balances, record payments, and keep monthly commission periods updated.",
-    "statusTitle": "Payment Status",
-    "statusDescription": "Track your sales, commission totals, payment history, and current outstanding balance.",
+    "title": "مدفوعات الموزعين",
+    "description": "راجع أرصدة عمولات الموزعين، وسجّل الدفعات، وحافظ على تحديث فترات العمولات الشهرية.",
+    "statusTitle": "حالة المدفوعات",
+    "statusDescription": "تابع مبيعاتك وإجمالي العمولات وسجل المدفوعات والرصيد المتبقي حالياً.",
+    "statusSimpleDescription": "اعرض إجمالي مبيعاتك، وما دفعته بالفعل إلى مديرك، وما تبقى عليك سداده.",
     "summary": {
-      "totalSales": "Total Sales",
-      "commissionRate": "Commission Rate",
-      "totalOwed": "Total Owed",
-      "totalPaid": "Total Paid",
-      "outstanding": "Outstanding Balance"
+      "totalSales": "إجمالي المبيعات",
+      "commissionRate": "نسبة العمولة",
+      "totalOwed": "إجمالي المستحق",
+      "totalPaid": "إجمالي المدفوع",
+      "outstanding": "الرصيد المستحق",
+      "totalPaidToManager": "المبلغ الذي دفعته للمدير",
+      "remainingToPay": "المتبقي غير المدفوع",
+      "helpText": "تعرض هذه الصفحة حجم مبيعاتك، وما دفعته بالفعل إلى مديرك، وما تبقى عليك سداده."
     },
     "filters": {
-      "period": "Period"
+      "period": "الفترة"
     },
     "columns": {
-      "reseller": "Reseller",
-      "period": "Period",
-      "sales": "Sales",
-      "rate": "Rate",
-      "owed": "Commission Owed",
-      "paid": "Amount Paid",
-      "outstanding": "Outstanding",
-      "date": "Date",
-      "amount": "Amount",
-      "method": "Method",
-      "reference": "Reference",
-      "notes": "Notes"
+      "reseller": "الموزع",
+      "period": "الفترة",
+      "sales": "المبيعات",
+      "rate": "النسبة",
+      "owed": "العمولة المستحقة",
+      "paid": "المبلغ المدفوع",
+      "outstanding": "المتبقي",
+      "date": "التاريخ",
+      "amount": "المبلغ",
+      "method": "طريقة الدفع",
+      "reference": "المرجع",
+      "notes": "ملاحظات"
     },
     "status": {
-      "unpaid": "Unpaid",
-      "partial": "Partial",
-      "paid": "Paid"
+      "unpaid": "غير مدفوع",
+      "partial": "مدفوع جزئياً",
+      "paid": "مدفوع"
     },
     "sections": {
-      "commissions": "Commission Periods",
-      "history": "Payment History",
-      "monthlyBreakdown": "Monthly Breakdown"
+      "commissions": "فترات العمولات",
+      "history": "سجل المدفوعات",
+      "monthlyBreakdown": "التفصيل الشهري",
+      "overview": "نظرة عامة على المدفوعات",
+      "historyHint": "هذه هي المدفوعات التي دفعتها بالفعل إلى مديرك."
     },
     "actions": {
-      "view": "View",
-      "recordPayment": "Record Payment",
-      "addCommission": "Add Commission",
-      "editCommission": "Edit Commission",
-      "editPayment": "Edit Payment"
+      "view": "عرض",
+      "recordPayment": "تسجيل دفعة",
+      "addCommission": "إضافة عمولة",
+      "editCommission": "تعديل العمولة",
+      "editPayment": "تعديل الدفعة"
     },
     "dialogs": {
-      "recordPayment": "Record Payment",
-      "editPayment": "Edit Payment",
-      "addCommission": "Add Commission",
-      "editCommission": "Edit Commission"
+      "recordPayment": "تسجيل دفعة",
+      "editPayment": "تعديل الدفعة",
+      "addCommission": "إضافة عمولة",
+      "editCommission": "تعديل العمولة"
     },
     "fields": {
-      "commission": "Commission Period",
-      "amount": "Amount",
-      "paymentDate": "Payment Date",
-      "paymentMethod": "Payment Method",
-      "reference": "Reference",
-      "notes": "Notes",
-      "period": "Period",
-      "totalSales": "Total Sales",
-      "commissionRate": "Commission Rate (%)",
-      "commissionOwed": "Commission Owed"
+      "commission": "فترة العمولة",
+      "amount": "المبلغ",
+      "paymentDate": "تاريخ الدفع",
+      "paymentMethod": "طريقة الدفع",
+      "reference": "المرجع",
+      "notes": "ملاحظات",
+      "period": "الفترة",
+      "totalSales": "إجمالي المبيعات",
+      "commissionRate": "نسبة العمولة (%)",
+      "commissionOwed": "العمولة المستحقة"
     },
     "methods": {
-      "bank_transfer": "Bank Transfer",
-      "cash": "Cash",
-      "other": "Other"
+      "bank_transfer": "تحويل بنكي",
+      "cash": "نقداً",
+      "other": "أخرى"
     },
     "empty": {
-      "resellers": "No reseller payment rows found for the current filters.",
-      "payments": "No payment history found yet.",
-      "commissions": "No commission periods found yet."
+      "resellers": "لم يتم العثور على سجلات مدفوعات للموزعين ضمن الفلاتر الحالية.",
+      "payments": "لا يوجد سجل مدفوعات بعد.",
+      "commissions": "لا توجد فترات عمولات بعد."
     },
     "validation": {
-      "payment": "Select a commission period, payment date, and a valid amount.",
-      "commission": "Enter a valid period, commission rate, and commission owed amount."
+      "payment": "اختر فترة عمولة وتاريخ دفع ومبلغاً صالحاً.",
+      "commission": "أدخل فترة صالحة ونسبة عمولة صحيحة ومبلغ عمولة مستحق صالح."
     },
     "messages": {
-      "paymentSaved": "Payment saved successfully.",
-      "commissionSaved": "Commission saved successfully."
+      "paymentSaved": "تم حفظ الدفعة بنجاح.",
+      "commissionSaved": "تم حفظ العمولة بنجاح."
     }
   }
 }

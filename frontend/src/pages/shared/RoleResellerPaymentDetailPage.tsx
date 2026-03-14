@@ -110,7 +110,6 @@ export function RoleResellerPaymentDetailPage({
     { key: 'amount_paid', label: t('payments.columns.paid'), sortable: true, sortValue: (row) => row.amount_paid, render: (row) => formatCurrency(row.amount_paid, 'USD', locale) },
     { key: 'outstanding', label: t('payments.columns.outstanding'), sortable: true, sortValue: (row) => row.outstanding, render: (row) => formatCurrency(row.outstanding, 'USD', locale) },
     { key: 'status', label: t('common.status'), render: (row) => <PaymentStatusPill status={row.status} /> },
-    { key: 'actions', label: t('common.actions'), render: (row) => <Button type="button" size="sm" variant="outline" onClick={() => openCommissionDialog('edit', row)}>{t('payments.actions.editCommission')}</Button> },
   ], [locale, t])
 
   const paymentColumns = useMemo<Array<DataTableColumn<ResellerPayment>>>(() => [
@@ -193,6 +192,12 @@ export function RoleResellerPaymentDetailPage({
         title={detail?.reseller.name ?? t('payments.title')}
         description={detail?.reseller.email ?? t('payments.description')}
       />
+
+      <div className="flex flex-wrap gap-3">
+        <Button type="button" onClick={() => openPaymentDialog('create')}>
+          {t('payments.actions.recordPayment')}
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <StatsCard title={t('payments.summary.totalSales', { defaultValue: 'Total Sales' })} value={formatCurrency(detail?.summary.total_sales ?? 0, 'USD', locale)} icon={BadgeDollarSign} color="sky" />

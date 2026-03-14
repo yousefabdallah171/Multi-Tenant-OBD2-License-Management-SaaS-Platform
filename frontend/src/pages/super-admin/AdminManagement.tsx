@@ -16,7 +16,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { biosService } from '@/services/bios.service'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
@@ -67,8 +66,6 @@ export function AdminManagementPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [form, setForm] = useState(emptyForm)
-  const [unlockTarget, setUnlockTarget] = useState<ManagedUser | null>(null)
-  const [unlockReason, setUnlockReason] = useState('')
   const [passwordTarget, setPasswordTarget] = useState<ManagedUser | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [showCreatePassword, setShowCreatePassword] = useState(false)
@@ -198,16 +195,6 @@ export function AdminManagementPage() {
     },
   })
 
-  const unlockMutation = useMutation({
-    mutationFn: () => biosService.unlockUsername(unlockTarget?.id ?? 0, unlockReason),
-    onSuccess: () => {
-      toast.success(t('superAdmin.pages.usernameManagement.unlockSuccess'))
-      setUnlockTarget(null)
-      setUnlockReason('')
-      invalidateUserQueries(unlockTarget?.id)
-    },
-  })
-
   const resetPasswordMutation = useMutation({
     mutationFn: () => adminService.resetPassword(passwordTarget?.id ?? 0, newPassword, revokeTokensOnReset),
     onSuccess: () => {
@@ -220,8 +207,6 @@ export function AdminManagementPage() {
     },
   })
 
-  const visibleAdminIds = adminsQuery.data?.data.map((admin) => admin.id) ?? []
-  const allVisibleSelected = visibleAdminIds.length > 0 && visibleAdminIds.every((id) => selectedIds.includes(id))
   const activeSuperAdminCount = (adminsQuery.data?.data ?? []).filter((admin) => admin.role === 'super_admin' && admin.status === 'active').length
   const currentUserId = user?.id ?? null
   const detailState = {
@@ -238,6 +223,12 @@ export function AdminManagementPage() {
 
   const isProtectedSuperAdmin = (row: ManagedUser) =>
     row.role === 'super_admin' && (row.id === currentUserId || (row.status === 'active' && activeSuperAdminCount <= 1))
+  const isSuperAdminRow = (row: ManagedUser) => row.role === 'super_admin'
+
+  const selectableAdminIds = (adminsQuery.data?.data ?? [])
+    .filter((admin) => !isSuperAdminRow(admin))
+    .map((admin) => admin.id)
+  const allVisibleSelected = selectableAdminIds.length > 0 && selectableAdminIds.every((id) => selectedIds.includes(id))
 
   function validateForm() {
     if (editing && !form.username.trim()) {
@@ -265,6 +256,7 @@ export function AdminManagementPage() {
             <input
               type="checkbox"
               checked={selectedIds.includes(row.id)}
+              disabled={isSuperAdminRow(row)}
               onChange={(event) => {
                 setSelectedIds((current) =>
                   event.target.checked ? Array.from(new Set([...current, row.id])) : current.filter((id) => id !== row.id),
@@ -347,17 +339,9 @@ export function AdminManagementPage() {
               <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.userDetail(lang, row.id), { state: detailState })}>
                 {t('common.view')}
               </DropdownMenuItem>
-              <DropdownMenuItem disabled={isProtectedSuperAdmin(row)} onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
-                {row.status === 'active' ? t('common.suspend') : t('common.activate')}
-              </DropdownMenuItem>
-              {row.username_locked ? (
-                <DropdownMenuItem
-                  onSelect={() => {
-                    setUnlockTarget(row)
-                    setUnlockReason('')
-                  }}
-                >
-                  {t('superAdmin.pages.usernameManagement.unlock')}
+              {row.role !== 'super_admin' ? (
+                <DropdownMenuItem onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
+                  {row.status === 'active' ? t('common.suspend') : t('common.activate')}
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem
@@ -370,8 +354,8 @@ export function AdminManagementPage() {
               >
                 {t('common.resetPassword')}
               </DropdownMenuItem>
-              {row.can_delete ? (
-                <DropdownMenuItem className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400" disabled={isProtectedSuperAdmin(row)} onSelect={() => setDeleteTarget(row)}>
+              {row.role !== 'super_admin' ? (
+                <DropdownMenuItem className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400" onSelect={() => setDeleteTarget(row)}>
                   {t('common.delete')}
                 </DropdownMenuItem>
               ) : null}
@@ -472,10 +456,10 @@ export function AdminManagementPage() {
               variant="secondary"
               onClick={() =>
                 setSelectedIds((current) =>
-                  allVisibleSelected ? current.filter((id) => !visibleAdminIds.includes(id)) : Array.from(new Set([...current, ...visibleAdminIds])),
+                  allVisibleSelected ? current.filter((id) => !selectableAdminIds.includes(id)) : Array.from(new Set([...current, ...selectableAdminIds])),
                 )
               }
-              disabled={visibleAdminIds.length === 0}
+              disabled={selectableAdminIds.length === 0}
             >
               {allVisibleSelected ? t('common.clearVisible') : t('common.selectAllVisible')}
             </Button>
@@ -487,10 +471,10 @@ export function AdminManagementPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-slate-500 dark:text-slate-400">{t('common.selectedCount', { count: selectedIds.length })}</span>
-            <Button type="button" variant="secondary" onClick={() => bulkSuspendMutation.mutate()} disabled={selectedIds.length === 0 || bulkSuspendMutation.isPending || (adminsQuery.data?.data ?? []).some((row) => selectedIds.includes(row.id) && isProtectedSuperAdmin(row))}>
+            <Button type="button" variant="secondary" onClick={() => bulkSuspendMutation.mutate()} disabled={selectedIds.length === 0 || bulkSuspendMutation.isPending || (adminsQuery.data?.data ?? []).some((row) => selectedIds.includes(row.id) && row.role === 'super_admin')}>
               {t('superAdmin.pages.adminManagement.bulkSuspend')}
             </Button>
-            <Button type="button" onClick={() => setBulkDeleteOpen(true)} disabled={selectedIds.length === 0 || bulkDeleteMutation.isPending || (adminsQuery.data?.data ?? []).some((row) => selectedIds.includes(row.id) && isProtectedSuperAdmin(row))}>
+            <Button type="button" onClick={() => setBulkDeleteOpen(true)} disabled={selectedIds.length === 0 || bulkDeleteMutation.isPending || (adminsQuery.data?.data ?? []).some((row) => selectedIds.includes(row.id) && row.role === 'super_admin')}>
               {t('superAdmin.pages.adminManagement.bulkDelete')}
             </Button>
           </div>
@@ -612,32 +596,6 @@ export function AdminManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={unlockTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setUnlockTarget(null)
-            setUnlockReason('')
-          }
-        }}
-        title={t('superAdmin.pages.usernameManagement.unlockTitle')}
-        description={unlockTarget?.email ?? ''}
-        confirmLabel={t('superAdmin.pages.usernameManagement.unlock')}
-        onConfirm={() => {
-          if (!unlockReason.trim()) {
-            toast.error(t('common.reason'))
-            return
-          }
-
-          unlockMutation.mutate()
-        }}
-      >
-        <div className="space-y-2">
-          <Label htmlFor="unlock-reason">{t('common.reason')}</Label>
-          <Textarea id="unlock-reason" value={unlockReason} onChange={(event) => setUnlockReason(event.target.value)} />
-        </div>
-      </ConfirmDialog>
 
       <Dialog
         open={passwordTarget !== null}

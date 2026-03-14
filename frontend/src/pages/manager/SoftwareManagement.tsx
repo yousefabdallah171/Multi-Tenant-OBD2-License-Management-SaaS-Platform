@@ -52,7 +52,7 @@ const EMPTY_FORM: ProgramFormState = {
   icon: '',
   external_api_key: '',
   external_software_id: '',
-  active: false,
+  active: true,
 }
 
 const EMPTY_ACTIVATION: ActivationFormState = {
@@ -465,10 +465,6 @@ export function SoftwareManagementPage() {
                 <p className="text-xs text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p>
               ) : null}
             </div>
-            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <input type="checkbox" checked={form.active} onChange={(event) => setForm((current) => ({ ...current, active: event.target.checked }))} />
-              {t('manager.pages.softwareManagement.activeToggle')}
-            </label>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeForm}>

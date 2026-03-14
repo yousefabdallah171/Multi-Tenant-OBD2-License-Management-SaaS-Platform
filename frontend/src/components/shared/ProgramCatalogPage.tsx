@@ -19,10 +19,11 @@ interface ProgramCatalogPageProps {
   title: string
   description: string
   translationPrefix: string
+  showBasePrice?: boolean
   onActivate?: (program: { id: number; name: string; base_price: number; has_external_api: boolean; external_software_id: number | null }) => void
 }
 
-export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix, onActivate }: ProgramCatalogPageProps) {
+export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix, showBasePrice = true, onActivate }: ProgramCatalogPageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -91,14 +92,16 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                 <CardContent className="space-y-4 p-5">
                   <p className="min-h-16 text-sm text-slate-600 dark:text-slate-300">{program.description || t(`${translationPrefix}.noDescription`)}</p>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <BadgeDollarSign className="h-3.5 w-3.5 rounded-full bg-sky-200/60 p-0.5 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" />
-                        {t(`${translationPrefix}.basePrice`)}
-                      </p>
-                      <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
-                    </div>
+                  <div className={`grid gap-3 ${showBasePrice ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}>
+                    {showBasePrice ? (
+                      <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                        <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          <BadgeDollarSign className="h-3.5 w-3.5 rounded-full bg-sky-200/60 p-0.5 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" />
+                          {t(`${translationPrefix}.basePrice`)}
+                        </p>
+                        <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
+                      </div>
+                    ) : null}
                     <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
                       <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         <Activity className="h-3.5 w-3.5 rounded-full bg-blue-200/60 p-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" />

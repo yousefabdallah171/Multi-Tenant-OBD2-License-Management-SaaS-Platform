@@ -181,12 +181,6 @@ export function ProgramFormPage() {
 
             <div className="space-y-4">
             <Field label={t('manager.pages.softwareManagement.basePrice', { defaultValue: t('manager.pages.softwareManagement.price') })} hint={t('software.fieldHints.basePrice', { defaultValue: 'Default sale price used when a reseller does not override it manually.' })}><Input type="number" min={0} step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} /></Field>
-            <Field label={t('common.status')} hint={t('software.fieldHints.status', { defaultValue: 'Active programs can be selected for new activations. Inactive programs stay hidden from normal sales.' })}>
-              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as 'active' | 'inactive' }))} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                <option value="active">{t('common.active')}</option>
-                <option value="inactive">{t('common.inactive')}</option>
-              </select>
-            </Field>
             <Field label={t('software.externalSoftwareId')} hint={t('software.fieldHints.externalSoftwareId', { defaultValue: 'Numeric software ID used by the external API for user add/remove and logs.' })}>
               <Input type="number" min={1} placeholder={t('software.externalSoftwareIdPlaceholder')} value={form.external_software_id} onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))} />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>

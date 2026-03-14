@@ -94,7 +94,6 @@ export function UsersPage() {
   })
 
   const resolveDetailPath = (row: ManagedUser) => (row.role === 'customer' ? routePaths.superAdmin.customerDetail(lang, row.id) : routePaths.superAdmin.userDetail(lang, row.id))
-
   const columns = useMemo<Array<DataTableColumn<ManagedUser>>>(
     () => [
       {
@@ -129,12 +128,16 @@ export function UsersPage() {
                 <Eye className="me-2 h-4 w-4" />
                 {t('common.view')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
-                {row.status === 'active' ? t('common.suspend') : t('common.activate')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
-                {t('common.delete')}
-              </DropdownMenuItem>
+              {row.role !== 'super_admin' ? (
+                <DropdownMenuItem onClick={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
+                  {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+                </DropdownMenuItem>
+              ) : null}
+              {row.role !== 'super_admin' ? (
+                <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
+                  {t('common.delete')}
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
             </DropdownMenu>
           </div>

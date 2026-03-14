@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { useAuth } from '@/hooks/useAuth'
-import { COMMON_TIMEZONES, resolveDisplayTimezone } from '@/lib/timezones'
+import { COMMON_TIMEZONES } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 
 interface ProfileWorkspaceProps {
@@ -22,17 +23,18 @@ interface ProfileWorkspaceProps {
 export function ProfileWorkspace({ eyebrow, description, translationPrefix }: ProfileWorkspaceProps) {
   const { t } = useTranslation()
   const { user, setAuthenticatedUser } = useAuth()
+  const { timezone: resolvedTimezone } = useResolvedTimezone(user?.timezone)
   const initialProfileForm = useMemo(
     () => ({
       name: user?.name ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
-      timezone: resolveDisplayTimezone(user?.timezone),
+      timezone: user?.timezone ?? resolvedTimezone,
       branding: {
         primary_color: user?.branding?.primary_color ?? '#0284c7',
       },
     }),
-    [user?.email, user?.name, user?.phone, user?.timezone, user?.branding?.primary_color],
+    [resolvedTimezone, user?.email, user?.name, user?.phone, user?.timezone, user?.branding?.primary_color],
   )
   const [profileForm, setProfileForm] = useState(initialProfileForm)
   const [passwordForm, setPasswordForm] = useState({
@@ -52,7 +54,7 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
         name: data.user.name ?? '',
         email: data.user.email ?? '',
         phone: data.user.phone ?? '',
-        timezone: resolveDisplayTimezone(data.user.timezone),
+        timezone: data.user.timezone ?? resolvedTimezone,
         branding: {
           primary_color: data.user.branding?.primary_color ?? '#0284c7',
         },

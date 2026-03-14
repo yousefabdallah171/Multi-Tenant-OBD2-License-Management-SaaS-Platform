@@ -1662,12 +1662,16 @@
     "description": "Review reseller commission balances, record payments, and keep monthly commission periods updated.",
     "statusTitle": "Payment Status",
     "statusDescription": "Track your sales, commission totals, payment history, and current outstanding balance.",
+    "statusSimpleDescription": "See your sales total, what you already paid to your manager, and what is still left to pay.",
     "summary": {
       "totalSales": "Total Sales",
       "commissionRate": "Commission Rate",
       "totalOwed": "Total Owed",
       "totalPaid": "Total Paid",
-      "outstanding": "Outstanding Balance"
+      "outstanding": "Outstanding Balance",
+      "totalPaidToManager": "Amount You Paid to Manager",
+      "remainingToPay": "Still Not Paid",
+      "helpText": "This page shows how much you sold, how much you already paid to your manager, and how much is still left to pay."
     },
     "filters": {
       "period": "Period"
@@ -1694,7 +1698,9 @@
     "sections": {
       "commissions": "Commission Periods",
       "history": "Payment History",
-      "monthlyBreakdown": "Monthly Breakdown"
+      "monthlyBreakdown": "Monthly Breakdown",
+      "overview": "Payment Overview",
+      "historyHint": "These are the payments you already made to your manager."
     },
     "actions": {
       "view": "View",

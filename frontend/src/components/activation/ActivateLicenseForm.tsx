@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
+import { useLanguage } from '@/hooks/useLanguage'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
+import { formatDate } from '@/lib/utils'
 import { activateLicense } from '@/services/activation.service'
 import type { ProgramDurationPreset } from '@/types/manager-reseller.types'
 import { formatUsername } from '@/utils/biosId'
@@ -96,10 +99,13 @@ function computeRelativeScheduleDate(value: number, unit: 'minutes' | 'hours' | 
 export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLicenseFormProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const displayTimezone = useMemo(() => resolveDisplayTimezone(), [])
+  const { lang } = useLanguage()
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const { timezone: displayTimezone } = useResolvedTimezone()
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const isReseller = user?.role === 'reseller'
   const [form, setForm] = useState(() => createEmptyForm(displayTimezone))
+  const previousDisplayTimezoneRef = useRef(displayTimezone)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(() => program.duration_presets?.[0]?.id ?? null)
@@ -180,6 +186,32 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       return firstPreset?.id ?? null
     })
   }, [isReseller, program.duration_presets])
+
+  useEffect(() => {
+    const previousDisplayTimezone = previousDisplayTimezoneRef.current
+    if (previousDisplayTimezone === displayTimezone) {
+      return
+    }
+
+    setForm((current) => {
+      const next = { ...current }
+
+      if (current.scheduled_timezone === previousDisplayTimezone) {
+        next.scheduled_timezone = displayTimezone
+      }
+
+      if (current.end_date === getDefaultEndDate(previousDisplayTimezone)) {
+        next.end_date = getDefaultEndDate(displayTimezone)
+      }
+
+      if (!current.is_scheduled && (!current.scheduled_date_time || current.scheduled_date_time === getDefaultScheduleDate(previousDisplayTimezone))) {
+        next.scheduled_date_time = getDefaultScheduleDate(displayTimezone)
+      }
+
+      return next
+    })
+    previousDisplayTimezoneRef.current = displayTimezone
+  }, [displayTimezone])
 
   useEffect(() => {
     if (priceMode === 'auto') {
@@ -310,7 +342,11 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     onSuccess: (data) => {
       setSubmitError('')
       if (form.is_scheduled && form.scheduled_date_time) {
-        toast.success(t('activate.scheduledSuccess', { dateTime: new Date(form.scheduled_date_time).toLocaleString() }))
+        const scheduledAt = zonedDateTimeInputToUtcDate(form.scheduled_date_time, form.scheduled_timezone)
+        const dateTime = scheduledAt
+          ? `${formatDate(scheduledAt.toISOString(), locale, form.scheduled_timezone)} (${form.scheduled_timezone})`
+          : `${form.scheduled_date_time.replace('T', ' ')} ${form.scheduled_timezone}`
+        toast.success(t('activate.scheduledSuccess', { dateTime }))
       } else {
         toast.success(`${t('activate.successTitle')} - ${t('activate.successMessage', { key: data.license_key })}`)
       }
@@ -336,7 +372,12 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
 
   const isExternalConfigured = program.has_external_api !== false
   const schedulePreview = form.is_scheduled && form.scheduled_date_time
-    ? `${form.scheduled_date_time.replace('T', ' ')} ${form.scheduled_timezone}`
+    ? (() => {
+        const scheduledAt = zonedDateTimeInputToUtcDate(form.scheduled_date_time, form.scheduled_timezone)
+        return scheduledAt
+          ? `${formatDate(scheduledAt.toISOString(), locale, form.scheduled_timezone)} (${form.scheduled_timezone})`
+          : `${form.scheduled_date_time.replace('T', ' ')} ${form.scheduled_timezone}`
+      })()
     : ''
 
   const startSummary = useMemo(() => {
@@ -349,8 +390,8 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       return t('activate.startingFromPending', { defaultValue: 'Starting from the selected date' })
     }
 
-    return `${t('activate.startingFrom', { defaultValue: 'Starting from' })}: ${scheduledAt.toLocaleString()} (${form.scheduled_timezone})`
-  }, [form.is_scheduled, form.scheduled_date_time, form.scheduled_timezone, t])
+    return `${t('activate.startingFrom', { defaultValue: 'Starting from' })}: ${formatDate(scheduledAt.toISOString(), locale, form.scheduled_timezone)} (${form.scheduled_timezone})`
+  }, [form.is_scheduled, form.scheduled_date_time, form.scheduled_timezone, locale, t])
 
   const endSummary = useMemo(() => {
     if (form.mode === 'end_date') {
@@ -359,15 +400,15 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
       }
 
-      return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${endDate.toLocaleString()}`
+      return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(endDate.toISOString(), locale, displayTimezone)}`
     }
 
     if (durationDays <= 0) {
       return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
     }
 
-    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${new Date(effectiveStartDate.getTime() + durationDays * 86400000).toLocaleString()}`
-  }, [displayTimezone, durationDays, effectiveStartDate, form.end_date, form.mode, t])
+    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(new Date(effectiveStartDate.getTime() + durationDays * 86400000), locale, displayTimezone)}`
+  }, [displayTimezone, durationDays, effectiveStartDate, form.end_date, form.mode, locale, t])
 
   function handleSubmit() {
     setSubmitError('')

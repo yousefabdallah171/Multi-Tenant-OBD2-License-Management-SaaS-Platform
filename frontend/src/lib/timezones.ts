@@ -5,6 +5,13 @@ export interface TimezoneOption {
   value: string
 }
 
+export interface ResolveTimezoneOptions {
+  preferred?: string | null
+  userTimezone?: string | null
+  browserTimezone?: string | null
+  serverTimezone?: string | null
+}
+
 type DateParts = {
   year: number
   month: number
@@ -31,6 +38,8 @@ const FALLBACK_TIMEZONES = [
   'America/Los_Angeles',
   'Australia/Sydney',
 ]
+
+const SERVER_TIMEZONE_STORAGE_KEY = 'app_server_timezone'
 
 const partsFormatterCache = new Map<string, Intl.DateTimeFormat>()
 
@@ -77,6 +86,36 @@ function unique(values: string[]) {
   return [...new Set(values)]
 }
 
+function readStoredServerTimezone(): string | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  try {
+    const value = window.localStorage.getItem(SERVER_TIMEZONE_STORAGE_KEY)
+    return isValidIanaTimezone(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+export function persistServerTimezone(timezone: string | null | undefined) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    if (isValidIanaTimezone(timezone)) {
+      window.localStorage.setItem(SERVER_TIMEZONE_STORAGE_KEY, timezone)
+      return
+    }
+
+    window.localStorage.removeItem(SERVER_TIMEZONE_STORAGE_KEY)
+  } catch {
+    // Ignore storage write failures; timezone resolution has other fallbacks.
+  }
+}
+
 export function isValidIanaTimezone(value: string | null | undefined): value is string {
   if (!value) {
     return false
@@ -115,22 +154,50 @@ export const COMMON_TIMEZONES: TimezoneOption[] = getSupportedTimezones().map((v
   label: formatTimezoneLabel(value),
 }))
 
-export function resolveBrowserTimezone(): string {
-  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-  return isValidIanaTimezone(browserTimezone) ? browserTimezone : 'UTC'
-}
-
-export function resolveDisplayTimezone(preferred?: string | null): string {
-  if (isValidIanaTimezone(preferred)) {
-    return preferred
+export function readBrowserTimezone(): string | null {
+  if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
+    return null
   }
 
-  const storedTimezone = useAuthStore.getState().user?.timezone
+  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return isValidIanaTimezone(browserTimezone) ? browserTimezone : null
+}
+
+export function resolveBrowserTimezone(): string {
+  return readBrowserTimezone() ?? 'UTC'
+}
+
+function normalizeResolveTimezoneOptions(optionsOrPreferred?: string | null | ResolveTimezoneOptions): ResolveTimezoneOptions {
+  if (typeof optionsOrPreferred === 'string' || optionsOrPreferred == null) {
+    return { preferred: optionsOrPreferred ?? null }
+  }
+
+  return optionsOrPreferred
+}
+
+export function resolveDisplayTimezone(optionsOrPreferred?: string | null | ResolveTimezoneOptions): string {
+  const options = normalizeResolveTimezoneOptions(optionsOrPreferred)
+
+  if (isValidIanaTimezone(options.preferred)) {
+    return options.preferred
+  }
+
+  const storedTimezone = options.userTimezone ?? useAuthStore.getState().user?.timezone
   if (isValidIanaTimezone(storedTimezone)) {
     return storedTimezone
   }
 
-  return resolveBrowserTimezone()
+  const browserTimezone = options.browserTimezone ?? readBrowserTimezone()
+  if (isValidIanaTimezone(browserTimezone)) {
+    return browserTimezone
+  }
+
+  const serverTimezone = options.serverTimezone ?? readStoredServerTimezone()
+  if (isValidIanaTimezone(serverTimezone)) {
+    return serverTimezone
+  }
+
+  return 'UTC'
 }
 
 export function getZonedDateParts(value: Date | string, timeZone: string): DateParts | null {

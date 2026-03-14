@@ -21,6 +21,7 @@ interface RenewLicensePageProps {
   invalidateQueryKey: readonly unknown[]
   eyebrow: string
   cachePattern?: RegExp
+  activeLicenseTitle?: string
 }
 
 export function RenewLicensePage({
@@ -28,6 +29,7 @@ export function RenewLicensePage({
   invalidateQueryKey,
   eyebrow,
   cachePattern,
+  activeLicenseTitle,
 }: RenewLicensePageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
@@ -52,7 +54,7 @@ export function RenewLicensePage({
   const license = licenseQuery.data?.data
   const displayStatus = license ? getLicenseDisplayStatus(license) : null
   const title = displayStatus === 'active'
-    ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+    ? (activeLicenseTitle ?? t('common.increaseDuration', { defaultValue: 'Increase Duration' }))
     : displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
       ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
       : license && isPausedPendingLicense(license)

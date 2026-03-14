@@ -9,20 +9,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
-import { COMMON_TIMEZONES, resolveDisplayTimezone } from '@/lib/timezones'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
+import { COMMON_TIMEZONES } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 
 export function ProfilePage() {
   const { t } = useTranslation()
   const { user, setAuthenticatedUser } = useAuth()
+  const { timezone: resolvedTimezone } = useResolvedTimezone(user?.timezone)
   const initialProfileForm = useMemo(
     () => ({
       name: user?.name ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
-      timezone: resolveDisplayTimezone(user?.timezone),
+      timezone: user?.timezone ?? resolvedTimezone,
     }),
-    [user?.email, user?.name, user?.phone, user?.timezone],
+    [resolvedTimezone, user?.email, user?.name, user?.phone, user?.timezone],
   )
   const [profileForm, setProfileForm] = useState(initialProfileForm)
   const [passwordForm, setPasswordForm] = useState({
@@ -42,7 +44,7 @@ export function ProfilePage() {
         name: data.user.name ?? '',
         email: data.user.email ?? '',
         phone: data.user.phone ?? '',
-        timezone: resolveDisplayTimezone(data.user.timezone),
+        timezone: data.user.timezone ?? resolvedTimezone,
       })
       setIsProfileDirty(false)
       toast.success(t('superAdmin.pages.profile.profileSaved'))

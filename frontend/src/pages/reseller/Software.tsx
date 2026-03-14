@@ -16,6 +16,7 @@ export function SoftwarePage() {
       title={t('reseller.pages.software.title')}
       description={t('reseller.pages.software.description')}
       translationPrefix="reseller.pages.software"
+      showBasePrice={false}
       onActivate={(program) =>
         navigate(routePaths.reseller.activateLicense(lang, program.id), {
           state: { returnTo: location.pathname },

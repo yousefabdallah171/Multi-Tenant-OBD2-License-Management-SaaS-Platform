@@ -12,7 +12,9 @@ use App\Enums\UserRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -160,26 +162,40 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
-            'branding.primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-        ]);
+        try {
+            $validated = $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
+                'phone' => ['nullable', 'string', 'max:20'],
+                'timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
+                'branding.primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            ]);
 
-        // Handle branding separately for JSON structure
-        if (isset($validated['branding'])) {
-            $user->branding = $validated['branding'];
+            $supportsBranding = Schema::hasColumn('users', 'branding');
+
+            if ($supportsBranding && isset($validated['branding'])) {
+                $user->branding = $validated['branding'];
+            }
+
             unset($validated['branding']);
+
+            $user->update($validated);
+
+            return response()->json([
+                'message' => 'Profile updated successfully.',
+                'user' => $user->fresh('tenant'),
+            ]);
+        } catch (\Throwable $exception) {
+            Log::error('profile.update.failed', [
+                'user_id' => $user?->id,
+                'payload_keys' => array_keys($request->all()),
+                'timezone' => $request->input('timezone'),
+                'has_branding' => $request->has('branding'),
+                'message' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
         }
-
-        $user->update($validated);
-
-        return response()->json([
-            'message' => 'Profile updated successfully.',
-            'user' => $user->fresh('tenant'),
-        ]);
     }
 
     public function updatePassword(Request $request): JsonResponse

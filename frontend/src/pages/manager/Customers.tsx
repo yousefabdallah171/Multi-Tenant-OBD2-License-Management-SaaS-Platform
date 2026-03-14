@@ -19,9 +19,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
-import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
 import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
@@ -31,7 +32,6 @@ import type { DurationUnit, ManagerCustomerSummary, RenewLicenseData } from '@/t
 import { formatUsername } from '@/utils/biosId'
 
 const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
-const DEFAULT_TIMEZONE = resolveDisplayTimezone()
 
 interface ActivationFormState {
   customer_name: string
@@ -53,24 +53,26 @@ interface ActivationFormState {
   price: string
 }
 
-const EMPTY_ACTIVATION_FORM: ActivationFormState = {
-  customer_name: '',
-  client_name: '',
-  customer_email: '',
-  customer_phone: '',
-  bios_id: '',
-  program_id: '',
-  duration_value: '30',
-  duration_unit: 'days',
-  mode: 'end_date',
-  end_date: formatDateTimeLocalInTimezone(new Date(Date.now() + 30 * 86400000), DEFAULT_TIMEZONE),
-  is_scheduled: false,
-  schedule_mode: 'relative',
-  schedule_offset_value: '1',
-  schedule_offset_unit: 'hours',
-  scheduled_date_time: '',
-  scheduled_timezone: DEFAULT_TIMEZONE,
-  price: '',
+function createEmptyActivationForm(defaultTimezone: string): ActivationFormState {
+  return {
+    customer_name: '',
+    client_name: '',
+    customer_email: '',
+    customer_phone: '',
+    bios_id: '',
+    program_id: '',
+    duration_value: '30',
+    duration_unit: 'days',
+    mode: 'end_date',
+    end_date: formatDateTimeLocalInTimezone(new Date(Date.now() + 30 * 86400000), defaultTimezone),
+    is_scheduled: false,
+    schedule_mode: 'relative',
+    schedule_offset_value: '1',
+    schedule_offset_unit: 'hours',
+    scheduled_date_time: '',
+    scheduled_timezone: defaultTimezone,
+    price: '',
+  }
 }
 
 export function CustomersPage() {
@@ -79,6 +81,7 @@ export function CustomersPage() {
   const { lang } = useLanguage()
   const queryClient = useQueryClient()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const { timezone: displayTimezone } = useResolvedTimezone()
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -94,7 +97,7 @@ export function CustomersPage() {
   const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
-  const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
+  const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [editTarget, setEditTarget] = useState<ManagerCustomerSummary | null>(null)
   const [deactivateTarget, setDeactivateTarget] = useState<ManagerCustomerSummary | null>(null)
@@ -174,7 +177,7 @@ export function CustomersPage() {
     onSuccess: () => {
       setActivationOpen(false)
       setActivationStep(0)
-      setActivationForm(EMPTY_ACTIVATION_FORM)
+      setActivationForm(createEmptyActivationForm(displayTimezone))
       setPriceMode('auto')
       invalidate(queryClient)
     },
@@ -392,8 +395,8 @@ export function CustomersPage() {
       ) : '-'),
     },
     { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
-    { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale) : '-') },
-    { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
+    { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale, displayTimezone) : '-') },
+    { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale, displayTimezone) : '-') },
     {
       key: 'actions',
       label: t('common.actions'),
@@ -767,7 +770,7 @@ export function CustomersPage() {
                 <div>{activationForm.bios_id}</div>
                 <div>{selectedProgram?.name ?? '-'}</div>
                 <div>{durationDays} {t('common.days')}</div>
-                <div>{expiryPreview ? formatDate(expiryPreview, locale) : '-'}</div>
+                <div>{expiryPreview ? formatDate(expiryPreview, locale, displayTimezone) : '-'}</div>
                 <div>{formatCurrency(totalPrice, 'USD', locale)}</div>
               </CardContent>
             </Card>
@@ -974,7 +977,7 @@ function buildScheduledDateTime(form: ActivationFormState) {
   if (form.schedule_offset_unit === 'minutes') date.setMinutes(date.getMinutes() + amount)
   if (form.schedule_offset_unit === 'hours') date.setHours(date.getHours() + amount)
   if (form.schedule_offset_unit === 'days') date.setDate(date.getDate() + amount)
-  return date.toISOString()
+  return formatDateTimeLocalInTimezone(date, form.scheduled_timezone)
 }
 
 function validateActivationStep(
@@ -1007,7 +1010,6 @@ function validateActivationStep(
   }
   return ''
 }
-
 
 
 

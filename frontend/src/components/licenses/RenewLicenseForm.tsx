@@ -4,8 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useLanguage } from '@/hooks/useLanguage'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
-import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
+import { formatDate } from '@/lib/utils'
 import type { RenewLicenseData } from '@/types/manager-reseller.types'
 
 type DurationUnit = 'minutes' | 'hours' | 'days'
@@ -116,7 +119,9 @@ export function RenewLicenseForm({
   enabled = true,
 }: RenewLicenseFormProps) {
   const { t } = useTranslation()
-  const displayTimezone = useMemo(() => resolveDisplayTimezone(), [])
+  const { lang } = useLanguage()
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const { timezone: displayTimezone } = useResolvedTimezone()
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
   const [durationValue, setDurationValue] = useState('30')
@@ -249,8 +254,8 @@ export function RenewLicenseForm({
       return t('activate.startingFromPending', { defaultValue: 'Starting from the selected date' })
     }
 
-    return `${t('activate.startingFrom', { defaultValue: 'Starting from' })}: ${scheduledDate.toLocaleString()} (${scheduleTimezone})`
-  }, [scheduleAt, scheduleEnabled, scheduleTimezone, t])
+    return `${t('activate.startingFrom', { defaultValue: 'Starting from' })}: ${formatDate(scheduledDate.toISOString(), locale, scheduleTimezone)} (${scheduleTimezone})`
+  }, [locale, scheduleAt, scheduleEnabled, scheduleTimezone, t])
 
   const endSummary = useMemo(() => {
     if (mode === 'end_date') {
@@ -259,15 +264,15 @@ export function RenewLicenseForm({
         return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
       }
 
-      return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${endDateUtc.toLocaleString()}`
+      return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(endDateUtc.toISOString(), locale, displayTimezone)}`
     }
 
     if (durationDays <= 0) {
       return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
     }
 
-    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${new Date(effectiveAnchorDate.getTime() + durationDays * 86400000).toLocaleString()}`
-  }, [displayTimezone, durationDays, effectiveAnchorDate, endDate, mode, t])
+    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(new Date(effectiveAnchorDate.getTime() + durationDays * 86400000), locale, displayTimezone)}`
+  }, [displayTimezone, durationDays, effectiveAnchorDate, endDate, locale, mode, t])
 
   return (
     <div className="space-y-4">
