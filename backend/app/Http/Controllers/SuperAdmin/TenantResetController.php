@@ -546,9 +546,58 @@ class TenantResetController extends BaseSuperAdminController
             return $row;
         }, $rows);
 
-        foreach (array_chunk($rows, 200) as $chunk) {
-            DB::table($table)->insert($chunk);
+        Log::info('tenant-backup restore start', [
+            'table' => $table,
+            'rows' => count($rows),
+        ]);
+
+        $settings = $this->restoreChunkSettings($table);
+        $chunk = [];
+        $chunkBytes = 0;
+        $inserted = 0;
+
+        foreach ($rows as $row) {
+            $rowJson = json_encode($row, JSON_UNESCAPED_UNICODE);
+            $rowBytes = is_string($rowJson) ? strlen($rowJson) : 0;
+
+            if (! empty($chunk)
+                && (count($chunk) >= $settings['max_rows'] || ($chunkBytes + $rowBytes) > $settings['max_bytes'])) {
+                DB::table($table)->insert($chunk);
+                $inserted += count($chunk);
+                $chunk = [];
+                $chunkBytes = 0;
+            }
+
+            $chunk[] = $row;
+            $chunkBytes += $rowBytes;
         }
+
+        if (! empty($chunk)) {
+            DB::table($table)->insert($chunk);
+            $inserted += count($chunk);
+        }
+
+        Log::info('tenant-backup restore complete', [
+            'table' => $table,
+            'rows' => $inserted,
+        ]);
+    }
+
+    /**
+     * @return array{max_rows:int,max_bytes:int}
+     */
+    private function restoreChunkSettings(string $table): array
+    {
+        return match ($table) {
+            'api_logs', 'activity_logs', 'bios_access_logs' => [
+                'max_rows' => 10,
+                'max_bytes' => 512 * 1024,
+            ],
+            default => [
+                'max_rows' => 100,
+                'max_bytes' => 1024 * 1024,
+            ],
+        };
     }
 
     /**
