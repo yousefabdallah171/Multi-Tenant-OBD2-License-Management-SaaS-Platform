@@ -157,7 +157,7 @@ export function CustomerDetailPage() {
                           <p className="font-medium">{entry.action}</p>
                           <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="text-end">
                           <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
                         </div>
                       </div>
@@ -180,7 +180,7 @@ export function CustomerDetailPage() {
                           {change.requested_by ? <p className="text-xs text-slate-600 dark:text-slate-300">Requested by: {change.requested_by}</p> : null}
                           {change.reviewed_by ? <p className="text-xs text-slate-600 dark:text-slate-300">Approved by: {change.reviewed_by}</p> : null}
                         </div>
-                        <div className="text-right">
+                        <div className="text-end">
                           <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
                             change.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
                             : change.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'

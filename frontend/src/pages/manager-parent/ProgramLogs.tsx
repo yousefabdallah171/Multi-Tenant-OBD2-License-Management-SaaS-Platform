@@ -425,7 +425,7 @@ export function ProgramLogsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 text-left dark:border-slate-800">
+                      <tr className="border-b border-slate-200 text-start dark:border-slate-800">
                         <th className="p-2">{t('common.username')}</th>
                         <th className="p-2">{t('common.timestamp')}</th>
                         <th className="p-2">{t('managerParent.pages.ipAnalytics.ipAddress')}</th>

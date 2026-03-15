@@ -46,7 +46,7 @@
 
 ## Execution Status
 
-- Scope completed so far: `Sprints 1-15`
+- Scope completed so far: `Sprints 1-25`
 - Role/session used: `manager_parent` via `manager@obd2sw.com`
 - Environment observed: the seeded manager-parent demo account in this environment is `manager@obd2sw.com`, not `parent@obd2sw.com`
 - Temporary QA data created:
@@ -59,6 +59,7 @@
   - Request `13`: `EEEE` -> `PARENT-BIOS-REJECT-20260315` (`Rejected`)
 - Existing QA data touched:
   - Customer `61` renamed from `QA Sprint6 Customer 20260315001820` to `QA Parent Sprint4 Edited 20260315`
+  - Customer `61` BIOS changed from `BIOS-S6-20260315001820` to `PARENT-BIOS-REQ-20260315` after Sprint 15 approval coverage
   - Customer `72` was renewed once during Sprint 11 coverage; expiry moved to `Mar 17, 2026, 1:49 AM`
   - Temporary manager `71` was created, edited, suspended, reactivated, login-verified, and deleted during Sprint 5 coverage
   - Temporary program `4` was created, edited to `Inactive`, manager-visibility checked, and deleted during Sprint 8 coverage
@@ -87,6 +88,25 @@
 - Sprint 14: BIOS details page loads recent BIOS chips, route-based deep linking works, and the `Overview`, `Licenses`, and `Resellers` tabs render data for a selected BIOS.
 - Sprint 15: BIOS change requests load by pending status, reject-cancel works, rejection with notes works, approval works, and new reseller requests can be reviewed end to end.
 
+### Confirmed Sprint 16-17 Summary
+
+- Sprint 16: BIOS conflicts page loads real conflict data, conflict-type filtering works, the conflict detail dialog opens correctly, and the UI explains the conflict origin through type, reseller, program, affected-customer, and BIOS detail fields.
+- Sprint 17: IP analytics loads real tenant-scoped rows with country flags, country filtering works, `VPN/Proxy` filtering produces the correct empty state for this tenant, and clicking an IP address currently does not open any customer lookup or drill-down.
+
+### Confirmed Sprint 18-22 Summary
+
+- Sprint 18: reseller payments page loads, period/status filters render, summary cards render, and the seeded zero-commission reseller row is visible for the active period.
+- Sprint 19: reseller payment detail loads, reseller identity and summary cards render, and the page shows correct empty states for both `Amounts Owed by Period` and `Payment History` when the reseller has no commission periods or prior payments yet.
+- Sprint 20: reports page loads with charts, range presets work, export controls render, and clicking `Total Activations` deep-links into reseller logs with both `action=license.activated` and the active date range pre-applied.
+- Sprint 21: panel activity loads, action and user filters render, preset date ranges work, `Clear` resets the active date range, CSV export downloads successfully, and pagination advances correctly.
+- Sprint 22: reseller logs page loads, action cards and seller/action/date filters render, report deep-link parameters are honored, and clicking the sidebar `Reseller Logs` entry resets active filters back to the base route.
+
+### Confirmed Sprint 23-25 Summary
+
+- Sprint 23: the `User Logs` page at `/en/program-logs` loads, program/user/action filters render, the `User Actions` tab shows real records, action filtering works, and CSV export downloads successfully.
+- Sprint 24: API Status loads for the externally configured program, reports `Online` status with response time and last-checked metadata, and `Ping now` completes successfully.
+- Sprint 25: Settings page loads and real settings changes persist across reload for company name, default pricing, notification preferences, and primary accent color. The current page does not expose a `trial_days` control, so the trial-length scenarios in the written sprint could not be executed from the live UI.
+
 ### Partial / Deferred From This Pass
 
 - Sprint 3 pagination stress test was not meaningful with the current dataset size and filter state.
@@ -97,6 +117,13 @@
 - Sprint 13 timeline/date-range/reseller filtering could not be exercised in-browser because the parent-manager BIOS history route is currently replaced by a redirect to `/bios-conflicts`.
 - Sprint 14 `IP Analytics`, `Panel Activity`, and `Blacklist Status` tabs were not deeply stressed because the sprint target was satisfied by `Overview`, `Licenses`, `Resellers`, and route deep-link coverage.
 - Sprint 15 live auto-refresh of the change-requests list was not proven; newly submitted requests required leaving and re-entering the page to appear in the current session.
+- Sprint 14 `?bios=` query-string deep-linking was not cleanly re-proven in this pass because hard direct navigation in the active browser session bounced to login; in-app BIOS detail navigation remained functional.
+- Sprint 16 resolved/unresolved status filtering could not be exercised because the current page exposes no status filter, and the seeded conflict dataset contains only one open conflict.
+- Sprint 17 true proxy/hosting positive-row coverage could not be exercised because the current tenant dataset returned only safe/low-reputation rows during this pass.
+- Sprint 19 record-payment, edit-payment, and commission-override mutation coverage remains blocked by fixture state, not by a page failure. The validated reseller currently has `0%` commission with no commission periods and no payment history rows yet.
+- Sprint 23 external-login feed coverage is fixture-limited in the current environment. The `External Login Events` tab rendered a valid empty state for the selected program, so row-level IP-location validation was not possible in this pass.
+- Sprint 24 programs without an external API key could not be exercised from the live page because only the externally configured program was available in the selector during this pass.
+- Sprint 25 cross-role `trial_days` propagation could not be executed because the current Settings UI does not expose any trial-days field to change.
 
 ---
 
@@ -1121,6 +1148,25 @@ manager-parent sets trial_days = 5
 | 30 | 15 | BIOS Change Requests | Change-requests list did not auto-refresh after a reseller submitted a new request in another session. The new row appeared only after leaving and re-entering `/en/bios-change-requests`. | Ã°Å¸Å¸Â¡ Medium | Open | |
 | 31 | 15 | BIOS Change Requests | Status handling is split across both `Approved` and `Approved, Sync Pending` states. This is functional, but the tested approval flow produced `Approved` for the new request while an older request remained under `Approved, Sync Pending`, so operators must check two filters to review completed approvals. | Ã°Å¸Å¸Â¢ Low | Open | |
 
+| 32 | 15 | BIOS Change Requests | Rejected BIOS requests are not surfaced clearly on the reseller customer-detail side after rejection. The manager-parent list showed the request as `Rejected`, but reseller customer detail for `EEEE` did not expose a visible rejected-request state in the tested view. | Medium | Open | |
+| 33 | 16 | BIOS Conflicts | BIOS Conflicts page does not expose the resolved/unresolved status filter described in the sprint. The live UI only provides conflict-type and date-range controls. | High | Open | |
+| 34 | 16 | BIOS Conflicts | Conflict status wording differs from the plan. The table uses `Open` instead of the expected `Resolved` / `Unresolved` vocabulary. | Medium | Open | |
+| 35 | 17 | IP Analytics | IP Analytics implementation differs materially from the sprint definition. The live page shows `Username`, `BIOS ID`, `Program`, `External ID`, `IP Address`, `Location`, `ISP`, `VPN/Proxy`, and `Timestamp`, but it does not expose `Is Proxy`, `Is Hosting`, `Login Count`, or `Last Seen` columns. | High | Open | |
+| 36 | 17 | IP Analytics | The top chart is `Country Distribution`, not the planned IP risk breakdown pie chart (`Safe / Proxy / Hosting / Unknown`). | High | Open | |
+| 37 | 17 | IP Analytics | There is no IP drill-down or customer lookup when clicking an IP address. Clicking `154.183.52.60` left the user on `/en/ip-analytics` with no modal, tooltip, or navigation. | High | Open | |
+| 38 | 18 | Reseller Payments | The reseller-payments list does not expose the `Manager` column described in the sprint. The live table shows `Reseller, Sales, Rate, Commission Owed, Amount Paid, Outstanding, Status, Actions` only. | High | Open | |
+| 39 | 20 | Reports | The reports table differs materially from the planned manager-breakdown view. The live page renders a `Reseller Balances` table with `Reseller, Total Revenue, Activations, Avg Price, Commission` instead of a manager-oriented breakdown. | High | Open | |
+| 40 | 21 | Activity | The panel-activity user filter does not include all visible actors. Activity entries include `Main Manager`, but the filter dropdown only exposed `Mohamed Reseller` and `Ahmed Reseller` in the tested state. | Medium | Open | |
+| 41 | 21 | Activity | Panel Activity still exposes raw/internal action keys such as `bios.change_requested`, `bios.change_approved`, `license.renewed`, and `license.scheduled_activation_executed` instead of fully humanized labels. | Medium | Open | |
+| 42 | 22 | Reseller Logs | Reseller Logs still lacks the manager-specific scope controls described in the sprint. There is no dedicated `Manager` column and no manager filter in the live UI. | High | Open | |
+| 43 | 22 | Reseller Logs | Seller filtering is not scoped correctly. Selecting `Ahmed Reseller (Reseller)` applied `seller_id=3`, but the resulting table still included `Main Manager` and `Mohamed Reseller` rows. | High | Open | |
+| 44 | 22 | Reseller Logs | Customer-link navigation is hijacked by the row click handler. Clicking the customer link `eeee` in a filtered reseller-log row navigated to `/en/team-management/3` instead of `/en/customers/42`. | High | Open | |
+| 45 | 23 | User Logs | The page no longer matches the planned `Program Logs` shape. The live route is titled `User Logs`, uses `User Actions` / `External Login Events` tabs, and does not expose the sprint's date-range filter controls. | Medium | Open | |
+| 46 | 23 | User Logs | The action filter contains a duplicate `Activate` option in the current UI. | Low | Open | |
+| 47 | 24 | API Status | API Status is implemented as a single-program detail view, not the multi-program status board described in the sprint. The live page shows one selected program with `Status`, `Response time`, `Last checked`, and `Ping now`, but no list of all programs and no `Not Configured` state coverage. | High | Open | |
+| 48 | 25 | Settings | The Settings page does not expose the `trial_days` control described in the sprint, so tenant trial-length management cannot be performed from the current UI. | High | Open | |
+| 49 | 25 | Settings | The Settings page no longer matches the full planned form. The live UI supports business info, default pricing, notifications, logo, and primary accent color, but does not expose the sprint's explicit trial-days field. | Medium | Open | |
+
 **Severity:**
 - 🔴 Critical — feature broken, data lost, or cross-role flow broken
 - 🟠 High — feature partially broken, workaround needed
@@ -1213,4 +1259,4 @@ mcp_playwright_evaluate({ script: "window.resizeTo(375, 812)" })
 
 *Last updated: 2026-03-15 | Manager-Parent dashboard QA — Sprints 1-9 executed in the live app*
 *Includes end-to-end reseller blacklist and BIOS change-request flows validated in Sprints 12 and 15*
-*Execution status supersedes the legacy footer text above: this document now reflects live QA through Sprint 15.*
+*Execution status supersedes the legacy footer text above: this document now reflects live QA through Sprint 25.*

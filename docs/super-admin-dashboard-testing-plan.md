@@ -987,9 +987,13 @@ These end-to-end flows verify that super-admin actions ripple correctly across t
 
 | # | Sprint | Page | Issue | Severity | Status | Fix Applied |
 |---|--------|------|-------|----------|--------|-------------|
-| 1 | | | | | Open | |
-| 2 | | | | | Open | |
-| 3 | | | | | Open | |
+| 1 | 1 | Auth / Layout | Navbar timezone shows `Africa/Banjul` in the current environment instead of the older expected `UTC` text from the plan. | Low | Open | No |
+| 2 | 1 | Tenants (AR) | Arabic tenant status card for `Deactive` rendered as `????` instead of a translated label. | Medium | Open | No |
+| 3 | 1 | Sidebar | Super-admin navigation is grouped differently from the written plan (`Admin Mgmt`, `BIOS Blacklist`, `Settings` expand to nested items). | Low | Open | No |
+| 4 | 2 | Dashboard | Dashboard card set differs from the older plan (`Total tenants`, `Total revenue`, `Current active customers`, `Total users`, `Tracked countries`). | Low | Open | No |
+| 5 | 3 | Create Tenant | Create tenant dialog no longer exposes a visible `Slug` field; slug is auto-generated from the tenant name. | Low | Open | No |
+| 6 | 3 | Tenant Edit | Tenant edit dialog only exposed `Name` and `Status` in the tested state, which is narrower than the original sprint description. | Low | Open | No |
+| 7 | 1 | Route Guard | Manager-parent and reseller are blocked from super-admin routes, but they are redirected back to their own dashboards instead of login or a 403-style page. | Medium | Open | No |
 
 **Severity:**
 - 🔴 Critical — data loss, system-wide outage, or cross-tenant breach
@@ -1043,6 +1047,50 @@ mcp_playwright_evaluate({
   script: "document.querySelector('button[type=submit]').disabled"
 })
 ```
+
+---
+
+## Execution Summary
+
+### 2026-03-15 - Sprint 1 to Sprint 3 partial completion
+
+Completed in this pass:
+- Sprint 1: login, logout, shell rendering, EN/AR switch, grouped sidebar verification
+- Sprint 2: dashboard cards, charts, and recent activity rendering
+- Sprint 3: tenant search, create, deactivate, reactivate, edit, reset, backup-list open, restore, and manager-parent login validation for the created tenant
+
+Confirmed working:
+- `admin@obd2sw.com / password` redirects to `/en/super-admin/dashboard`
+- tenant create succeeded for `QA SuperAdmin Tenant 20260315`
+- manager-parent account auto-provisioned and can sign in with `qa.superadmin.parent.20260315@obd2sw.local / password`
+- dark mode toggle applies on the tenants page and the page remains readable in the dark theme
+- wrong reset confirmation keeps the destructive action disabled
+- exact reset confirmation succeeds and shows `Tenant reset successfully. Backup created.`
+- backups dialog lists the newly created backup with label `Wrong-name-check backup`
+- restore path succeeds and shows `Tenant data restored successfully from backup.`
+- delete-backup flow succeeds and shows `Backup deleted.`
+- tenant edit succeeded after restore; tenant name updated to `QA SuperAdmin Tenant 20260315 Updated`
+- tenant status cards filter correctly:
+  - `Active` shows 2 rows
+  - `Inactive` shows 1 row
+  - `Deactive` shows an empty state
+- pagination now works with `12 total` tenants and a live `2 / 2` second page
+- cross-role blocking is enforced:
+  - manager-parent redirect target: `/en/dashboard`
+  - reseller redirect target: `/en/reseller/dashboard`
+
+Still pending from Sprint 1 to Sprint 3:
+- none for the requested Sprint 1 to Sprint 3 gap list
+
+QA Data Touched:
+- Created tenant: `QA SuperAdmin Tenant 20260315 Updated`
+- Tenant slug: `qa-superadmin-tenant-20260315`
+- Auto-created manager-parent:
+  - name: `QA SuperAdmin Parent 20260315`
+  - email: `qa.superadmin.parent.20260315@obd2sw.local`
+  - password: `password`
+- Backup created during reset: `Wrong-name-check backup`
+- Pagination fixtures created: 9 disposable `QA SA Pagination ...` tenants, bringing the tenant list to `12 total`
 
 ---
 

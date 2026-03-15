@@ -75,7 +75,7 @@ export function SecurityLocksPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left dark:border-slate-800">
+                    <tr className="border-b border-slate-200 text-start dark:border-slate-800">
                       <th className="p-2">{t('common.email')}</th>
                       <th className="p-2">{t('security.device')}</th>
                       <th className="p-2">{t('security.lastIp')}</th>
@@ -124,7 +124,7 @@ export function SecurityLocksPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left dark:border-slate-800">
+                    <tr className="border-b border-slate-200 text-start dark:border-slate-800">
                       <th className="p-2">{t('security.lastIp')}</th>
                       <th className="p-2">{t('security.device')}</th>
                       <th className="p-2">{t('security.country')}</th>
@@ -169,7 +169,7 @@ export function SecurityLocksPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left dark:border-slate-800">
+                    <tr className="border-b border-slate-200 text-start dark:border-slate-800">
                       <th className="p-2">{t('common.timestamp')}</th>
                       <th className="p-2">{t('common.user')}</th>
                       <th className="p-2">{t('common.action')}</th>

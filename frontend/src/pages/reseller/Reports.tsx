@@ -121,7 +121,7 @@ export function ReportsPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('reseller.pages.reports.avgPriceHint', { defaultValue: 'Activation revenue divided by activation volume in the selected range.' })}</p>
             </div>
           </div>
-          <div className="text-right text-lg font-semibold text-slate-950 dark:text-white">{formatCurrency(summary?.avg_price ?? 0, 'USD', locale)}</div>
+          <div className="text-end text-lg font-semibold text-slate-950 dark:text-white">{formatCurrency(summary?.avg_price ?? 0, 'USD', locale)}</div>
         </CardContent>
       </Card>
 

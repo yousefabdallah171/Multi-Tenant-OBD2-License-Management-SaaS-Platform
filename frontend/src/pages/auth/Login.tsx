@@ -116,7 +116,7 @@ export function LoginPage() {
           aria-label={t('common.toggleTheme')}
         >
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          <span className="ml-2">{isDark ? t('common.lightMode') : t('common.darkMode')}</span>
+          <span className="ms-2">{isDark ? t('common.lightMode') : t('common.darkMode')}</span>
         </Button>
 
         <Button
