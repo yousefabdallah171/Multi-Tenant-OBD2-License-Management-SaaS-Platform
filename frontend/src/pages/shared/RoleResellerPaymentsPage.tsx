@@ -1,38 +1,69 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Banknote, CirclePercent, Wallet, WalletCards } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowRight, Banknote, Wallet, WalletCards } from 'lucide-react'
+import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
-import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { formatCurrency } from '@/lib/utils'
-import type { ResellerPaymentFilters, ResellerPaymentListData, ResellerPaymentRow } from '@/types/manager-reseller.types'
+import type { RecordPaymentPayload, ResellerPaymentFilters, ResellerPaymentListData, ResellerPaymentRow } from '@/types/manager-reseller.types'
+
+const todayDate = () => new Date().toISOString().slice(0, 10)
+const MAX_PAYMENT_AMOUNT = 99_999_999.99
 
 interface RoleResellerPaymentsPageProps {
   eyebrow: string
   queryKeyPrefix: string
   fetchList: (filters?: ResellerPaymentFilters) => Promise<ResellerPaymentListData>
+  recordPayment: (payload: RecordPaymentPayload) => Promise<{ message?: string }>
   detailPath: (lang: 'ar' | 'en', resellerId: number) => string
 }
 
-export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, detailPath }: RoleResellerPaymentsPageProps) {
+export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, recordPayment, detailPath }: RoleResellerPaymentsPageProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [period, setPeriod] = useState(() => new Date().toISOString().slice(0, 7))
-  const [status, setStatus] = useState<ResellerPaymentFilters['status']>('')
+  const [paymentOpen, setPaymentOpen] = useState(false)
+  const [paymentForm, setPaymentForm] = useState({
+    reseller_id: 0,
+    amount: '',
+    payment_date: todayDate(),
+    notes: '',
+  })
 
   const query = useQuery({
-    queryKey: [queryKeyPrefix, 'reseller-payments', period, status],
-    queryFn: () => fetchList({ period, status }),
+    queryKey: [queryKeyPrefix, 'reseller-payments'],
+    queryFn: () => fetchList(),
   })
 
   const rows = query.data?.data ?? []
   const summary = query.data?.summary
+  const resellerOptions = rows.map((row) => ({
+    id: row.reseller_id,
+    name: row.reseller_name,
+    email: row.reseller_email,
+  }))
+
+  const paymentMutation = useMutation({
+    mutationFn: (payload: RecordPaymentPayload) => recordPayment(payload),
+    onSuccess: (response) => {
+      toast.success(response.message ?? t('payments.messages.paymentSaved'))
+      setPaymentOpen(false)
+      resetPaymentForm()
+      void queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, 'reseller-payments'] })
+    },
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
+  })
 
   const columns = useMemo<Array<DataTableColumn<ResellerPaymentRow>>>(() => [
     {
@@ -53,13 +84,6 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, d
       sortable: true,
       sortValue: (row) => row.total_sales,
       render: (row) => formatCurrency(row.total_sales, 'USD', locale),
-    },
-    {
-      key: 'commission_rate',
-      label: t('payments.columns.rate'),
-      sortable: true,
-      sortValue: (row) => row.commission_rate,
-      render: (row) => `${row.commission_rate}%`,
     },
     {
       key: 'commission_owed',
@@ -83,21 +107,10 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, d
       render: (row) => formatCurrency(row.outstanding, 'USD', locale),
     },
     {
-      key: 'status',
-      label: t('common.status'),
-      sortable: true,
-      sortValue: (row) => row.status,
-      render: (row) => <PaymentStatusPill status={row.status} />,
-    },
-    {
       key: 'actions',
       label: t('common.actions'),
       render: (row) => (
-        <button
-          type="button"
-          onClick={() => navigate(detailPath(lang, row.reseller_id))}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
-        >
+        <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
           {t('payments.actions.view')}
           <ArrowRight className="h-4 w-4" />
         </button>
@@ -105,57 +118,116 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, d
     },
   ], [detailPath, lang, locale, navigate, t])
 
+  function resetPaymentForm() {
+    setPaymentForm({
+      reseller_id: rows[0]?.reseller_id ?? 0,
+      amount: '',
+      payment_date: todayDate(),
+      notes: '',
+    })
+  }
+
+  function openPaymentDialog() {
+    setPaymentOpen(true)
+    resetPaymentForm()
+  }
+
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={eyebrow} title={t('payments.title')} description={t('payments.description')} />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <PageHeader eyebrow={eyebrow} title={t('payments.title')} description={t('payments.description')} />
+        <Button type="button" onClick={openPaymentDialog}>
+          {t('payments.actions.recordPayment')}
+        </Button>
+      </div>
 
-      <Card>
-        <CardContent className="grid gap-3 p-4 md:grid-cols-2">
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('payments.filters.period')}</span>
-            <input
-              type="month"
-              value={period}
-              onChange={(event) => setPeriod(event.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('common.status')}</span>
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value as ResellerPaymentFilters['status'])}
-              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-            >
-              <option value="">{t('common.allStatuses')}</option>
-              <option value="unpaid">{t('payments.status.unpaid')}</option>
-              <option value="partial">{t('payments.status.partial')}</option>
-              <option value="paid">{t('payments.status.paid')}</option>
-            </select>
-          </label>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <StatsCard title={t('payments.summary.totalOwed')} value={formatCurrency(summary?.total_owed ?? 0, 'USD', locale)} icon={WalletCards} color="amber" />
         <StatsCard title={t('payments.summary.totalPaid')} value={formatCurrency(summary?.total_paid ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
         <StatsCard title={t('payments.summary.outstanding')} value={formatCurrency(summary?.total_outstanding ?? 0, 'USD', locale)} icon={Wallet} color="rose" />
-        <StatsCard title={t('payments.filters.period')} value={summary?.period ?? period} icon={CirclePercent} color="sky" />
       </div>
 
       <DataTable columns={columns} data={rows} rowKey={(row) => row.reseller_id} isLoading={query.isLoading} emptyMessage={t('payments.empty.resellers')} />
+
+      <Dialog open={paymentOpen} onOpenChange={(open) => { if (!open) { setPaymentOpen(false); resetPaymentForm() } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('payments.dialogs.recordPayment')}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <label className="space-y-2">
+              <span className="text-sm font-medium">{t('payments.columns.reseller', { defaultValue: 'Reseller' })}</span>
+              <select
+                value={paymentForm.reseller_id}
+                onChange={(event) => setPaymentForm((current) => ({ ...current, reseller_id: Number(event.target.value) }))}
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value={0}>{t('common.selectOption', { defaultValue: 'Select an option' })}</option>
+                {resellerOptions.map((reseller) => (
+                  <option key={reseller.id} value={reseller.id}>{`${reseller.name} (${reseller.email})`}</option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium">{t('payments.fields.amount')}</span>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={paymentForm.amount}
+                onChange={(event) => setPaymentForm((current) => ({ ...current, amount: sanitizeMoneyInput(event.target.value) }))}
+                placeholder={t('payments.fields.amount')}
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium">{t('common.date')}</span>
+              <Input
+                type="date"
+                value={paymentForm.payment_date}
+                onChange={(event) => setPaymentForm((current) => ({ ...current, payment_date: event.target.value }))}
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium">{t('payments.fields.notes', { defaultValue: 'Note' })}</span>
+              <Textarea
+                value={paymentForm.notes}
+                onChange={(event) => setPaymentForm((current) => ({ ...current, notes: event.target.value }))}
+                placeholder={t('payments.fields.notes', { defaultValue: 'Note' })}
+              />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => { setPaymentOpen(false); resetPaymentForm() }}>{t('common.cancel')}</Button>
+            <Button
+              type="button"
+              disabled={paymentMutation.isPending}
+              onClick={() => {
+                const amount = Number(paymentForm.amount)
+
+                if (paymentForm.reseller_id <= 0 || !Number.isFinite(amount) || amount <= 0 || amount > MAX_PAYMENT_AMOUNT) {
+                  toast.error(t('payments.validation.amountOnly', { defaultValue: 'Enter a valid payment amount.' }))
+                  return
+                }
+
+                paymentMutation.mutate({
+                  reseller_id: paymentForm.reseller_id,
+                  amount,
+                  payment_date: paymentForm.payment_date || undefined,
+                  notes: paymentForm.notes.trim() || undefined,
+                })
+              }}
+            >
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-function PaymentStatusPill({ status }: { status: ResellerPaymentRow['status'] }) {
-  const { t } = useTranslation()
-
-  const tone = {
-    unpaid: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
-    partial: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
-    paid: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
-  }[status]
-
-  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>{t(`payments.status.${status}`)}</span>
+function sanitizeMoneyInput(value: string) {
+  const cleaned = value.replace(/[^0-9.]/g, '')
+  const [whole = '', ...rest] = cleaned.split('.')
+  const fraction = rest.join('').slice(0, 2)
+  return fraction.length > 0 ? `${whole}.${fraction}` : whole
 }

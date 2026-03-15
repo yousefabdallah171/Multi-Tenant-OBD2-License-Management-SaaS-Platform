@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, BadgeDollarSign, Banknote, ReceiptText, Wallet } from 'lucide-react'
+import { ArrowLeft, BadgeDollarSign, Banknote, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -29,6 +29,8 @@ interface RoleResellerPaymentDetailPageProps {
 
 type PaymentDialogState = { mode: 'create' | 'edit'; payment?: ResellerPayment } | null
 type CommissionDialogState = { mode: 'create' | 'edit'; commission?: ResellerCommission } | null
+const todayDate = () => new Date().toISOString().slice(0, 10)
+const MAX_PAYMENT_AMOUNT = 99_999_999.99
 
 export function RoleResellerPaymentDetailPage({
   eyebrow,
@@ -51,9 +53,8 @@ export function RoleResellerPaymentDetailPage({
   const [paymentForm, setPaymentForm] = useState({
     commission_id: 0,
     amount: '',
-    payment_date: new Date().toISOString().slice(0, 10),
+    payment_date: todayDate(),
     payment_method: 'bank_transfer' as RecordPaymentPayload['payment_method'],
-    reference: '',
     notes: '',
   })
   const [commissionForm, setCommissionForm] = useState({
@@ -105,11 +106,9 @@ export function RoleResellerPaymentDetailPage({
   const commissionColumns = useMemo<Array<DataTableColumn<ResellerCommission>>>(() => [
     { key: 'period', label: t('payments.columns.period'), sortable: true, sortValue: (row) => row.period, render: (row) => row.period },
     { key: 'total_sales', label: t('payments.columns.sales'), sortable: true, sortValue: (row) => row.total_sales, render: (row) => formatCurrency(row.total_sales, 'USD', locale) },
-    { key: 'commission_rate', label: t('payments.columns.rate'), sortable: true, sortValue: (row) => row.commission_rate, render: (row) => `${row.commission_rate}%` },
     { key: 'commission_owed', label: t('payments.columns.owed'), sortable: true, sortValue: (row) => row.commission_owed, render: (row) => formatCurrency(row.commission_owed, 'USD', locale) },
     { key: 'amount_paid', label: t('payments.columns.paid'), sortable: true, sortValue: (row) => row.amount_paid, render: (row) => formatCurrency(row.amount_paid, 'USD', locale) },
     { key: 'outstanding', label: t('payments.columns.outstanding'), sortable: true, sortValue: (row) => row.outstanding, render: (row) => formatCurrency(row.outstanding, 'USD', locale) },
-    { key: 'status', label: t('common.status'), render: (row) => <PaymentStatusPill status={row.status} /> },
   ], [locale, t])
 
   const paymentColumns = useMemo<Array<DataTableColumn<ResellerPayment>>>(() => [
@@ -124,11 +123,10 @@ export function RoleResellerPaymentDetailPage({
 
   function resetPaymentForm() {
     setPaymentForm({
-      commission_id: detail?.commissions[0]?.id ?? 0,
+      commission_id: getDefaultCommissionId(detail),
       amount: '',
-      payment_date: new Date().toISOString().slice(0, 10),
+      payment_date: todayDate(),
       payment_method: 'bank_transfer',
-      reference: '',
       notes: '',
     })
   }
@@ -148,11 +146,10 @@ export function RoleResellerPaymentDetailPage({
 
     if (mode === 'edit' && payment) {
       setPaymentForm({
-        commission_id: payment.commission_id,
+        commission_id: payment.commission_id ?? 0,
         amount: String(payment.amount),
-        payment_date: payment.payment_date ?? new Date().toISOString().slice(0, 10),
+        payment_date: payment.payment_date ?? '',
         payment_method: payment.payment_method,
-        reference: payment.reference ?? '',
         notes: payment.notes ?? '',
       })
       return
@@ -182,9 +179,8 @@ export function RoleResellerPaymentDetailPage({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <StatsCard title={t('payments.summary.totalSales', { defaultValue: 'Total Sales' })} value={formatCurrency(detail?.summary.total_sales ?? 0, 'USD', locale)} icon={BadgeDollarSign} color="sky" />
-        <StatsCard title={t('payments.summary.totalOwedFromReseller', { defaultValue: 'Total Owed by Reseller' })} value={formatCurrency(detail?.summary.total_owed ?? 0, 'USD', locale)} icon={ReceiptText} color="amber" />
         <StatsCard title={t('payments.summary.totalPaidByReseller', { defaultValue: 'Total Paid by Reseller' })} value={formatCurrency(detail?.summary.total_paid ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
         <StatsCard title={t('payments.summary.remainingFromReseller', { defaultValue: 'Still Not Paid' })} value={formatCurrency(detail?.summary.total_outstanding ?? 0, 'USD', locale)} icon={Wallet} color="rose" />
       </div>
@@ -218,38 +214,48 @@ export function RoleResellerPaymentDetailPage({
           <DialogHeader><DialogTitle>{paymentDialog?.mode === 'edit' ? t('payments.dialogs.editPayment') : t('payments.dialogs.recordPayment')}</DialogTitle></DialogHeader>
           <div className="grid gap-4">
             <label className="space-y-2">
-              <span className="text-sm font-medium">{t('payments.fields.commission')}</span>
-              <select value={paymentForm.commission_id} onChange={(event) => setPaymentForm((current) => ({ ...current, commission_id: Number(event.target.value) }))} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                {(detail?.commissions ?? []).map((commission) => <option key={commission.id} value={commission.id}>{commission.period} - {formatCurrency(commission.outstanding, 'USD', locale)}</option>)}
-              </select>
+              <span className="text-sm font-medium">{t('payments.fields.amount')}</span>
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={paymentForm.amount}
+                onChange={(event) => setPaymentForm((current) => ({ ...current, amount: sanitizeMoneyInput(event.target.value) }))}
+                placeholder={t('payments.fields.amount')}
+              />
             </label>
-            <Input value={paymentForm.amount} onChange={(event) => setPaymentForm((current) => ({ ...current, amount: event.target.value }))} placeholder={t('payments.fields.amount')} />
-            <Input type="date" value={paymentForm.payment_date} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_date: event.target.value }))} />
-            <select value={paymentForm.payment_method} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_method: event.target.value as RecordPaymentPayload['payment_method'] }))} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-              <option value="bank_transfer">{t('payments.methods.bank_transfer')}</option>
-              <option value="cash">{t('payments.methods.cash')}</option>
-              <option value="other">{t('payments.methods.other')}</option>
-            </select>
-            <Input value={paymentForm.reference} onChange={(event) => setPaymentForm((current) => ({ ...current, reference: event.target.value }))} placeholder={t('payments.fields.reference')} />
-            <Textarea value={paymentForm.notes} onChange={(event) => setPaymentForm((current) => ({ ...current, notes: event.target.value }))} placeholder={t('payments.fields.notes')} />
+            <label className="space-y-2">
+              <span className="text-sm font-medium">{t('common.date')}</span>
+              <Input type="date" value={paymentForm.payment_date} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_date: event.target.value }))} />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium">{t('payments.fields.notes', { defaultValue: 'Note' })}</span>
+              <Textarea
+                value={paymentForm.notes}
+                onChange={(event) => setPaymentForm((current) => ({ ...current, notes: event.target.value }))}
+                placeholder={t('payments.fields.notes', { defaultValue: 'Note' })}
+              />
+            </label>
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => { setPaymentDialog(null); resetPaymentForm() }}>{t('common.cancel')}</Button>
             <Button type="button" disabled={paymentMutation.isPending} onClick={() => {
-              if (!detail || !paymentForm.commission_id || Number(paymentForm.amount) <= 0 || paymentForm.payment_date === '') {
-                toast.error(t('payments.validation.payment'))
+              const commissionId = paymentDialog?.payment?.commission_id ?? (paymentForm.commission_id || undefined)
+
+              const amount = Number(paymentForm.amount)
+
+              if (!detail || !Number.isFinite(amount) || amount <= 0 || amount > MAX_PAYMENT_AMOUNT) {
+                toast.error(t('payments.validation.amountOnly', { defaultValue: 'Enter a valid payment amount.' }))
                 return
               }
 
               paymentMutation.mutate({
                 paymentId: paymentDialog?.payment?.id,
                 body: {
-                  commission_id: paymentForm.commission_id,
+                  commission_id: commissionId,
                   reseller_id: detail.reseller.id,
-                  amount: Number(paymentForm.amount),
-                  payment_date: paymentForm.payment_date,
+                  amount,
+                  payment_date: paymentForm.payment_date || undefined,
                   payment_method: paymentForm.payment_method,
-                  reference: paymentForm.reference.trim() || undefined,
                   notes: paymentForm.notes.trim() || undefined,
                 },
               })
@@ -292,14 +298,14 @@ export function RoleResellerPaymentDetailPage({
   )
 }
 
-function PaymentStatusPill({ status }: { status: ResellerCommission['status'] }) {
-  const { t } = useTranslation()
+function getDefaultCommissionId(detail: ResellerPaymentDetailData | undefined) {
+  const outstandingCommission = detail?.commissions.find((commission) => commission.outstanding > 0)
+  return outstandingCommission?.id ?? detail?.commissions[0]?.id ?? 0
+}
 
-  const tone = {
-    unpaid: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
-    partial: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
-    paid: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
-  }[status]
-
-  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${tone}`}>{t(`payments.status.${status}`)}</span>
+function sanitizeMoneyInput(value: string) {
+  const cleaned = value.replace(/[^0-9.]/g, '')
+  const [whole = '', ...rest] = cleaned.split('.')
+  const fraction = rest.join('').slice(0, 2)
+  return fraction.length > 0 ? `${whole}.${fraction}` : whole
 }

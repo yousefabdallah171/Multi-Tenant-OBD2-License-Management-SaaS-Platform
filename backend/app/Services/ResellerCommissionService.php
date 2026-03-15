@@ -40,21 +40,25 @@ class ResellerCommissionService
         });
     }
 
-    public function recordPayment(ResellerCommission $commission, User $manager, array $payload): ResellerPayment
+    public function recordPayment(?ResellerCommission $commission, User $manager, array $payload): ResellerPayment
     {
         return DB::transaction(function () use ($commission, $manager, $payload): ResellerPayment {
             $payment = ResellerPayment::query()->create([
-                'commission_id' => $commission->id,
-                'reseller_id' => $commission->reseller_id,
+                'commission_id' => $commission?->id,
+                'reseller_id' => $commission?->reseller_id ?? (int) $payload['reseller_id'],
                 'manager_id' => $manager->id,
                 'amount' => round((float) $payload['amount'], 2),
-                'payment_date' => (string) $payload['payment_date'],
+                'payment_date' => isset($payload['payment_date']) && $payload['payment_date'] !== ''
+                    ? (string) $payload['payment_date']
+                    : now()->toDateString(),
                 'payment_method' => (string) $payload['payment_method'],
                 'reference' => $payload['reference'] ?? null,
                 'notes' => $payload['notes'] ?? null,
             ]);
 
-            $this->recalculateCommission($commission);
+            if ($commission !== null) {
+                $this->recalculateCommission($commission);
+            }
 
             return $payment->fresh(['commission', 'reseller:id,name,email', 'manager:id,name,email']);
         });
@@ -63,23 +67,27 @@ class ResellerCommissionService
     public function updatePayment(ResellerPayment $payment, User $manager, array $payload): ResellerPayment
     {
         return DB::transaction(function () use ($payment, $manager, $payload): ResellerPayment {
-            $originalCommissionId = (int) $payment->commission_id;
+            $originalCommissionId = $payment->commission_id !== null ? (int) $payment->commission_id : null;
 
             $payment->fill([
-                'commission_id' => (int) $payload['commission_id'],
+                'commission_id' => isset($payload['commission_id']) ? (int) $payload['commission_id'] : null,
                 'reseller_id' => (int) $payload['reseller_id'],
                 'manager_id' => $manager->id,
                 'amount' => round((float) $payload['amount'], 2),
-                'payment_date' => (string) $payload['payment_date'],
+                'payment_date' => isset($payload['payment_date']) && $payload['payment_date'] !== ''
+                    ? (string) $payload['payment_date']
+                    : ($payment->payment_date?->toDateString() ?: now()->toDateString()),
                 'payment_method' => (string) $payload['payment_method'],
                 'reference' => $payload['reference'] ?? null,
                 'notes' => $payload['notes'] ?? null,
             ]);
             $payment->save();
 
-            $this->recalculateCommissionById($originalCommissionId);
+            if ($originalCommissionId !== null) {
+                $this->recalculateCommissionById($originalCommissionId);
+            }
 
-            if ((int) $payment->commission_id !== $originalCommissionId) {
+            if ($payment->commission_id !== null && (int) $payment->commission_id !== $originalCommissionId) {
                 $this->recalculateCommissionById((int) $payment->commission_id);
             }
 
@@ -107,7 +115,7 @@ class ResellerCommissionService
     {
         $owed = round((float) $commission->commission_owed, 2);
         $paid = round((float) ($commission->amount_paid ?? 0), 2);
-        $outstanding = round(max($owed - $paid, 0), 2);
+        $outstanding = round($owed - $paid, 2);
 
         $commission->amount_paid = $paid;
         $commission->outstanding = $outstanding;

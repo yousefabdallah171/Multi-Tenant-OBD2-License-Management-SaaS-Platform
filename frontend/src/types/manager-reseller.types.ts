@@ -436,7 +436,7 @@ export interface ResellerCommission {
 
 export interface ResellerPayment {
   id: number
-  commission_id: number
+  commission_id: number | null
   period?: string | null
   reseller_id: number
   reseller_name?: string | null
@@ -512,11 +512,11 @@ export interface ResellerPaymentFilters {
 }
 
 export interface RecordPaymentPayload {
-  commission_id: number
+  commission_id?: number
   reseller_id: number
   amount: number
-  payment_date: string
-  payment_method: 'bank_transfer' | 'cash' | 'other'
+  payment_date?: string
+  payment_method?: 'bank_transfer' | 'cash' | 'other'
   reference?: string
   notes?: string
 }

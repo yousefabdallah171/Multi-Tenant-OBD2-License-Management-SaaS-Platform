@@ -8,6 +8,7 @@ use App\Models\ResellerCommission;
 use App\Models\ResellerPayment;
 use App\Models\User;
 use App\Services\ResellerCommissionService;
+use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,13 @@ class ResellerPaymentController extends BaseManagerParentController
             ->keyBy('reseller_id');
 
         [$start, $end] = $this->periodRange($period);
+        $paymentsByReseller = ResellerPayment::query()
+            ->whereIn('reseller_id', $resellers->pluck('id'))
+            ->whereBetween('payment_date', [$start, $end])
+            ->selectRaw('reseller_id, ROUND(COALESCE(SUM(amount), 0), 2) as total_paid')
+            ->groupBy('reseller_id')
+            ->pluck('total_paid', 'reseller_id');
+
         $salesByReseller = License::query()
             ->where('tenant_id', $tenantId)
             ->whereIn('reseller_id', $resellers->pluck('id'))
@@ -48,12 +56,12 @@ class ResellerPaymentController extends BaseManagerParentController
             ->groupBy('reseller_id')
             ->pluck('total_sales', 'reseller_id');
 
-        $rows = $resellers->map(function (User $reseller) use ($commissions, $salesByReseller, $period): array {
+        $rows = $resellers->map(function (User $reseller) use ($commissions, $paymentsByReseller, $salesByReseller, $period): array {
             $commission = $commissions->get($reseller->id);
             $totalSales = round((float) ($commission?->total_sales ?? $salesByReseller->get($reseller->id, 0)), 2);
-            $commissionOwed = round((float) ($commission?->commission_owed ?? 0), 2);
-            $amountPaid = round((float) ($commission?->amount_paid ?? 0), 2);
-            $outstanding = round((float) ($commission?->outstanding ?? max($commissionOwed - $amountPaid, 0)), 2);
+            $amountPaid = round((float) ($commission?->amount_paid ?? $paymentsByReseller->get($reseller->id, 0)), 2);
+            $commissionOwed = round((float) ($commission?->commission_owed ?? $totalSales), 2);
+            $outstanding = round((float) ($commission?->outstanding ?? ($commissionOwed - $amountPaid)), 2);
 
             return [
                 'reseller_id' => $reseller->id,
@@ -66,7 +74,7 @@ class ResellerPaymentController extends BaseManagerParentController
                 'commission_owed' => $commissionOwed,
                 'amount_paid' => $amountPaid,
                 'outstanding' => $outstanding,
-                'status' => $commission?->status ?? ($commissionOwed > 0 ? 'unpaid' : 'paid'),
+                'status' => $commission?->status ?? $this->resolveComputedStatus($commissionOwed, $amountPaid),
                 'created_at' => $reseller->created_at?->toIso8601String(),
             ];
         })->filter(fn (array $row): bool => $statusFilter ? $row['status'] === $statusFilter : true)->values();
@@ -101,6 +109,29 @@ class ResellerPaymentController extends BaseManagerParentController
             ->get();
 
         $totalSales = round((float) License::where('reseller_id', $reseller->id)->sum('price'), 2);
+        $totalPaid = round((float) $payments->sum('amount'), 2);
+        $commissionsData = $commissions->map(fn (ResellerCommission $commission): array => $this->serializeCommission($commission))->values();
+
+        if ($commissionsData->isEmpty()) {
+            $commissionsData = collect([
+                [
+                    'id' => 0,
+                    'reseller_id' => $reseller->id,
+                    'reseller_name' => $reseller->name,
+                    'period' => 'All Time',
+                    'total_sales' => $totalSales,
+                    'commission_rate' => 0.0,
+                    'commission_owed' => $totalSales,
+                    'amount_paid' => $totalPaid,
+                    'outstanding' => round($totalSales - $totalPaid, 2),
+                    'status' => $this->resolveComputedStatus($totalSales, $totalPaid),
+                    'notes' => null,
+                    'manager_name' => null,
+                    'created_at' => null,
+                    'updated_at' => null,
+                ],
+            ]);
+        }
 
         return response()->json([
             'data' => [
@@ -112,11 +143,11 @@ class ResellerPaymentController extends BaseManagerParentController
                 ],
                 'summary' => [
                     'total_sales' => $totalSales,
-                    'total_owed' => round((float) $commissions->sum('commission_owed'), 2),
-                    'total_paid' => round((float) $payments->sum('amount'), 2),
-                    'total_outstanding' => round((float) $commissions->sum('outstanding'), 2),
+                    'total_owed' => round((float) ($commissions->isEmpty() ? $totalSales : $commissions->sum('commission_owed')), 2),
+                    'total_paid' => $totalPaid,
+                    'total_outstanding' => round((float) ($commissions->isEmpty() ? ($totalSales - $totalPaid) : $commissions->sum('outstanding')), 2),
                 ],
-                'commissions' => $commissions->map(fn (ResellerCommission $commission): array => $this->serializeCommission($commission))->values(),
+                'commissions' => $commissionsData,
                 'payments' => $payments->map(fn (ResellerPayment $payment): array => $this->serializePayment($payment))->values(),
             ],
         ]);
@@ -125,31 +156,40 @@ class ResellerPaymentController extends BaseManagerParentController
     public function storePayment(Request $request, ResellerCommissionService $commissionService): JsonResponse
     {
         $validated = $request->validate([
-            'commission_id' => ['required', 'integer', 'exists:reseller_commissions,id'],
+            'commission_id' => ['nullable', 'integer', 'exists:reseller_commissions,id'],
             'reseller_id' => ['required', 'integer', 'exists:users,id'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'payment_date' => ['required', 'date'],
-            'payment_method' => ['required', 'in:bank_transfer,cash,other'],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'payment_date' => ['nullable', 'date'],
+            'payment_method' => ['nullable', 'in:bank_transfer,cash,other'],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
         ]);
 
+        $validated['payment_date'] = isset($validated['payment_date'])
+            ? Carbon::parse((string) $validated['payment_date'])->toDateString()
+            : now()->toDateString();
+        $validated['payment_method'] = $validated['payment_method'] ?? 'bank_transfer';
+
         $reseller = $this->resolveReseller($request, User::query()->findOrFail((int) $validated['reseller_id']));
-        $commission = $this->resolveCommission($request, ResellerCommission::query()->findOrFail((int) $validated['commission_id']));
-        abort_unless((int) $commission->reseller_id === $reseller->id, 422, 'Commission does not belong to the selected reseller.');
+        $commission = isset($validated['commission_id'])
+            ? $this->resolveCommission($request, ResellerCommission::query()->findOrFail((int) $validated['commission_id']))
+            : null;
+        abort_unless($commission === null || (int) $commission->reseller_id === $reseller->id, 422, 'Commission does not belong to the selected reseller.');
 
         $payment = $commissionService->recordPayment($commission, $this->currentManagerParent($request), $validated);
 
         $this->logActivity(
             $request,
             'reseller.payment_recorded',
-            sprintf('Recorded %s payment of $%s for %s (%s).', $payment->payment_method, number_format((float) $payment->amount, 2), $reseller->name, $commission->period),
+            $commission
+                ? sprintf('Recorded payment of $%s for %s (%s).', number_format((float) $payment->amount, 2), $reseller->name, $commission->period)
+                : sprintf('Recorded payment of $%s for %s.', number_format((float) $payment->amount, 2), $reseller->name),
             [
                 'reseller_id' => $reseller->id,
-                'commission_id' => $commission->id,
+                'commission_id' => $commission?->id,
                 'payment_id' => $payment->id,
                 'amount' => round((float) $payment->amount, 2),
-                'period' => $commission->period,
+                'period' => $commission?->period,
             ],
         );
 
@@ -164,18 +204,25 @@ class ResellerPaymentController extends BaseManagerParentController
         $payment = $this->resolvePayment($request, $resellerPayment);
 
         $validated = $request->validate([
-            'commission_id' => ['required', 'integer', 'exists:reseller_commissions,id'],
+            'commission_id' => ['nullable', 'integer', 'exists:reseller_commissions,id'],
             'reseller_id' => ['required', 'integer', 'exists:users,id'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'payment_date' => ['required', 'date'],
-            'payment_method' => ['required', 'in:bank_transfer,cash,other'],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'payment_date' => ['nullable', 'date'],
+            'payment_method' => ['nullable', 'in:bank_transfer,cash,other'],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
         ]);
 
+        $validated['payment_date'] = isset($validated['payment_date'])
+            ? Carbon::parse((string) $validated['payment_date'])->toDateString()
+            : ($payment->payment_date?->toDateString() ?: now()->toDateString());
+        $validated['payment_method'] = $validated['payment_method'] ?? ($payment->payment_method ?: 'bank_transfer');
+
         $reseller = $this->resolveReseller($request, User::query()->findOrFail((int) $validated['reseller_id']));
-        $commission = $this->resolveCommission($request, ResellerCommission::query()->findOrFail((int) $validated['commission_id']));
-        abort_unless((int) $commission->reseller_id === $reseller->id, 422, 'Commission does not belong to the selected reseller.');
+        $commission = isset($validated['commission_id'])
+            ? $this->resolveCommission($request, ResellerCommission::query()->findOrFail((int) $validated['commission_id']))
+            : null;
+        abort_unless($commission === null || (int) $commission->reseller_id === $reseller->id, 422, 'Commission does not belong to the selected reseller.');
 
         $updatedPayment = $commissionService->updatePayment($payment, $this->currentManagerParent($request), $validated);
 
@@ -185,7 +232,7 @@ class ResellerPaymentController extends BaseManagerParentController
             sprintf('Updated payment #%d for %s.', $updatedPayment->id, $reseller->name),
             [
                 'reseller_id' => $reseller->id,
-                'commission_id' => (int) $updatedPayment->commission_id,
+                'commission_id' => $updatedPayment->commission_id,
                 'payment_id' => $updatedPayment->id,
                 'amount' => round((float) $updatedPayment->amount, 2),
             ],
@@ -256,8 +303,10 @@ class ResellerPaymentController extends BaseManagerParentController
         $payment->loadMissing('commission', 'reseller');
 
         abort_unless(
-            $payment->commission !== null
-                && (int) $payment->commission->tenant_id === $this->currentTenantId($request)
+            (
+                $payment->commission === null
+                || (int) $payment->commission->tenant_id === $this->currentTenantId($request)
+            )
                 && ($payment->reseller?->role?->value ?? (string) $payment->reseller?->role) === UserRole::RESELLER->value,
             404,
         );
@@ -271,6 +320,15 @@ class ResellerPaymentController extends BaseManagerParentController
         $end = $start->endOfMonth();
 
         return [$start->toDateTimeString(), $end->toDateTimeString()];
+    }
+
+    private function resolveComputedStatus(float $commissionOwed, float $amountPaid): string
+    {
+        if ($amountPaid <= 0) {
+            return $commissionOwed > 0 ? 'unpaid' : 'paid';
+        }
+
+        return $amountPaid >= $commissionOwed ? 'paid' : 'partial';
     }
 
     private function serializeCommission(ResellerCommission $commission): array

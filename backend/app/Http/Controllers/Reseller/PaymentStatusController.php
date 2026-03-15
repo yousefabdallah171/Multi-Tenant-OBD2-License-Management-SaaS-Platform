@@ -35,20 +35,41 @@ class PaymentStatusController extends BaseResellerController
             ->sum('price'), 2);
 
         $latestRate = $commissions->first()?->commission_rate;
+        $totalPaid = round((float) $payments->sum('amount'), 2);
+        $monthlyBreakdown = $commissions
+            ->take(12)
+            ->map(fn (ResellerCommission $commission): array => $this->serializeCommission($commission))
+            ->values();
+
+        if ($monthlyBreakdown->isEmpty()) {
+            $monthlyBreakdown = collect([
+                [
+                    'id' => 0,
+                    'period' => 'All Time',
+                    'total_sales' => $totalSales,
+                    'commission_rate' => round((float) ($latestRate ?? 0), 2),
+                    'commission_owed' => $totalSales,
+                    'amount_paid' => $totalPaid,
+                    'outstanding' => round($totalSales - $totalPaid, 2),
+                    'status' => $this->resolveComputedStatus($totalSales, $totalPaid),
+                    'notes' => null,
+                    'manager_name' => null,
+                    'created_at' => null,
+                    'updated_at' => null,
+                ],
+            ]);
+        }
 
         return response()->json([
             'data' => [
                 'summary' => [
                     'total_sales' => $totalSales,
                     'commission_rate' => round((float) ($latestRate ?? 0), 2),
-                    'total_owed' => round((float) $commissions->sum('commission_owed'), 2),
-                    'total_paid' => round((float) $payments->sum('amount'), 2),
-                    'outstanding_balance' => round((float) $commissions->sum('outstanding'), 2),
+                    'total_owed' => round((float) ($commissions->isEmpty() ? $totalSales : $commissions->sum('commission_owed')), 2),
+                    'total_paid' => $totalPaid,
+                    'outstanding_balance' => round((float) ($commissions->isEmpty() ? ($totalSales - $totalPaid) : $commissions->sum('outstanding')), 2),
                 ],
-                'monthly_breakdown' => $commissions
-                    ->take(12)
-                    ->map(fn (ResellerCommission $commission): array => $this->serializeCommission($commission))
-                    ->values(),
+                'monthly_breakdown' => $monthlyBreakdown,
                 'payment_history' => $payments
                     ->map(fn (ResellerPayment $payment): array => $this->serializePayment($payment))
                     ->values(),
@@ -89,5 +110,14 @@ class PaymentStatusController extends BaseResellerController
             'created_at' => $payment->created_at?->toIso8601String(),
             'updated_at' => $payment->updated_at?->toIso8601String(),
         ];
+    }
+
+    private function resolveComputedStatus(float $commissionOwed, float $amountPaid): string
+    {
+        if ($amountPaid <= 0) {
+            return $commissionOwed > 0 ? 'unpaid' : 'paid';
+        }
+
+        return $amountPaid >= $commissionOwed ? 'paid' : 'partial';
     }
 }

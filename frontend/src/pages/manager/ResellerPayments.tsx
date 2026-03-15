@@ -11,6 +11,7 @@ export function ResellerPaymentsPage() {
       eyebrow={t('manager.layout.eyebrow')}
       queryKeyPrefix="manager"
       fetchList={managerService.getResellerPayments}
+      recordPayment={managerService.recordPayment}
       detailPath={(lang, resellerId) => routePaths.manager.resellerPaymentDetail(lang, resellerId)}
     />
   )
