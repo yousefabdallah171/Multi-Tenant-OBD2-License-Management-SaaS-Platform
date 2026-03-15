@@ -47,7 +47,9 @@ export function SettingsPage() {
   const saveMutation = useMutation({
     mutationFn: () => settingsService.update(form as SystemSettings),
     onSuccess: () => {
-      persistServerTimezone(form.general.server_timezone)
+      if (form) {
+        persistServerTimezone(form.general.server_timezone)
+      }
       toast.success(t('superAdmin.pages.settings.saveSuccess'))
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'settings'] })
       void queryClient.invalidateQueries({ queryKey: ['settings', 'online-widget'] })

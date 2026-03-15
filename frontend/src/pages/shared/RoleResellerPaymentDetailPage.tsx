@@ -161,23 +161,6 @@ export function RoleResellerPaymentDetailPage({
     resetPaymentForm()
   }
 
-  function openCommissionDialog(mode: 'create' | 'edit', commission?: ResellerCommission) {
-    setCommissionDialog({ mode, commission })
-
-    if (mode === 'edit' && commission) {
-      setCommissionForm({
-        period: commission.period,
-        total_sales: String(commission.total_sales),
-        commission_rate: String(commission.commission_rate),
-        commission_owed: String(commission.commission_owed),
-        notes: commission.notes ?? '',
-      })
-      return
-    }
-
-    resetCommissionForm()
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-start">

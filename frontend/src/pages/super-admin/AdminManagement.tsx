@@ -15,12 +15,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { adminService } from '@/services/admin.service'
+import { biosService } from '@/services/bios.service'
 import { tenantService } from '@/services/tenant.service'
 import type { ManagedUser } from '@/types/super-admin.types'
 
@@ -38,7 +37,6 @@ const emptyForm = {
 export function AdminManagementPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
-  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -207,8 +205,6 @@ export function AdminManagementPage() {
     },
   })
 
-  const activeSuperAdminCount = (adminsQuery.data?.data ?? []).filter((admin) => admin.role === 'super_admin' && admin.status === 'active').length
-  const currentUserId = user?.id ?? null
   const detailState = {
     returnTo,
     restore: {
@@ -221,8 +217,6 @@ export function AdminManagementPage() {
     },
   }
 
-  const isProtectedSuperAdmin = (row: ManagedUser) =>
-    row.role === 'super_admin' && (row.id === currentUserId || (row.status === 'active' && activeSuperAdminCount <= 1))
   const isSuperAdminRow = (row: ManagedUser) => row.role === 'super_admin'
 
   const selectableAdminIds = (adminsQuery.data?.data ?? [])
@@ -365,7 +359,7 @@ export function AdminManagementPage() {
         ),
       },
     ],
-    [activeSuperAdminCount, currentUserId, detailState, lang, locale, navigate, selectedIds, statusMutation, t],
+    [detailState, lang, locale, navigate, selectedIds, statusMutation, t],
   )
 
   return (
