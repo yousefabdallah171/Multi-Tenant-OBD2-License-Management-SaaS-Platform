@@ -96,6 +96,7 @@
     "pauseSuccess": "License paused successfully.",
     "resumeSuccess": "License resumed successfully.",
     "reactivateSuccess": "License reactivated successfully.",
+    "deactive": "Deactive",
     "inactive": "Inactive",
     "pending": "Pending",
     "scheduled": "Scheduled",
@@ -107,6 +108,7 @@
       "scheduled": "Will activate automatically later.",
       "scheduledFailed": "Scheduled activation failed and needs a retry.",
       "pending": "Saved or created, but not active yet.",
+      "inactive": "Not active and unavailable until re-enabled.",
       "cancelled": "Stopped and removed from the software until renewed or reactivated.",
       "noLicense": "Customer profile exists, but no license has been created yet."
     },
@@ -114,7 +116,10 @@
     "allTenants": "All tenants",
     "allStatuses": "All statuses",
     "allMethods": "All methods",
+    "allResellers": "All resellers",
+    "allPrograms": "All programs",
     "selectTenant": "Select tenant",
+    "selectOption": "Select option",
     "resetPassword": "Reset password",
     "revokeSessionsOnPasswordReset": "Log out this user from all devices",
     "revokeSessionsOnPasswordResetHelp": "Revokes existing login sessions so the new password takes effect immediately.",
@@ -153,6 +158,7 @@
     "csv": "CSV",
     "pdf": "PDF",
     "activate": "Activate",
+    "increaseDuration": "Increase Duration",
     "suspend": "Deactive",
     "createdAt": "Created at",
     "start": "Start",
@@ -171,6 +177,14 @@
     "selectRow": "Select {{name}}",
     "previous": "Previous",
     "next": "Next",
+    "retry": "Retry",
+    "custom": "Custom",
+    "saved": "Saved successfully.",
+    "deactivated": "Deactivated successfully.",
+    "paused": "Paused successfully.",
+    "resumed": "Resumed successfully.",
+    "new": "New",
+    "timezone": "Timezone",
     "adjustFilters": "Try adjusting the current filters or search terms.",
     "connectionLost": "Connection lost. Please check your network and try again.",
     "openNavigation": "Open navigation menu",
@@ -217,7 +231,32 @@
         "title": "Server error",
         "description": "An unexpected error occurred while processing the request. Retry now or return to your dashboard."
       }
-    }
+    },
+    "activityActions": {
+      "activation": "Activation",
+      "deactivation": "Deactivation",
+      "renewal": "Renewal",
+      "scheduled": "Scheduled Activation",
+      "scheduledExecuted": "Scheduled Activation Executed",
+      "scheduledFailed": "Scheduled Activation Failed",
+      "customerDeleted": "Customer Deleted",
+      "teamCreate": "Create Team Member",
+      "teamUpdate": "Update Team Member",
+      "teamDelete": "Delete Team Member",
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete",
+      "add": "Add",
+      "remove": "Remove",
+      "import": "Import",
+      "unblockEmail": "Unblock Email",
+      "resetPassword": "Reset Password",
+      "changeUsername": "Change Username",
+      "unlockUsername": "Unlock Username",
+      "login": "Login"
+    },
+    "personalColor": "Personal Dashboard Color",
+    "personalColorHint": "Customize your dashboard theme color. Leave empty to use role default."
   },
   "superAdmin": {
     "layout": {
@@ -265,9 +304,44 @@
         "ipCountryDistribution": "IP Country Distribution",
         "ipCountryDistributionDescription": "Top login countries across the platform."
       },
+      "customers": {
+        "title": "Customers",
+        "description": "Global customer directory with tenant, seller, program, status, username, and BIOS drill-downs.",
+        "createDescription": "Create a customer profile or activate a license from the super admin workspace.",
+        "searchPlaceholder": "Search by customer, email, or BIOS ID",
+        "allResellers": "All resellers",
+        "allPrograms": "All programs",
+        "biosId": "BIOS ID",
+        "addCustomer": "Add Customer"
+      },
       "tenants": {
         "title": "Tenant Management",
         "description": "Create tenants, provision their manager parent account, and monitor revenue and activation counts.",
+        "backupsAction": "Backups",
+        "backupsTitle": "Backups",
+        "backupsDescription": "Restore, download, or import backups. Downloaded files can be imported on any server.",
+        "importBackupFile": "Import backup file",
+        "importBackupHint": "Accepts .json exported from this or another server. Backup is stored without restoring - use Restore to apply it.",
+        "backupLabelOptional": "Backup Label (optional)",
+        "labelOptional": "Label (optional)",
+        "chooseFile": "Choose file",
+        "importing": "Importing...",
+        "loadingBackups": "Loading backups...",
+        "noBackupsYet": "No backups yet. Reset the tenant to create a backup first, or import a file above.",
+        "resetTenant": "Reset Tenant",
+        "resetTenantData": "Reset Tenant Data",
+        "resetting": "Resetting...",
+        "restoreAction": "Restore",
+        "downloadAction": "Download",
+        "restoreBackupTitle": "Restore Backup",
+        "restoreBackupIntro": "This will replace all current tenant operational data with the backup from",
+        "restoreBackupWarning": "Current data will be wiped before restoring.",
+        "backupContains": "This backup contains:",
+        "typeToConfirm": "Type",
+        "toConfirm": "to confirm",
+        "restoring": "Restoring...",
+        "deleteBackupTitle": "Delete Backup",
+        "deleteBackupDescription": "Delete backup from {{date}}? This cannot be undone.",
         "saveSuccess": "Tenant saved successfully.",
         "deleteSuccess": "Tenant status updated successfully.",
         "managers": "Managers",
@@ -1326,7 +1400,9 @@
     "title": "Sign in",
     "subtitle": "OBD2SW License Management Platform",
     "emailLabel": "Email Address",
+    "emailPlaceholder": "Enter your email",
     "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
     "submitBtn": "Sign in",
     "signingIn": "Signing in...",
     "networkError": "The frontend cannot reach the backend API. Check your network and API URL.",
@@ -1499,7 +1575,16 @@
     "quickPreset90Days": "90 days",
     "presetDurationSummary": "{{days}} days",
     "presetPriceSummary": "$ {{price}}",
-    "pricePresetLocked": "Price is controlled by the selected preset."
+    "pricePresetLocked": "Price is controlled by the selected preset.",
+    "durationDays": "Duration in Days",
+    "expiryPreview": "Expiry Preview"
+  },
+  "dateRange": {
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "last3Months": "Last 3 Months",
+    "lastYear": "Last Year",
+    "custom": "Custom"
   },
   "customerPortal": {
     "layout": {
@@ -1576,7 +1661,11 @@
     }
   },
   "validation": {
-    "nameNotBiosId": "Enter the customer's full name (e.g. John Smith)"
+    "nameNotBiosId": "Enter the customer's full name (e.g. John Smith)",
+    "required": "Field required",
+    "invalidEmail": "Invalid email format",
+    "invalidPhone": "Invalid phone number",
+    "invalidNumber": "Invalid number"
   },
   "onlineWidget": {
     "title": "Online Now",
@@ -1587,6 +1676,7 @@
   },
   "biosDetails": {
     "title": "BIOS ID Details",
+    "description": "Search a BIOS identifier to inspect its overview, license history, reseller activity, and blacklist state.",
     "search": "Search BIOS ID",
     "searchPlaceholder": "Search by BIOS ID",
     "overview": "Overview",
@@ -1624,7 +1714,11 @@
   "customerDetail": {
     "resellerTimeline": "Reseller Timeline",
     "soldBy": "Sold by",
-    "period": "Period"
+    "period": "Period",
+    "biosChanges": "BIOS Changes",
+    "requestedBy": "Requested by",
+    "approvedBy": "Approved by",
+    "noBiosChangeRequests": "No BIOS change requests"
   },
   "customers": {
     "filterByManagerParent": "Filter by Manager Parent",
@@ -1697,6 +1791,8 @@
     },
     "sections": {
       "commissions": "Commission Periods",
+      "amountsOwedByPeriod": "Amounts Owed by Period",
+      "amountsOwedByPeriodHint": "Each row shows what this reseller sold, what they owe for that period, what they already paid, and what is still left.",
       "history": "Payment History",
       "monthlyBreakdown": "Monthly Breakdown",
       "overview": "Payment Overview",

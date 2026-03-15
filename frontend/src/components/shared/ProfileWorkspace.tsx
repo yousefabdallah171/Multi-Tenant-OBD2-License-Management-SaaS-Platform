@@ -194,7 +194,7 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
             <Label htmlFor="current-password">{t(`${translationPrefix}.currentPassword`)}</Label>
             <div className="relative">
               <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={passwordForm.current_password} onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))} className="pe-12" />
-              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowCurrentPassword((current) => !current)}>
+              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-11 w-11 -translate-y-1/2 px-0" onClick={() => setShowCurrentPassword((current) => !current)}>
                 {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 <span className="sr-only">{showCurrentPassword ? t('common.hide') : t('common.show')}</span>
               </Button>
@@ -204,7 +204,7 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
             <Label htmlFor="new-password">{t(`${translationPrefix}.newPassword`)}</Label>
             <div className="relative">
               <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={passwordForm.password} onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))} className="pe-12" />
-              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowNewPassword((current) => !current)}>
+              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-11 w-11 -translate-y-1/2 px-0" onClick={() => setShowNewPassword((current) => !current)}>
                 {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 <span className="sr-only">{showNewPassword ? t('common.hide') : t('common.show')}</span>
               </Button>
@@ -220,7 +220,7 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
                 onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
                 className="pe-12"
               />
-              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowConfirmPassword((current) => !current)}>
+              <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-11 w-11 -translate-y-1/2 px-0" onClick={() => setShowConfirmPassword((current) => !current)}>
                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 <span className="sr-only">{showConfirmPassword ? t('common.hide') : t('common.show')}</span>
               </Button>

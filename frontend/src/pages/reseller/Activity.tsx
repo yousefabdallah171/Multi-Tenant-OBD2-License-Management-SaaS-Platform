@@ -196,6 +196,18 @@ function translateActivityAction(action: string, t: ReturnType<typeof useTransla
     return t('reseller.pages.activity.renewal')
   }
 
+  if (action.includes('license.scheduled_activation_executed')) {
+    return t('common.activityActions.scheduledExecuted', { defaultValue: 'Scheduled Activation Executed' })
+  }
+
+  if (action.includes('license.scheduled_activation_failed')) {
+    return t('common.activityActions.scheduledFailed', { defaultValue: 'Scheduled Activation Failed' })
+  }
+
+  if (action.includes('license.scheduled')) {
+    return t('common.activityActions.scheduled', { defaultValue: 'Scheduled Activation' })
+  }
+
   if (action.includes('customer.deleted')) {
     return t('reseller.pages.dashboard.activityLabels.customerDeleted', { defaultValue: 'Customer Deleted' })
   }

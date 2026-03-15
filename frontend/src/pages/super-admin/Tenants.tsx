@@ -259,7 +259,7 @@ export function TenantsPage() {
                 }}
               >
                 <History className="me-2 h-4 w-4" />
-                Backups
+                {t('superAdmin.pages.tenants.backupsAction', { defaultValue: 'Backups' })}
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-orange-600 focus:text-orange-600 dark:text-orange-400 dark:focus:text-orange-400"
@@ -270,7 +270,7 @@ export function TenantsPage() {
                 }}
               >
                 <RotateCcw className="me-2 h-4 w-4" />
-                Reset Tenant
+                {t('superAdmin.pages.tenants.resetTenant', { defaultValue: 'Reset Tenant' })}
               </DropdownMenuItem>
               <DropdownMenuItem className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400" onSelect={() => setDeleteTarget(row)}>
                 {t('common.delete')}
@@ -485,7 +485,7 @@ export function TenantsPage() {
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-orange-600 dark:text-orange-400">Reset Tenant Data</DialogTitle>
+            <DialogTitle className="text-orange-600 dark:text-orange-400">{t('superAdmin.pages.tenants.resetTenantData', { defaultValue: 'Reset Tenant Data' })}</DialogTitle>
             <DialogDescription>
               This will permanently delete all customers, licenses, BIOS logs, and activity data for{' '}
               <span className="font-semibold text-slate-900 dark:text-white">{resetTarget?.name}</span>. A backup will be created first so you can restore later.
@@ -503,7 +503,7 @@ export function TenantsPage() {
               <p className="mt-2 text-sm text-orange-700 dark:text-orange-400">Managers and resellers are <strong>NOT</strong> deleted.</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reset-label">Backup Label (optional)</Label>
+              <Label htmlFor="reset-label">{t('superAdmin.pages.tenants.backupLabelOptional', { defaultValue: 'Backup Label (optional)' })}</Label>
               <Input
                 id="reset-label"
                 placeholder="e.g. Before Q1 2026 reset"
@@ -513,7 +513,7 @@ export function TenantsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="reset-confirm">
-                Type <span className="font-mono font-semibold text-slate-900 dark:text-white">{resetTarget?.name}</span> to confirm
+                {t('superAdmin.pages.tenants.typeToConfirm', { defaultValue: 'Type' })} <span className="font-mono font-semibold text-slate-900 dark:text-white">{resetTarget?.name}</span> {t('superAdmin.pages.tenants.toConfirm', { defaultValue: 'to confirm' })}
               </Label>
               <Input
                 id="reset-confirm"
@@ -525,7 +525,7 @@ export function TenantsPage() {
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setResetTarget(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
@@ -533,7 +533,7 @@ export function TenantsPage() {
               disabled={resetConfirmName !== resetTarget?.name || resetMutation.isPending}
               onClick={() => resetMutation.mutate()}
             >
-              {resetMutation.isPending ? 'Resetting…' : 'Reset Tenant'}
+              {resetMutation.isPending ? t('superAdmin.pages.tenants.resetting', { defaultValue: 'Resetting...' }) : t('superAdmin.pages.tenants.resetTenant', { defaultValue: 'Reset Tenant' })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -552,16 +552,16 @@ export function TenantsPage() {
       >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Backups — {backupsTarget?.name}</DialogTitle>
-            <DialogDescription>Restore, download, or import backups. Downloaded files can be imported on any server.</DialogDescription>
+            <DialogTitle>{t('superAdmin.pages.tenants.backupsTitle', { defaultValue: 'Backups' })} - {backupsTarget?.name}</DialogTitle>
+            <DialogDescription>{t('superAdmin.pages.tenants.backupsDescription', { defaultValue: 'Restore, download, or import backups. Downloaded files can be imported on any server.' })}</DialogDescription>
           </DialogHeader>
 
           {/* Import section */}
           <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Import backup file</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('superAdmin.pages.tenants.importBackupFile', { defaultValue: 'Import backup file' })}</p>
             <div className="flex items-center gap-2">
               <Input
-                placeholder="Label (optional)"
+                placeholder={t('superAdmin.pages.tenants.labelOptional', { defaultValue: 'Label (optional)' })}
                 value={importLabel}
                 onChange={(e) => setImportLabel(e.target.value)}
                 className="max-w-[180px]"
@@ -581,16 +581,16 @@ export function TenantsPage() {
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="me-1.5 h-3.5 w-3.5" />
-                {importMutation.isPending ? 'Importing…' : 'Choose file'}
+                {importMutation.isPending ? t('superAdmin.pages.tenants.importing', { defaultValue: 'Importing...' }) : t('superAdmin.pages.tenants.chooseFile', { defaultValue: 'Choose file' })}
               </Button>
             </div>
-            <p className="mt-1.5 text-xs text-slate-400">Accepts .json exported from this or another server. Backup is stored without restoring — use Restore to apply it.</p>
+            <p className="mt-1.5 text-xs text-slate-400">{t('superAdmin.pages.tenants.importBackupHint', { defaultValue: 'Accepts .json exported from this or another server. Backup is stored without restoring - use Restore to apply it.' })}</p>
           </div>
 
           {backupsQuery.isLoading ? (
-            <LoadingSpinner fullPage={false} label="Loading backups…" />
+            <LoadingSpinner fullPage={false} label={t('superAdmin.pages.tenants.loadingBackups', { defaultValue: 'Loading backups...' })} />
           ) : backupsQuery.data?.data.length === 0 ? (
-            <p className="py-4 text-center text-sm text-slate-500">No backups yet. Reset the tenant to create a backup first, or import a file above.</p>
+            <p className="py-4 text-center text-sm text-slate-500">{t('superAdmin.pages.tenants.noBackupsYet', { defaultValue: 'No backups yet. Reset the tenant to create a backup first, or import a file above.' })}</p>
           ) : (
             <div className="max-h-[50vh] space-y-2 overflow-y-auto">
               {backupsQuery.data?.data.map((backup) => (
@@ -608,7 +608,7 @@ export function TenantsPage() {
                       ) : null}
                     </div>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      By {backup.created_by?.name ?? 'Unknown'} •{' '}
+                      {t('common.addedBy')} {backup.created_by?.name ?? t('common.unknown')} •{' '}
                       {backup.stats.customers} customers, {backup.stats.licenses} licenses
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1.5">
@@ -635,7 +635,7 @@ export function TenantsPage() {
                       }}
                     >
                       <RotateCcw className="me-1 h-3.5 w-3.5" />
-                      Restore
+                      {t('superAdmin.pages.tenants.restoreAction', { defaultValue: 'Restore' })}
                     </Button>
                     <Button
                       type="button"
@@ -644,7 +644,7 @@ export function TenantsPage() {
                       onClick={() => handleDownload(backup)}
                     >
                       <Download className="me-1 h-3.5 w-3.5" />
-                      Download
+                      {t('superAdmin.pages.tenants.downloadAction', { defaultValue: 'Download' })}
                     </Button>
                     <Button
                       type="button"
@@ -654,7 +654,7 @@ export function TenantsPage() {
                       onClick={() => setDeleteBackupTarget(backup)}
                     >
                       <Trash2 className="me-1 h-3.5 w-3.5" />
-                      Delete
+                      {t('common.delete')}
                     </Button>
                   </div>
                 </div>
@@ -663,7 +663,7 @@ export function TenantsPage() {
           )}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setBackupsTarget(null)}>
-              Close
+              {t('common.closeDialog')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -681,17 +681,17 @@ export function TenantsPage() {
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-sky-600 dark:text-sky-400">Restore Backup</DialogTitle>
+            <DialogTitle className="text-sky-600 dark:text-sky-400">{t('superAdmin.pages.tenants.restoreBackupTitle', { defaultValue: 'Restore Backup' })}</DialogTitle>
             <DialogDescription>
-              This will replace all current tenant operational data with the backup from{' '}
+              {t('superAdmin.pages.tenants.restoreBackupIntro', { defaultValue: 'This will replace all current tenant operational data with the backup from' })}{' '}
               <span className="font-semibold">{restoreTarget ? formatDate(restoreTarget.created_at ?? new Date(), locale) : ''}</span>.
-              Current data will be wiped before restoring.
+              {' '}{t('superAdmin.pages.tenants.restoreBackupWarning', { defaultValue: 'Current data will be wiped before restoring.' })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {restoreTarget ? (
               <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 dark:border-sky-900/50 dark:bg-sky-950/20">
-                <p className="text-sm font-medium text-sky-800 dark:text-sky-300">This backup contains:</p>
+                <p className="text-sm font-medium text-sky-800 dark:text-sky-300">{t('superAdmin.pages.tenants.backupContains', { defaultValue: 'This backup contains:' })}</p>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {Object.entries(restoreTarget.stats)
                     .filter(([, v]) => v > 0)
@@ -705,7 +705,7 @@ export function TenantsPage() {
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="restore-confirm">
-                Type <span className="font-mono font-semibold text-slate-900 dark:text-white">{backupsTarget?.name}</span> to confirm
+                {t('superAdmin.pages.tenants.typeToConfirm', { defaultValue: 'Type' })} <span className="font-mono font-semibold text-slate-900 dark:text-white">{backupsTarget?.name}</span> {t('superAdmin.pages.tenants.toConfirm', { defaultValue: 'to confirm' })}
               </Label>
               <Input
                 id="restore-confirm"
@@ -717,14 +717,14 @@ export function TenantsPage() {
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setRestoreTarget(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               type="button"
               disabled={restoreConfirmName !== backupsTarget?.name || restoreMutation.isPending}
               onClick={() => restoreMutation.mutate()}
             >
-              {restoreMutation.isPending ? 'Restoring…' : 'Restore Backup'}
+              {restoreMutation.isPending ? t('superAdmin.pages.tenants.restoring', { defaultValue: 'Restoring...' }) : t('superAdmin.pages.tenants.restoreBackupTitle', { defaultValue: 'Restore Backup' })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -736,9 +736,9 @@ export function TenantsPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteBackupTarget(null)
         }}
-        title="Delete Backup"
-        description={deleteBackupTarget ? `Delete backup from ${formatDate(deleteBackupTarget.created_at ?? new Date(), locale)}? This cannot be undone.` : ''}
-        confirmLabel="Delete"
+        title={t('superAdmin.pages.tenants.deleteBackupTitle', { defaultValue: 'Delete Backup' })}
+        description={deleteBackupTarget ? t('superAdmin.pages.tenants.deleteBackupDescription', { defaultValue: 'Delete backup from {{date}}? This cannot be undone.', date: formatDate(deleteBackupTarget.created_at ?? new Date(), locale) }) : ''}
+        confirmLabel={t('common.delete')}
         isDestructive
         onConfirm={() => {
           if (deleteBackupTarget) deleteBackupMutation.mutate(deleteBackupTarget)

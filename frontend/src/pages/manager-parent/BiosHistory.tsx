@@ -157,7 +157,7 @@ export function BiosHistoryPage() {
                     {t('managerParent.pages.biosHistory.timelineMeta', { customer: entry.customer ?? '-', reseller: entry.reseller ?? '-' })}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   <StatusBadge status={entry.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} />
                   <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{entry.occurred_at ? formatDate(entry.occurred_at, locale) : '-'}</p>
                 </div>

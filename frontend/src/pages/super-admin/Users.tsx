@@ -21,10 +21,10 @@ import { userService } from '@/services/user.service'
 import type { ManagedUser } from '@/types/super-admin.types'
 
 const statusTabs = [
-  { value: '', labelKey: 'common.all' },
-  { value: 'active', labelKey: 'common.active' },
-  { value: 'suspended', labelKey: 'common.suspended' },
-  { value: 'inactive', labelKey: 'common.inactive' },
+  { value: '', labelKey: 'common.all', fallback: 'All' },
+  { value: 'active', labelKey: 'common.active', fallback: 'Active' },
+  { value: 'suspended', labelKey: 'common.suspended', fallback: 'Suspended' },
+  { value: 'inactive', labelKey: 'common.inactive', fallback: 'Inactive' },
 ] as const
 
 export function UsersPage() {
@@ -207,7 +207,7 @@ export function UsersPage() {
                   setPage(1)
                 }}
               >
-                {t(tab.labelKey)}
+                {t(tab.labelKey, { defaultValue: tab.fallback })}
               </Button>
             ))}
           </div>

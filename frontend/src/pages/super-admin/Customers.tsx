@@ -20,8 +20,8 @@ import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
 import { superAdminCustomerService } from '@/services/super-admin-customer.service'
-import { adminService } from '@/services/admin.service'
 import { tenantService } from '@/services/tenant.service'
+import { userService } from '@/services/user.service'
 import type { SuperAdminCustomerSummary } from '@/types/super-admin.types'
 
 const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
@@ -78,8 +78,8 @@ export function CustomersPage() {
   })
 
   const sellersQuery = useQuery({
-    queryKey: ['super-admin', 'customers', 'sellers'],
-    queryFn: () => adminService.getAll({ per_page: 100 }),
+    queryKey: ['super-admin', 'customers', 'sellers', tenantId],
+    queryFn: () => userService.getAll({ per_page: 100, tenant_id: tenantId || '', role: 'reseller', status: 'active' }),
   })
 
   const programsQuery = useQuery({
@@ -208,7 +208,10 @@ export function CustomersPage() {
     onError: () => toast.error(t('common.error')),
   })
 
-  const sellerOptions = (sellersQuery.data?.data ?? []).filter((user) => user.role !== 'super_admin' && user.role !== 'customer')
+  const sellerOptions = sellersQuery.data?.data ?? []
+  const sellerFilterPlaceholder = tenantId
+    ? t('superAdmin.pages.customers.allResellers', { defaultValue: 'All resellers' })
+    : t('superAdmin.pages.customers.allResellers', { defaultValue: 'All resellers' })
 
   const columns = useMemo<Array<DataTableColumn<SuperAdminCustomerSummary>>>(
     () => [
@@ -238,7 +241,7 @@ export function CustomersPage() {
       { key: 'phone', label: t('common.phone'), sortable: true, sortValue: (row) => row.phone ?? '', render: (row) => row.phone ?? '-' },
       {
         key: 'bios',
-        label: t('managerParent.pages.customers.biosId'),
+        label: t('superAdmin.pages.customers.biosId'),
         sortable: true,
         sortValue: (row) => row.bios_id ?? '',
         render: (row) => row.bios_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, row.bios_id)}>{row.bios_id}</Link> : '-',
@@ -342,12 +345,12 @@ export function CustomersPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <h2 className="text-3xl font-semibold">{t('managerParent.nav.customers')}</h2>
-          <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">Global customer directory with tenant, seller, program, status, username, and BIOS drill-downs.</p>
+          <h2 className="text-3xl font-semibold">{t('superAdmin.pages.customers.title')}</h2>
+          <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.customers.description')}</p>
         </div>
         <Button type="button" onClick={() => navigate(routePaths.superAdmin.customerCreate(lang))}>
           <Plus className="me-2 h-4 w-4" />
-          {t('managerParent.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}
+          {t('superAdmin.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}
         </Button>
       </div>
 
@@ -422,17 +425,17 @@ export function CustomersPage() {
       <Card>
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 xl:grid-cols-5">
-            <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder={t('managerParent.pages.customers.searchPlaceholder')} />
+            <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder={t('superAdmin.pages.customers.searchPlaceholder')} />
             <select value={tenantId} onChange={(event) => { setTenantId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
               <option value="">{t('common.allTenants')}</option>
               {tenantsQuery.data?.data.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
             </select>
             <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-              <option value="">{t('common.allResellers', { defaultValue: 'All resellers' })}</option>
+              <option value="">{sellerFilterPlaceholder}</option>
               {sellerOptions.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}
             </select>
             <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-              <option value="">{t('common.allPrograms', { defaultValue: 'All programs' })}</option>
+              <option value="">{t('superAdmin.pages.customers.allPrograms', { defaultValue: 'All programs' })}</option>
               {programsQuery.data?.data.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}
             </select>
           </div>

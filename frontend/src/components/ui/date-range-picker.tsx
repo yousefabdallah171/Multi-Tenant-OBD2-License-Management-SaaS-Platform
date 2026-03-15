@@ -40,21 +40,13 @@ export function DateRangePicker({ value, onChange, className, showPresets = true
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const hasValue = Boolean(value.from || value.to)
-  const presetLabels = lang === 'ar'
-    ? {
-        last7: 'آخر 7 أيام',
-        last30: 'آخر 30 يوم',
-        last90: 'آخر 3 أشهر',
-        last365: 'آخر سنة',
-        custom: 'مخصص',
-      }
-    : {
-        last7: 'Last 7 Days',
-        last30: 'Last 30 Days',
-        last90: 'Last 3 Months',
-        last365: 'Last Year',
-        custom: 'Custom',
-      }
+  const presetLabels = {
+    last7: t('dateRange.last7Days', { defaultValue: lang === 'ar' ? 'آخر 7 أيام' : 'Last 7 Days' }),
+    last30: t('dateRange.last30Days', { defaultValue: lang === 'ar' ? 'آخر 30 يومًا' : 'Last 30 Days' }),
+    last90: t('dateRange.last3Months', { defaultValue: lang === 'ar' ? 'آخر 3 أشهر' : 'Last 3 Months' }),
+    last365: t('dateRange.lastYear', { defaultValue: lang === 'ar' ? 'آخر سنة' : 'Last Year' }),
+    custom: t('dateRange.custom', { defaultValue: lang === 'ar' ? 'مخصص' : 'Custom' }),
+  }
 
   return (
     <div className={cn('space-y-3', className)}>

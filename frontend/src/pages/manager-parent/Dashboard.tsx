@@ -190,7 +190,7 @@ export function DashboardPage() {
                     <p className="font-medium text-slate-950 dark:text-white">{member.name}</p>
                     <p className="text-xs capitalize text-slate-500 dark:text-slate-400">{t(`roles.${member.role}`)}</p>
                   </div>
-                  <div className="text-end">
+                  <div className="text-start">
                     <p className="font-semibold text-slate-950 dark:text-white">{formatCurrency(member.revenue, 'USD', locale)}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t('managerParent.pages.dashboard.activationsCount', { count: member.activations })}</p>
                   </div>

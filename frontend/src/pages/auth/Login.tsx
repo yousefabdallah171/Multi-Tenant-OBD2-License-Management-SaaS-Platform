@@ -141,7 +141,7 @@ export function LoginPage() {
           </Button>
         ) : null}
 
-        <div className={`w-full max-w-[440px] ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="w-full max-w-[440px] text-start" dir={isRtl ? 'rtl' : 'ltr'}>
           <Card className={`rounded-none border-white/20 bg-white/95 shadow-2xl sm:rounded-3xl dark:border-slate-800/80 dark:bg-slate-950/90`}>
             <CardHeader className="space-y-4 px-8 pt-8 text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600 dark:text-sky-300">{t('brand.badge')}</p>
@@ -186,7 +186,7 @@ export function LoginPage() {
                     name="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="your@email.com"
+                    placeholder={t('login.emailPlaceholder', { defaultValue: 'Enter your email' })}
                     value={email}
                     disabled={isSubmitting || isLocked}
                     onChange={(event) => {
@@ -203,7 +203,7 @@ export function LoginPage() {
                       name="password"
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
-                      placeholder="********"
+                      placeholder={t('login.passwordPlaceholder', { defaultValue: 'Enter your password' })}
                       value={password}
                       disabled={isSubmitting || isLocked}
                       onChange={(event) => {
@@ -216,7 +216,7 @@ export function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword((value) => !value)}
                       disabled={isSubmitting || isLocked}
-                      className={`absolute top-1/2 -translate-y-1/2 text-slate-500 ${isRtl ? 'left-3' : 'right-3'}`}
+                      className={`absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 ${isRtl ? 'left-1' : 'right-1'}`}
                       aria-label={showPassword ? t('common.hide') : t('common.show')}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

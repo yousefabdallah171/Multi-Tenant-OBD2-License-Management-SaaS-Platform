@@ -170,17 +170,6 @@ export function AdminManagementPage() {
     },
   })
 
-  const bulkSuspendMutation = useMutation({
-    mutationFn: async () => {
-      await Promise.all(selectedIds.map((id) => adminService.update(id, { status: 'suspended' })))
-    },
-    onSuccess: () => {
-      toast.success(t('superAdmin.pages.adminManagement.bulkSuspendSuccess'))
-      setSelectedIds([])
-      invalidateUserQueries()
-    },
-  })
-
   const bulkDeleteMutation = useMutation({
     mutationFn: async () => {
       await Promise.all(selectedIds.map((id) => adminService.delete(id)))
@@ -217,13 +206,6 @@ export function AdminManagementPage() {
     },
   }
 
-  const isSuperAdminRow = (row: ManagedUser) => row.role === 'super_admin'
-
-  const selectableAdminIds = (adminsQuery.data?.data ?? [])
-    .filter((admin) => !isSuperAdminRow(admin))
-    .map((admin) => admin.id)
-  const allVisibleSelected = selectableAdminIds.length > 0 && selectableAdminIds.every((id) => selectedIds.includes(id))
-
   function validateForm() {
     if (editing && !form.username.trim()) {
       toast.error(t('superAdmin.pages.usernameManagement.usernameRequired'))
@@ -246,30 +228,16 @@ export function AdminManagementPage() {
         sortable: true,
         sortValue: (row) => row.name,
         render: (row) => (
-          <label className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={selectedIds.includes(row.id)}
-              disabled={isSuperAdminRow(row)}
-              onChange={(event) => {
-                setSelectedIds((current) =>
-                  event.target.checked ? Array.from(new Set([...current, row.id])) : current.filter((id) => id !== row.id),
-                )
-              }}
-              aria-label={t('common.selectRow', { name: row.name })}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-            />
-            <button
-              type="button"
-              className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
-              onClick={(event) => {
-                event.stopPropagation()
-                navigate(routePaths.superAdmin.userDetail(lang, row.id), { state: detailState })
-              }}
-            >
-              {row.name}
-            </button>
-          </label>
+          <button
+            type="button"
+            className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
+            onClick={(event) => {
+              event.stopPropagation()
+              navigate(routePaths.superAdmin.userDetail(lang, row.id), { state: detailState })
+            }}
+          >
+            {row.name}
+          </button>
         ),
       },
       { key: 'email', label: t('common.email'), sortable: true, sortValue: (row) => row.email, render: (row) => row.email },
@@ -442,38 +410,6 @@ export function AdminManagementPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                setSelectedIds((current) =>
-                  allVisibleSelected ? current.filter((id) => !selectableAdminIds.includes(id)) : Array.from(new Set([...current, ...selectableAdminIds])),
-                )
-              }
-              disabled={selectableAdminIds.length === 0}
-            >
-              {allVisibleSelected ? t('common.clearVisible') : t('common.selectAllVisible')}
-            </Button>
-            {selectedIds.length > 0 ? (
-              <Button type="button" variant="ghost" onClick={() => setSelectedIds([])}>
-                {t('common.clearSelection')}
-              </Button>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-slate-500 dark:text-slate-400">{t('common.selectedCount', { count: selectedIds.length })}</span>
-            <Button type="button" variant="secondary" onClick={() => bulkSuspendMutation.mutate()} disabled={selectedIds.length === 0 || bulkSuspendMutation.isPending || (adminsQuery.data?.data ?? []).some((row) => selectedIds.includes(row.id) && row.role === 'super_admin')}>
-              {t('superAdmin.pages.adminManagement.bulkSuspend')}
-            </Button>
-            <Button type="button" onClick={() => setBulkDeleteOpen(true)} disabled={selectedIds.length === 0 || bulkDeleteMutation.isPending || (adminsQuery.data?.data ?? []).some((row) => selectedIds.includes(row.id) && row.role === 'super_admin')}>
-              {t('superAdmin.pages.adminManagement.bulkDelete')}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       <DataTable
         columns={columns}
@@ -567,6 +503,19 @@ export function AdminManagementPage() {
                     {tenant.name}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-status">{t('common.accountStatus')}</Label>
+              <select
+                id="admin-status"
+                value={form.status}
+                onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as typeof current.status }))}
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="active">{t('common.active')}</option>
+                <option value="suspended">{t('common.suspended')}</option>
+                <option value="inactive">{t('common.inactive')}</option>
               </select>
             </div>
           </div>

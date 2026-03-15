@@ -719,8 +719,8 @@ export function CustomersPage() {
                 {activationForm.is_scheduled ? (
                   <>
                     <div className="flex gap-2">
-                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'relative' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'relative' }))}>Relative</Button>
-                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'custom' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'custom' }))}>Custom</Button>
+                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'relative' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'relative' }))}>{t('activate.scheduleModeRelative', { defaultValue: 'After' })}</Button>
+                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'custom' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'custom' }))}>{t('activate.scheduleModeCustom', { defaultValue: 'Custom Date' })}</Button>
                     </div>
                     {activationForm.schedule_mode === 'relative' ? (
                       <div className="grid gap-3 md:grid-cols-3">
@@ -753,8 +753,8 @@ export function CustomersPage() {
               <div className="space-y-2">
                 <Label>{t('common.price')}</Label>
                 <div className="flex gap-2">
-                  <Button type="button" size="sm" variant={priceMode === 'auto' ? 'default' : 'outline'} onClick={() => setPriceMode('auto')}>Auto</Button>
-                  <Button type="button" size="sm" variant={priceMode === 'manual' ? 'default' : 'outline'} onClick={() => setPriceMode('manual')}>Manual</Button>
+                  <Button type="button" size="sm" variant={priceMode === 'auto' ? 'default' : 'outline'} onClick={() => setPriceMode('auto')}>{t('activate.priceModeAuto', { defaultValue: 'Auto' })}</Button>
+                  <Button type="button" size="sm" variant={priceMode === 'manual' ? 'default' : 'outline'} onClick={() => setPriceMode('manual')}>{t('activate.priceModeManual', { defaultValue: 'Manual' })}</Button>
                 </div>
                 <Input type="number" min={0} step="0.01" value={priceMode === 'auto' ? totalPrice.toFixed(2) : activationForm.price} onChange={(event) => setActivationForm((current) => ({ ...current, price: event.target.value }))} readOnly={priceMode === 'auto'} />
               </div>
@@ -819,7 +819,7 @@ export function CustomersPage() {
           }
         }}
         title={t('common.edit', { defaultValue: 'Edit Customer' })}
-        description="Update the customer name, email, or phone."
+        description={t('manager.pages.customers.editDescription', { defaultValue: 'Update the customer name, email, or phone.' })}
         initialClientName={editTarget?.name ?? ''}
         initialEmail={editTarget?.email}
         initialPhone={editTarget?.phone}
@@ -1010,7 +1010,6 @@ function validateActivationStep(
   }
   return ''
 }
-
 
 
 

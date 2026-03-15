@@ -81,7 +81,7 @@ export function Navbar() {
             type="button"
             variant="ghost"
             size="sm"
-            className="h-9 w-9 px-0 sm:h-9 sm:w-auto sm:px-3"
+            className="h-11 w-11 px-0 sm:h-10 sm:w-auto sm:px-3"
             onClick={toggleTheme}
             aria-label={t('common.toggleTheme')}
           >
@@ -92,7 +92,7 @@ export function Navbar() {
             type="button"
             variant="ghost"
             size="sm"
-            className="h-9 w-9 px-0 sm:h-9 sm:w-auto sm:px-3"
+            className="h-11 w-11 px-0 sm:h-10 sm:w-auto sm:px-3"
             onClick={switchLanguage}
             aria-label={t('common.switchLanguage')}
           >
@@ -104,7 +104,7 @@ export function Navbar() {
               type="button"
               variant="ghost"
               size="sm"
-              className="h-9 w-9 px-0 sm:h-9 sm:w-auto sm:px-3"
+              className="h-11 w-11 px-0 sm:h-10 sm:w-auto sm:px-3"
               onClick={() => void promptInstall()}
               aria-label={lang === 'ar' ? 'تثبيت التطبيق' : 'Install app'}
             >
@@ -151,4 +151,3 @@ export function Navbar() {
     </header>
   )
 }
-

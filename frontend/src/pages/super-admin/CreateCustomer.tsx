@@ -16,10 +16,10 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { activateLicense } from '@/services/activation.service'
-import { adminService } from '@/services/admin.service'
 import { programService } from '@/services/program.service'
 import { superAdminCustomerService } from '@/services/super-admin-customer.service'
 import { tenantService } from '@/services/tenant.service'
+import { userService } from '@/services/user.service'
 import { formatUsername } from '@/utils/biosId'
 
 type DurationUnit = 'minutes' | 'hours' | 'days'
@@ -116,7 +116,7 @@ export function CreateCustomerPage() {
 
   const sellersQuery = useQuery({
     queryKey: ['super-admin', 'customer-create', 'sellers', tenantId],
-    queryFn: () => adminService.getAll({ per_page: 100, tenant_id: tenantId || '' }),
+    queryFn: () => userService.getAll({ per_page: 100, tenant_id: tenantId || '', role: 'reseller', status: 'active' }),
     enabled: tenantId !== '',
   })
 
@@ -142,10 +142,14 @@ export function CreateCustomerPage() {
     setScheduleAt(formatDateTimeLocalInTimezone(buildRelativeSchedule(value, scheduleAfterUnit), scheduleTimezone))
   }, [scheduleAfterUnit, scheduleAfterValue, scheduleEnabled, scheduleMode, scheduleTimezone])
 
-  const sellerOptions = useMemo(
-    () => (sellersQuery.data?.data ?? []).filter((user) => ['manager_parent', 'manager', 'reseller'].includes(user.role)),
-    [sellersQuery.data?.data],
-  )
+  const sellerOptions = useMemo(() => sellersQuery.data?.data ?? [], [sellersQuery.data?.data])
+  const sellerPlaceholder = !tenantId
+    ? t('activate.selectTenantFirst', { defaultValue: 'Select a tenant first' })
+    : sellersQuery.isLoading
+      ? t('common.loading', { defaultValue: 'Loading...' })
+      : sellerOptions.length === 0
+        ? t('activate.noResellersAvailable', { defaultValue: 'No active resellers available' })
+        : t('common.selectOption', { defaultValue: 'Select option' })
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === programId)
 
@@ -318,9 +322,9 @@ export function CreateCustomerPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('managerParent.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}</CardTitle>
+          <CardTitle>{t('superAdmin.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}</CardTitle>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Create a customer profile or activate a license from the super admin workspace.
+            {t('superAdmin.pages.customers.createDescription', { defaultValue: 'Create a customer profile or activate a license from the super admin workspace.' })}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -340,8 +344,13 @@ export function CreateCustomerPage() {
               </select>
             </Field>
             <Field label={t('common.reseller')} error={errors.sellerId}>
-              <select value={sellerId} onChange={(event) => setSellerId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950" disabled={!tenantId}>
-                <option value="">{t('common.selectOption', { defaultValue: 'Select option' })}</option>
+              <select
+                value={sellerId}
+                onChange={(event) => setSellerId(event.target.value ? Number(event.target.value) : '')}
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                disabled={!tenantId || sellersQuery.isLoading}
+              >
+                <option value="">{sellerPlaceholder}</option>
                 {sellerOptions.map((seller) => (
                   <option key={seller.id} value={seller.id}>
                     {`${seller.name} (${t(`roles.${seller.role}`)})`}

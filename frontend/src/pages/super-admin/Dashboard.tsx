@@ -12,8 +12,8 @@ import { StaggerGroup, StaggerItem } from '@/components/shared/PageTransition'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
-import { localizeMonthLabel } from '@/lib/chart-labels'
-import { formatActivityActionLabel, formatCurrency, formatDate } from '@/lib/utils'
+import { localizeMonthLabel, truncateChartLabel } from '@/lib/chart-labels'
+import { formatActivityActionLabel, formatActivityDescription, formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { reportService } from '@/services/report.service'
 
@@ -51,6 +51,10 @@ export function DashboardPage() {
   const stats = statsQuery.data?.data.stats
   const statsLoading = statsQuery.isLoading && !stats
   const countryData = stats?.ip_country_map ?? []
+  const revenueTrendData = (revenueTrendQuery.data?.data ?? []).map((item) => ({
+    ...item,
+    month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
+  }))
   const timelineData = (timelineQuery.data?.data ?? []).map((item) => ({
     ...item,
     label: item.label ? localizeMonthLabel(item.label, locale) : item.label,
@@ -101,7 +105,7 @@ export function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <LineChartWidget
           title={t('superAdmin.pages.dashboard.revenueTrend')}
-          data={revenueTrendQuery.data?.data ?? []}
+          data={revenueTrendData}
           isLoading={revenueTrendQuery.isLoading}
           xKey="month"
           series={[{ key: 'revenue', label: t('common.revenue') }]}
@@ -114,6 +118,8 @@ export function DashboardPage() {
           xKey="tenant"
           horizontal
           showLabels
+          xAxisFormatter={(value) => truncateChartLabel(value, 24)}
+          tooltipLabelFormatter={(value) => String(value)}
           series={[{ key: 'revenue', label: t('common.revenue') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
         />
@@ -153,8 +159,8 @@ export function DashboardPage() {
             }}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(item.action)}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
+                  <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(item.action, t)}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{formatActivityDescription(item.description, locale)}</p>
                 </div>
                 <span className="text-xs text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</span>
               </div>

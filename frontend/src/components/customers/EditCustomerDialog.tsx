@@ -51,7 +51,7 @@ export function EditCustomerDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{title ?? t('common.edit', { defaultValue: 'Edit Customer' })}</DialogTitle>
-          <DialogDescription>{description ?? 'Update customer information.'}</DialogDescription>
+          <DialogDescription>{description ?? t('common.edit', { defaultValue: 'Update customer information.' })}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <Field label={t('activate.clientName', { defaultValue: 'Client Display Name' })} htmlFor="edit-customer-client-name">

@@ -101,7 +101,7 @@ export function TeamMemberDetailPage() {
     {
       key: 'action',
       label: t('common.action'),
-      render: (row) => formatActivityActionLabel(row.action),
+      render: (row) => formatActivityActionLabel(row.action, t),
     },
     {
       key: 'customer',

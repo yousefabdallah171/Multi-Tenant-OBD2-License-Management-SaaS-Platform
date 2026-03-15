@@ -101,7 +101,7 @@ export function BiosDetailsPage() {
             </div>
           ) : biosId ? null : (
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {search.trim().length >= 2 ? t('common.noData') : 'Recent BIOS IDs will appear here.'}
+              {search.trim().length >= 2 ? t('common.noData') : t('biosDetails.description')}
             </p>
           )}
         </CardContent>
@@ -149,36 +149,36 @@ export function BiosDetailsPage() {
                   </div>
                 ) : null}
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Program</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.program')}</p>
                   <p className="font-medium">{latestLicense?.program?.name ?? '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Duration</p>
-                  <p className="font-medium">{latestLicense ? `${latestLicense.duration_days} days` : '-'}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.duration')}</p>
+                  <p className="font-medium">{latestLicense ? `${latestLicense.duration_days} ${t('common.days')}` : '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Price</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.price')}</p>
                   <p className="font-medium">{latestLicense ? `$${Number(latestLicense.price).toFixed(2)}` : '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Activated</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.activate')}</p>
                   <p className="font-medium">{latestLicense?.activated_at ? formatDate(latestLicense.activated_at, locale) : '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Expires</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.expiry')}</p>
                   <p className="font-medium">{latestLicense?.expires_at ? formatDate(latestLicense.expires_at, locale) : '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">External Username</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.username')}</p>
                   <p className="font-medium">{latestLicense?.external_username ?? '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Latest License Status</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.status')}</p>
                   <p className="font-medium">{latestLicense?.status ?? '-'}</p>
                 </div>
                 {latestCustomer && latestLicense ? (
                   <div className="rounded-xl bg-slate-50 p-3 md:col-span-2 dark:bg-slate-900/40">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Sale Summary</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.overviewSections.saleSummary')}</p>
                     <p className="font-medium">
                       {`${latestReseller?.name ?? '-'} sold ${latestLicense.program?.name ?? '-'} to ${latestCustomer.name}`}
                     </p>
@@ -194,7 +194,7 @@ export function BiosDetailsPage() {
             <Card><CardContent className="space-y-2 p-4">{(licensesQuery.data?.data ?? []).map((license) => <div key={license.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{license.program?.name ?? '-'}</p><p className="text-sm text-slate-500 dark:text-slate-400">{license.status} | ${Number(license.price).toFixed(2)}</p></div>)}</CardContent></Card>
           </TabsContent>
           <TabsContent value="resellers">
-            <Card><CardContent className="space-y-2 p-4">{(resellersQuery.data ?? []).map((reseller) => <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{reseller.name ?? '-'}</p><p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p><p className="text-xs text-slate-500 dark:text-slate-400">Activations: {reseller.activation_count}</p><p className="text-xs text-slate-500 dark:text-slate-400">Revenue: ${Number(reseller.total_revenue).toFixed(2)}</p></div>)}</CardContent></Card>
+            <Card><CardContent className="space-y-2 p-4">{(resellersQuery.data ?? []).map((reseller) => <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{reseller.name ?? '-'}</p><p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('common.activations')}: {reseller.activation_count}</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('common.revenue')}: ${Number(reseller.total_revenue).toFixed(2)}</p></div>)}</CardContent></Card>
           </TabsContent>
           <TabsContent value="ips">
             <Card><CardContent className="space-y-2 p-4">{(ipsQuery.data ?? []).map((ip, index) => <div key={`${ip.ip_address}-${index}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">{ip.ip_address ?? '-'}</div>)}</CardContent></Card>

@@ -76,7 +76,7 @@ export function CustomerDetailPage() {
               <TabsTrigger value="bios">{t('managerParent.pages.customers.biosId')}</TabsTrigger>
               <TabsTrigger value="ips">{t('managerParent.pages.ipAnalytics.title')}</TabsTrigger>
               <TabsTrigger value="activity">{t('managerParent.nav.activity')}</TabsTrigger>
-              <TabsTrigger value="bios-changes">BIOS Changes</TabsTrigger>
+              <TabsTrigger value="bios-changes">{t('customerDetail.biosChanges', { defaultValue: 'BIOS Changes' })}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="licenses">
@@ -157,7 +157,7 @@ export function CustomerDetailPage() {
                           <p className="font-medium">{entry.action}</p>
                           <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
                         </div>
-                        <div className="text-end">
+                        <div className="text-start">
                           <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
                         </div>
                       </div>
@@ -169,7 +169,7 @@ export function CustomerDetailPage() {
 
             <TabsContent value="bios-changes">
               <Card>
-                <CardHeader><CardTitle>BIOS Change Requests</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('biosChangeRequests.title')}</CardTitle></CardHeader>
                 <CardContent className="space-y-2">
                   {(biosChangeHistoryQuery.data?.data ?? []).map((change) => (
                     <div key={change.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
@@ -177,10 +177,10 @@ export function CustomerDetailPage() {
                         <div className="flex-1 space-y-1">
                           <p className="font-medium">{change.old_bios_id} → {change.new_bios_id}</p>
                           <p className="text-sm text-slate-500 dark:text-slate-400">{change.reason || '-'}</p>
-                          {change.requested_by ? <p className="text-xs text-slate-600 dark:text-slate-300">Requested by: {change.requested_by}</p> : null}
-                          {change.reviewed_by ? <p className="text-xs text-slate-600 dark:text-slate-300">Approved by: {change.reviewed_by}</p> : null}
+                          {change.requested_by ? <p className="text-xs text-slate-600 dark:text-slate-300">{t('customerDetail.requestedBy', { defaultValue: 'Requested by' })}: {change.requested_by}</p> : null}
+                          {change.reviewed_by ? <p className="text-xs text-slate-600 dark:text-slate-300">{t('customerDetail.approvedBy', { defaultValue: 'Approved by' })}: {change.reviewed_by}</p> : null}
                         </div>
-                        <div className="text-end">
+                        <div className="text-start">
                           <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
                             change.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
                             : change.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
@@ -195,7 +195,7 @@ export function CustomerDetailPage() {
                   ))}
                   {biosChangeHistoryQuery.data?.data?.length === 0 && !biosChangeHistoryQuery.isLoading ? (
                     <div className="rounded-2xl border border-slate-200 p-4 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                      No BIOS change requests
+                      {t('customerDetail.noBiosChangeRequests', { defaultValue: 'No BIOS change requests' })}
                     </div>
                   ) : null}
                 </CardContent>

@@ -23,7 +23,7 @@ export function formatCurrency(value: number, currency = 'USD', locale = 'en-US'
   }).format(value)
 }
 
-export function formatActivityActionLabel(action: string) {
+export function formatActivityActionLabel(action: string, t?: TFunction) {
   if (!action) {
     return '-'
   }
@@ -31,59 +31,87 @@ export function formatActivityActionLabel(action: string) {
   const normalized = action.toLowerCase()
 
   if (normalized.includes('license.activated') || normalized.includes('license.activate')) {
-    return 'Activation'
+    return t ? t('common.activityActions.activation', { defaultValue: 'Activation' }) : 'Activation'
   }
 
   if (normalized.includes('license.deactivated') || normalized.includes('license.deactivate')) {
-    return 'Deactivation'
+    return t ? t('common.activityActions.deactivation', { defaultValue: 'Deactivation' }) : 'Deactivation'
   }
 
   if (normalized.includes('license.renewed') || normalized.includes('license.renew')) {
-    return 'Renewal'
+    return t ? t('common.activityActions.renewal', { defaultValue: 'Renewal' }) : 'Renewal'
   }
 
   if (normalized.includes('license.scheduled_activation_executed')) {
-    return 'Scheduled Activation Executed'
+    return t ? t('common.activityActions.scheduledExecuted', { defaultValue: 'Scheduled Activation Executed' }) : 'Scheduled Activation Executed'
   }
 
   if (normalized.includes('license.scheduled_activation_failed')) {
-    return 'Scheduled Activation Failed'
+    return t ? t('common.activityActions.scheduledFailed', { defaultValue: 'Scheduled Activation Failed' }) : 'Scheduled Activation Failed'
   }
 
   if (normalized.includes('license.scheduled')) {
-    return 'Scheduled Activation'
+    return t ? t('common.activityActions.scheduled', { defaultValue: 'Scheduled Activation' }) : 'Scheduled Activation'
   }
 
   if (normalized.includes('customer.deleted')) {
-    return 'Customer Deleted'
+    return t ? t('common.activityActions.customerDeleted', { defaultValue: 'Customer Deleted' }) : 'Customer Deleted'
+  }
+
+  if (normalized === 'delete' || normalized.endsWith('.delete')) {
+    return t ? t('common.activityActions.delete', { defaultValue: 'Delete' }) : 'Delete'
+  }
+
+  if (normalized === 'update' || normalized.endsWith('.update')) {
+    return t ? t('common.activityActions.update', { defaultValue: 'Update' }) : 'Update'
+  }
+
+  if (normalized === 'create' || normalized.endsWith('.create')) {
+    return t ? t('common.activityActions.create', { defaultValue: 'Create' }) : 'Create'
+  }
+
+  if (normalized === 'add' || normalized.endsWith('.add')) {
+    return t ? t('common.activityActions.add', { defaultValue: 'Add' }) : 'Add'
+  }
+
+  if (normalized === 'remove' || normalized.endsWith('.remove')) {
+    return t ? t('common.activityActions.remove', { defaultValue: 'Remove' }) : 'Remove'
+  }
+
+  if (normalized === 'import' || normalized.endsWith('.import')) {
+    return t ? t('common.activityActions.import', { defaultValue: 'Import' }) : 'Import'
+  }
+
+  if (normalized.includes('unblock email')) {
+    return t ? t('common.activityActions.unblockEmail', { defaultValue: 'Unblock Email' }) : 'Unblock Email'
   }
 
   if (normalized.includes('team.create')) {
-    return 'Create Team Member'
+    return t ? t('common.activityActions.teamCreate', { defaultValue: 'Create Team Member' }) : 'Create Team Member'
   }
 
   if (normalized.includes('team.update')) {
-    return 'Update Team Member'
+    return t ? t('common.activityActions.teamUpdate', { defaultValue: 'Update Team Member' }) : 'Update Team Member'
   }
 
   if (normalized.includes('team.delete')) {
-    return 'Delete Team Member'
+    return t ? t('common.activityActions.teamDelete', { defaultValue: 'Delete Team Member' }) : 'Delete Team Member'
   }
 
   if (normalized.includes('username.reset_password')) {
-    return 'Reset Password'
+    return t ? t('common.activityActions.resetPassword', { defaultValue: 'Reset Password' }) : 'Reset Password'
   }
 
   if (normalized.includes('username.change')) {
-    return 'Change Username'
+    return t ? t('common.activityActions.changeUsername', { defaultValue: 'Change Username' }) : 'Change Username'
   }
 
   if (normalized.includes('username.unlock')) {
-    return 'Unlock Username'
+    return t ? t('common.activityActions.unlockUsername', { defaultValue: 'Unlock Username' }) : 'Unlock Username'
   }
 
   if (normalized.includes('auth.login')) {
-    return 'Login'
+    return t ? t('common.activityActions.login', { defaultValue: 'Login' }) : 'Login'
   }
 
   const fallback = action.includes('.') ? action.split('.').at(-1) ?? action : action
@@ -93,6 +121,43 @@ export function formatActivityActionLabel(action: string) {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
+}
+
+export function formatActivityDescription(description: string | null | undefined, locale = 'en-US') {
+  if (!description) {
+    return '-'
+  }
+
+  if (!locale.startsWith('ar')) {
+    return description
+  }
+
+  const replacements: Array<[RegExp, string]> = [
+    [/^Deleted admin account for (.+)\.$/i, 'تم حذف حساب المشرف {{value}}.'],
+    [/^Updated admin account for (.+)\.$/i, 'تم تحديث حساب المشرف {{value}}.'],
+    [/^Created admin account for (.+)\.$/i, 'تم إنشاء حساب المشرف {{value}}.'],
+    [/^Activated (.+) for BIOS (.+)\.$/i, 'تم تفعيل {{value1}} لمعرّف BIOS {{value2}}.'],
+    [/^Removed BIOS (.+) from blacklist\.$/i, 'تمت إزالة BIOS {{value}} من القائمة السوداء.'],
+    [/^Added BIOS (.+) to blacklist\.$/i, 'تمت إضافة BIOS {{value}} إلى القائمة السوداء.'],
+    [/^Unblocked account: (.+)$/i, 'تم إلغاء حظر الحساب: {{value}}'],
+    [/^Imported BIOS blacklist CSV\.$/i, 'تم استيراد ملف CSV للقائمة السوداء لـ BIOS.'],
+    [/^Scheduled activation executed for license (\d+)\.$/i, 'تم تنفيذ التفعيل المجدول للترخيص {{value}}.'],
+    [/^Renewed license (\d+) for BIOS (.+)\.$/i, 'تم تجديد الترخيص {{value1}} لمعرّف BIOS {{value2}}.'],
+  ]
+
+  for (const [pattern, template] of replacements) {
+    const match = description.match(pattern)
+    if (!match) {
+      continue
+    }
+
+    return template
+      .replace('{{value}}', match[1] ?? '')
+      .replace('{{value1}}', match[1] ?? '')
+      .replace('{{value2}}', match[2] ?? '')
+  }
+
+  return description
 }
 
 export function isCustomerLicenseHistoryAction(action: string) {
@@ -206,7 +271,7 @@ export function getLicenseDisplayStatus<T extends SchedulableLicense>(value: T |
   return value.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'
 }
 
-type ExplainedStatus = 'active' | 'expired' | 'pending' | 'cancelled' | 'scheduled' | 'scheduled_failed'
+type ExplainedStatus = 'active' | 'expired' | 'pending' | 'cancelled' | 'scheduled' | 'scheduled_failed' | 'inactive'
 
 export function getStatusMeaning(status: string, t: TFunction) {
   const meanings: Record<ExplainedStatus, string> = {
@@ -216,6 +281,7 @@ export function getStatusMeaning(status: string, t: TFunction) {
     cancelled: t('common.statusMeaning.cancelled', { defaultValue: 'Stopped and removed from the software until renewed or reactivated.' }),
     scheduled: t('common.statusMeaning.scheduled', { defaultValue: 'Will activate automatically later.' }),
     scheduled_failed: t('common.statusMeaning.scheduledFailed', { defaultValue: 'Scheduled activation failed and needs a retry.' }),
+    inactive: t('common.statusMeaning.inactive', { defaultValue: 'Not active and unavailable until re-enabled.' }),
   }
 
   return meanings[status as ExplainedStatus] ?? null
