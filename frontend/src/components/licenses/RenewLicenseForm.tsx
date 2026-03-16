@@ -106,6 +106,12 @@ function buildRelativeSchedule(value: number, unit: DurationUnit) {
   return next
 }
 
+function getMinimumScheduleDate(timeZone: string) {
+  const next = new Date()
+  next.setMinutes(next.getMinutes() + 1, 0, 0)
+  return formatDateTimeLocalInTimezone(next, timeZone)
+}
+
 export function RenewLicenseForm({
   confirmLabel,
   confirmLoadingLabel,
@@ -266,7 +272,7 @@ export function RenewLicenseForm({
       next.duration = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
     }
 
-    if (!presetOnly && scheduleEnabled) {
+    if (allowScheduleControls && scheduleEnabled) {
       const scheduledAt = scheduledStartDate?.getTime() ?? Number.NaN
       if (!scheduleAt || !Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
         next.scheduleAt = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
@@ -278,7 +284,12 @@ export function RenewLicenseForm({
     }
 
     return next
-  }, [displayTimezone, durationDays, effectiveAnchorDate, endDate, mode, presetOnly, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, totalPrice])
+  }, [allowScheduleControls, displayTimezone, durationDays, effectiveAnchorDate, endDate, mode, presetOnly, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, totalPrice])
+
+  const minimumScheduleAt = useMemo(
+    () => getMinimumScheduleDate(scheduleTimezone),
+    [scheduleTimezone],
+  )
 
   const startSummary = useMemo(() => {
     if (!allowScheduleControls || !scheduleEnabled) {
@@ -358,7 +369,12 @@ export function RenewLicenseForm({
                 <Input type="datetime-local" value={scheduleAt} readOnly />
               </div>
             ) : (
-              <Input type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
+              <Input
+                type="datetime-local"
+                value={scheduleAt}
+                min={minimumScheduleAt}
+                onChange={(event) => setScheduleAt(event.target.value)}
+              />
             )}
             <select value={scheduleTimezone} onChange={(event) => setScheduleTimezone(event.target.value)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
               {COMMON_TIMEZONES.map((item) => (
