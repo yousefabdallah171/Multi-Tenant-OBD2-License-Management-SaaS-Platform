@@ -71,9 +71,10 @@ export function RenewLicensePage({
     return program?.duration_presets ?? []
   }, [license?.program_id, presetOnly, resellerProgramsQuery.data?.data])
   const displayStatus = license ? getLicenseDisplayStatus(license) : null
+  const isScheduleEdit = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
   const title = displayStatus === 'active'
     ? (activeLicenseTitle ?? t('common.increaseDuration', { defaultValue: 'Increase Duration' }))
-    : displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+    : isScheduleEdit
       ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
       : license && isPausedPendingLicense(license)
         ? t('common.continue', { defaultValue: 'Continue' })
@@ -99,8 +100,10 @@ export function RenewLicensePage({
 
       void queryClient.invalidateQueries({ queryKey: invalidateQueryKey })
       toast.success(
-        payload.is_scheduled
-          ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })
+        isScheduleEdit
+          ? t('common.scheduleUpdatedSuccess', { defaultValue: 'Schedule updated successfully.' })
+          : payload.is_scheduled
+            ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })
           : t('common.licenseRenewedSuccess', { defaultValue: 'License renewed successfully.' }),
       )
       navigate(returnTo, { replace: true })
@@ -169,6 +172,8 @@ export function RenewLicensePage({
               resetKey={license.id}
               presetOnly={presetOnly}
               presetOptions={resellerPresetOptions}
+              allowScheduleControls={isScheduleEdit}
+              requireScheduled={isScheduleEdit}
             />
           ) : null}
         </CardContent>

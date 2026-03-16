@@ -169,6 +169,7 @@
     "customerUpdatedSuccess": "تم تحديث العميل بنجاح.",
     "licenseActivatedSuccess": "تم تفعيل الترخيص بنجاح.",
     "activationScheduledSuccess": "تمت جدولة التفعيل بنجاح.",
+    "scheduleUpdatedSuccess": "تم تحديث الجدولة بنجاح.",
     "licenseRenewedSuccess": "تم تجديد الترخيص بنجاح.",
     "rowsPerPage": "عدد الصفوف",
     "totalCount": "الإجمالي {{count}}",

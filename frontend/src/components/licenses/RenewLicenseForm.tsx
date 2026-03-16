@@ -31,6 +31,8 @@ interface RenewLicenseFormProps {
   enabled?: boolean
   presetOnly?: boolean
   presetOptions?: ProgramDurationPreset[]
+  allowScheduleControls?: boolean
+  requireScheduled?: boolean
 }
 
 const MIN_DURATION_DAYS = 1 / 1440
@@ -121,6 +123,8 @@ export function RenewLicenseForm({
   enabled = true,
   presetOnly = false,
   presetOptions = [],
+  allowScheduleControls = !presetOnly,
+  requireScheduled = false,
 }: RenewLicenseFormProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
@@ -163,7 +167,7 @@ export function RenewLicenseForm({
     setDurationUnit('days')
     const nextScheduleTimezone = initialScheduledTimezone ?? displayTimezone
     setEndDate(resolveInitialEndDate(displayTimezone, anchorDate, initialExpiresAt, initialScheduledAt))
-    setScheduleEnabled(presetOnly ? false : Boolean(initialScheduledAt))
+    setScheduleEnabled(requireScheduled || (!presetOnly && Boolean(initialScheduledAt)) || (allowScheduleControls && Boolean(initialScheduledAt)))
     setScheduleMode('on')
     setScheduleAfterValue('1')
     setScheduleAfterUnit('hours')
@@ -175,7 +179,7 @@ export function RenewLicenseForm({
   }, [activePresetOptions, anchorDate, autoPricePerDay, displayTimezone, enabled, initialExpiresAt, initialPrice, initialScheduledAt, initialScheduledTimezone, presetOnly, resetKey])
 
   useEffect(() => {
-    if (!scheduleEnabled || scheduleMode !== 'after') {
+    if (!allowScheduleControls || !scheduleEnabled || scheduleMode !== 'after') {
       return
     }
 
@@ -277,7 +281,7 @@ export function RenewLicenseForm({
   }, [displayTimezone, durationDays, effectiveAnchorDate, endDate, mode, presetOnly, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, totalPrice])
 
   const startSummary = useMemo(() => {
-    if (presetOnly || !scheduleEnabled) {
+    if (!allowScheduleControls || !scheduleEnabled) {
       return t('activate.startingNow', { defaultValue: 'Starting now' })
     }
 
@@ -315,11 +319,12 @@ export function RenewLicenseForm({
           </p>
           <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{startSummary}</p>
         </div>
-        {!presetOnly ? (
+        {allowScheduleControls ? (
         <label className="flex items-center gap-3 text-sm font-medium">
           <input
             type="checkbox"
             checked={scheduleEnabled}
+            disabled={requireScheduled}
             onChange={(event) => {
               const checked = event.target.checked
               setScheduleEnabled(checked)
@@ -332,7 +337,7 @@ export function RenewLicenseForm({
           {t('activate.scheduleToggle', { defaultValue: 'Schedule activation for later' })}
         </label>
         ) : null}
-        {!presetOnly && scheduleEnabled ? (
+        {allowScheduleControls && scheduleEnabled ? (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant={scheduleMode === 'on' ? 'default' : 'outline'} onClick={() => setScheduleMode('on')}>
@@ -479,9 +484,9 @@ export function RenewLicenseForm({
           onClick={() => onSubmit({
             duration_days: Number(durationDays.toFixed(6)),
             price: totalPrice,
-            is_scheduled: presetOnly ? undefined : scheduleEnabled || undefined,
-            scheduled_date_time: presetOnly ? undefined : scheduleEnabled ? scheduleAt : undefined,
-            scheduled_timezone: presetOnly ? undefined : scheduleEnabled ? scheduleTimezone : undefined,
+            is_scheduled: allowScheduleControls ? (scheduleEnabled || undefined) : undefined,
+            scheduled_date_time: allowScheduleControls && scheduleEnabled ? scheduleAt : undefined,
+            scheduled_timezone: allowScheduleControls && scheduleEnabled ? scheduleTimezone : undefined,
           })}
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

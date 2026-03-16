@@ -173,6 +173,7 @@
     "customerUpdatedSuccess": "Customer updated successfully.",
     "licenseActivatedSuccess": "License activated successfully.",
     "activationScheduledSuccess": "Activation scheduled successfully.",
+    "scheduleUpdatedSuccess": "Schedule updated successfully.",
     "licenseRenewedSuccess": "License renewed successfully.",
     "rowsPerPage": "Rows per page",
     "totalCount": "{{count}} total",
