@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
-import { COMMON_TIMEZONES, normalizeTimezoneOptionValue } from '@/lib/timezones'
+import { BROWSER_DEFAULT_TIMEZONE_VALUE, COMMON_TIMEZONES, getBrowserDefaultTimezoneOption, normalizeTimezoneOptionValue } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 
 export function ProfilePage() {
@@ -23,7 +23,7 @@ export function ProfilePage() {
       name: user?.name ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
-      timezone: normalizeTimezoneOptionValue(user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC'),
+      timezone: user?.timezone ? normalizeTimezoneOptionValue(user.timezone) : BROWSER_DEFAULT_TIMEZONE_VALUE,
     }),
     [browserTimezone, serverTimezone, user?.email, user?.name, user?.phone, user?.timezone],
   )
@@ -50,14 +50,17 @@ export function ProfilePage() {
     return ''
   }, [profileForm.phone, t])
   const profileMutation = useMutation({
-    mutationFn: () => profileService.updateProfile(profileForm),
+    mutationFn: () => profileService.updateProfile({
+      ...profileForm,
+      timezone: profileForm.timezone === BROWSER_DEFAULT_TIMEZONE_VALUE ? null : profileForm.timezone,
+    }),
     onSuccess: (data) => {
       setAuthenticatedUser(data.user)
       setProfileForm({
         name: data.user.name ?? '',
         email: data.user.email ?? '',
         phone: data.user.phone ?? '',
-        timezone: normalizeTimezoneOptionValue(data.user.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC'),
+        timezone: data.user.timezone ? normalizeTimezoneOptionValue(data.user.timezone) : BROWSER_DEFAULT_TIMEZONE_VALUE,
       })
       setIsProfileDirty(false)
       toast.success(t('superAdmin.pages.profile.profileSaved'))
@@ -143,6 +146,9 @@ export function ProfilePage() {
                 onChange={(event) => updateProfileField('timezone', event.target.value)}
                 className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
+                <option value={getBrowserDefaultTimezoneOption(browserTimezone, serverTimezone).value}>
+                  {getBrowserDefaultTimezoneOption(browserTimezone, serverTimezone).label}
+                </option>
                 {COMMON_TIMEZONES.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}

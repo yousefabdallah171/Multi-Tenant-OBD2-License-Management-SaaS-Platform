@@ -40,6 +40,7 @@ const FALLBACK_TIMEZONES = [
 ]
 
 const SERVER_TIMEZONE_STORAGE_KEY = 'app_server_timezone'
+export const BROWSER_DEFAULT_TIMEZONE_VALUE = '__browser_default__'
 
 const partsFormatterCache = new Map<string, Intl.DateTimeFormat>()
 
@@ -249,6 +250,17 @@ export const COMMON_TIMEZONES: TimezoneOption[] = [...groupedTimezones.entries()
     }
   })
   .sort((left, right) => parseUtcOffsetLabel(left.label) - parseUtcOffsetLabel(right.label))
+
+export function getBrowserDefaultTimezoneOption(
+  browserTimezone?: string | null,
+  serverTimezone?: string | null,
+): TimezoneOption {
+  const fallbackLabel = formatTimezoneLabel(browserTimezone ?? serverTimezone ?? 'UTC')
+  return {
+    value: BROWSER_DEFAULT_TIMEZONE_VALUE,
+    label: `Browser default (${fallbackLabel})`,
+  }
+}
 
 export function readBrowserTimezone(): string | null {
   if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
