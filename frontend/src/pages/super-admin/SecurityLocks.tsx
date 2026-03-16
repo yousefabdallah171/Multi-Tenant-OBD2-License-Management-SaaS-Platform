@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { securityService } from '@/services/security.service'
 import { IpLocationCell } from '@/utils/countryFlag'
-import { formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatDate } from '@/lib/utils'
 import { useLanguage } from '@/hooks/useLanguage'
 import type { SecurityAuditLog } from '@/types/super-admin.types'
 
@@ -110,6 +111,7 @@ export function SecurityLocksPage() {
                     ))}
                   </tbody>
                 </table>
+                {lockedAccounts.length === 0 ? <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} /> : null}
               </div>
             </CardContent>
           </Card>
@@ -155,6 +157,7 @@ export function SecurityLocksPage() {
                     ))}
                   </tbody>
                 </table>
+                {blockedIps.length === 0 ? <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} /> : null}
               </div>
             </CardContent>
           </Card>
@@ -184,7 +187,7 @@ export function SecurityLocksPage() {
                         <tr key={row.id} className="border-b border-slate-100 dark:border-slate-900">
                           <td className="p-2">{row.created_at ? formatDate(row.created_at, locale) : '-'}</td>
                           <td className="p-2">{row.admin?.name ?? 'System'}</td>
-                          <td className="p-2">{row.action}</td>
+                          <td className="p-2">{formatActivityActionLabel(row.action, t)}</td>
                           <td className="p-2">{target}</td>
                           <td className="p-2">{row.admin_ip ?? '-'}</td>
                         </tr>
@@ -192,6 +195,7 @@ export function SecurityLocksPage() {
                     })}
                   </tbody>
                 </table>
+                {auditRows.length === 0 ? <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} /> : null}
               </div>
             </CardContent>
           </Card>

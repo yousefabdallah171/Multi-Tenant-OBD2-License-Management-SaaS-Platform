@@ -388,7 +388,7 @@ export function CustomersPage() {
           <StatusBadge status={getLicenseDisplayStatus(row)} />
           {isPlainPendingLicense(row) ? (
             <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
-              New
+              {t('common.new', { defaultValue: lang === 'ar' ? 'جديد' : 'New' })}
             </span>
           ) : null}
         </div>
@@ -955,6 +955,8 @@ function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
   void Promise.all([
     queryClient.invalidateQueries({ queryKey: ['manager', 'customers'] }),
     queryClient.invalidateQueries({ queryKey: ['manager', 'licenses'] }),
+    queryClient.refetchQueries({ queryKey: ['manager', 'customers'], type: 'active' }),
+    queryClient.refetchQueries({ queryKey: ['manager', 'licenses'], type: 'active' }),
   ])
 }
 
@@ -1010,8 +1012,5 @@ function validateActivationStep(
   }
   return ''
 }
-
-
-
 
 

@@ -105,7 +105,7 @@
 
 - Sprint 23: the `User Logs` page at `/en/program-logs` loads, program/user/action filters render, the `User Actions` tab shows real records, action filtering works, and CSV export downloads successfully.
 - Sprint 24: API Status loads for the externally configured program, reports `Online` status with response time and last-checked metadata, and `Ping now` completes successfully.
-- Sprint 25: Settings page loads and real settings changes persist across reload for company name, default pricing, notification preferences, and primary accent color. The current page does not expose a `trial_days` control, so the trial-length scenarios in the written sprint could not be executed from the live UI.
+- Sprint 25: Settings page loads and real settings changes persist across reload for company name, default pricing, notification preferences, and primary accent color. The current page does not expose a `trial_days` control by product design, so the older trial-length scenarios in the written sprint are no longer applicable to the live UI.
 
 ### Partial / Deferred From This Pass
 
@@ -114,7 +114,7 @@
 - Sprint 4 live auto-refresh and historical BIOS/IP depth were not fully stressed in this pass.
 - Sprint 8 preset delete persistence was not fully exercised after create because the temporary program was cleaned up once create/edit/delete coverage was complete.
 - Sprint 9 duration-mode scheduling and past-date validation were not fully exercised in this pass.
-- Sprint 13 timeline/date-range/reseller filtering could not be exercised in-browser because the parent-manager BIOS history route is currently replaced by a redirect to `/bios-conflicts`.
+- Sprint 13 timeline/date-range/reseller filtering could not be exercised in the earlier pass because the parent-manager BIOS history route was then redirecting to `/bios-conflicts`; the standalone history route has since been restored locally.
 - Sprint 14 `IP Analytics`, `Panel Activity`, and `Blacklist Status` tabs were not deeply stressed because the sprint target was satisfied by `Overview`, `Licenses`, `Resellers`, and route deep-link coverage.
 - Sprint 15 live auto-refresh of the change-requests list was not proven; newly submitted requests required leaving and re-entering the page to appear in the current session.
 - Sprint 14 `?bios=` query-string deep-linking was not cleanly re-proven in this pass because hard direct navigation in the active browser session bounced to login; in-app BIOS detail navigation remained functional.
@@ -123,7 +123,7 @@
 - Sprint 19 record-payment, edit-payment, and commission-override mutation coverage remains blocked by fixture state, not by a page failure. The validated reseller currently has `0%` commission with no commission periods and no payment history rows yet.
 - Sprint 23 external-login feed coverage is fixture-limited in the current environment. The `External Login Events` tab rendered a valid empty state for the selected program, so row-level IP-location validation was not possible in this pass.
 - Sprint 24 programs without an external API key could not be exercised from the live page because only the externally configured program was available in the selector during this pass.
-- Sprint 25 cross-role `trial_days` propagation could not be executed because the current Settings UI does not expose any trial-days field to change.
+- Sprint 25 cross-role `trial_days` propagation is not executable from the current Settings UI because trial-day management is no longer exposed there by product design.
 
 ---
 
@@ -1142,9 +1142,9 @@ manager-parent sets trial_days = 5
 
 | 25 | 10 | Create Customer | Parent-manager customer creation is still routed through the shared activation workspace rather than a dedicated customer-only form. The page includes program/license controls and only exposes customer-only behavior as a mode within that shared screen. | Ã°Å¸Å¸Â  High | Open | |
 | 26 | 11 | Renew License | Renew success feedback is too generic. The tested renew flow completed and extended expiry correctly, but the user-facing toast is only `Saved`. | Ã°Å¸Å¸Â¡ Medium | Open | |
-| 27 | 13 | BIOS History | The parent-manager BIOS history route is effectively removed from the current UI. There is no sidebar entry, and the frontend router redirects `/bios-history` to `/bios-conflicts`, which blocks the planned history, filter, date-range, and timeline coverage entirely. | Ã°Å¸Å¸Â  High | Open | |
+| 27 | 13 | BIOS History | The parent-manager BIOS history route had been removed from the current UI and `/bios-history` redirected to `/bios-conflicts`, blocking the planned history coverage. | Ã°Å¸Å¸Â  High | Fixed locally | |
 | 28 | 14 | BIOS Details | BIOS details still renders the raw translation key `biosDetails.description` under the page heading. | Ã°Å¸Å¸Â¡ Medium | Open | |
-| 29 | 14 | BIOS Details | BIOS search remains unstable. Entering a 2-character query (`EE`) on the BIOS details page triggered a server-side failure and surfaced `An unexpected error occurred while processing the request. Retry now or return to your dashboard.` instead of narrowing results. | Ã°Å¸Å¸Â  High | Open | |
+| 29 | 14 | BIOS Details | BIOS search remained unstable. Entering a 2-character query (`EE`) on the BIOS details page triggered a server-side failure instead of narrowing results. | Ã°Å¸Å¸Â  High | Fixed locally | |
 | 30 | 15 | BIOS Change Requests | Change-requests list did not auto-refresh after a reseller submitted a new request in another session. The new row appeared only after leaving and re-entering `/en/bios-change-requests`. | Ã°Å¸Å¸Â¡ Medium | Open | |
 | 31 | 15 | BIOS Change Requests | Status handling is split across both `Approved` and `Approved, Sync Pending` states. This is functional, but the tested approval flow produced `Approved` for the new request while an older request remained under `Approved, Sync Pending`, so operators must check two filters to review completed approvals. | Ã°Å¸Å¸Â¢ Low | Open | |
 
@@ -1164,7 +1164,7 @@ manager-parent sets trial_days = 5
 | 45 | 23 | User Logs | The page no longer matches the planned `Program Logs` shape. The live route is titled `User Logs`, uses `User Actions` / `External Login Events` tabs, and does not expose the sprint's date-range filter controls. | Medium | Open | |
 | 46 | 23 | User Logs | The action filter contains a duplicate `Activate` option in the current UI. | Low | Open | |
 | 47 | 24 | API Status | API Status is implemented as a single-program detail view, not the multi-program status board described in the sprint. The live page shows one selected program with `Status`, `Response time`, `Last checked`, and `Ping now`, but no list of all programs and no `Not Configured` state coverage. | High | Open | |
-| 48 | 25 | Settings | The Settings page does not expose the `trial_days` control described in the sprint, so tenant trial-length management cannot be performed from the current UI. | High | Open | |
+| 48 | 25 | Settings | The Settings page does not expose the `trial_days` control described in the sprint. This is now an intentional product-scope change rather than an accidental missing field. | High | Superseded by product scope | |
 | 49 | 25 | Settings | The Settings page no longer matches the full planned form. The live UI supports business info, default pricing, notifications, logo, and primary accent color, but does not expose the sprint's explicit trial-days field. | Medium | Open | |
 
 **Severity:**

@@ -3,12 +3,13 @@ import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
-import { formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import type { LicenseHistoryEntry } from '@/types/manager-reseller.types'
@@ -116,26 +117,34 @@ export function CustomerDetailPage() {
           <Card>
             <CardHeader><CardTitle>{t('managerParent.pages.ipAnalytics.title')}</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {(customer.ip_logs ?? []).map((log) => (
-                <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                  <p className="font-medium">{log.ip_address}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
-                </div>
-              ))}
+              {(customer.ip_logs ?? []).length === 0 ? (
+                <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} />
+              ) : (
+                (customer.ip_logs ?? []).map((log) => (
+                  <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                    <p className="font-medium">{log.ip_address}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader><CardTitle>{t('manager.nav.activity')}</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {(customer.activity ?? []).map((entry) => (
-                <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                  <p className="font-medium">{entry.action}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
-                </div>
-              ))}
+              {(customer.activity ?? []).length === 0 ? (
+                <EmptyState title={t('common.noData')} description={t('manager.pages.activity.noMatches')} />
+              ) : (
+                (customer.activity ?? []).map((entry) => (
+                  <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                    <p className="font-medium">{formatActivityActionLabel(entry.action, t)}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </>

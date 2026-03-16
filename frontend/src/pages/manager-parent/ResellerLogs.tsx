@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
@@ -12,7 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import { teamService } from '@/services/team.service'
@@ -138,6 +139,7 @@ export function ResellerLogsPage() {
               <Link
                 className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
                 to={routePaths.managerParent.teamMemberDetail(lang, row.seller.id)}
+                onClick={(event) => event.stopPropagation()}
               >
                 {row.seller.name ?? '-'}
               </Link>
@@ -176,7 +178,11 @@ export function ResellerLogsPage() {
         const customerName = row.customer_name ?? getMetadataString(row.metadata, 'customer_name') ?? '-'
 
         return row.customer_id ? (
-          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
+          <Link
+            className="text-sky-600 hover:underline dark:text-sky-300"
+            to={routePaths.managerParent.customerDetail(lang, row.customer_id)}
+            onClick={(event) => event.stopPropagation()}
+          >
             {customerName}
           </Link>
         ) : customerName
@@ -201,7 +207,11 @@ export function ResellerLogsPage() {
         }
 
         return (
-          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, biosId)}>
+          <Link
+            className="text-sky-600 hover:underline dark:text-sky-300"
+            to={routePaths.managerParent.biosDetail(lang, biosId)}
+            onClick={(event) => event.stopPropagation()}
+          >
             {biosId}
           </Link>
         )
@@ -372,24 +382,8 @@ function normalizeRole(role: string | null | undefined): UserRole | null {
     : null
 }
 
-function getActionLabel(action: string, t: (key: string, options?: Record<string, unknown>) => string) {
-  if (action === 'license.activated') {
-    return t('common.activate')
-  }
-
-  if (action === 'license.renewed') {
-    return t('common.renew')
-  }
-
-  if (action === 'license.deactivated') {
-    return t('common.deactivate')
-  }
-
-  if (action === 'license.delete') {
-    return t('common.delete')
-  }
-
-  return action
+function getActionLabel(action: string, t: TFunction) {
+  return formatActivityActionLabel(action, t)
 }
 
 function getMetadataString(metadata: Record<string, unknown>, key: string) {

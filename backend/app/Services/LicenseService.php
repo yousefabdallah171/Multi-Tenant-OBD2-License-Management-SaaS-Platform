@@ -35,7 +35,7 @@ class LicenseService
         $actor = $this->currentActor();
         $relatedSeller = ! empty($data['seller_id']) ? User::query()->find((int) $data['seller_id']) : null;
         $reseller = $this->resolveReseller($actor, $relatedSeller);
-        $program = Program::query()->findOrFail($data['program_id']);
+        $program = $this->resolveAccessibleProgram($actor, (int) $data['program_id'], $reseller);
         $biosId = trim((string) $data['bios_id']);
         $customerName = trim((string) ($data['customer_name'] ?? ''));
         $apiKey = $program->getDecryptedApiKey();
@@ -46,6 +46,12 @@ class LicenseService
 
         if ($customerName === '') {
             throw ValidationException::withMessages(['customer_name' => 'The customer name field is required.']);
+        }
+
+        if (preg_match('/[\/:?#]/', $biosId) === 1) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'The BIOS ID contains unsupported reserved characters.',
+            ]);
         }
 
         $externalUsername = $this->normalizeExternalUsername($customerName, $biosId);
@@ -987,6 +993,28 @@ class LicenseService
             ->trim('_')
             ->limit(50, '')
             ->value() ?: 'user_'.Str::lower(Str::random(8));
+    }
+
+    private function resolveAccessibleProgram(User $actor, int $programId, User $reseller): Program
+    {
+        $query = Program::query()->whereKey($programId);
+        $role = $actor->role?->value ?? (string) $actor->role;
+
+        if ($role === UserRole::SUPER_ADMIN->value) {
+            $query->where('tenant_id', $reseller->tenant_id);
+        } else {
+            $query->where('tenant_id', $actor->tenant_id);
+        }
+
+        $program = $query->first();
+
+        if (! $program) {
+            throw ValidationException::withMessages([
+                'program_id' => 'The selected program is invalid.',
+            ]);
+        }
+
+        return $program;
     }
 
     private function normalizeTimezone(string $timezone): string

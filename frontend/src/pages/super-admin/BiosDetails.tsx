@@ -23,7 +23,7 @@ export function BiosDetailsPage() {
   const searchQuery = useQuery({
     queryKey: ['super-admin', 'bios-details', 'search', search],
     queryFn: () => superAdminBiosDetailsService.searchBiosIds(search),
-    enabled: search.trim().length >= 2,
+    enabled: search.trim().length >= 3,
   })
   const recentQuery = useQuery({
     queryKey: ['super-admin', 'bios-details', 'recent'],
@@ -71,7 +71,7 @@ export function BiosDetailsPage() {
     ] as Array<[string, string]>
   }, [locale, overviewQuery.data, t])
 
-  const visibleBiosList = search.trim().length >= 2 ? (searchQuery.data ?? []) : (biosId ? [] : (recentQuery.data ?? []))
+  const visibleBiosList = search.trim().length >= 3 ? (searchQuery.data ?? []) : (biosId ? [] : (recentQuery.data ?? []))
   const latestLicense = overviewQuery.data?.latest_license
   const latestCustomer = latestLicense?.customer ?? overviewQuery.data?.customer
   const latestReseller = latestLicense?.reseller ?? overviewQuery.data?.reseller
@@ -101,7 +101,7 @@ export function BiosDetailsPage() {
             </div>
           ) : biosId ? null : (
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {search.trim().length >= 2 ? t('common.noData') : t('biosDetails.description')}
+              {search.trim().length >= 3 ? t('common.noData') : t('biosDetails.description')}
             </p>
           )}
         </CardContent>

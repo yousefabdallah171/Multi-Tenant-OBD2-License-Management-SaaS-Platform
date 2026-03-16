@@ -179,6 +179,70 @@ export function RoleResellerPaymentDetailPage({
         </Button>
       </div>
 
+      {paymentDialog ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="reseller-payment-dialog-title" aria-describedby="reseller-payment-dialog-description">
+          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div className="space-y-2 pe-8">
+              <h2 id="reseller-payment-dialog-title" className="text-xl font-semibold text-slate-950 dark:text-white">
+                {paymentDialog.mode === 'edit' ? t('payments.dialogs.editPayment') : t('payments.dialogs.recordPayment')}
+              </h2>
+              <p id="reseller-payment-dialog-description" className="text-sm text-slate-500 dark:text-slate-400">
+                {t('payments.sections.managerHistoryHint', { defaultValue: 'These are the payments this reseller already paid to you.' })}
+              </p>
+            </div>
+            <div className="mt-4 grid gap-4">
+              <label className="space-y-2">
+                <span className="text-sm font-medium">{t('payments.fields.amount')}</span>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={paymentForm.amount}
+                  onChange={(event) => setPaymentForm((current) => ({ ...current, amount: sanitizeMoneyInput(event.target.value) }))}
+                  placeholder={t('payments.fields.amount')}
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium">{t('common.date')}</span>
+                <Input type="date" value={paymentForm.payment_date} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_date: event.target.value }))} />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium">{t('payments.fields.notes', { defaultValue: 'Note' })}</span>
+                <Textarea
+                  value={paymentForm.notes}
+                  onChange={(event) => setPaymentForm((current) => ({ ...current, notes: event.target.value }))}
+                  placeholder={t('payments.fields.notes', { defaultValue: 'Note' })}
+                />
+              </label>
+            </div>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={() => { setPaymentDialog(null); resetPaymentForm() }}>{t('common.cancel')}</Button>
+              <Button type="button" disabled={paymentMutation.isPending} onClick={() => {
+                const commissionId = paymentDialog.payment?.commission_id ?? (paymentForm.commission_id || undefined)
+
+                const amount = Number(paymentForm.amount)
+
+                if (!detail || !Number.isFinite(amount) || amount <= 0 || amount > MAX_PAYMENT_AMOUNT) {
+                  toast.error(t('payments.validation.amountOnly', { defaultValue: 'Enter a valid payment amount.' }))
+                  return
+                }
+
+                paymentMutation.mutate({
+                  paymentId: paymentDialog.payment?.id,
+                  body: {
+                    commission_id: commissionId,
+                    reseller_id: detail.reseller.id,
+                    amount,
+                    payment_date: paymentForm.payment_date || undefined,
+                    payment_method: paymentForm.payment_method,
+                    notes: paymentForm.notes.trim() || undefined,
+                  },
+                })
+              }}>{t('common.save')}</Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <StatsCard title={t('payments.summary.totalSales', { defaultValue: 'Total Sales' })} value={formatCurrency(detail?.summary.total_sales ?? 0, 'USD', locale)} icon={BadgeDollarSign} color="sky" />
         <StatsCard title={t('payments.summary.totalPaidByReseller', { defaultValue: 'Total Paid by Reseller' })} value={formatCurrency(detail?.summary.total_paid ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
@@ -208,61 +272,6 @@ export function RoleResellerPaymentDetailPage({
           <DataTable columns={paymentColumns} data={detail?.payments ?? []} rowKey={(row) => row.id} isLoading={query.isLoading} emptyMessage={t('payments.empty.payments')} />
         </CardContent>
       </Card>
-
-      <Dialog open={Boolean(paymentDialog)} onOpenChange={(open) => { if (!open) { setPaymentDialog(null); resetPaymentForm() } }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{paymentDialog?.mode === 'edit' ? t('payments.dialogs.editPayment') : t('payments.dialogs.recordPayment')}</DialogTitle></DialogHeader>
-          <div className="grid gap-4">
-            <label className="space-y-2">
-              <span className="text-sm font-medium">{t('payments.fields.amount')}</span>
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={paymentForm.amount}
-                onChange={(event) => setPaymentForm((current) => ({ ...current, amount: sanitizeMoneyInput(event.target.value) }))}
-                placeholder={t('payments.fields.amount')}
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-medium">{t('common.date')}</span>
-              <Input type="date" value={paymentForm.payment_date} onChange={(event) => setPaymentForm((current) => ({ ...current, payment_date: event.target.value }))} />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-medium">{t('payments.fields.notes', { defaultValue: 'Note' })}</span>
-              <Textarea
-                value={paymentForm.notes}
-                onChange={(event) => setPaymentForm((current) => ({ ...current, notes: event.target.value }))}
-                placeholder={t('payments.fields.notes', { defaultValue: 'Note' })}
-              />
-            </label>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => { setPaymentDialog(null); resetPaymentForm() }}>{t('common.cancel')}</Button>
-            <Button type="button" disabled={paymentMutation.isPending} onClick={() => {
-              const commissionId = paymentDialog?.payment?.commission_id ?? (paymentForm.commission_id || undefined)
-
-              const amount = Number(paymentForm.amount)
-
-              if (!detail || !Number.isFinite(amount) || amount <= 0 || amount > MAX_PAYMENT_AMOUNT) {
-                toast.error(t('payments.validation.amountOnly', { defaultValue: 'Enter a valid payment amount.' }))
-                return
-              }
-
-              paymentMutation.mutate({
-                paymentId: paymentDialog?.payment?.id,
-                body: {
-                  commission_id: commissionId,
-                  reseller_id: detail.reseller.id,
-                  amount,
-                  payment_date: paymentForm.payment_date || undefined,
-                  payment_method: paymentForm.payment_method,
-                  notes: paymentForm.notes.trim() || undefined,
-                },
-              })
-            }}>{t('common.save')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={Boolean(commissionDialog)} onOpenChange={(open) => { if (!open) { setCommissionDialog(null); resetCommissionForm() } }}>
         <DialogContent>

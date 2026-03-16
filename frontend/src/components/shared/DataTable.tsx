@@ -106,7 +106,13 @@ export function DataTable<T>({
     }
 
     if (sortKey === column.key) {
-      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))
+      if (sortDirection === 'asc') {
+        setSortDirection('desc')
+        return
+      }
+
+      setSortKey(null)
+      setSortDirection('asc')
       return
     }
 

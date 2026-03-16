@@ -48,6 +48,7 @@ export function RenewLicensePage({
     queryKey: [...invalidateQueryKey, 'license-renew', licenseId],
     queryFn: () => licenseService.getById(licenseId),
     enabled: Number.isFinite(licenseId) && licenseId > 0,
+    retry: false,
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_DETAIL),
   })
 
@@ -117,6 +118,11 @@ export function RenewLicensePage({
         </CardHeader>
         <CardContent className="space-y-4">
           {licenseQuery.isLoading ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.loading')}</p> : null}
+          {!licenseQuery.isLoading && licenseQuery.isError ? (
+            <p className="text-sm text-rose-600 dark:text-rose-400">
+              {resolveApiErrorMessage(licenseQuery.error, t('common.noData'))}
+            </p>
+          ) : null}
           {!licenseQuery.isLoading && !license ? (
             <p className="text-sm text-rose-600 dark:text-rose-400">{t('common.noData')}</p>
           ) : null}

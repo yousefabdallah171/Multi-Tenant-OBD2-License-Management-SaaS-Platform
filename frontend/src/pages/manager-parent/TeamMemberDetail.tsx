@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatActivityActionLabel, formatCurrency, formatDate, isCustomerLicenseHistoryAction, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate, formatReadableActivityDescription, isCustomerLicenseHistoryAction, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import { teamService } from '@/services/team.service'
@@ -219,8 +219,8 @@ export function TeamMemberDetailPage() {
               ) : (
                 member.recent_activity.map((entry) => (
                   <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                    <p className="font-medium text-slate-950 dark:text-white">{entry.action}</p>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
+                    <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(entry.action, t)}</p>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
                     <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
                   </div>
                 ))

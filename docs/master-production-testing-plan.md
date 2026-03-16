@@ -1234,7 +1234,7 @@ Phase 7 — Production Deploy (this plan, Parts 7-8)
 
 | # | Plan | Sprint | Issue | Severity | Status | Fix |
 |---|------|--------|-------|----------|--------|-----|
-| 1 | Master | Session 1 / SC-1 | Shared DataTable third click does not clear sort state; sort toggles asc/desc but never returns to unsorted state on the super-admin tenants table. | High | Open | Inspect shared table sort-state cycle and clear-on-third-click behavior. |
+| 1 | Master | Session 1 / SC-1 | Shared DataTable third click did not clear sort state; sort toggled asc/desc but never returned to unsorted state on the super-admin tenants table. | High | Fixed locally | Shared DataTable sort-state cycle now clears on the third click; keep a post-deploy regression on the tenants table to confirm. |
 | 2 | Master | Session 1 / SC-1 | Shared DataTable empty-state fallback was previously broken on the super-admin tenants table; current regression retest now renders `EmptyState` correctly on 0-result filtering. | High | Verified fixed | Keep the tenants-table 0-result filter in the post-deploy regression pack to ensure the shared table stays on the `EmptyState` branch. |
 | 3 | Master | Session 1 / SC-2 | Shared status translation leaked raw key `common.inactive` on the super-admin tenants page. | Medium | Fixed locally | Added shared inactive status translation coverage in `StatusBadge`, shared status meanings, and `en`/`ar` locale keys. |
 | 4 | Master | Session 1 / SP-1 to SP-5 | Shared page coverage is partially complete: activate, renew, customer create, and reseller payments were validated on live routes, but deeper mutation/invalidation checks still remain for later master sessions. | Low | Open | Continue Session 1 follow-up pass after the first documentation checkpoint. |
@@ -1242,8 +1242,8 @@ Phase 7 — Production Deploy (this plan, Parts 7-8)
 | 6 | Master | Session 2 / CRI-1 | Inactive programs remained visible to manager and reseller catalogs through the shared `/api/programs` endpoint. | High | Fixed locally | Restricted manager/reseller program listing and direct program reads to `status=active` in the shared program controller. |
 | 7 | Master | Session 3 / SEC-1 | Unauthenticated API requests could explode into `Route [login] not defined` instead of returning a clean `401`, because the framework guest redirect still assumed a web login route. | High | Fixed locally | Added API-aware guest redirect handling and forced JSON exception rendering for `/api/*` in `bootstrap/app.php`. |
 | 8 | Master | Session 3 / PERF-2 | Manager dashboard API is borderline against the `< 500ms` target on uncached hits; sampled responses ranged from `451.89ms` to `578.32ms` with a `~499ms` average. | Medium | Open | Review aggregate queries and cache warm-up in `Manager\DashboardController`; customers API is comfortably within budget. |
-| 9 | Master | Session 5 / ACT-6 | Activation with URL-unsafe BIOS values containing `/` and `:` is not safe end to end; the external activation path surfaced an external `404 Not Found` response instead of a supported activation or controlled local validation error. | High | Open | Audit the activation contract for BIOS values with reserved characters and verify the upstream external endpoint/username-path handling remains safe for encoded BIOS identifiers. |
-| 10 | Master | Session 5 / ACT-7 | `program_id=99999` on `POST /api/licenses/activate` returns a model `404`/exception response instead of a clean validation-style `422`, and in local debug mode it exposes a full stack trace. | Medium | Open | Replace `findOrFail()` on activation program lookup with a tenant/role-aware validated lookup that returns a clean business validation error. |
+| 9 | Master | Session 5 / ACT-6 | Activation with URL-unsafe BIOS values containing `/` and `:` was not safe end to end; the external activation path surfaced an external `404 Not Found` response instead of a controlled local validation error. | High | Fixed locally | Reserved path characters are now rejected early with a clean validation error before the external activation path is reached. |
+| 10 | Master | Session 5 / ACT-7 | `program_id=99999` on `POST /api/licenses/activate` returned a model `404`/exception response instead of a clean validation-style `422`, and in local debug mode it exposed a full stack trace. | Medium | Fixed locally | Activation program lookup now returns a clean validation error for invalid program IDs. |
 | 11 | Master | Session 5 / ACT-4 | Scheduled activations currently persist with `status=pending`; the written activation API plan still expects `status=scheduled`. | Low | Open | Decide whether to normalize the implementation to `scheduled` or update the written master plan to the actual lifecycle wording. |
 
 **Severity:**
@@ -1822,8 +1822,6 @@ STEP 6: Verify program stats updated
 
 - Current status: **Not production-ready yet**
 - Reason:
-  - open `High` master issues still exist in shared components:
-    - `SC-1` DataTable third-click sort reset is still open
   - master-plan execution is still incomplete:
     - Session 1 follow-up shared-page mutation checks remain open
     - Session 2 still has pending middleware / cross-role items
@@ -1894,8 +1892,8 @@ STEP 6: Verify program stats updated
 
 ### Confirmed Session 1 findings so far
 
-- Shared DataTable sort clear is broken:
-  - third click on sortable headers does not return to an unsorted state
+- Shared DataTable sort clear was fixed locally:
+  - third click on sortable headers now returns to an unsorted state
 - Shared DataTable empty-state rendering no longer reproduces:
   - 0-result filtering on the super-admin tenants table now renders `EmptyState` correctly instead of blank rows
 - Shared status translation leak for `common.inactive` was fixed locally during this pass and no longer reproduces on the super-admin tenants page
@@ -2131,15 +2129,17 @@ STEP 6: Verify program stats updated
 
 ### Confirmed Session 4 findings
 
-- Shared DataTable third-click sort reset is still reproducing on the super-admin tenants table and remains the main open shared-component regression.
+- Shared DataTable third-click sort reset no longer reproduces after the local shared-table fix; keep the tenants-table sort cycle in the post-deploy regression pack.
 - Shared DataTable empty-state fallback no longer reproduces in the live tenants-table regression retest.
+- Shared activity/action label cleanup is now fixed locally on the remaining manager, manager-parent, and super-admin detail/feed surfaces that were still rendering raw internal action keys.
+- Customer mutation refresh behavior is now fixed locally on manager, manager-parent, and super-admin customer pages by forcing active customer-query refetch after mutations.
+- Shared reseller-payment dialogs now include descriptions, clearing the remaining dialog `aria-describedby` warning seen in the payment flows.
 - The application can be prepared locally for production, but the real production checklist cannot be honestly closed until the actual deployment host is checked with production env values and HTTPS.
 
 ### Session 4 conclusion
 
 - App behavior is close to release-ready from the local validation perspective.
 - Release readiness is still blocked by:
-  - the open shared DataTable third-click sort regression
   - production-host verification still pending for env, HTTPS, permissions, monitoring, and smoke checks
 
 ### Session 5 - Part 9
@@ -2194,11 +2194,9 @@ STEP 6: Verify program stats updated
 - `ACT-4` status wording drift:
   - scheduled activations are created with `status="pending"`, not `status="scheduled"` as the written plan expects
 - `ACT-6-T4` URL-unsafe BIOS activation is not safe end to end:
-  - activating BIOS values containing `/` and `:` failed through the external activation path
-  - current failure surfaced as an external `404 Not Found` response instead of a safe supported activation path or a controlled local validation message
+  - this was fixed locally by rejecting reserved path characters before the external activation path is reached
 - `ACT-7-T1` non-existent program handling is not production-clean:
-  - `program_id=99999` throws a model `404` / exception response instead of a clean validation-style `422`
-  - because the local environment still has `APP_DEBUG=true`, the response includes a full stack trace
+  - this was fixed locally by returning a clean validation-style `422` for invalid `program_id` values
 - `ACT-2` end-date mode does not match the current backend API contract:
   - the implemented shared endpoint does not accept a dedicated `end_date` field
   - current API shape is duration / preset / absolute scheduled datetime, so the written ACT-2 checklist is now partly plan drift

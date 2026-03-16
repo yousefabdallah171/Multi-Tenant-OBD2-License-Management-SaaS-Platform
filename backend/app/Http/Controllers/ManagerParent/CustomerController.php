@@ -479,8 +479,6 @@ class CustomerController extends BaseManagerParentController
 
         $existingLicense = License::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('reseller_id', $seller->id)
-            ->where('program_id', $program->id)
             ->where('bios_id', $normalizedBiosId)
             ->where(function ($query): void {
                 $query
@@ -491,7 +489,7 @@ class CustomerController extends BaseManagerParentController
 
         if ($existingLicense) {
             throw ValidationException::withMessages([
-                'bios_id' => 'A license already exists for this BIOS ID and program.',
+                'bios_id' => 'A license already exists for this BIOS ID.',
             ]);
         }
 

@@ -506,7 +506,13 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                     </div>
                   )}
                 </div>
-                <Input value={priceInput} readOnly={isReseller || priceMode === 'auto'} onChange={(event) => setPriceInput(event.target.value.replace(/[^\d.]/g, ''))} />
+                <Input
+                  value={priceInput}
+                  disabled={isReseller}
+                  readOnly={isReseller || priceMode === 'auto'}
+                  onChange={(event) => setPriceInput(event.target.value.replace(/[^\d.]/g, ''))}
+                  className={isReseller || priceMode === 'auto' ? 'cursor-not-allowed bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400' : ''}
+                />
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {isReseller
                     ? t('activate.pricePresetLocked', { defaultValue: 'Price is controlled by the selected preset.' })

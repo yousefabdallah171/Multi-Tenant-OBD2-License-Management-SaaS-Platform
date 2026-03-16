@@ -13,7 +13,7 @@ import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel, truncateChartLabel } from '@/lib/chart-labels'
-import { formatActivityActionLabel, formatActivityDescription, formatCurrency, formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { reportService } from '@/services/report.service'
 
@@ -160,7 +160,7 @@ export function DashboardPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(item.action, t)}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{formatActivityDescription(item.description, locale)}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(item.description, locale)}</p>
                 </div>
                 <span className="text-xs text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</span>
               </div>

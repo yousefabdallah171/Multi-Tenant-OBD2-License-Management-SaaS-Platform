@@ -3,11 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Download, UserRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { activityService } from '@/services/activity.service'
 import { teamService } from '@/services/team.service'
 
@@ -62,7 +63,7 @@ export function ActivityPage() {
             <option value="">{t('managerParent.pages.activity.allActions')}</option>
             {actionOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {formatActivityActionLabel(option, t)}
               </option>
             ))}
           </select>
@@ -96,8 +97,8 @@ export function ActivityPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold text-slate-950 dark:text-white">{entry.user?.name ?? t('managerParent.pages.activity.system')}</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{entry.action}</p>
-                    {entry.description ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{entry.description}</p> : null}
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{formatActivityActionLabel(entry.action, t)}</p>
+                    {entry.description ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p> : null}
                   </div>
                   <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
                 </div>
@@ -118,9 +119,7 @@ export function ActivityPage() {
         ))}
 
         {!activityQuery.isLoading && entries.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.activity.noMatches')}</CardContent>
-          </Card>
+          <EmptyState title={t('common.noData')} description={t('managerParent.pages.activity.noMatches')} />
         ) : null}
       </div>
 

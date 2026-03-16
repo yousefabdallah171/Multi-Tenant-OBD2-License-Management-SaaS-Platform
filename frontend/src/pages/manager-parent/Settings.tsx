@@ -70,10 +70,12 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
   const { user, setAuthenticatedUser } = useAuth()
   const [form, setForm] = useState<TenantSettings>(settings)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const basePriceInputRef = useRef<HTMLInputElement>(null)
 
   const updateMutation = useMutation({
-    mutationFn: () => managerParentService.updateSettings(form),
+    mutationFn: (payload: TenantSettings) => managerParentService.updateSettings(payload),
     onSuccess: (response) => {
+      setForm(response.data)
       toast.success(t('managerParent.pages.settings.saveSuccess'))
       // Update auth store so branding reflects immediately
       if (user && user.tenant) {
@@ -100,6 +102,11 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
   })
 
   function saveSettings() {
+    const nextDefaults = {
+      ...form.defaults,
+      base_price: Number(basePriceInputRef.current?.value ?? form.defaults.base_price) || 0,
+    }
+
     if (!form.business.company_name.trim()) {
       toast.error(t('managerParent.pages.settings.companyNameRequired'))
       return
@@ -110,7 +117,18 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
       return
     }
 
-    updateMutation.mutate()
+    updateMutation.mutate({
+      business: {
+        ...form.business,
+      },
+      defaults: nextDefaults,
+      notifications: {
+        ...form.notifications,
+      },
+      branding: {
+        ...form.branding,
+      },
+    })
   }
 
   function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -121,8 +139,34 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
   }
 
   function handleRemoveLogo() {
-    setForm((current) => ({ ...current, branding: { ...current.branding, logo: null } }))
-    updateMutation.mutate()
+    const nextForm: TenantSettings = {
+      business: {
+        ...form.business,
+      },
+      defaults: {
+        ...form.defaults,
+      },
+      notifications: {
+        ...form.notifications,
+      },
+      branding: {
+        ...form.branding,
+        logo: null,
+      },
+    }
+
+    setForm(nextForm)
+    updateMutation.mutate(nextForm)
+  }
+
+  function updateBasePrice(value: string) {
+    setForm((current) => ({
+      ...current,
+      defaults: {
+        ...current.defaults,
+        base_price: Number(value) || 0,
+      },
+    }))
   }
 
   return (
@@ -172,11 +216,13 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
               <div className="space-y-2">
                 <Label htmlFor="settings-price">{t('managerParent.pages.settings.defaultPricing')}</Label>
                 <Input
+                  ref={basePriceInputRef}
                   id="settings-price"
                   type="number"
                   step="0.01"
                   value={form.defaults.base_price}
-                  onChange={(event) => setForm((current) => ({ ...current, defaults: { ...current.defaults, base_price: Number(event.target.value) || 0 } }))}
+                  onInput={(event) => updateBasePrice(event.currentTarget.value)}
+                  onChange={(event) => updateBasePrice(event.target.value)}
                 />
               </div>
             </CardContent>

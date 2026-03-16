@@ -276,6 +276,7 @@
       "apiStatus": "حالة API",
       "settings": "الإعدادات",
       "profile": "الملف الشخصي",
+      "biosHistory": "سجل BIOS",
       "biosConflicts": "تعارضات BIOS",
       "biosDetails": "تفاصيل BIOS"
     },
@@ -553,6 +554,7 @@
       "teamManagement": "إدارة الفريق",
       "softwareManagement": "إدارة البرامج",
       "biosBlacklist": "القائمة السوداء لـ BIOS",
+      "biosHistory": "سجل BIOS",
       "biosConflicts": "تعارضات BIOS",
       "ipAnalytics": "تحليلات IP",
       "logs": "سجلات المنصة",
@@ -654,6 +656,7 @@
         "companyName": "اسم الشركة",
         "address": "العنوان",
         "defaults": "الإعدادات الافتراضية",
+        "defaultTrialDays": "أيام التجربة الافتراضية",
         "defaultPricing": "التسعير الافتراضي",
         "notifications": "الإشعارات",
         "newActivationsAlerts": "تنبيهات بريدية للتفعيلات الجديدة",

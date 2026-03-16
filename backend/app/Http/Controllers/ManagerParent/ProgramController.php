@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ManagerParent;
 
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Support\ExternalApiSecurity;
 use Illuminate\Http\JsonResponse;
@@ -88,10 +89,10 @@ class ProgramController extends BaseManagerParentController
             ? $request->file('icon')->store('program-icons', 'public')
             : null;
 
-        $program = DB::transaction(function () use ($validated, $iconPath): Program {
+        $program = DB::transaction(function () use ($request, $validated, $iconPath): Program {
             $program = Program::query()->create([
                 'version' => $validated['version'] ?? '1.0',
-                'trial_days' => $validated['trial_days'] ?? 0,
+                'trial_days' => $validated['trial_days'] ?? $this->defaultTrialDays($request),
                 'status' => $validated['status'] ?? 'active',
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
@@ -411,5 +412,13 @@ class ProgramController extends BaseManagerParentController
         }
 
         return preg_match('/^[A-Za-z0-9_-]+$/', $normalized) === 1 ? $normalized : 'apilogs';
+    }
+
+    private function defaultTrialDays(Request $request): int
+    {
+        $tenant = Tenant::query()->find($this->currentTenantId($request));
+        $settings = is_array($tenant?->settings) ? $tenant->settings : [];
+
+        return max(0, (int) data_get($settings, 'defaults.trial_days', 7));
     }
 }

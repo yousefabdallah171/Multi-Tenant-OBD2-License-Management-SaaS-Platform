@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Manager;
 use App\Enums\UserRole;
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\BiosActivationService;
 use App\Support\ExternalApiSecurity;
@@ -108,7 +109,7 @@ class SoftwareController extends BaseManagerController
                 'file_size' => $validated['file_size'] ?? null,
                 'system_requirements' => $validated['system_requirements'] ?? null,
                 'installation_guide_url' => $validated['installation_guide_url'] ?? null,
-                'trial_days' => $validated['trial_days'] ?? 7,
+                'trial_days' => $validated['trial_days'] ?? $this->defaultTrialDays($request),
                 'base_price' => $validated['base_price'],
                 'icon' => $validated['icon'] ?? null,
                 'status' => $this->resolveStatus($validated),
@@ -464,5 +465,13 @@ class SoftwareController extends BaseManagerController
         }
 
         return preg_match('/^[A-Za-z0-9_-]+$/', $normalized) === 1 ? $normalized : 'apilogs';
+    }
+
+    private function defaultTrialDays(Request $request): int
+    {
+        $tenant = Tenant::query()->find($this->currentTenantId($request));
+        $settings = is_array($tenant?->settings) ? $tenant->settings : [];
+
+        return max(0, (int) data_get($settings, 'defaults.trial_days', 7));
     }
 }

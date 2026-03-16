@@ -160,6 +160,45 @@ export function formatActivityDescription(description: string | null | undefined
   return description
 }
 
+export function formatReadableActivityDescription(description: string | null | undefined, locale = 'en-US') {
+  if (!description) {
+    return '-'
+  }
+
+  if (!locale.startsWith('ar')) {
+    return description
+  }
+
+  const replacements: Array<[RegExp, string]> = [
+    [/^Deleted admin account for (.+)\.$/i, 'تم حذف حساب المشرف {{value}}.'],
+    [/^Updated admin account for (.+)\.$/i, 'تم تحديث حساب المشرف {{value}}.'],
+    [/^Created admin account for (.+)\.$/i, 'تم إنشاء حساب المشرف {{value}}.'],
+    [/^Activated (.+) E2E for BIOS (.+)\.$/i, 'تم تفعيل {{value1}} لمعرّف BIOS {{value2}}.'],
+    [/^Activated (.+) for BIOS (.+)\.$/i, 'تم تفعيل {{value1}} لمعرّف BIOS {{value2}}.'],
+    [/^Removed BIOS (.+) from blacklist\.$/i, 'تمت إزالة BIOS {{value}} من القائمة السوداء.'],
+    [/^Added BIOS (.+) to blacklist\.$/i, 'تمت إضافة BIOS {{value}} إلى القائمة السوداء.'],
+    [/^Unblocked account: (.+)$/i, 'تم إلغاء حظر الحساب: {{value}}'],
+    [/^Imported BIOS blacklist CSV\.$/i, 'تم استيراد ملف CSV للقائمة السوداء لـ BIOS.'],
+    [/^Scheduled activation executed for license (\d+)\.$/i, 'تم تنفيذ التفعيل المجدول للترخيص {{value}}.'],
+    [/^Scheduled activation failed for license (\d+)\.$/i, 'فشل التفعيل المجدول للترخيص {{value}}.'],
+    [/^Renewed license (\d+) for BIOS (.+)\.$/i, 'تم تجديد الترخيص {{value1}} لمعرّف BIOS {{value2}}.'],
+  ]
+
+  for (const [pattern, template] of replacements) {
+    const match = description.match(pattern)
+    if (!match) {
+      continue
+    }
+
+    return template
+      .replace('{{value}}', match[1] ?? '')
+      .replace('{{value1}}', match[1] ?? '')
+      .replace('{{value2}}', match[2] ?? '')
+  }
+
+  return description
+}
+
 export function isCustomerLicenseHistoryAction(action: string) {
   if (!action) {
     return false

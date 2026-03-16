@@ -52,6 +52,7 @@ const ManagerParentBiosBlacklistPage = lazyNamed(() => import('@/pages/manager-p
 const ManagerParentBiosChangeRequestsPage = lazyNamed(() => import('@/pages/manager-parent/BiosChangeRequests'), 'BiosChangeRequestsPage')
 const ManagerParentBiosConflictsPage = lazyNamed(() => import('@/pages/manager-parent/BiosConflicts'), 'BiosConflictsPage')
 const ManagerParentBiosDetailsPage = lazyNamed(() => import('@/pages/manager-parent/BiosDetails'), 'BiosDetailsPage')
+const ManagerParentBiosHistoryPage = lazyNamed(() => import('@/pages/manager-parent/BiosHistory'), 'BiosHistoryPage')
 const ManagerParentCustomersPage = lazyNamed(() => import('@/pages/manager-parent/Customers'), 'CustomersPage')
 const ManagerParentCreateCustomerPage = lazyNamed(() => import('@/pages/manager-parent/CreateCustomer'), 'CreateCustomerPageForManagerParent')
 const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-parent/CustomerDetail'), 'CustomerDetailPage')
@@ -75,6 +76,7 @@ const ApiStatusPage = lazyNamed(() => import('@/pages/super-admin/ApiStatus'), '
 const BiosBlacklistPage = lazyNamed(() => import('@/pages/super-admin/BiosBlacklist'), 'BiosBlacklistPage')
 const SuperAdminBiosConflictsPage = lazyNamed(() => import('@/pages/super-admin/BiosConflicts'), 'BiosConflictsPage')
 const SuperAdminBiosDetailsPage = lazyNamed(() => import('@/pages/super-admin/BiosDetails'), 'BiosDetailsPage')
+const SuperAdminBiosHistoryPage = lazyNamed(() => import('@/pages/super-admin/BiosHistory'), 'BiosHistoryPage')
 const SuperAdminCustomersPage = lazyNamed(() => import('@/pages/super-admin/Customers'), 'CustomersPage')
 const SuperAdminCreateCustomerPage = lazyNamed(() => import('@/pages/super-admin/CreateCustomer'), 'CreateCustomerPage')
 const SuperAdminCustomerDetailPage = lazyNamed(() => import('@/pages/super-admin/CustomerDetail'), 'CustomerDetailPage')
@@ -135,12 +137,13 @@ export function AppRouter() {
                   <Route path="customers" element={<SuperAdminCustomersPage />} />
                   <Route path="customers/create" element={<SuperAdminCreateCustomerPage />} />
                   <Route path="customers/licenses/:id/renew" element={<SuperAdminRenewLicensePage />} />
+                  <Route path="licenses/:id/renew" element={<SuperAdminRenewLicensePage />} />
                   <Route path="customers/:id" element={<SuperAdminCustomerDetailPage />} />
                   <Route path="users" element={<UsersPage />} />
                   <Route path="users/:id" element={<UserDetailPage />} />
                   <Route path="admin-management" element={<AdminManagementPage />} />
                   <Route path="bios-blacklist" element={<BiosBlacklistPage />} />
-                  <Route path="bios-history" element={<Navigate to="../bios-conflicts" replace />} />
+                  <Route path="bios-history" element={<SuperAdminBiosHistoryPage />} />
                   <Route path="bios-details" element={<SuperAdminBiosDetailsPage />} />
                   <Route path="bios-details/:biosId" element={<SuperAdminBiosDetailsPage />} />
                   <Route path="bios-conflicts" element={<SuperAdminBiosConflictsPage />} />
@@ -166,7 +169,7 @@ export function AppRouter() {
                   <Route path="software-management/:id/edit" element={<ManagerParentProgramFormPage />} />
                   <Route path="software-management/:id/activate" element={<ActivateLicensePageForManagerParent />} />
                   <Route path="bios-blacklist" element={<ManagerParentBiosBlacklistPage />} />
-                  <Route path="bios-history" element={<Navigate to="../bios-conflicts" replace />} />
+                  <Route path="bios-history" element={<ManagerParentBiosHistoryPage />} />
                   <Route path="bios-details" element={<ManagerParentBiosDetailsPage />} />
                   <Route path="bios-details/:biosId" element={<ManagerParentBiosDetailsPage />} />
                   <Route path="bios-change-requests" element={<ManagerParentBiosChangeRequestsPage />} />
@@ -185,6 +188,7 @@ export function AppRouter() {
                   <Route path="customers" element={<ManagerParentCustomersPage />} />
                   <Route path="customers/create" element={<ManagerParentCreateCustomerPage />} />
                   <Route path="customers/licenses/:id/renew" element={<ManagerParentRenewLicensePage />} />
+                  <Route path="licenses/:id/renew" element={<ManagerParentRenewLicensePage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="customers/:id" element={<ManagerParentCustomerDetailPage />} />
                   <Route path="settings" element={<ManagerParentSettingsPage />} />
@@ -201,6 +205,7 @@ export function AppRouter() {
                   <Route path="customers" element={<ManagerCustomersPage />} />
                   <Route path="customers/create" element={<ManagerCreateCustomerPage />} />
                   <Route path="customers/licenses/:id/renew" element={<ManagerRenewLicensePage />} />
+                  <Route path="licenses/:id/renew" element={<ManagerRenewLicensePage />} />
                   <Route path="customers/:id" element={<ManagerCustomerDetailPage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="software" element={<ManagerSoftwarePage />} />
@@ -226,6 +231,7 @@ export function AppRouter() {
                   <Route path="customers" element={<ResellerCustomersPage />} />
                   <Route path="customers/create" element={<ResellerCreateCustomerPage />} />
                   <Route path="customers/licenses/:id/renew" element={<ResellerRenewLicensePage />} />
+                  <Route path="licenses/:id/renew" element={<ResellerRenewLicensePage />} />
                   <Route path="customers/:id" element={<ResellerCustomerDetailPage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="activations" element={<ResellerActivationsPage />} />

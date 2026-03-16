@@ -8,7 +8,6 @@ import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -127,16 +126,11 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     })
   }
 
-  function openPaymentDialog() {
-    setPaymentOpen(true)
-    resetPaymentForm()
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <PageHeader eyebrow={eyebrow} title={t('payments.title')} description={t('payments.description')} />
-        <Button type="button" onClick={openPaymentDialog}>
+        <Button type="button" onClick={() => { resetPaymentForm(); setPaymentOpen(true) }}>
           {t('payments.actions.recordPayment')}
         </Button>
       </div>
@@ -149,78 +143,81 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
 
       <DataTable columns={columns} data={rows} rowKey={(row) => row.reseller_id} isLoading={query.isLoading} emptyMessage={t('payments.empty.resellers')} />
 
-      <Dialog open={paymentOpen} onOpenChange={(open) => { if (!open) { setPaymentOpen(false); resetPaymentForm() } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('payments.dialogs.recordPayment')}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <label className="space-y-2">
-              <span className="text-sm font-medium">{t('payments.columns.reseller', { defaultValue: 'Reseller' })}</span>
-              <select
-                value={paymentForm.reseller_id}
-                onChange={(event) => setPaymentForm((current) => ({ ...current, reseller_id: Number(event.target.value) }))}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+      {paymentOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="record-payment-title" aria-describedby="record-payment-description">
+          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div className="space-y-2 pe-8">
+              <h2 id="record-payment-title" className="text-xl font-semibold text-slate-950 dark:text-white">{t('payments.dialogs.recordPayment')}</h2>
+              <p id="record-payment-description" className="text-sm text-slate-500 dark:text-slate-400">{t('payments.description')}</p>
+            </div>
+            <div className="mt-4 grid gap-4">
+              <label className="space-y-2">
+                <span className="text-sm font-medium">{t('payments.columns.reseller', { defaultValue: 'Reseller' })}</span>
+                <select
+                  value={paymentForm.reseller_id}
+                  onChange={(event) => setPaymentForm((current) => ({ ...current, reseller_id: Number(event.target.value) }))}
+                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                >
+                  <option value={0}>{t('common.selectOption', { defaultValue: 'Select an option' })}</option>
+                  {resellerOptions.map((reseller) => (
+                    <option key={reseller.id} value={reseller.id}>{`${reseller.name} (${reseller.email})`}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium">{t('payments.fields.amount')}</span>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={paymentForm.amount}
+                  onChange={(event) => setPaymentForm((current) => ({ ...current, amount: sanitizeMoneyInput(event.target.value) }))}
+                  placeholder={t('payments.fields.amount')}
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium">{t('common.date')}</span>
+                <Input
+                  type="date"
+                  value={paymentForm.payment_date}
+                  onChange={(event) => setPaymentForm((current) => ({ ...current, payment_date: event.target.value }))}
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium">{t('payments.fields.notes', { defaultValue: 'Note' })}</span>
+                <Textarea
+                  value={paymentForm.notes}
+                  onChange={(event) => setPaymentForm((current) => ({ ...current, notes: event.target.value }))}
+                  placeholder={t('payments.fields.notes', { defaultValue: 'Note' })}
+                />
+              </label>
+            </div>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={() => { setPaymentOpen(false); resetPaymentForm() }}>{t('common.cancel')}</Button>
+              <Button
+                type="button"
+                disabled={paymentMutation.isPending}
+                onClick={() => {
+                  const amount = Number(paymentForm.amount)
+
+                  if (paymentForm.reseller_id <= 0 || !Number.isFinite(amount) || amount <= 0 || amount > MAX_PAYMENT_AMOUNT) {
+                    toast.error(t('payments.validation.amountOnly', { defaultValue: 'Enter a valid payment amount.' }))
+                    return
+                  }
+
+                  paymentMutation.mutate({
+                    reseller_id: paymentForm.reseller_id,
+                    amount,
+                    payment_date: paymentForm.payment_date || undefined,
+                    notes: paymentForm.notes.trim() || undefined,
+                  })
+                }}
               >
-                <option value={0}>{t('common.selectOption', { defaultValue: 'Select an option' })}</option>
-                {resellerOptions.map((reseller) => (
-                  <option key={reseller.id} value={reseller.id}>{`${reseller.name} (${reseller.email})`}</option>
-                ))}
-              </select>
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-medium">{t('payments.fields.amount')}</span>
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={paymentForm.amount}
-                onChange={(event) => setPaymentForm((current) => ({ ...current, amount: sanitizeMoneyInput(event.target.value) }))}
-                placeholder={t('payments.fields.amount')}
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-medium">{t('common.date')}</span>
-              <Input
-                type="date"
-                value={paymentForm.payment_date}
-                onChange={(event) => setPaymentForm((current) => ({ ...current, payment_date: event.target.value }))}
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-sm font-medium">{t('payments.fields.notes', { defaultValue: 'Note' })}</span>
-              <Textarea
-                value={paymentForm.notes}
-                onChange={(event) => setPaymentForm((current) => ({ ...current, notes: event.target.value }))}
-                placeholder={t('payments.fields.notes', { defaultValue: 'Note' })}
-              />
-            </label>
+                {t('common.save')}
+              </Button>
+            </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => { setPaymentOpen(false); resetPaymentForm() }}>{t('common.cancel')}</Button>
-            <Button
-              type="button"
-              disabled={paymentMutation.isPending}
-              onClick={() => {
-                const amount = Number(paymentForm.amount)
-
-                if (paymentForm.reseller_id <= 0 || !Number.isFinite(amount) || amount <= 0 || amount > MAX_PAYMENT_AMOUNT) {
-                  toast.error(t('payments.validation.amountOnly', { defaultValue: 'Enter a valid payment amount.' }))
-                  return
-                }
-
-                paymentMutation.mutate({
-                  reseller_id: paymentForm.reseller_id,
-                  amount,
-                  payment_date: paymentForm.payment_date || undefined,
-                  notes: paymentForm.notes.trim() || undefined,
-                })
-              }}
-            >
-              {t('common.save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      ) : null}
     </div>
   )
 }

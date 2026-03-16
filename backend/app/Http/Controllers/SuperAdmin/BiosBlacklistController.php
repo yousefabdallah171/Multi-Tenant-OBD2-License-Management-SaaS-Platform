@@ -123,13 +123,14 @@ class BiosBlacklistController extends BaseSuperAdminController
             }
 
             [$biosId, $reason] = array_pad(str_getcsv($line), 2, null);
+            $normalizedBiosId = trim((string) $biosId);
 
-            if (blank($biosId)) {
+            if ($normalizedBiosId === '' || $this->isHeaderRow($normalizedBiosId, $reason)) {
                 continue;
             }
 
             BiosBlacklist::query()->updateOrCreate(
-                ['tenant_id' => null, 'bios_id' => trim((string) $biosId)],
+                ['tenant_id' => null, 'bios_id' => $normalizedBiosId],
                 [
                     'added_by' => $request->user()?->id,
                     'reason' => trim((string) ($reason ?: 'Imported entry')),
@@ -146,6 +147,15 @@ class BiosBlacklistController extends BaseSuperAdminController
             'message' => 'Blacklist imported successfully.',
             'created' => $created,
         ]);
+    }
+
+    private function isHeaderRow(string $biosId, ?string $reason): bool
+    {
+        $normalizedBiosId = strtolower(trim($biosId));
+        $normalizedReason = strtolower(trim((string) $reason));
+
+        return in_array($normalizedBiosId, ['bios id', 'bios_id'], true)
+            && in_array($normalizedReason, ['', 'reason', 'notes'], true);
     }
 
     public function export(): StreamedResponse

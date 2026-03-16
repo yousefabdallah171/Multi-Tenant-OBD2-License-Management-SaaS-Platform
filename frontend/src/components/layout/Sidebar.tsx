@@ -101,6 +101,7 @@ export function Sidebar() {
   ]), [lang])
   const managerParentBiosPaths = useMemo(() => ([
     routePaths.managerParent.biosBlacklist(lang),
+    routePaths.managerParent.biosHistory(lang),
     routePaths.managerParent.biosDetails(lang),
     routePaths.managerParent.biosChangeRequests(lang),
     routePaths.managerParent.biosConflicts(lang),
@@ -115,6 +116,7 @@ export function Sidebar() {
   ]), [lang])
   const superAdminBiosPaths = useMemo(() => ([
     routePaths.superAdmin.biosBlacklist(lang),
+    routePaths.superAdmin.biosHistory(lang),
     routePaths.superAdmin.biosDetails(lang),
     routePaths.superAdmin.biosConflicts(lang),
   ]), [lang])
@@ -196,6 +198,7 @@ export function Sidebar() {
   ]
   const managerParentBiosChildren: NavItem[] = [
     { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
+    { key: 'biosHistory', icon: History, href: routePaths.managerParent.biosHistory, translationKey: 'managerParent.nav.biosHistory' },
     { key: 'biosDetails', icon: History, href: routePaths.managerParent.biosDetails, translationKey: 'managerParent.nav.biosDetails' },
     { key: 'biosChangeRequests', icon: History, href: routePaths.managerParent.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
     { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.managerParent.biosConflicts, translationKey: 'managerParent.nav.biosConflicts' },
@@ -214,6 +217,7 @@ export function Sidebar() {
   ]
   const superAdminBiosChildren: NavItem[] = [
     { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },
+    { key: 'biosHistory', icon: History, href: routePaths.superAdmin.biosHistory, translationKey: 'superAdmin.nav.biosHistory' },
     { key: 'biosDetails', icon: History, href: routePaths.superAdmin.biosDetails, translationKey: 'superAdmin.nav.biosDetails' },
     { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.superAdmin.biosConflicts, translationKey: 'superAdmin.nav.biosConflicts' },
   ]
@@ -662,5 +666,4 @@ export function Sidebar() {
     </>
   )
 }
-
 

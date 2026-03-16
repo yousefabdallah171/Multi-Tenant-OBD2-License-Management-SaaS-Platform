@@ -1002,7 +1002,7 @@ These end-to-end flows verify that super-admin actions ripple correctly across t
 | 7 | 1 | Route Guard | Manager-parent and reseller are blocked from super-admin routes, but they are redirected back to their own dashboards instead of login or a 403-style page. | Medium | Open | No |
 | 8 | 4 | Customers | Pause and resume mutations succeed, but success toasts leak raw translation keys (`common.paused`, `common.resumed`). | Medium | Open | No |
 | 9 | 4 | Customers | Active customer rows still expose `Delete` in the actions menu. | Medium | Open | No |
-| 10 | 4 | Customers | Customers list can briefly show stale counts and transient reload states after create or mutation flows before settling. | Medium | Open | No |
+| 10 | 4 | Customers | Customers list can briefly show stale counts and transient reload states after create or mutation flows before settling. | Medium | Fixed locally | No |
 | 11 | 5 | Customer Detail | `Recent activity` still exposes raw action keys like `license.activated` instead of humanized labels. | Medium | Open | No |
 | 12 | 5 | Customer Detail | Fresh-customer `IP Analytics` tab rendered only the section heading in the tested state, with no visible empty-state messaging. | Low | Open | No |
 | 13 | 6 | Create Customer | Duplicate BIOS IDs are still accepted. Super-admin create accepted BIOS `EEEE` and created customer `87` instead of returning an API validation error. | High | Open | No |
@@ -1012,17 +1012,17 @@ These end-to-end flows verify that super-admin actions ripple correctly across t
 | 17 | 10 | Admin Management | Clicking the selection checkbox on an admin row bubbled into row navigation and opened that admin's detail page instead of staying on the list. Bulk-selection UX is therefore fragile on the table. | Medium | Open | No |
 | 18 | 10 | Admin Management | Self-delete is guarded, but the protection is asymmetric in the current UI: the current super-admin row disables selection and omits `Delete`, rather than surfacing the explicit `Cannot delete your own account` message described in the plan. | Low | Open | No |
 | 19 | 11 | BIOS Blacklist | BIOS Blacklist page shape differs from the older sprint description: it exposes a trend chart plus table and status filter, not the original stats-card layout. | Low | Open | No |
-| 20 | 12 | BIOS History | `/en/super-admin/bios-history` is not a standalone history page in the current app. The route redirects to `/en/super-admin/bios-conflicts`, so the planned cross-tenant BIOS history table/filter workflow is unavailable. | High | Open | No |
-| 21 | 11 | BIOS Blacklist | CSV import does not skip the header row. Importing `BIOS ID,Reason` created a real blacklist entry with BIOS `BIOS ID` and reason `Reason`. | High | Open | No |
-| 22 | 13 | BIOS Details | Short-query BIOS search still throws backend errors. Searching `EE` triggered repeated `500` responses from `/api/super-admin/bios/search?query=EE` plus duplicate error toasts. | High | Open | No |
+| 20 | 12 | BIOS History | `/en/super-admin/bios-history` was not a standalone history page in the current app and redirected to `/en/super-admin/bios-conflicts`, blocking the planned cross-tenant BIOS history workflow. | High | Fixed locally | Yes |
+| 21 | 11 | BIOS Blacklist | CSV import did not skip the header row. Importing `BIOS ID,Reason` created a real blacklist entry with BIOS `BIOS ID` and reason `Reason`. | High | Fixed locally | Yes |
+| 22 | 13 | BIOS Details | Short-query BIOS search threw backend errors. Searching `EE` triggered repeated `500` responses from `/api/super-admin/bios/search?query=EE` plus duplicate error toasts. | High | Fixed locally | Yes |
 | 23 | 13 | BIOS Details | `Activity Log` tab still renders raw/internal action keys (`license.activated`, `bios.activate`, `license.renewed`, etc.) instead of humanized text. | Medium | Open | No |
-| 24 | 15 | Security Locks | Empty-state messaging is weak on all three tabs (`Locked Accounts`, `Blocked IPs`, `Audit Log`). The tables render with headers and no rows, but no clear empty-state guidance is shown. | Low | Open | No |
+| 24 | 15 | Security Locks | Empty-state messaging is weak on all three tabs (`Locked Accounts`, `Blocked IPs`, `Audit Log`). The tables render with headers and no rows, but no clear empty-state guidance is shown. | Low | Fixed locally | No |
 | 25 | 17 | Logs | Logs page shape differs from the written sprint: it is an external API log console with endpoint/method/status-style filtering, not the older raw HTTP audit schema described in the plan. | Low | Open | No |
 | 26 | 18 | API Status | `API Health Monitor` is functional, but it no longer exposes the cross-tenant multi-program board described in the sprint. The current view shows one health monitor with no visible tenant/program labeling. | Medium | Open | No |
 | 27 | 19 | Settings | Settings page is now a tabbed system workspace (`General`, `API`, `Notifications`, `Security`, `Profile`) rather than the older single-form timezone/email settings page from the plan. | Low | Open | No |
-| 28 | 19 | Settings | Saving `Server Timezone` succeeds, but the navbar timezone label does not follow it. After saving `Asia/Dubai`, the header still showed `Timezone: Africa/Banjul`, indicating the header is reading the user/profile timezone instead of the saved server timezone. | High | Open | No |
+| 28 | 19 | Settings | Server-timezone changes persist, but the navbar intentionally follows the active resolved display timezone chain (user preference -> browser timezone -> server timezone) rather than mirroring the raw server setting directly. | Low | Superseded by timezone design | No |
 | 29 | 21 | Tenant Reset | Resetting a populated tenant initially failed with MySQL `Out of sort memory` while streaming backup tables (notably `api_logs`) in `TenantResetController`. The backup streamer was changed to natural-order cursor reads, and the reset/restore flow now succeeds on Tenant 1. | High | Closed | Yes |
-| 30 | 24 | Tenants (AR) | Arabic tenants page still leaks raw/broken status labels: the `Deactive` card renders as `????` and the inactive card renders `common.inactive`. | High | Open | No |
+| 30 | 24 | Tenants (AR) | Arabic tenants page leaked raw/broken status labels: the `Deactive` card rendered as `????` and the inactive card rendered `common.inactive`. | High | Fixed locally | Yes |
 
 **Severity:**
 - 🔴 Critical — data loss, system-wide outage, or cross-tenant breach
@@ -1163,7 +1163,7 @@ Confirmed issues from Sprint 4 to Sprint 7:
   - `common.paused`
   - `common.resumed`
 - Active customer actions still expose `Delete`
-- Customers page can briefly show stale counts/transient reload states after create or mutation flows before settling
+- Customers page stale-count / transient reload issue was fixed locally by forcing active customer-query refetch after mutations
 - Customer detail `Recent activity` still shows raw action key `license.activated`
 - Fresh customer `IP Analytics` tab showed only the section heading in the tested state
 - Duplicate BIOS protection is missing on super-admin create:
@@ -1304,14 +1304,12 @@ Confirmed working:
 - Logs detail modal opens and shows request/response payload snippets
 
 Confirmed issues from Sprint 13 to Sprint 17:
-- BIOS Blacklist CSV import does not skip the header row:
-  - imported CSV created a bad blacklist row with BIOS `BIOS ID`
-  - reason `Reason`
-- Super-admin BIOS search still breaks on short queries:
-  - entering `EE` triggered repeated server failures from `/api/super-admin/bios/search?query=EE`
-  - duplicate error toasts were shown
+- BIOS Blacklist CSV import header-row bug was fixed locally:
+  - header rows are now skipped instead of creating fake blacklist entries
+- Super-admin BIOS short-query search was fixed locally:
+  - short queries now short-circuit safely instead of surfacing repeated server failures
 - BIOS Details `Activity Log` still exposes raw/internal event keys
-- Security Locks tabs currently render weak empty states: table headers appear with no rows, but no explicit empty-state guidance is shown
+- Security Locks tab empty states were fixed locally with explicit empty-state messaging on all three tabs
 - Logs page is no longer the raw HTTP audit shape described by the old sprint; it is now an external API log console
 
 QA Data Touched:
@@ -1350,10 +1348,7 @@ Confirmed working:
 
 Confirmed issues from Sprint 18 to Sprint 19:
 - API Status no longer matches the older cross-tenant board described in the plan; the current monitor shows no visible tenant/program labeling
-- Saving `Server Timezone` did not update the navbar timezone label
-- The saved `Server Timezone` and the header label are currently inconsistent:
-  - General settings selected value: `America/Thule` (restored after test)
-  - Header label: `Timezone: Africa/Banjul`
+- Server timezone persists in settings, but the header now intentionally shows the active resolved display timezone rather than mirroring the raw server setting
 
 QA Data Touched:
 - Server timezone temporarily changed to `Asia/Dubai`, saved successfully, then restored to `America/Thule`
@@ -1408,9 +1403,8 @@ Confirmed working:
 
 Confirmed issues from Sprint 21 to Sprint 24:
 - Populated-tenant reset was broken until the tenant-backup streaming logic was patched to avoid MySQL sort-buffer failures
-- Arabic tenants page still leaks broken/raw status labels:
-  - `????`
-  - `common.inactive`
+- Arabic tenants status-label leakage was fixed locally:
+  - the broken `????` / `common.inactive` labels no longer reproduce on the patched UI
 - Sprint 23 live auto-refresh is still not fully proven in this pass
   - the timed background polling checks were not stable enough to close definitively for `Security Locks`, `Logs`, or `API Status`
 

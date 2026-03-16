@@ -50,5 +50,5 @@ export function truncateChartLabel(label: string | number, maxLength = 22) {
     return normalized
   }
 
-  return `${normalized.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`
+  return `${normalized.slice(0, Math.max(1, maxLength - 1)).trimEnd()}...`
 }

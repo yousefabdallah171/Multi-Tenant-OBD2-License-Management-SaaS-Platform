@@ -57,12 +57,12 @@
 - Program status toggling is inconsistent: deactivating works, but clicking the `Active` control on an inactive program opened a customer registration dialog instead of simply reactivating the program.
 - Manager activate-license form differs from the written plan: no visible program picker, no unscheduled duration/end-date mode switch, and the schedule controls expose `Custom Date` plus `Duration Mode` only after enabling scheduling.
 - Manager customer-create page is still the shared activation form. The documented customer-only form without program/license fields does not exist as a separate UI.
-- Customer-only manager creation currently requires a program selection and permits duplicate BIOS IDs. Creating a second record for BIOS `EEEE` succeeded instead of surfacing a duplicate-BIOS validation error.
+- Customer-only manager creation still uses the shared activation form and still requires a program selection, but duplicate BIOS IDs are now rejected locally with a validation error instead of creating a second record.
 - Manager customers list can briefly render impossible summary states after create flows, for example `All 0` while other status cards still contain non-zero values until a reload.
-- Manager renew/increase-duration is inconsistent: the row action for customer `eeee` routes to `/en/manager/customers/licenses/20/renew`, which never loads because `/api/licenses/20` returns `404`, while newer manager-created licenses do open a working renew page.
+- Manager renew/increase-duration keeps working through both the current route and the restored legacy renew aliases; the older `/en/manager/customers/licenses/:id/renew` path no longer hangs on a missing-license loading loop.
 - BIOS details page exposes a raw translation key in the header description: `biosDetails.description`.
-- BIOS details search is unstable. Searching for `MG` triggered repeated `500` responses from `/api/manager/bios/search?query=MG`.
-- BIOS detail resolution can bind a BIOS to the wrong current customer when duplicate BIOS values exist. Opening `EEEE` surfaced the pending duplicate record as the active overview context.
+- BIOS details search now safely short-circuits queries under 3 characters instead of surfacing backend `500` errors.
+- BIOS detail overview now prefers the current effective license context instead of blindly using the newest duplicate row, so active BIOS records no longer get replaced by a newer pending duplicate in the header context.
 - Customer-detail BIOS deep-linking is inconsistent: `/en/manager/bios-details/BIOS-S6-20260315001820` loads the tab shell but leaves overview data blank.
 - BIOS change request approval success copy is now `BIOS change approved but external sync is pending.` instead of the simpler approval toast documented in the plan.
 - Payment detail dialog is missing a dialog description / `aria-describedby`, and Radix emits accessibility warnings in the console when `Record Payment` opens.
@@ -988,19 +988,19 @@
 | 14 | 8 | Software management | Deactivating a program works, but clicking the `Active` control on an inactive program opens a registration dialog instead of reactivating the program. | High | Open | |
 | 15 | 9 | Activate license | Manager activate form no longer matches the documented structure: no visible program picker, no unscheduled duration/end-date mode switch, and schedule options only expand after enabling scheduling. | Medium | Open | |
 | 16 | 10 | Create customer | `/en/manager/customers/create` is still the shared activation form and includes program/license controls. The documented customer-only form does not exist separately. | Medium | Open | |
-| 17 | 10 | Create customer | Manager customer-only creation still requires a program and allows duplicate BIOS IDs. Creating a second customer with BIOS `EEEE` succeeded instead of surfacing a duplicate-BIOS error. | High | Open | |
+| 17 | 10 | Create customer | Manager customer-only creation still requires a program, but duplicate BIOS IDs are now rejected locally instead of creating a second customer with BIOS `EEEE`. | High | Fixed locally | |
 | 18 | 10 | Customers | Immediately after manager create flows, the customers list can briefly render impossible summary states such as `All 0` with non-zero status cards until a reload. | Medium | Open | |
-| 19 | 11 | Renew license | Manager renew route is inconsistent. Older license route `/en/manager/customers/licenses/20/renew` stays on loading because `/api/licenses/20` returns `404`, while newer manager-created license routes work. | High | Open | |
+| 19 | 11 | Renew license | Manager renew route was inconsistent. Older license route `/en/manager/customers/licenses/20/renew` stayed on loading because `/api/licenses/20` returned `404`, while newer manager-created license routes worked. | High | Fixed locally | |
 | 20 | 12 | BIOS details | BIOS details header still shows raw translation key text `biosDetails.description`. | Medium | Open | |
-| 21 | 12 | BIOS details | BIOS search endpoint is unstable. Searching `MG` triggered repeated `500` responses from `/api/manager/bios/search?query=MG`. | High | Open | |
-| 22 | 12 | BIOS details | BIOS resolution can attach the wrong current customer when duplicate BIOS values exist. Opening `EEEE` surfaced the pending duplicate record as the overview context. | High | Open | |
+| 21 | 12 | BIOS details | BIOS search endpoint was unstable. Searching `MG` triggered repeated `500` responses from `/api/manager/bios/search?query=MG`. | High | Fixed locally | |
+| 22 | 12 | BIOS details | BIOS resolution could attach the wrong current customer when duplicate BIOS values existed. Opening `EEEE` surfaced the pending duplicate record as the overview context. | High | Fixed locally | |
 | 23 | 12 | BIOS details | Navigating from customer detail to `/en/manager/bios-details/BIOS-S6-20260315001820` loads the shell but leaves overview values blank. | High | Open | |
 | 24 | 13 | BIOS change requests | Approval success copy now reads `BIOS change approved but external sync is pending.` rather than the simpler success text documented in the plan. | Low | Open | |
-| 25 | 15 | Reseller payment detail | `Record Payment` dialog triggers Radix accessibility warnings because `DialogContent` lacks a description / `aria-describedby`. | Low | Open | |
+| 25 | 15 | Reseller payment detail | `Record Payment` dialog triggers Radix accessibility warnings because `DialogContent` lacks a description / `aria-describedby`. | Low | Fixed locally | |
 | 26 | 16 | Reports | Reports stat labels no longer match the plan exactly. The UI uses `Current Active Customers` and omits the older `Active Licenses` wording. | Low | Open | |
 | 27 | 16 | Reports | Reports deep-link to reseller logs only pre-applies `action=license.activated`; the active date range is not carried in the URL as documented. | Medium | Open | |
-| 28 | 17 | Activity log | Activity entries still expose raw/internal action keys such as `license.renewed`, `manager.program.create`, and `team.status`. | Medium | Open | |
-| 29 | 18 | Reseller logs | Reseller logs still include raw/internal action values like `bios.change_requested` and `bios.change_approved` in the full log stream. | Medium | Open | |
+| 28 | 17 | Activity log | Activity entries still expose raw/internal action keys such as `license.renewed`, `manager.program.create`, and `team.status`. | Medium | Fixed locally | |
+| 29 | 18 | Reseller logs | Reseller logs still include raw/internal action values like `bios.change_requested` and `bios.change_approved` in the full log stream. | Medium | Fixed locally | |
 | 30 | 18 | Reseller logs | Clicking a customer link from reseller logs can land on the correct route while initially rendering only the customer-detail shell without the expected data blocks. | Medium | Open | |
 | 31 | 21 | Auth/session | Clearing cookies alone did not invalidate the manager session; full browser storage clearing was required to force redirect to `/en/login`. | Medium | Open | |
 | 32 | 23 | Arabic i18n | Arabic BIOS pages still contain untranslated/garbled text, including `biosDetails.description` and mixed `????` labels. | High | Open | |

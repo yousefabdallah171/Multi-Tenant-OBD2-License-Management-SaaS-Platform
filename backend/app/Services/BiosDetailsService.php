@@ -117,8 +117,11 @@ class BiosDetailsService
 
         $first = $licenses->first();
         $last = $licenses->sortByDesc('activated_at')->first();
+        $overviewLicense = $licenses
+            ->sortByDesc(fn (License $license): int => $this->overviewLicenseSortKey($license))
+            ->first();
         $originalBiosId = $this->splitBiosId($biosId)[1];
-        $resolvedUsername = $this->resolveOverviewUsername($last, $last?->customer, [], $biosId);
+        $resolvedUsername = $this->resolveOverviewUsername($overviewLicense ?? $last, $overviewLicense?->customer, [], $biosId);
 
         $intervals = [];
         $sorted = $licenses->sortBy('activated_at')->values();
@@ -134,20 +137,20 @@ class BiosDetailsService
             'bios_id' => $biosId,
             'original_bios_id' => $originalBiosId,
             'username' => $resolvedUsername,
-            'customer' => $first?->customer ? [
-                'id' => $first->customer->id,
-                'name' => $first->customer->name,
-                'username' => $first->customer->username,
-                'email' => $first->customer->email,
-                'phone' => $first->customer->phone,
+            'customer' => $overviewLicense?->customer ? [
+                'id' => $overviewLicense->customer->id,
+                'name' => $overviewLicense->customer->name,
+                'username' => $overviewLicense->customer->username,
+                'email' => $overviewLicense->customer->email,
+                'phone' => $overviewLicense->customer->phone,
             ] : null,
-            'reseller' => $first?->reseller ? [
-                'id' => $first->reseller->id,
-                'name' => $first->reseller->name,
-                'email' => $first->reseller->email,
-                'phone' => $first->reseller->phone,
+            'reseller' => $overviewLicense?->reseller ? [
+                'id' => $overviewLicense->reseller->id,
+                'name' => $overviewLicense->reseller->name,
+                'email' => $overviewLicense->reseller->email,
+                'phone' => $overviewLicense->reseller->phone,
             ] : null,
-            'status' => $last?->status,
+            'status' => $overviewLicense?->effectiveStatus() ?? $last?->effectiveStatus(),
             'first_activation' => $first?->activated_at?->toIso8601String(),
             'last_activity' => $last?->activated_at?->toIso8601String(),
             'total_activations' => $licenses->count(),
@@ -360,10 +363,16 @@ class BiosDetailsService
 
     public function searchBiosIds(string $query, ?int $tenantId = null): array
     {
+        $normalizedQuery = trim($query);
+
+        if (mb_strlen($normalizedQuery) < 3) {
+            return [];
+        }
+
         $licenseIds = License::query()
             ->select('bios_id')
             ->distinct()
-            ->where('bios_id', 'like', '%'.$query.'%')
+            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
             ->orderByDesc('id')
             ->limit(20);
 
@@ -374,7 +383,7 @@ class BiosDetailsService
         $blacklistIds = $this->biosBlacklistQuery(null, $tenantId)
             ->select('bios_id')
             ->distinct()
-            ->where('bios_id', 'like', '%'.$query.'%')
+            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
             ->orderByDesc('id')
             ->limit(20)
             ->pluck('bios_id');
@@ -382,7 +391,7 @@ class BiosDetailsService
         $accessLogIds = $this->biosAccessLogsQuery(null, $tenantId)
             ->select('bios_id')
             ->distinct()
-            ->where('bios_id', 'like', '%'.$query.'%')
+            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
             ->orderByDesc('id')
             ->limit(20)
             ->pluck('bios_id');
@@ -390,7 +399,7 @@ class BiosDetailsService
         $conflictIds = $this->biosConflictsQuery(null, $tenantId)
             ->select('bios_id')
             ->distinct()
-            ->where('bios_id', 'like', '%'.$query.'%')
+            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
             ->orderByDesc('id')
             ->limit(20)
             ->pluck('bios_id');
@@ -524,6 +533,22 @@ class BiosDetailsService
         if ($tenantId !== null) {
             $query->where('tenant_id', $tenantId);
         }
+    }
+
+    private function overviewLicenseSortKey(License $license): int
+    {
+        $priority = match ($license->effectiveStatus()) {
+            'active' => 5,
+            'scheduled' => 4,
+            'pending' => 3,
+            'suspended' => 2,
+            'expired', 'cancelled' => 1,
+            default => 0,
+        };
+
+        $timestamp = ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0;
+
+        return ($priority * 1000000000000) + $timestamp;
     }
 
     /**
