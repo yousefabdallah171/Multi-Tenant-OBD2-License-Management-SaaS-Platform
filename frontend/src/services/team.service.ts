@@ -14,7 +14,7 @@ export interface TeamPayload {
   email: string
   password?: string
   phone?: string | null
-  role: 'manager' | 'reseller'
+  role: 'reseller'
 }
 
 export const teamService = {

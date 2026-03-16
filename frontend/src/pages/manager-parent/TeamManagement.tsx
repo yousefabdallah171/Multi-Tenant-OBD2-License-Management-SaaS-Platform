@@ -69,7 +69,7 @@ export function TeamManagementPage() {
   const [search, setSearch] = useState(() => restoreState?.search ?? '')
   const [status, setStatus] = useState<'active' | 'suspended' | 'inactive' | ''>(() => restoreState?.status ?? '')
   const [formOpen, setFormOpen] = useState(false)
-  const [inviteRole, setInviteRole] = useState<'manager' | 'reseller'>('manager')
+  const [inviteRole, setInviteRole] = useState<'reseller'>('reseller')
   const [deleteTarget, setDeleteTarget] = useState<TeamMemberSummary | null>(null)
   const [editingMember, setEditingMember] = useState<TeamMemberSummary | null>(null)
   const [form, setForm] = useState<TeamFormState>(EMPTY_FORM)
@@ -96,7 +96,7 @@ export function TeamManagementPage() {
   const createMutation = useMutation({
     mutationFn: (payload: TeamPayload) => teamService.create(payload),
     onSuccess: () => {
-      toast.success(t(inviteRole === 'manager' ? 'managerParent.pages.teamManagement.managerInvited' : 'managerParent.pages.teamManagement.resellerInvited'))
+      toast.success(t('managerParent.pages.teamManagement.resellerInvited'))
       closeForm()
       invalidateTeamQueries()
     },
@@ -258,7 +258,7 @@ export function TeamManagementPage() {
                 <DropdownMenuItem
                   onClick={() => {
                     setEditingMember(row)
-                    setInviteRole(row.role === 'reseller' ? 'reseller' : 'manager')
+                    setInviteRole('reseller')
                     setForm({
                       name: row.name,
                       email: row.email,
@@ -327,7 +327,7 @@ export function TeamManagementPage() {
   function closeForm() {
     setFormOpen(false)
     setEditingMember(null)
-    setInviteRole('manager')
+    setInviteRole('reseller')
     setForm(EMPTY_FORM)
     setShowCreatePassword(false)
   }
@@ -382,20 +382,22 @@ export function TeamManagementPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('managerParent.pages.teamManagement.title')}
-        description={t('managerParent.pages.teamManagement.description')}
+      title={t('managerParent.pages.teamManagement.title')}
+        description={lang === 'ar'
+          ? 'اعرض المدراء الحاليين وأدر حسابات الموزعين ضمن هذا الشريك. لا يمكن إنشاء مدير جديد من هذه الصفحة.'
+          : 'Review existing managers and manage reseller accounts under this tenant. New manager accounts can only be created by super admin.'}
         actions={
           <Button
             type="button"
             onClick={() => {
               setEditingMember(null)
-              setInviteRole(role === 'reseller' ? 'reseller' : 'manager')
+              setInviteRole('reseller')
               setForm(EMPTY_FORM)
               setFormOpen(true)
               setShowCreatePassword(false)
             }}
           >
-            {t('managerParent.pages.dashboard.actions.inviteTeamMember')}
+            {lang === 'ar' ? 'إنشاء موزع' : 'Create reseller'}
           </Button>
         }
       />
@@ -467,23 +469,26 @@ export function TeamManagementPage() {
             <DialogTitle>
               {editingMember
                 ? t('managerParent.pages.teamManagement.editTitle')
-                : t('managerParent.pages.dashboard.actions.inviteTeamMember')}
+                : (lang === 'ar' ? 'إنشاء موزع' : 'Create reseller')}
             </DialogTitle>
-            <DialogDescription>{editingMember ? t('managerParent.pages.teamManagement.editDescription') : t('managerParent.pages.teamManagement.formDescription')}</DialogDescription>
+            <DialogDescription>
+              {editingMember
+                ? t('managerParent.pages.teamManagement.editDescription')
+                : (lang === 'ar'
+                    ? 'أنشئ حساب موزع جديد ضمن هذا الشريك.'
+                    : 'Create a new reseller account under this tenant.')}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
             {!editingMember ? (
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="team-role">{t('common.role')}</Label>
-                <select
+                <Input
                   id="team-role"
-                  value={inviteRole}
-                  onChange={(event) => setInviteRole(event.target.value as 'manager' | 'reseller')}
-                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-                >
-                  <option value="manager">{t('roles.manager')}</option>
-                  <option value="reseller">{t('roles.reseller')}</option>
-                </select>
+                  value={lang === 'ar' ? 'موزع' : 'Reseller'}
+                  readOnly
+                  className="cursor-not-allowed bg-slate-100 dark:bg-slate-900"
+                />
               </div>
             ) : null}
             <div className="space-y-2">

@@ -74,7 +74,7 @@ class SystemSettingsStore
                 'session_timeout' => 120,
             ],
             'widgets' => [
-                'show_online_widget_to_resellers' => false,
+                'show_online_widget_to_resellers' => true,
             ],
         ];
     }

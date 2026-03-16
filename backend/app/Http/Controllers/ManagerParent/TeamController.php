@@ -59,7 +59,7 @@ class TeamController extends BaseManagerParentController
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
-            'role' => ['required', 'in:manager,reseller'],
+            'role' => ['required', 'in:reseller'],
         ]);
 
         $user = User::query()->create([
@@ -69,15 +69,15 @@ class TeamController extends BaseManagerParentController
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'phone' => $validated['phone'] ?? null,
-            'role' => $validated['role'],
+            'role' => UserRole::RESELLER->value,
             'status' => 'active',
             'created_by' => $request->user()?->id,
             'username_locked' => false,
         ]);
 
-        $this->logActivity($request, 'team.create', sprintf('Created %s account for %s.', $validated['role'], $user->email), [
+        $this->logActivity($request, 'team.create', sprintf('Created %s account for %s.', UserRole::RESELLER->value, $user->email), [
             'target_user_id' => $user->id,
-            'role' => $validated['role'],
+            'role' => UserRole::RESELLER->value,
         ]);
 
         return response()->json(['data' => $this->serializeUser($user, collect([$user->id => $this->memberStats($user)]))], 201);
