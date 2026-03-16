@@ -167,7 +167,7 @@ class AuthController extends Controller
                 'name' => ['required', 'string', 'max:255'],
                 'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
                 'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+?\d{6,20}$/'],
-                'timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
+                'timezone' => ['nullable', 'string', 'max:64', Rule::in(['UTC'])],
                 'branding.primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             ]);
 

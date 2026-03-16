@@ -154,6 +154,13 @@ export const COMMON_TIMEZONES: TimezoneOption[] = getSupportedTimezones().map((v
   label: formatTimezoneLabel(value),
 }))
 
+export const UTC_TIMEZONE_OPTION: TimezoneOption = {
+  value: 'UTC',
+  label: 'UTC',
+}
+
+export const UTC_ONLY_TIMEZONES: TimezoneOption[] = [UTC_TIMEZONE_OPTION]
+
 export function readBrowserTimezone(): string | null {
   if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
     return null

@@ -10,22 +10,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
 import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
-import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
-import { COMMON_TIMEZONES } from '@/lib/timezones'
+import { UTC_ONLY_TIMEZONES } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 
 export function ProfilePage() {
   const { t } = useTranslation()
   const { user, setAuthenticatedUser } = useAuth()
-  const { timezone: resolvedTimezone } = useResolvedTimezone(user?.timezone)
   const initialProfileForm = useMemo(
     () => ({
       name: user?.name ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
-      timezone: user?.timezone ?? resolvedTimezone,
+      timezone: 'UTC',
     }),
-    [resolvedTimezone, user?.email, user?.name, user?.phone, user?.timezone],
+    [user?.email, user?.name, user?.phone],
   )
   const [profileForm, setProfileForm] = useState(initialProfileForm)
   const [passwordForm, setPasswordForm] = useState({
@@ -57,7 +55,7 @@ export function ProfilePage() {
         name: data.user.name ?? '',
         email: data.user.email ?? '',
         phone: data.user.phone ?? '',
-        timezone: data.user.timezone ?? resolvedTimezone,
+        timezone: data.user.timezone ?? 'UTC',
       })
       setIsProfileDirty(false)
       toast.success(t('superAdmin.pages.profile.profileSaved'))
@@ -143,7 +141,7 @@ export function ProfilePage() {
                 onChange={(event) => updateProfileField('timezone', event.target.value)}
                 className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                {COMMON_TIMEZONES.map((item) => (
+                {UTC_ONLY_TIMEZONES.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
                   </option>
