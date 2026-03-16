@@ -46,7 +46,6 @@ use App\Http\Controllers\OnlineUsersController;
 use App\Http\Controllers\ExportTaskController;
 use App\Http\Controllers\Reseller\CustomerController as ResellerCustomerController;
 use App\Http\Controllers\Reseller\DashboardController as ResellerDashboardController;
-use App\Http\Controllers\Reseller\ActivityController as ResellerActivityController;
 use App\Http\Controllers\Reseller\BiosChangeRequestController as ResellerBiosChangeRequestController;
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
 use App\Http\Controllers\Reseller\PaymentStatusController as ResellerPaymentStatusController;
@@ -278,7 +277,6 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/dashboard/activations-chart', [ResellerDashboardController::class, 'activationsChart']);
         Route::get('/dashboard/revenue-chart', [ResellerDashboardController::class, 'revenueChart']);
         Route::get('/dashboard/recent-activity', [ResellerDashboardController::class, 'recentActivity']);
-        Route::get('/activity', [ResellerActivityController::class, 'index']);
         Route::get('/payment-status', [ResellerPaymentStatusController::class, 'index']);
 
         Route::get('/customers', [ResellerCustomerController::class, 'index']);
