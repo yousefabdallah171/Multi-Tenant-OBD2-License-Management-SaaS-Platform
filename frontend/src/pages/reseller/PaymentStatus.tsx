@@ -22,6 +22,15 @@ export function PaymentStatusPage() {
   })
 
   const data = query.data?.data
+  const outstandingBalance = data?.summary.outstanding_balance ?? 0
+  const hasCreditBalance = outstandingBalance < 0
+  const balanceCardTitle = hasCreditBalance
+    ? t('payments.summary.creditToReceive', { defaultValue: 'Money You Should Receive' })
+    : t('payments.summary.remainingToPay', { defaultValue: 'Still Not Paid' })
+  const balanceCardValue = formatCurrency(hasCreditBalance ? Math.abs(outstandingBalance) : outstandingBalance, 'USD', locale)
+  const overviewHelpText = hasCreditBalance
+    ? t('payments.summary.creditHelpText', { defaultValue: 'You have already paid more than what is owed. This balance should be returned or credited to you.' })
+    : t('payments.summary.helpText', { defaultValue: 'This page shows how much you sold, how much you already paid to your manager, and how much is still left to pay.' })
 
   const paymentColumns = useMemo<Array<DataTableColumn<ResellerPayment>>>(() => [
     { key: 'payment_date', label: t('payments.columns.date'), sortable: true, sortValue: (row) => row.payment_date ?? '', render: (row) => (row.payment_date ? formatDate(row.payment_date, locale) : '-') },
@@ -43,14 +52,14 @@ export function PaymentStatusPage() {
         <StatsCard title={t('payments.summary.totalSales')} value={formatCurrency(data?.summary.total_sales ?? 0, 'USD', locale)} icon={WalletCards} color="sky" />
         <StatsCard title={t('payments.summary.totalOwed', { defaultValue: 'Amount You Owe' })} value={formatCurrency(data?.summary.total_owed ?? 0, 'USD', locale)} icon={ReceiptText} color="amber" />
         <StatsCard title={t('payments.summary.totalPaidToManager', { defaultValue: 'Amount You Paid to Manager' })} value={formatCurrency(data?.summary.total_paid ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
-        <StatsCard title={t('payments.summary.remainingToPay', { defaultValue: 'Still Not Paid' })} value={formatCurrency(data?.summary.outstanding_balance ?? 0, 'USD', locale)} icon={Wallet} color="rose" />
+        <StatsCard title={balanceCardTitle} value={balanceCardValue} icon={Wallet} color={hasCreditBalance ? 'emerald' : 'rose'} />
       </div>
 
       <Card>
         <CardHeader className="space-y-2">
           <CardTitle>{t('payments.sections.overview', { defaultValue: 'Payment Overview' })}</CardTitle>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {t('payments.summary.helpText', { defaultValue: 'This page shows how much you sold, how much you already paid to your manager, and how much is still left to pay.' })}
+            {overviewHelpText}
           </p>
         </CardHeader>
       </Card>
