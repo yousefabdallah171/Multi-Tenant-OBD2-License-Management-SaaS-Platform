@@ -148,6 +148,7 @@ export interface ManagerCustomerSummary {
   paused_at?: string | null
   pause_remaining_minutes?: number | null
   pause_reason?: string | null
+  is_blacklisted?: boolean
   license_count: number
   has_active_license?: boolean
 }
@@ -181,6 +182,7 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
     paused_at?: string | null
     pause_remaining_minutes?: number | null
     pause_reason?: string | null
+    is_blacklisted?: boolean
   }>
   resellers_summary?: Array<{
     reseller_id: number | null
@@ -236,6 +238,7 @@ export interface ResellerCustomerSummary {
   paused_at?: string | null
   pause_remaining_minutes?: number | null
   pause_reason?: string | null
+  is_blacklisted?: boolean
   license_count: number
 }
 
@@ -259,6 +262,7 @@ export interface ResellerCustomerDetails extends ResellerCustomerSummary {
     paused_at?: string | null
     pause_remaining_minutes?: number | null
     pause_reason?: string | null
+    is_blacklisted?: boolean
   }>
 }
 
@@ -337,7 +341,7 @@ export interface RenewLicenseData {
 export interface ManagerTeamFilters {
   page?: number
   per_page?: number
-  status?: 'active' | 'suspended' | 'inactive' | ''
+  status?: 'active' | 'inactive' | 'deactive' | ''
   search?: string
 }
 
@@ -380,6 +384,7 @@ export interface LicenseHistoryEntry {
   duration_days: number
   price: number
   status: string
+  is_blacklisted?: boolean
   paused_at?: string | null
   pause_reason?: string | null
 }
@@ -392,8 +397,8 @@ export interface BiosChangeRequest {
   program_name: string | null
   old_bios_id: string
   new_bios_id: string
-  reason: string
-  status: 'pending' | 'approved' | 'rejected' | 'approved_pending_sync'
+  reason: string | null
+  status: 'pending' | 'approved' | 'rejected'
   reseller_id?: number | null
   reseller_name?: string | null
   reseller_email?: string | null
@@ -407,14 +412,14 @@ export interface BiosChangeRequest {
 export interface BiosChangeRequestFilters {
   page?: number
   per_page?: number
-  status?: '' | 'pending' | 'approved' | 'rejected' | 'approved_pending_sync'
+  status?: '' | 'pending' | 'approved' | 'rejected'
   count_only?: boolean
 }
 
 export interface SubmitBiosChangeRequestData {
   license_id: number
   new_bios_id: string
-  reason: string
+  reason?: string
 }
 
 export interface ResellerCommission {

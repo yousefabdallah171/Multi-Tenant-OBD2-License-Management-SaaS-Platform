@@ -46,7 +46,6 @@ export function ReportsPage() {
 
   const summary = summaryQuery.data?.data
   const hasRange = Boolean(range.from && range.to)
-  const activationDetailsUrl = `${routePaths.reseller.activations(lang)}?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`
   const presetCards = useMemo(() => {
     const last7 = resolvePresetRange(7)
     const last30 = resolvePresetRange(30)
@@ -95,7 +94,7 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-3xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-[1px] dark:from-emerald-950/30 dark:to-emerald-900/20">
           <StatsCard title={t('reseller.pages.reports.totalRevenue')} value={formatCurrency(summary?.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
         </div>
@@ -104,9 +103,6 @@ export function ReportsPage() {
         </button>
         <button type="button" className="rounded-3xl bg-gradient-to-br from-amber-50 to-amber-100/50 p-[1px] text-start dark:from-amber-950/30 dark:to-amber-900/20" onClick={() => navigate(`${routePaths.reseller.customers(lang)}?status=active`)}>
           <StatsCard title={t('reseller.pages.reports.activeCustomers')} value={summary?.active_customers ?? summary?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        </button>
-        <button type="button" className="rounded-3xl bg-gradient-to-br from-sky-50 to-sky-100/50 p-[1px] text-start dark:from-sky-950/30 dark:to-sky-900/20" onClick={() => navigate(activationDetailsUrl)}>
-          <StatsCard title={t('reseller.pages.reports.totalActivations')} value={summary?.total_activations ?? 0} icon={Activity} color="rose" />
         </button>
       </div>
 

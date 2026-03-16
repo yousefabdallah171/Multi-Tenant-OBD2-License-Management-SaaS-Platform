@@ -265,6 +265,7 @@ export interface CustomerSummary {
   paused_at?: string | null
   pause_remaining_minutes?: number | null
   pause_reason?: string | null
+  is_blacklisted?: boolean
   license_count: number
   has_active_license?: boolean
 }
@@ -298,6 +299,7 @@ export interface CustomerDetails extends CustomerSummary {
     paused_at?: string | null
     pause_remaining_minutes?: number | null
     pause_reason?: string | null
+    is_blacklisted?: boolean
   }>
   resellers_summary?: Array<{
     reseller_id: number | null
@@ -341,6 +343,7 @@ export interface CustomerLicenseHistoryEntry {
   duration_days: number
   price: number
   status: string
+  is_blacklisted?: boolean
   paused_at?: string | null
   pause_reason?: string | null
 }
@@ -353,8 +356,8 @@ export interface ManagerParentBiosChangeRequest {
   program_name: string | null
   old_bios_id: string
   new_bios_id: string
-  reason: string
-  status: 'pending' | 'approved' | 'rejected' | 'approved_pending_sync'
+  reason: string | null
+  status: 'pending' | 'approved' | 'rejected'
   reseller_id: number | null
   reseller_name: string | null
   reseller_email: string | null

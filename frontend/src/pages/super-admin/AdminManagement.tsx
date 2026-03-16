@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
+import { normalizeAccountStatus, toStoredAccountStatus, type AccountStatusFilter } from '@/lib/account-status'
 import { formatDate, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { adminService } from '@/services/admin.service'
@@ -31,7 +32,7 @@ const emptyForm = {
   role: 'manager_parent' as 'super_admin' | 'manager_parent' | 'manager' | 'reseller',
   tenant_id: '' as number | '',
   phone: '',
-  status: 'active' as 'active' | 'suspended' | 'inactive',
+  status: 'active' as 'active' | 'inactive',
 }
 
 export function AdminManagementPage() {
@@ -56,7 +57,7 @@ export function AdminManagementPage() {
   const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 10)
   const [role, setRole] = useState(() => restoreState?.role ?? '')
   const [tenantId, setTenantId] = useState<number | ''>(() => restoreState?.tenantId ?? '')
-  const [status, setStatus] = useState(() => restoreState?.status ?? '')
+  const [status, setStatus] = useState<AccountStatusFilter>(() => (restoreState?.status as AccountStatusFilter | undefined) ?? '')
   const [search, setSearch] = useState(() => restoreState?.search ?? '')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ManagedUser | null>(null)
@@ -149,7 +150,7 @@ export function AdminManagementPage() {
   })
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'suspended' }) => adminService.update(id, { status: nextStatus }),
+    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'inactive' }) => adminService.update(id, { status: nextStatus }),
     onSuccess: () => {
       toast.success(t('superAdmin.pages.adminManagement.statusUpdated'))
       invalidateUserQueries()
@@ -264,7 +265,13 @@ export function AdminManagementPage() {
         ),
       },
       { key: 'role', label: t('common.role'), sortable: true, sortValue: (row) => row.role, render: (row) => <RoleBadge role={row.role} /> },
-      { key: 'status', label: t('common.accountStatus'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      {
+        key: 'status',
+        label: t('common.accountStatus'),
+        sortable: true,
+        sortValue: (row) => normalizeAccountStatus(row.status),
+        render: (row) => <StatusBadge status={normalizeAccountStatus(row.status)} />,
+      },
       { key: 'created', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
       {
         key: 'actions',
@@ -290,7 +297,7 @@ export function AdminManagementPage() {
                     role: row.role === 'customer' ? 'reseller' : row.role,
                     tenant_id: row.tenant?.id ?? '',
                     phone: row.phone ?? '',
-                    status: row.status,
+                    status: toStoredAccountStatus(normalizeAccountStatus(row.status)),
                   })
                   setFormOpen(true)
                   setShowCreatePassword(false)
@@ -302,8 +309,8 @@ export function AdminManagementPage() {
                 {t('common.view')}
               </DropdownMenuItem>
               {row.role !== 'super_admin' ? (
-                <DropdownMenuItem onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
-                  {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+                <DropdownMenuItem onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: normalizeAccountStatus(row.status) === 'active' ? 'inactive' : 'active' })}>
+                  {normalizeAccountStatus(row.status) === 'active' ? t('common.deactive') : t('common.activate')}
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem
@@ -397,15 +404,14 @@ export function AdminManagementPage() {
           <select
             value={status}
             onChange={(event) => {
-              setStatus(event.target.value)
+              setStatus(event.target.value as AccountStatusFilter)
               setPage(1)
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
             <option value="">{t('common.allStatuses')}</option>
             <option value="active">{t('common.active')}</option>
-            <option value="suspended">{t('common.suspended')}</option>
-            <option value="inactive">{t('common.inactive')}</option>
+            <option value="deactive">{t('common.deactive')}</option>
           </select>
         </CardContent>
       </Card>
@@ -514,8 +520,7 @@ export function AdminManagementPage() {
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
                 <option value="active">{t('common.active')}</option>
-                <option value="suspended">{t('common.suspended')}</option>
-                <option value="inactive">{t('common.inactive')}</option>
+                <option value="inactive">{t('common.deactive')}</option>
               </select>
             </div>
           </div>

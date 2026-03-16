@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
+import { normalizeAccountStatus, toStoredAccountStatus } from '@/lib/account-status'
 import { formatActivityActionLabel, formatDate, formatReadableActivityDescription, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { adminService } from '@/services/admin.service'
@@ -28,7 +29,7 @@ interface EditFormState {
   phone: string
   role: ManagedUser['role']
   tenant_id: number | ''
-  status: ManagedUser['status']
+  status: 'active' | 'inactive'
 }
 
 export function UserDetailPage() {
@@ -130,7 +131,7 @@ export function UserDetailPage() {
                 phone: user.phone ?? '',
                 role: user.role,
                 tenant_id: user.tenant?.id ?? '',
-                status: user.status,
+                status: toStoredAccountStatus(normalizeAccountStatus(user.status)),
               })
               setEditOpen(true)
             }}
@@ -153,7 +154,7 @@ export function UserDetailPage() {
 
           <div className="grid gap-4 md:grid-cols-3">
             <MetricCard label={t('common.role')} value={<RoleBadge role={user.role} />} />
-            <MetricCard label={t('common.accountStatus')} value={<StatusBadge status={user.status} />} />
+            <MetricCard label={t('common.accountStatus')} value={<StatusBadge status={normalizeAccountStatus(user.status)} />} />
             <MetricCard label={t('common.tenant')} value={user.tenant?.name ?? '-'} />
           </div>
 
@@ -264,12 +265,11 @@ export function UserDetailPage() {
               <select
                 id="detail-admin-status"
                 value={form.status}
-                onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as ManagedUser['status'] }))}
+                onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as 'active' | 'inactive' }))}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
                 <option value="active">{t('common.active')}</option>
-                <option value="suspended">{t('common.suspended')}</option>
-                <option value="inactive">{t('common.inactive')}</option>
+                <option value="inactive">{t('common.deactive')}</option>
               </select>
             </div>
           </div>

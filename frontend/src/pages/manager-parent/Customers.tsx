@@ -10,7 +10,7 @@ import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
-import { StatusBadge } from '@/components/shared/StatusBadge'
+import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -398,7 +398,7 @@ export function CustomersPage() {
       sortValue: (row) => getLicenseDisplayStatus(row),
       render: (row) => (row.status ? (
         <div className="relative inline-flex">
-          <StatusBadge status={getLicenseDisplayStatus(row)} />
+          <LicenseStatusBadges status={getLicenseDisplayStatus(row)} isBlocked={Boolean(row.is_blacklisted)} />
           {isPlainPendingLicense(row) ? (
             <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
               {t('common.new', { defaultValue: lang === 'ar' ? 'جديد' : 'New' })}
@@ -1075,4 +1075,3 @@ function validateActivationStep(
 
   return ''
 }
-

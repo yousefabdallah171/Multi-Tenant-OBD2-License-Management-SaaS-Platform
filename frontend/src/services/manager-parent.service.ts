@@ -225,7 +225,7 @@ export const managerParentService = {
       const { data } = await api.get<{ data: Array<{ id: number; old_bios_id: string; new_bios_id: string; reason: string; status: string; requested_by: string | null; reviewed_by: string | null; created_at: string; reviewed_at: string | null }> }>(`/customers/${id}/bios-change-history`)
       return data
     },
-  async getBiosChangeRequests(params?: { page?: number; per_page?: number; status?: '' | 'pending' | 'approved' | 'rejected' | 'approved_pending_sync'; count_only?: boolean }) {
+  async getBiosChangeRequests(params?: { page?: number; per_page?: number; status?: '' | 'pending' | 'approved' | 'rejected'; count_only?: boolean }) {
     const { data } = await api.get<PaginatedResponse<ManagerParentBiosChangeRequest>>('/bios-change-requests', { params })
     return data
   },

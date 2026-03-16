@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
+import { normalizeAccountStatus } from '@/lib/account-status'
 import { formatActivityActionLabel, formatCurrency, formatDate, formatReadableActivityDescription, isCustomerLicenseHistoryAction, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
@@ -180,7 +181,7 @@ export function TeamMemberDetailPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <MetricCard label={t('common.accountStatus')} value={<StatusBadge status={member.status} />} />
+            <MetricCard label={t('common.accountStatus')} value={<StatusBadge status={normalizeAccountStatus(member.status)} />} />
             <MetricCard label={t('common.role')} value={member.role} />
           </div>
 

@@ -18,7 +18,7 @@ class TeamController extends BaseManagerParentController
     {
         $validated = $request->validate([
             'role' => ['nullable', 'in:manager,reseller'],
-            'status' => ['nullable', 'in:active,suspended,inactive'],
+            'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
             'search' => ['nullable', 'string'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -30,7 +30,14 @@ class TeamController extends BaseManagerParentController
             ->where('tenant_id', $this->currentTenantId($request))
             ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->when(! empty($validated['role']), fn ($query) => $query->where('role', $validated['role']))
-            ->when(! empty($validated['status']), fn ($query) => $query->where('status', $validated['status']))
+            ->when(! empty($validated['status']), function ($query) use ($validated): void {
+                if ($validated['status'] === 'deactive') {
+                    $query->whereIn('status', ['suspended', 'inactive']);
+                    return;
+                }
+
+                $query->where('status', $validated['status']);
+            })
             ->when(! empty($validated['search']), function ($query) use ($validated): void {
                 $query->where(function ($builder) use ($validated): void {
                     $builder
@@ -59,8 +66,12 @@ class TeamController extends BaseManagerParentController
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
-            'role' => ['required', 'in:reseller'],
+            'role' => ['required', 'in:manager,reseller'],
         ]);
+
+        $role = $validated['role'] === UserRole::MANAGER->value
+            ? UserRole::MANAGER
+            : UserRole::RESELLER;
 
         $user = User::query()->create([
             'tenant_id' => $this->currentTenantId($request),
@@ -69,15 +80,15 @@ class TeamController extends BaseManagerParentController
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'phone' => $validated['phone'] ?? null,
-            'role' => UserRole::RESELLER->value,
+            'role' => $role->value,
             'status' => 'active',
             'created_by' => $request->user()?->id,
             'username_locked' => false,
         ]);
 
-        $this->logActivity($request, 'team.create', sprintf('Created %s account for %s.', UserRole::RESELLER->value, $user->email), [
+        $this->logActivity($request, 'team.create', sprintf('Created %s account for %s.', $role->value, $user->email), [
             'target_user_id' => $user->id,
-            'role' => UserRole::RESELLER->value,
+            'role' => $role->value,
         ]);
 
         return response()->json(['data' => $this->serializeUser($user, collect([$user->id => $this->memberStats($user)]))], 201);
@@ -91,8 +102,12 @@ class TeamController extends BaseManagerParentController
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
-            'status' => ['sometimes', 'in:active,suspended,inactive'],
+            'status' => ['sometimes', 'in:active,suspended,inactive,deactive'],
         ]);
+
+        if (($validated['status'] ?? null) === 'deactive') {
+            $validated['status'] = 'inactive';
+        }
 
         $user->update($validated);
 
@@ -127,8 +142,12 @@ class TeamController extends BaseManagerParentController
         $user = $this->resolveTeamUser($request, $user);
 
         $validated = $request->validate([
-            'status' => ['required', 'in:active,suspended,inactive'],
+            'status' => ['required', 'in:active,suspended,inactive,deactive'],
         ]);
+
+        if ($validated['status'] === 'deactive') {
+            $validated['status'] = 'inactive';
+        }
 
         $user->update(['status' => $validated['status']]);
 

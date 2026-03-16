@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, Banknote, ShieldCheck, Users } from 'lucide-react'
+import { Banknote, ShieldCheck, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
@@ -43,12 +43,6 @@ export function ReportsPage() {
     ...item,
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
   }))
-  const activationsDetailsUrl = buildQueryUrl(routePaths.manager.resellerLogs(lang), {
-    action: 'license.activated',
-    from: range.from,
-    to: range.to,
-  })
-
   const columns = useMemo<Array<DataTableColumn<FinancialReportData['reseller_balances'][number]>>>(
     () => [
       { key: 'reseller', label: t('managerParent.pages.financialReports.columns.reseller'), sortable: true, sortValue: (row) => row.reseller, render: (row) => row.reseller },
@@ -75,16 +69,13 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <StatsCard title={t('managerParent.pages.financialReports.totalTenantRevenue')} value={formatCurrency(report?.summary.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
         <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.manager.customers(lang))}>
           <StatsCard title={t('managerParent.pages.financialReports.totalCustomers')} value={report?.summary.total_customers ?? 0} icon={Users} color="sky" />
         </button>
         <button type="button" className="w-full text-start" onClick={() => navigate(`${routePaths.manager.customers(lang)}?status=active`)}>
           <StatsCard title={t('managerParent.pages.financialReports.activeCustomers')} value={report?.summary.active_customers ?? report?.summary.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        </button>
-        <button type="button" className="w-full text-start" onClick={() => navigate(activationsDetailsUrl)}>
-          <StatsCard title={t('managerParent.pages.financialReports.totalActivations')} value={report?.summary.total_activations ?? 0} icon={Activity} color="rose" />
         </button>
       </div>
 
@@ -165,17 +156,4 @@ function formatDateInput(value: Date) {
   const day = String(value.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
-}
-
-function buildQueryUrl(basePath: string, params: Record<string, string | undefined>) {
-  const search = new URLSearchParams()
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value) {
-      search.set(key, value)
-    }
-  })
-
-  const query = search.toString()
-  return query === '' ? basePath : `${basePath}?${query}`
 }

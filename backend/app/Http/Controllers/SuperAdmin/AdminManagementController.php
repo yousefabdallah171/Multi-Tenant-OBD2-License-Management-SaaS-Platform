@@ -20,7 +20,7 @@ class AdminManagementController extends BaseSuperAdminController
         $validated = $request->validate([
             'role' => ['nullable', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'status' => ['nullable', 'in:active,suspended,deactive'],
+            'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -41,7 +41,11 @@ class AdminManagementController extends BaseSuperAdminController
         }
 
         if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
+            if ($validated['status'] === 'deactive') {
+                $query->whereIn('status', ['suspended', 'inactive']);
+            } else {
+                $query->where('status', $validated['status']);
+            }
         }
 
         if (! empty($validated['search'])) {
@@ -71,7 +75,12 @@ class AdminManagementController extends BaseSuperAdminController
             'role' => ['required', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
+            'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
         ]);
+
+        if (($validated['status'] ?? null) === 'deactive') {
+            $validated['status'] = 'inactive';
+        }
 
         if ($validated['role'] !== UserRole::SUPER_ADMIN->value && empty($validated['tenant_id'])) {
             return response()->json(['message' => 'Tenant assignment is required for non-super-admin accounts.'], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -86,7 +95,7 @@ class AdminManagementController extends BaseSuperAdminController
                 'phone' => $validated['phone'] ?? null,
                 'password' => Hash::make($validated['password']),
                 'role' => $validated['role'],
-                'status' => 'active',
+                'status' => $validated['status'] ?? 'active',
                 'created_by' => $request->user()?->id,
                 'username_locked' => false,
             ]);
@@ -110,8 +119,12 @@ class AdminManagementController extends BaseSuperAdminController
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'role' => ['sometimes', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'status' => ['sometimes', 'in:active,suspended,inactive'],
+            'status' => ['sometimes', 'in:active,suspended,inactive,deactive'],
         ]);
+
+        if (($validated['status'] ?? null) === 'deactive') {
+            $validated['status'] = 'inactive';
+        }
 
         $this->guardSuperAdminMutation($request, $user, $validated['status'] ?? null, false);
 
@@ -305,7 +318,7 @@ class AdminManagementController extends BaseSuperAdminController
             abort(response()->json(['message' => $message], Response::HTTP_UNPROCESSABLE_ENTITY));
         }
 
-        $willDeactivate = $isDelete || in_array($nextStatus, ['suspended', 'deactive'], true);
+        $willDeactivate = $isDelete || in_array($nextStatus, ['suspended', 'inactive', 'deactive'], true);
         if (! $willDeactivate) {
             return;
         }

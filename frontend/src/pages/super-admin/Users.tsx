@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
+import { normalizeAccountStatus, type AccountStatusFilter } from '@/lib/account-status'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { tenantService } from '@/services/tenant.service'
@@ -23,8 +24,7 @@ import type { ManagedUser } from '@/types/super-admin.types'
 const statusTabs = [
   { value: '', labelKey: 'common.all', fallback: 'All' },
   { value: 'active', labelKey: 'common.active', fallback: 'Active' },
-  { value: 'suspended', labelKey: 'common.suspended', fallback: 'Suspended' },
-  { value: 'inactive', labelKey: 'common.inactive', fallback: 'Inactive' },
+  { value: 'deactive', labelKey: 'common.deactive', fallback: 'Deactive' },
 ] as const
 
 export function UsersPage() {
@@ -48,7 +48,7 @@ export function UsersPage() {
   const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 25)
   const [role, setRole] = useState(() => restoreState?.role ?? '')
   const [tenantId, setTenantId] = useState<number | ''>(() => restoreState?.tenantId ?? '')
-  const [status, setStatus] = useState(() => restoreState?.status ?? '')
+  const [status, setStatus] = useState<AccountStatusFilter>(() => (restoreState?.status as AccountStatusFilter | undefined) ?? '')
   const [search, setSearch] = useState(() => restoreState?.search ?? '')
   const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null)
   const returnTo = `${location.pathname}${location.search}`
@@ -75,7 +75,7 @@ export function UsersPage() {
   })
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'suspended' | 'inactive' }) => userService.updateStatus(id, nextStatus),
+    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'inactive' }) => userService.updateStatus(id, nextStatus),
     onSuccess: () => {
       toast.success(t('superAdmin.pages.users.statusUpdated'))
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'users'] })
@@ -110,7 +110,13 @@ export function UsersPage() {
       },
       { key: 'role', label: t('common.role'), sortable: true, sortValue: (row) => row.role, render: (row) => <RoleBadge role={row.role} /> },
       { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? '-' },
-      { key: 'status', label: t('common.accountStatus'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      {
+        key: 'status',
+        label: t('common.accountStatus'),
+        sortable: true,
+        sortValue: (row) => normalizeAccountStatus(row.status),
+        render: (row) => <StatusBadge status={normalizeAccountStatus(row.status)} />,
+      },
       { key: 'created', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
       {
         key: 'actions',
@@ -129,8 +135,8 @@ export function UsersPage() {
                 {t('common.view')}
               </DropdownMenuItem>
               {row.role !== 'super_admin' ? (
-                <DropdownMenuItem onClick={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
-                  {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+                <DropdownMenuItem onClick={() => statusMutation.mutate({ id: row.id, nextStatus: normalizeAccountStatus(row.status) === 'active' ? 'inactive' : 'active' })}>
+                  {normalizeAccountStatus(row.status) === 'active' ? t('common.deactive') : t('common.activate')}
                 </DropdownMenuItem>
               ) : null}
               {row.role !== 'super_admin' ? (

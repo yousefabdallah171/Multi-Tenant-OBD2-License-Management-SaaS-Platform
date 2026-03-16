@@ -4,8 +4,9 @@ import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { BlockBadge } from '@/components/shared/BlockBadge'
+import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
-import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -56,7 +57,7 @@ export function CustomerDetailPage() {
     mutationFn: () => resellerService.submitBiosChangeRequest({
       license_id: requestableLicense?.id ?? 0,
       new_bios_id: newBiosId.trim(),
-      reason: requestReason.trim(),
+      reason: requestReason.trim() || undefined,
     }),
     onSuccess: (response) => {
       toast.success(response.message ?? t('biosChangeRequests.submitted'))
@@ -101,7 +102,7 @@ export function CustomerDetailPage() {
               <Info label={t('reseller.pages.customers.table.bios')} value={customer.bios_id ?? '-'} />
               <Info
                 label={t('common.status')}
-                value={<StatusBadge status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} />}
+                value={<LicenseStatusBadges status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(customer.is_blacklisted)} />}
               />
               <Info label={t('common.program')} value={customer.program ?? '-'} />
               <Info label={t('common.price')} value={formatCurrency(customer.price, 'USD', locale)} />
@@ -122,7 +123,7 @@ export function CustomerDetailPage() {
                     <Info label={t('common.username')} value={resolveLicenseUsername(customer) ?? '-'} />
                     <Info
                       label={t('common.status')}
-                      value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} />}
+                      value={<LicenseStatusBadges status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(license.is_blacklisted)} />}
                     />
                     <Info label={t('common.price')} value={formatCurrency(license.price, 'USD', locale)} />
                     <Info label={t('common.expiry')} value={license.expires_at ? formatDate(license.expires_at, locale) : '-'} />
@@ -145,7 +146,10 @@ export function CustomerDetailPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosChangeRequests.currentBios')}</p>
-              <p className="font-medium">{requestableLicense?.bios_id ?? '-'}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{requestableLicense?.bios_id ?? '-'}</p>
+                {requestableLicense?.is_blacklisted ? <BlockBadge /> : null}
+              </div>
             </div>
             <Input
               value={newBiosId}
@@ -176,8 +180,8 @@ export function CustomerDetailPage() {
                   return
                 }
 
-                if (requestReason.trim().length < 5) {
-                  toast.error(t('biosChangeRequests.reasonValidation'))
+                if ((requestableLicense.bios_id ?? '').trim().toLowerCase() === newBiosId.trim().toLowerCase()) {
+                  toast.error(t('biosChangeRequests.sameBiosValidation'))
                   return
                 }
 
@@ -212,7 +216,7 @@ function Info({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
       <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="mt-1 whitespace-pre-line font-medium">{value}</p>
+      <div className="mt-1 whitespace-pre-line font-medium">{value}</div>
     </div>
   )
 }

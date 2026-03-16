@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resellerService } from '@/services/reseller.service'
-import { formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatDate } from '@/lib/utils'
 
 export function ActivityPage() {
   const { t } = useTranslation()
@@ -75,7 +75,7 @@ export function ActivityPage() {
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${visual.badgeClass}`}>
-                          {translateActivityAction(entry.action, t)}
+                          {formatActivityActionLabel(entry.action, t)}
                         </span>
                         {entry.description ? <p className="text-sm text-slate-600 dark:text-slate-300">{entry.description}</p> : null}
                       </div>
@@ -181,40 +181,4 @@ function resolveActivityVisual(action: string) {
     cardClass: 'border-s-4 border-s-slate-400',
     badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300',
   }
-}
-
-function translateActivityAction(action: string, t: ReturnType<typeof useTranslation>['t']) {
-  if (action.includes('license.activated') || action.includes('license.activate')) {
-    return t('reseller.pages.activity.activation')
-  }
-
-  if (action.includes('license.deactivated') || action.includes('license.deactivate')) {
-    return t('reseller.pages.activity.deactivation')
-  }
-
-  if (action.includes('license.renewed') || action.includes('license.renew')) {
-    return t('reseller.pages.activity.renewal')
-  }
-
-  if (action.includes('license.scheduled_activation_executed')) {
-    return t('common.activityActions.scheduledExecuted', { defaultValue: 'Scheduled Activation Executed' })
-  }
-
-  if (action.includes('license.scheduled_activation_failed')) {
-    return t('common.activityActions.scheduledFailed', { defaultValue: 'Scheduled Activation Failed' })
-  }
-
-  if (action.includes('license.scheduled')) {
-    return t('common.activityActions.scheduled', { defaultValue: 'Scheduled Activation' })
-  }
-
-  if (action.includes('customer.deleted')) {
-    return t('reseller.pages.dashboard.activityLabels.customerDeleted', { defaultValue: 'Customer Deleted' })
-  }
-
-  if (action.includes('auth.login')) {
-    return t('reseller.pages.activity.login')
-  }
-
-  return action
 }

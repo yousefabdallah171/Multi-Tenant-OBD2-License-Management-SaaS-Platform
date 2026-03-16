@@ -42,6 +42,18 @@ export function formatActivityActionLabel(action: string, t?: TFunction) {
     return t ? t('common.activityActions.renewal', { defaultValue: 'Renewal' }) : 'Renewal'
   }
 
+  if (normalized.includes('license.resumed') || normalized.includes('license.resume')) {
+    return t ? t('common.activityActions.resume', { defaultValue: 'Resume' }) : 'Resume'
+  }
+
+  if (normalized.includes('license.bios_changed') || normalized.includes('license.bios.change')) {
+    return t ? t('common.activityActions.biosChanged', { defaultValue: 'BIOS Changed' }) : 'BIOS Changed'
+  }
+
+  if (normalized.includes('bios.change_requested')) {
+    return t ? t('common.activityActions.biosChangeRequested', { defaultValue: 'BIOS Change Requested' }) : 'BIOS Change Requested'
+  }
+
   if (normalized.includes('license.scheduled_activation_executed')) {
     return t ? t('common.activityActions.scheduledExecuted', { defaultValue: 'Scheduled Activation Executed' }) : 'Scheduled Activation Executed'
   }

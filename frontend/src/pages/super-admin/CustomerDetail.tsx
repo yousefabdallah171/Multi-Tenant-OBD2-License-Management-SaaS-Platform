@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { StatusBadge } from '@/components/shared/StatusBadge'
+import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -56,7 +56,7 @@ export function CustomerDetailPage() {
               <Info label={t('common.tenant')} value={customer.tenant?.name ?? '-'} />
               <Info label={t('common.email')} value={customer.email ?? '-'} />
               <Info label={t('common.phone')} value={customer.phone ?? '-'} />
-              <Info label={t('common.status')} value={customer.status ? <StatusBadge status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-'} />
+              <Info label={t('common.status')} value={customer.status ? <LicenseStatusBadges status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(customer.is_blacklisted)} /> : '-'} />
               <Info label={t('common.createdAt')} value={customer.created_at ? formatDate(customer.created_at, locale) : '-'} />
               <Info label={t('common.reseller')} value={customer.resellers_summary?.[0]?.reseller_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.userDetail(lang, customer.resellers_summary[0].reseller_id)}>{customer.resellers_summary[0].reseller_name}</Link> : (customer.resellers_summary?.[0]?.reseller_name ?? '-')} />
             </CardContent>
@@ -81,7 +81,7 @@ export function CustomerDetailPage() {
                         <Info label={t('managerParent.pages.customers.biosId')} value={<Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link>} />
                         <Info label={t('common.username')} value={resolveLicenseUsername(customer, license.external_username) ?? '-'} />
                         <Info label={t('common.reseller')} value={license.reseller_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.userDetail(lang, license.reseller_id)}>{license.reseller ?? '-'}</Link> : (license.reseller ?? '-')} />
-                        <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
+                        <Info label={t('common.status')} value={<LicenseStatusBadges status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(license.is_blacklisted)} />} />
                       </div>
                     </div>
                   ))}
@@ -171,7 +171,7 @@ function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
       <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="mt-1 whitespace-pre-line font-medium">{value}</p>
+      <div className="mt-1 whitespace-pre-line font-medium">{value}</div>
     </div>
   )
 }

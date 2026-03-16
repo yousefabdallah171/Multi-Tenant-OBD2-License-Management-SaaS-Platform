@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { resellerService } from '@/services/reseller.service'
 
@@ -145,7 +145,7 @@ export function DashboardPage() {
                     <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${resolveActivityStyles(entry.action).badge}`}>
                       {resolveActivityStyles(entry.action).icon}
                     </span>
-                    <p className="font-medium text-slate-950 dark:text-white">{translateActivityAction(entry.action, t)}</p>
+                    <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(entry.action, t)}</p>
                     {entry.description ? <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description}</p> : null}
                   </div>
                   <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
@@ -212,39 +212,4 @@ function resolveActivityStyles(action: string) {
   }
 }
 
-function translateActivityAction(action: string, t: ReturnType<typeof useTranslation>['t']) {
-  if (action.includes('license.activated') || action.includes('license.activate')) {
-    return t('reseller.pages.activity.activation')
-  }
-
-  if (action.includes('license.deactivated') || action.includes('license.deactivate')) {
-    return t('reseller.pages.activity.deactivation')
-  }
-
-  if (action.includes('license.renewed') || action.includes('license.renew')) {
-    return t('reseller.pages.activity.renewal')
-  }
-
-  if (action.includes('license.scheduled_activation_executed')) {
-    return t('common.activityActions.scheduledExecuted', { defaultValue: 'Scheduled Activation Executed' })
-  }
-
-  if (action.includes('license.scheduled_activation_failed')) {
-    return t('common.activityActions.scheduledFailed', { defaultValue: 'Scheduled Activation Failed' })
-  }
-
-  if (action.includes('license.scheduled')) {
-    return t('common.activityActions.scheduled', { defaultValue: 'Scheduled Activation' })
-  }
-
-  if (action.includes('customer.deleted')) {
-    return t('reseller.pages.dashboard.activityLabels.customerDeleted', { defaultValue: 'Customer Deleted' })
-  }
-
-  if (action.includes('auth.login')) {
-    return t('reseller.pages.activity.login')
-  }
-
-  return action
-}
 

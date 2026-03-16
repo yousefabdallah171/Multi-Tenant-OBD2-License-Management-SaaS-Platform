@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
+import { normalizeAccountStatus, type AccountStatusFilter } from '@/lib/account-status'
 import { formatCurrency, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
@@ -50,10 +51,10 @@ export function TeamPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const queryClient = useQueryClient()
   const returnTo = `${location.pathname}${location.search}`
-  const restoreState = (location.state as { restore?: { page?: number; perPage?: number; status?: 'active' | 'suspended' | 'inactive' | ''; search?: string } } | null)?.restore
+  const restoreState = (location.state as { restore?: { page?: number; perPage?: number; status?: AccountStatusFilter; search?: string } } | null)?.restore
   const [page, setPage] = useState(() => restoreState?.page ?? 1)
   const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 10)
-  const [status, setStatus] = useState<'active' | 'suspended' | 'inactive' | ''>(() => restoreState?.status ?? '')
+  const [status, setStatus] = useState<AccountStatusFilter>(() => restoreState?.status ?? '')
   const [search, setSearch] = useState(() => restoreState?.search ?? '')
   const [formOpen, setFormOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<ManagerTeamReseller | null>(null)
@@ -149,7 +150,7 @@ export function TeamPage() {
   })
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'suspended' | 'inactive' }) =>
+    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'inactive' }) =>
       managerService.updateTeamMemberStatus(id, nextStatus),
     onSuccess: () => {
       toast.success(t('manager.pages.team.statusUpdated'))
@@ -240,7 +241,13 @@ export function TeamPage() {
       { key: 'customers', label: t('manager.pages.dashboard.teamCustomers'), sortable: true, sortValue: (row) => row.customers_count, render: (row) => row.customers_count },
       { key: 'licenses', label: t('manager.pages.dashboard.activeLicenses'), sortable: true, sortValue: (row) => row.active_licenses_count, render: (row) => row.active_licenses_count },
       { key: 'revenue', label: t('common.revenue'), sortable: true, sortValue: (row) => row.revenue, render: (row) => formatCurrency(row.revenue, 'USD', locale) },
-      { key: 'status', label: t('common.accountStatus'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
+      {
+        key: 'status',
+        label: t('common.accountStatus'),
+        sortable: true,
+        sortValue: (row) => normalizeAccountStatus(row.status),
+        render: (row) => <StatusBadge status={normalizeAccountStatus(row.status)} />,
+      },
       {
         key: 'actions',
         label: t('common.actions'),
@@ -274,11 +281,11 @@ export function TeamPage() {
                   onClick={() =>
                     statusMutation.mutate({
                       id: row.id,
-                      nextStatus: row.status === 'active' ? 'suspended' : 'active',
+                      nextStatus: normalizeAccountStatus(row.status) === 'active' ? 'inactive' : 'active',
                     })
                   }
                 >
-                  {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+                  {normalizeAccountStatus(row.status) === 'active' ? t('common.deactive') : t('common.activate')}
                 </DropdownMenuItem>
                 {row.can_delete ? <DropdownMenuItem onClick={() => setDeleteTarget(row)}>{t('common.delete')}</DropdownMenuItem> : null}
                 {row.username_locked ? (
@@ -385,15 +392,14 @@ export function TeamPage() {
           <select
             value={status}
             onChange={(event) => {
-              setStatus(event.target.value as 'active' | 'suspended' | 'inactive' | '')
+              setStatus(event.target.value as AccountStatusFilter)
               setPage(1)
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
           >
             <option value="">{t('common.allStatuses')}</option>
             <option value="active">{t('common.active')}</option>
-            <option value="suspended">{t('common.suspended')}</option>
-            <option value="inactive">{t('common.inactive')}</option>
+            <option value="deactive">{t('common.deactive')}</option>
           </select>
         </CardContent>
       </Card>

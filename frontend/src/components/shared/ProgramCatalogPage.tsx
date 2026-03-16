@@ -20,10 +20,11 @@ interface ProgramCatalogPageProps {
   description: string
   translationPrefix: string
   showBasePrice?: boolean
+  showLicensesSold?: boolean
   onActivate?: (program: { id: number; name: string; base_price: number; has_external_api: boolean; external_software_id: number | null }) => void
 }
 
-export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix, showBasePrice = true, onActivate }: ProgramCatalogPageProps) {
+export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix, showBasePrice = true, showLicensesSold = true, onActivate }: ProgramCatalogPageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -37,6 +38,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
   })
 
   const programs = programsQuery.data?.data ?? []
+  const effectiveShowLicensesSold = translationPrefix === 'reseller.pages.software' ? false : showLicensesSold
 
   return (
     <div className="space-y-6">
@@ -92,7 +94,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                 <CardContent className="space-y-4 p-5">
                   <p className="min-h-16 text-sm text-slate-600 dark:text-slate-300">{program.description || t(`${translationPrefix}.noDescription`)}</p>
 
-                  <div className={`grid gap-3 ${showBasePrice ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}>
+                  <div className={`grid gap-3 ${(showBasePrice || effectiveShowLicensesSold) && showBasePrice !== effectiveShowLicensesSold ? 'sm:grid-cols-1' : showBasePrice && effectiveShowLicensesSold ? 'sm:grid-cols-2' : ''}`}>
                     {showBasePrice ? (
                       <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
                         <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -102,13 +104,15 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                         <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
                       </div>
                     ) : null}
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <Activity className="h-3.5 w-3.5 rounded-full bg-blue-200/60 p-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" />
-                        {t(`${translationPrefix}.licensesSold`)}
-                      </p>
-                      <p className="mt-1 font-semibold">{program.licenses_sold}</p>
-                    </div>
+                    {effectiveShowLicensesSold ? (
+                      <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                        <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          <Activity className="h-3.5 w-3.5 rounded-full bg-blue-200/60 p-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" />
+                          {t(`${translationPrefix}.licensesSold`)}
+                        </p>
+                        <p className="mt-1 font-semibold">{program.licenses_sold}</p>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex gap-2">

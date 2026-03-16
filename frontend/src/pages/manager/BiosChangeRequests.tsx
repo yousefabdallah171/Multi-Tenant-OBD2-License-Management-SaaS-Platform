@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -11,10 +12,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import type { BiosChangeRequest } from '@/types/manager-reseller.types'
 
-type StatusFilter = '' | 'pending' | 'approved' | 'rejected' | 'approved_pending_sync'
+type StatusFilter = '' | 'pending' | 'approved' | 'rejected'
 
 export function BiosChangeRequestsPage() {
   const { t } = useTranslation()
@@ -62,26 +64,38 @@ export function BiosChangeRequestsPage() {
       label: t('common.customer'),
       sortable: true,
       sortValue: (row) => row.customer_name ?? '',
-      render: (row) => row.customer_name ?? '-',
+      render: (row) => row.customer_id ? (
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.customer_id)}>
+          {row.customer_name ?? '-'}
+        </Link>
+      ) : (row.customer_name ?? '-'),
     },
     {
       key: 'old_bios_id',
       label: t('biosChangeRequests.oldBios'),
       sortable: true,
       sortValue: (row) => row.old_bios_id,
-      render: (row) => row.old_bios_id,
+      render: (row) => row.customer_id ? (
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.customer_id)}>
+          {row.old_bios_id}
+        </Link>
+      ) : row.old_bios_id,
     },
     {
       key: 'new_bios_id',
       label: t('biosChangeRequests.newBios'),
       sortable: true,
       sortValue: (row) => row.new_bios_id,
-      render: (row) => row.new_bios_id,
+      render: (row) => row.customer_id ? (
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.customer_id)}>
+          {row.new_bios_id}
+        </Link>
+      ) : row.new_bios_id,
     },
     {
       key: 'reason',
       label: t('common.reason'),
-      render: (row) => <p className="max-w-xs whitespace-pre-wrap">{row.reason}</p>,
+      render: (row) => <p className="max-w-xs whitespace-pre-wrap">{row.reason || '-'}</p>,
     },
     {
       key: 'reseller_name',
@@ -109,7 +123,7 @@ export function BiosChangeRequestsPage() {
       label: t('common.actions'),
       render: (row) => (
         <div className="flex flex-wrap gap-2">
-          {row.status === 'pending' || row.status === 'approved_pending_sync' ? (
+          {row.status === 'pending' ? (
             <>
               <Button type="button" size="sm" onClick={() => approveMutation.mutate(row.id)} disabled={approveMutation.isPending}>
                 {t('biosChangeRequests.approve')}
@@ -124,7 +138,7 @@ export function BiosChangeRequestsPage() {
         </div>
       ),
     },
-  ], [approveMutation.isPending, locale, rejectMutation.isPending, t])
+  ], [approveMutation.isPending, lang, locale, rejectMutation.isPending, t])
 
   return (
     <div className="space-y-6">
@@ -145,7 +159,6 @@ export function BiosChangeRequestsPage() {
             <option value="pending">{t('biosChangeRequests.status.pending')}</option>
             <option value="approved">{t('biosChangeRequests.status.approved')}</option>
             <option value="rejected">{t('biosChangeRequests.status.rejected')}</option>
-            <option value="approved_pending_sync">{t('biosChangeRequests.status.approvedPendingSync')}</option>
           </select>
         </CardContent>
       </Card>
@@ -213,14 +226,12 @@ function StatusPill({ status, t }: { status: BiosChangeRequest['status']; t: (ke
     pending: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
     approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
     rejected: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
-    approved_pending_sync: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
   }
 
   const labels: Record<BiosChangeRequest['status'], string> = {
     pending: t('biosChangeRequests.status.pending'),
     approved: t('biosChangeRequests.status.approved'),
     rejected: t('biosChangeRequests.status.rejected'),
-    approved_pending_sync: t('biosChangeRequests.status.approvedPendingSync'),
   }
 
   return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}>{labels[status]}</span>

@@ -18,7 +18,7 @@ class TeamController extends BaseManagerController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:active,suspended,inactive'],
+            'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
             'search' => ['nullable', 'string'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -27,7 +27,11 @@ class TeamController extends BaseManagerController
         $query = $this->teamResellersQuery($request)->latest();
 
         if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
+            if ($validated['status'] === 'deactive') {
+                $query->whereIn('status', ['suspended', 'inactive']);
+            } else {
+                $query->where('status', $validated['status']);
+            }
         }
 
         if (! empty($validated['search'])) {
@@ -264,8 +268,12 @@ class TeamController extends BaseManagerController
         $reseller = $this->resolveTeamReseller($request, $user);
 
         $validated = $request->validate([
-            'status' => ['required', 'in:active,suspended,inactive'],
+            'status' => ['required', 'in:active,suspended,inactive,deactive'],
         ]);
+
+        if ($validated['status'] === 'deactive') {
+            $validated['status'] = 'inactive';
+        }
 
         $reseller->update(['status' => $validated['status']]);
 

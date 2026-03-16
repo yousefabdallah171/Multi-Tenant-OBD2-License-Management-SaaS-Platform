@@ -17,7 +17,7 @@ class UserController extends BaseSuperAdminController
         $validated = $request->validate([
             'role' => ['nullable', 'in:'.implode(',', UserRole::values())],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'status' => ['nullable', 'in:active,suspended,inactive'],
+            'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -31,7 +31,11 @@ class UserController extends BaseSuperAdminController
         }
 
         if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
+            if ($validated['status'] === 'deactive') {
+                $query->whereIn('status', ['suspended', 'inactive']);
+            } else {
+                $query->where('status', $validated['status']);
+            }
         }
 
         if (! empty($validated['search'])) {
@@ -65,8 +69,12 @@ class UserController extends BaseSuperAdminController
     public function updateStatus(Request $request, User $user): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['required', 'in:active,suspended,inactive'],
+            'status' => ['required', 'in:active,suspended,inactive,deactive'],
         ]);
+
+        if ($validated['status'] === 'deactive') {
+            $validated['status'] = 'inactive';
+        }
 
         $this->guardSuperAdminMutation($request, $user, $validated['status'], false);
 

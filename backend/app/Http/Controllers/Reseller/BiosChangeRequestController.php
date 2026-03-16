@@ -44,10 +44,12 @@ class BiosChangeRequestController extends BaseResellerController
         $validated = $request->validate([
             'license_id' => ['required', 'integer'],
             'new_bios_id' => ['required', 'string', 'min:5', 'max:255'],
-            'reason' => ['required', 'string', 'min:5', 'max:1000'],
+            'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $license = $this->resolveLicense($request, License::query()->findOrFail((int) $validated['license_id']));
+        $newBiosId = trim((string) $validated['new_bios_id']);
+        $reason = trim((string) ($validated['reason'] ?? ''));
 
         $existingPendingRequest = BiosChangeRequest::query()
             ->where('license_id', $license->id)
@@ -60,13 +62,19 @@ class BiosChangeRequestController extends BaseResellerController
             ], 422);
         }
 
+        if (mb_strtolower($newBiosId) === mb_strtolower(trim((string) $license->bios_id))) {
+            return response()->json([
+                'message' => 'This BIOS ID is the same as the current BIOS ID.',
+            ], 422);
+        }
+
         $biosChangeRequest = BiosChangeRequest::query()->create([
             'tenant_id' => $this->currentTenantId($request),
             'license_id' => $license->id,
             'reseller_id' => $this->currentReseller($request)->id,
             'old_bios_id' => (string) $license->bios_id,
-            'new_bios_id' => trim((string) $validated['new_bios_id']),
-            'reason' => trim((string) $validated['reason']),
+            'new_bios_id' => $newBiosId,
+            'reason' => $reason !== '' ? $reason : '',
             'status' => 'pending',
         ]);
 
@@ -81,7 +89,7 @@ class BiosChangeRequestController extends BaseResellerController
             'bios_id' => $license->bios_id,
             'old_bios_id' => $license->bios_id,
             'new_bios_id' => $biosChangeRequest->new_bios_id,
-            'reason' => $biosChangeRequest->reason,
+            'reason' => $biosChangeRequest->reason !== '' ? $biosChangeRequest->reason : null,
         ]);
 
         return response()->json([
@@ -100,7 +108,7 @@ class BiosChangeRequestController extends BaseResellerController
             'program_name' => $biosChangeRequest->license?->program?->name,
             'old_bios_id' => $biosChangeRequest->old_bios_id,
             'new_bios_id' => $biosChangeRequest->new_bios_id,
-            'reason' => $biosChangeRequest->reason,
+            'reason' => $biosChangeRequest->reason !== '' ? $biosChangeRequest->reason : null,
             'status' => $biosChangeRequest->status,
             'reviewer_id' => $biosChangeRequest->reviewer_id,
             'reviewer_name' => $biosChangeRequest->reviewer?->name,

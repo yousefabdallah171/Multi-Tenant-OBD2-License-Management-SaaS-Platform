@@ -5,7 +5,7 @@ export interface TeamListParams {
   page?: number
   per_page?: number
   role?: 'manager' | 'reseller' | ''
-  status?: 'active' | 'suspended' | 'inactive' | ''
+  status?: 'active' | 'inactive' | 'deactive' | ''
   search?: string
 }
 
@@ -14,7 +14,7 @@ export interface TeamPayload {
   email: string
   password?: string
   phone?: string | null
-  role: 'reseller'
+  role: 'manager' | 'reseller'
 }
 
 export const teamService = {

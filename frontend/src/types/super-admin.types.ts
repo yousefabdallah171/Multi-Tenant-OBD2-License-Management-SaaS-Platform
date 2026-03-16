@@ -94,6 +94,7 @@ export interface SuperAdminCustomerSummary {
   paused_at?: string | null
   pause_remaining_minutes?: number | null
   pause_reason?: string | null
+  is_blacklisted?: boolean
   license_count: number
   has_active_license?: boolean
 }
@@ -124,6 +125,7 @@ export interface SuperAdminCustomerDetails extends SuperAdminCustomerSummary {
     paused_at?: string | null
     pause_remaining_minutes?: number | null
     pause_reason?: string | null
+    is_blacklisted?: boolean
   }>
   resellers_summary?: Array<{
     reseller_id: number | null

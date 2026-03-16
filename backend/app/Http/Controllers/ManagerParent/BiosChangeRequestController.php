@@ -25,7 +25,11 @@ class BiosChangeRequestController extends BaseManagerParentController
         $query = $this->query($request);
 
         if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
+            if ($validated['status'] === 'approved') {
+                $query->whereIn('status', ['approved', 'approved_pending_sync']);
+            } else {
+                $query->where('status', $validated['status']);
+            }
         }
 
         if ((bool) ($validated['count_only'] ?? false)) {
@@ -170,7 +174,7 @@ class BiosChangeRequestController extends BaseManagerParentController
             'old_bios_id' => $biosChangeRequest->old_bios_id,
             'new_bios_id' => $biosChangeRequest->new_bios_id,
             'reason' => $biosChangeRequest->reason,
-            'status' => $biosChangeRequest->status,
+            'status' => $biosChangeRequest->status === 'approved_pending_sync' ? 'approved' : $biosChangeRequest->status,
             'reseller_id' => $biosChangeRequest->reseller_id,
             'reseller_name' => $biosChangeRequest->reseller?->name,
             'reseller_email' => $biosChangeRequest->reseller?->email,

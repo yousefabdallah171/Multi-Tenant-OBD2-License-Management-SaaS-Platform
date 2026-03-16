@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
+import { normalizeAccountStatus, type AccountStatusFilter } from '@/lib/account-status'
 import { formatCurrency, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
@@ -60,16 +61,16 @@ export function TeamManagementPage() {
       page?: number
       perPage?: number
       search?: string
-      status?: 'active' | 'suspended' | 'inactive' | ''
+      status?: AccountStatusFilter
     }
   } | null)?.restore
   const [role, setRole] = useState<'manager' | 'reseller' | ''>(() => restoreState?.role ?? '')
   const [page, setPage] = useState(() => restoreState?.page ?? 1)
   const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 10)
   const [search, setSearch] = useState(() => restoreState?.search ?? '')
-  const [status, setStatus] = useState<'active' | 'suspended' | 'inactive' | ''>(() => restoreState?.status ?? '')
+  const [status, setStatus] = useState<AccountStatusFilter>(() => restoreState?.status ?? '')
   const [formOpen, setFormOpen] = useState(false)
-  const [inviteRole, setInviteRole] = useState<'reseller'>('reseller')
+  const [inviteRole, setInviteRole] = useState<'manager' | 'reseller'>('reseller')
   const [deleteTarget, setDeleteTarget] = useState<TeamMemberSummary | null>(null)
   const [editingMember, setEditingMember] = useState<TeamMemberSummary | null>(null)
   const [form, setForm] = useState<TeamFormState>(EMPTY_FORM)
@@ -96,7 +97,9 @@ export function TeamManagementPage() {
   const createMutation = useMutation({
     mutationFn: (payload: TeamPayload) => teamService.create(payload),
     onSuccess: () => {
-      toast.success(t('managerParent.pages.teamManagement.resellerInvited'))
+      toast.success(inviteRole === 'manager'
+        ? t('managerParent.pages.teamManagement.managerInvited')
+        : t('managerParent.pages.teamManagement.resellerInvited'))
       closeForm()
       invalidateTeamQueries()
     },
@@ -137,7 +140,7 @@ export function TeamManagementPage() {
   })
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'suspended' | 'inactive' }) => teamService.updateStatus(id, nextStatus),
+    mutationFn: ({ id, nextStatus }: { id: number; nextStatus: 'active' | 'inactive' }) => teamService.updateStatus(id, nextStatus),
     onSuccess: () => {
       toast.success(t('managerParent.pages.teamManagement.statusUpdated'))
       invalidateTeamQueries()
@@ -218,8 +221,8 @@ export function TeamManagementPage() {
         key: 'status',
         label: t('common.accountStatus'),
         sortable: true,
-        sortValue: (row) => row.status,
-        render: (row) => <StatusBadge status={row.status} />,
+        sortValue: (row) => normalizeAccountStatus(row.status),
+        render: (row) => <StatusBadge status={normalizeAccountStatus(row.status)} />,
       },
       {
         key: 'customers',
@@ -258,7 +261,7 @@ export function TeamManagementPage() {
                 <DropdownMenuItem
                   onClick={() => {
                     setEditingMember(row)
-                    setInviteRole('reseller')
+                    setInviteRole(row.role)
                     setForm({
                       name: row.name,
                       email: row.email,
@@ -276,11 +279,11 @@ export function TeamManagementPage() {
                   onClick={() =>
                     statusMutation.mutate({
                       id: row.id,
-                      nextStatus: row.status === 'active' ? 'suspended' : 'active',
+                      nextStatus: normalizeAccountStatus(row.status) === 'active' ? 'inactive' : 'active',
                     })
                   }
                 >
-                  {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+                  {normalizeAccountStatus(row.status) === 'active' ? t('common.deactive') : t('common.activate')}
                 </DropdownMenuItem>
                 {row.can_delete ? <DropdownMenuItem onClick={() => setDeleteTarget(row)}>{t('common.delete')}</DropdownMenuItem> : null}
                 {row.username_locked ? (
@@ -382,22 +385,20 @@ export function TeamManagementPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-      title={t('managerParent.pages.teamManagement.title')}
-        description={lang === 'ar'
-          ? 'اعرض المدراء الحاليين وأدر حسابات الموزعين ضمن هذا الشريك. لا يمكن إنشاء مدير جديد من هذه الصفحة.'
-          : 'Review existing managers and manage reseller accounts under this tenant. New manager accounts can only be created by super admin.'}
+        title={t('managerParent.pages.teamManagement.title')}
+        description={t('managerParent.pages.teamManagement.description')}
         actions={
           <Button
             type="button"
             onClick={() => {
               setEditingMember(null)
-              setInviteRole('reseller')
+              setInviteRole(role === 'manager' ? 'manager' : 'reseller')
               setForm(EMPTY_FORM)
               setFormOpen(true)
               setShowCreatePassword(false)
             }}
           >
-            {lang === 'ar' ? 'إنشاء موزع' : 'Create reseller'}
+            {t('managerParent.pages.dashboard.actions.inviteTeamMember')}
           </Button>
         }
       />
@@ -429,15 +430,14 @@ export function TeamManagementPage() {
               <select
                 value={status}
                 onChange={(event) => {
-                  setStatus(event.target.value as 'active' | 'suspended' | 'inactive' | '')
+                  setStatus(event.target.value as AccountStatusFilter)
                   setPage(1)
                 }}
                 className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
                 <option value="">{t('common.allStatuses')}</option>
                 <option value="active">{t('common.active')}</option>
-                <option value="suspended">{t('common.suspended')}</option>
-                <option value="inactive">{t('common.inactive')}</option>
+                <option value="deactive">{t('common.deactive')}</option>
               </select>
             </CardContent>
           </Card>
@@ -469,26 +469,27 @@ export function TeamManagementPage() {
             <DialogTitle>
               {editingMember
                 ? t('managerParent.pages.teamManagement.editTitle')
-                : (lang === 'ar' ? 'إنشاء موزع' : 'Create reseller')}
+                : t('managerParent.pages.dashboard.actions.inviteTeamMember')}
             </DialogTitle>
             <DialogDescription>
               {editingMember
                 ? t('managerParent.pages.teamManagement.editDescription')
-                : (lang === 'ar'
-                    ? 'أنشئ حساب موزع جديد ضمن هذا الشريك.'
-                    : 'Create a new reseller account under this tenant.')}
+                : t('managerParent.pages.teamManagement.formDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
             {!editingMember ? (
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="team-role">{t('common.role')}</Label>
-                <Input
+                <select
                   id="team-role"
-                  value={lang === 'ar' ? 'موزع' : 'Reseller'}
-                  readOnly
-                  className="cursor-not-allowed bg-slate-100 dark:bg-slate-900"
-                />
+                  value={inviteRole}
+                  onChange={(event) => setInviteRole(event.target.value as 'manager' | 'reseller')}
+                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                >
+                  <option value="manager">{t('roles.manager')}</option>
+                  <option value="reseller">{t('roles.reseller')}</option>
+                </select>
               </div>
             ) : null}
             <div className="space-y-2">
