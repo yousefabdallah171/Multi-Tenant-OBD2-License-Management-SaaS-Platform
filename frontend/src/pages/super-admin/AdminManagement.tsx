@@ -278,7 +278,11 @@ export function AdminManagementPage() {
         label: t('common.actions'),
         className: 'w-20',
         render: (row) => (
-          <div onClick={(event) => event.stopPropagation()}>
+          <div
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button type="button" size="sm" variant="ghost" aria-label={t('common.actions')}>

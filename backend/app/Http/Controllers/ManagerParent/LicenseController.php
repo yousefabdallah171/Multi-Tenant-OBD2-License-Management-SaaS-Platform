@@ -110,9 +110,9 @@ class LicenseController extends BaseManagerParentController
     {
         $resolved = $this->resolveTenantLicense($request, $license);
 
-        if ($resolved->isEffectivelyActive()) {
+        if (! $this->canDeleteLicense($resolved)) {
             return response()->json([
-                'message' => 'Cannot delete an active license. Deactivate it first.',
+                'message' => 'Only expired or cancelled licenses can be deleted.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
@@ -139,6 +139,11 @@ class LicenseController extends BaseManagerParentController
         return response()->json([
             'message' => 'License deleted successfully.',
         ]);
+    }
+
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
     }
 
     private function resolveTenantLicense(Request $request, License $license): License

@@ -329,6 +329,12 @@ class CustomerController extends BaseSuperAdminController
 
         $licenses = License::query()->where('customer_id', $user->id)->get();
 
+        if ($licenses->contains(fn (License $license): bool => ! $this->canDeleteLicense($license))) {
+            return response()->json([
+                'message' => 'Only customers with expired or cancelled licenses can be deleted.',
+            ], 422);
+        }
+
         foreach ($licenses as $license) {
             $license->delete();
         }
@@ -338,6 +344,11 @@ class CustomerController extends BaseSuperAdminController
         return response()->json([
             'message' => 'Customer deleted successfully.',
         ]);
+    }
+
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
     }
 
     /**

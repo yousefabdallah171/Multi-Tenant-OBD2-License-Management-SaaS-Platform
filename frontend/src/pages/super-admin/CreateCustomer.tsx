@@ -268,7 +268,7 @@ export function CreateCustomerPage() {
     }),
     onSuccess: () => {
       setSubmitError('')
-      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      toast.success(t('common.customerCreatedSuccess', { defaultValue: 'Customer created successfully.' }))
       navigate(routePaths.superAdmin.customers(lang))
     },
     onError: (error: unknown) => {
@@ -276,7 +276,6 @@ export function CreateCustomerPage() {
       const normalized = rawMessage.toLowerCase()
       const message = normalized.includes('blacklisted') ? t('activate.biosBlacklisted') : rawMessage
       setSubmitError(message)
-      toast.error(message)
     },
   })
 
@@ -297,7 +296,11 @@ export function CreateCustomerPage() {
     }),
     onSuccess: () => {
       setSubmitError('')
-      toast.success(t('activate.successTitle', { defaultValue: 'Activated successfully' }))
+      toast.success(
+        scheduleEnabled
+          ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })
+          : t('common.licenseActivatedSuccess', { defaultValue: 'License activated successfully.' }),
+      )
       navigate(routePaths.superAdmin.customers(lang))
     },
     onError: (error: unknown) => {
@@ -305,7 +308,6 @@ export function CreateCustomerPage() {
       const normalized = rawMessage.toLowerCase()
       const message = normalized.includes('blacklisted') ? t('activate.biosBlacklisted') : rawMessage
       setSubmitError(message)
-      toast.error(message)
     },
   })
 

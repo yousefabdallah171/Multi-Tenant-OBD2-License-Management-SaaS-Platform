@@ -322,6 +322,23 @@ export function getLicenseDisplayStatus<T extends SchedulableLicense>(value: T |
   return value.status as 'active' | 'expired' | 'suspended' | 'cancelled' | 'inactive' | 'pending'
 }
 
+export function canDeleteLicense(value: SchedulableLicense | null | undefined) {
+  const displayStatus = getLicenseDisplayStatus(value)
+  return displayStatus === 'cancelled' || displayStatus === 'expired'
+}
+
+export function canDeleteCustomerRow<T extends SchedulableLicense & { license_id?: number | null }>(value: T | null | undefined) {
+  if (!value) {
+    return false
+  }
+
+  if (typeof value.license_id !== 'number') {
+    return true
+  }
+
+  return canDeleteLicense(value)
+}
+
 type ExplainedStatus = 'active' | 'expired' | 'pending' | 'cancelled' | 'scheduled' | 'scheduled_failed' | 'inactive'
 
 export function getStatusMeaning(status: string, t: TFunction) {

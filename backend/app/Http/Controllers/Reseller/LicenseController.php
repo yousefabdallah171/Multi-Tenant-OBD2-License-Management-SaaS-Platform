@@ -153,8 +153,10 @@ class LicenseController extends BaseResellerController
     public function destroy(Request $request, License $license): JsonResponse
     {
         $resolved = $this->resolveLicense($request, $license);
-        if ($resolved->status === 'active') {
-            $this->licenseService->deactivate($resolved);
+        if (! $this->canDeleteLicense($resolved)) {
+            return response()->json([
+                'message' => 'Only expired or cancelled licenses can be deleted.',
+            ], 422);
         }
 
         LicenseCacheInvalidation::invalidateForLicense($resolved);
@@ -278,19 +280,23 @@ class LicenseController extends BaseResellerController
             ->whereIn('id', $validated['ids'])
             ->get();
 
-        $count = $licenses->count();
-        foreach ($licenses as $license) {
-            if ($license->status === 'active') {
-                $this->licenseService->deactivate($license);
-            }
+        $deletableLicenses = $licenses->filter(fn (License $license): bool => $this->canDeleteLicense($license));
+        $count = $deletableLicenses->count();
+
+        foreach ($deletableLicenses as $license) {
             LicenseCacheInvalidation::invalidateForLicense($license);
             $license->delete();
         }
 
         return response()->json([
-            'message' => 'Selected licenses deleted successfully.',
+            'message' => $count > 0 ? 'Selected licenses deleted successfully.' : 'No deletable licenses selected.',
             'count' => $count,
         ]);
+    }
+
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
     }
 
     private function serializeLicense(License $license): array

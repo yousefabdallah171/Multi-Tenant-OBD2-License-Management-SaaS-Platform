@@ -258,7 +258,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }),
     onSuccess: () => {
       setSubmitError('')
-      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      toast.success(t('common.customerCreatedSuccess', { defaultValue: 'Customer created successfully.' }))
       navigate(backPath(lang))
     },
     onError: (error: unknown) => {
@@ -266,7 +266,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       const normalized = rawMessage.toLowerCase()
       const message = normalized.includes('blacklisted') ? t('activate.biosBlacklisted') : rawMessage
       setSubmitError(message)
-      toast.error(message)
     },
   })
 
@@ -287,7 +286,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }),
     onSuccess: () => {
       setSubmitError('')
-      toast.success(t('activate.successTitle', { defaultValue: 'Activated successfully' }))
+      toast.success(
+        scheduleEnabled
+          ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })
+          : t('common.licenseActivatedSuccess', { defaultValue: 'License activated successfully.' }),
+      )
       navigate(backPath(lang))
     },
     onError: (error: unknown) => {
@@ -295,7 +298,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       const normalized = rawMessage.toLowerCase()
       const message = normalized.includes('blacklisted') ? t('activate.biosBlacklisted') : rawMessage
       setSubmitError(message)
-      toast.error(message)
     },
   })
 

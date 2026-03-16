@@ -92,13 +92,17 @@ export function RenewLicensePage({
 
   const renewMutation = useMutation({
     mutationFn: (payload: RenewLicenseData) => licenseService.renew(licenseId, payload),
-    onSuccess: () => {
+    onSuccess: (_data, payload) => {
       if (cachePattern) {
         apiCache.clearPattern(cachePattern)
       }
 
       void queryClient.invalidateQueries({ queryKey: invalidateQueryKey })
-      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      toast.success(
+        payload.is_scheduled
+          ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })
+          : t('common.licenseRenewedSuccess', { defaultValue: 'License renewed successfully.' }),
+      )
       navigate(returnTo, { replace: true })
     },
     onError: (error: unknown) => {

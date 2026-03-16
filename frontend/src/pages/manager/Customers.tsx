@@ -23,7 +23,7 @@ import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
-import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
@@ -175,6 +175,11 @@ export function CustomersPage() {
         scheduled_timezone: activationForm.is_scheduled ? activationForm.scheduled_timezone : undefined,
       }),
     onSuccess: () => {
+      toast.success(
+        activationForm.is_scheduled
+          ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })
+          : t('common.licenseActivatedSuccess', { defaultValue: 'License activated successfully.' }),
+      )
       setActivationOpen(false)
       setActivationStep(0)
       setActivationForm(createEmptyActivationForm(displayTimezone))
@@ -188,7 +193,7 @@ export function CustomersPage() {
     mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
       managerService.updateCustomer(editTarget?.id ?? 0, payload),
     onSuccess: () => {
-      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      toast.success(t('common.customerUpdatedSuccess', { defaultValue: 'Customer updated successfully.' }))
       setEditTarget(null)
       invalidate(queryClient)
     },
@@ -296,7 +301,9 @@ export function CustomersPage() {
   const totalPrice = priceMode === 'auto' ? autoPrice : Number(activationForm.price || 0)
 
   const rows = customersQuery.data?.data ?? []
-  const selectableIds = rows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
+  const selectableIds = rows
+    .filter((row) => typeof row.license_id === 'number' && canDeleteLicense(row))
+    .map((row) => row.license_id as number)
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
   const activationSteps = t('reseller.pages.customers.activationDialog.steps', { returnObjects: true }) as string[]
@@ -322,7 +329,7 @@ export function CustomersPage() {
           }}
         />
       ),
-      render: (row) => typeof row.license_id === 'number' ? (
+      render: (row) => typeof row.license_id === 'number' && canDeleteLicense(row) ? (
         <input
           type="checkbox"
           checked={selectedLicenseIds.includes(row.license_id)}
@@ -405,6 +412,7 @@ export function CustomersPage() {
         const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
         const isPausedPending = isPausedPendingLicense(row)
         const isPlainPending = isPlainPendingLicense(row)
+        const canDeleteRow = canDeleteCustomerRow(row)
         const renewActionLabel = displayStatus === 'active'
           ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
           : isScheduleEditable
@@ -460,10 +468,12 @@ export function CustomersPage() {
                 {isPausedPending ? t('common.continue', { defaultValue: 'Continue' }) : t('common.reactivate')}
               </DropdownMenuItem>
             ) : null}
-            <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
-              <Trash2 className="me-2 h-4 w-4" />
-              {t('common.delete')}
-            </DropdownMenuItem>
+            {canDeleteRow ? (
+              <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
+                <Trash2 className="me-2 h-4 w-4" />
+                {t('common.delete')}
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
         )
@@ -1012,4 +1022,3 @@ function validateActivationStep(
   }
   return ''
 }
-

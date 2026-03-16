@@ -318,11 +318,14 @@ class CustomerController extends BaseResellerController
             ->where('reseller_id', $resellerId)
             ->get();
 
+        if ($licenses->contains(fn (License $license): bool => ! $this->canDeleteLicense($license))) {
+            return response()->json([
+                'message' => 'Only customers with expired or cancelled licenses can be deleted.',
+            ], 422);
+        }
+
         $licensesCount = $licenses->count();
         foreach ($licenses as $license) {
-            if ($license->status === 'active') {
-                $this->licenseService->deactivate($license);
-            }
             $license->delete();
         }
 
@@ -395,6 +398,11 @@ class CustomerController extends BaseResellerController
         $filtered = $licenses->filter(fn (License $license): bool => $this->licenseMatchesDisplayFilters($license, $filters));
 
         return $filtered->first() ?? $licenses->first();
+    }
+
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
     }
 
     /**

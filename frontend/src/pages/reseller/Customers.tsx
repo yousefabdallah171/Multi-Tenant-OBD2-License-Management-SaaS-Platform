@@ -29,7 +29,7 @@ import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
-import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -408,7 +408,7 @@ export function CustomersPage() {
     mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
       resellerService.updateCustomer(editTarget?.id ?? 0, payload),
     onSuccess: () => {
-      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      toast.success(t('common.customerUpdatedSuccess', { defaultValue: 'Customer updated successfully.' }))
       setEditTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] })
     },
@@ -429,9 +429,13 @@ export function CustomersPage() {
         is_scheduled: activationForm.is_scheduled || undefined,
         scheduled_date_time: activationForm.is_scheduled ? buildScheduledDateTime(activationForm) : undefined,
         scheduled_timezone: activationForm.is_scheduled ? activationForm.scheduled_timezone : undefined,
-      }),
+    }),
     onSuccess: () => {
-      toast.success(text.toasts.activated)
+      toast.success(
+        activationForm.is_scheduled
+          ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })
+          : t('common.licenseActivatedSuccess', { defaultValue: 'License activated successfully.' }),
+      )
       resetActivationDialog()
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
@@ -442,7 +446,6 @@ export function CustomersPage() {
     onError: (error) => {
       const message = getApiErrorMessage(error, text.validation.requestFailed)
       setActivationError(message)
-      toast.error(message)
     },
   })
 
@@ -558,7 +561,9 @@ export function CustomersPage() {
   })
 
   const customerRows = customersQuery.data?.data ?? []
-  const selectableIds = customerRows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
+  const selectableIds = customerRows
+    .filter((row) => typeof row.license_id === 'number' && canDeleteLicense(row))
+    .map((row) => row.license_id as number)
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
 
@@ -584,9 +589,9 @@ export function CustomersPage() {
             }}
           />
         ),
-        render: (row) => typeof row.license_id === 'number' ? (
-          <input
-            type="checkbox"
+      render: (row) => typeof row.license_id === 'number' && canDeleteLicense(row) ? (
+        <input
+          type="checkbox"
           checked={selectedLicenseIds.includes(row.license_id)}
           onChange={(event) => {
             if (event.target.checked) {
@@ -673,14 +678,15 @@ export function CustomersPage() {
       {
         key: 'actions',
         label: text.table.actions,
-        render: (row) => {
-          const displayStatus = getLicenseDisplayStatus(row)
-          const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
-          const isPausedPending = isPausedPendingLicense(row)
-          const isPlainPending = isPlainPendingLicense(row)
-          const renewActionLabel = displayStatus === 'active'
-            ? text.actions.renew
-            : isScheduleEditable
+      render: (row) => {
+        const displayStatus = getLicenseDisplayStatus(row)
+        const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+        const isPausedPending = isPausedPendingLicense(row)
+        const isPlainPending = isPlainPendingLicense(row)
+        const canDeleteRow = canDeleteCustomerRow(row)
+        const renewActionLabel = displayStatus === 'active'
+          ? text.actions.renew
+          : isScheduleEditable
               ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
               : isPlainPending
                 ? t('common.activate', { defaultValue: 'Activate' })
@@ -776,17 +782,19 @@ export function CustomersPage() {
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setDeleteTarget(row)
-                  }}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  {t('common.delete')}
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {canDeleteRow ? (
+                  <DropdownMenuItem
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setDeleteTarget(row)
+                    }}
+                  >
+                    <Trash2 className="me-2 h-4 w-4" />
+                    {t('common.delete')}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )
         },
       },

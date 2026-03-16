@@ -402,14 +402,17 @@ class CustomerController extends BaseManagerParentController
             ->where('customer_id', $customer->id)
             ->get();
 
+        if ($licenses->contains(fn (License $license): bool => ! $this->canDeleteLicense($license))) {
+            return response()->json([
+                'message' => 'Only customers with expired or cancelled licenses can be deleted.',
+            ], 422);
+        }
+
         $customerName = $customer->name;
         $customerId = $customer->id;
         $licensesCount = $licenses->count();
 
         foreach ($licenses as $license) {
-            if ($license->status === 'active') {
-                $this->licenseService->deactivate($license);
-            }
             $license->delete();
         }
 
@@ -428,6 +431,11 @@ class CustomerController extends BaseManagerParentController
         return response()->json([
             'message' => 'Customer deleted successfully.',
         ]);
+    }
+
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
     }
 
     private function createPendingLicense(Request $request, User $customer, string $biosId, int $programId, User $seller): void

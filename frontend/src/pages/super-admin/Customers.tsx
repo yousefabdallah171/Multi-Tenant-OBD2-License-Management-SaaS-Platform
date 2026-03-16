@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
-import { canReactivateLicense, canRetryScheduledLicense, formatDate, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canDeleteCustomerRow, canReactivateLicense, canRetryScheduledLicense, formatDate, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -151,7 +151,7 @@ export function CustomersPage() {
     mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
       superAdminCustomerService.update(editTarget?.id ?? 0, payload),
     onSuccess: () => {
-      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      toast.success(t('common.customerUpdatedSuccess', { defaultValue: 'Customer updated successfully.' }))
       setEditTarget(null)
       invalidate(queryClient)
     },
@@ -270,12 +270,13 @@ export function CustomersPage() {
       {
         key: 'actions',
         label: t('common.actions'),
-        render: (row) => {
-          const displayStatus = row.status ? getLicenseDisplayStatus(row) : null
-          const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
-          const isPausedPending = isPausedPendingLicense(row)
-          const isPlainPending = isPlainPendingLicense(row)
-          const renewActionLabel = displayStatus === 'active'
+      render: (row) => {
+        const displayStatus = row.status ? getLicenseDisplayStatus(row) : null
+        const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+        const isPausedPending = isPausedPendingLicense(row)
+        const isPlainPending = isPlainPendingLicense(row)
+        const canDeleteRow = canDeleteCustomerRow(row)
+        const renewActionLabel = displayStatus === 'active'
             ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
             : isScheduleEditable
               ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
@@ -327,10 +328,12 @@ export function CustomersPage() {
                     {t('common.retry')}
                   </DropdownMenuItem>
                 ) : null}
-                <DropdownMenuItem onSelect={() => setDeleteTarget(row)}>
-                  <Trash2 className="me-2 h-4 w-4" />
-                  {t('common.delete')}
-                </DropdownMenuItem>
+                {canDeleteRow ? (
+                  <DropdownMenuItem onSelect={() => setDeleteTarget(row)}>
+                    <Trash2 className="me-2 h-4 w-4" />
+                    {t('common.delete')}
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
