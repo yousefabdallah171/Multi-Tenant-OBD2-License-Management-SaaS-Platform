@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -109,6 +110,9 @@ export function BiosDetailsPage() {
             <Card>
               <CardHeader><CardTitle>{t('biosDetails.overview')}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
+                {!overviewQuery.isLoading && !overviewQuery.data ? (
+                  <EmptyState title={t('common.noData')} description={t('biosDetails.description')} />
+                ) : null}
                 <SectionCard title={t('biosDetails.overviewSections.biosInfo')}>
                   <InfoGrid items={[
                     [t('biosDetails.originalBios'), overviewQuery.data?.original_bios_id || '-'],

@@ -1705,6 +1705,8 @@
       "lastActivity": "آخر نشاط",
       "programsSold": "البرامج المباعة"
     },
+    "saleSummarySentence": "باع {{reseller}} برنامج {{program}} إلى {{customer}}",
+    "saleSummaryMeta": "{{days}} يوم | {{price}} | {{activatedAt}}",
     "activityTypes": {
       "activate": "تفعيل",
       "renew": "تجديد",
