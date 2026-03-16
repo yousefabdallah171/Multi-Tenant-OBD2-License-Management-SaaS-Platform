@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { UTC_ONLY_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { normalizeStrictPhoneInput } from '@/lib/phone'
@@ -427,7 +427,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                       <Input type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} />
                     )}
                     <select value={scheduleTimezone} onChange={(event) => setScheduleTimezone(event.target.value)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                      {UTC_ONLY_TIMEZONES.map((timezone) => (
+                      {COMMON_TIMEZONES.map((timezone) => (
                         <option key={timezone.value} value={timezone.value}>{timezone.label}</option>
                       ))}
                     </select>

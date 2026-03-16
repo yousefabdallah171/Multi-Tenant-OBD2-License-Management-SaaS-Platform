@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
-import { COMMON_TIMEZONES, UTC_ONLY_TIMEZONES, persistServerTimezone } from '@/lib/timezones'
+import { COMMON_TIMEZONES, persistServerTimezone } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 import { settingsService } from '@/services/settings.service'
 import type { SystemSettings } from '@/types/super-admin.types'
@@ -19,13 +20,14 @@ export function SettingsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { user, setAuthenticatedUser } = useAuth()
+  const { browserTimezone, serverTimezone } = useResolvedTimezone()
   const [showApiKey, setShowApiKey] = useState(false)
   const [draft, setDraft] = useState<SystemSettings | null>(null)
   const [profileForm, setProfileForm] = useState({
     name: user?.name ?? '',
     email: user?.email ?? '',
     phone: user?.phone ?? '',
-    timezone: 'UTC',
+    timezone: user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
   })
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
@@ -75,7 +77,7 @@ export function SettingsPage() {
         name: data.user.name ?? '',
         email: data.user.email ?? '',
         phone: data.user.phone ?? '',
-        timezone: data.user.timezone ?? 'UTC',
+        timezone: data.user.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
       })
       toast.success(t('superAdmin.pages.profile.profileSaved'))
     },
@@ -97,9 +99,9 @@ export function SettingsPage() {
       name: user?.name ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
-      timezone: 'UTC',
+      timezone: user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
     }),
-    [user?.email, user?.name, user?.phone],
+    [browserTimezone, serverTimezone, user?.email, user?.name, user?.phone, user?.timezone],
   )
 
   useEffect(() => {
@@ -291,7 +293,7 @@ export function SettingsPage() {
                     onChange={(event) => setProfileForm((current) => ({ ...current, timezone: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                   >
-                    {UTC_ONLY_TIMEZONES.map((item) => (
+                    {COMMON_TIMEZONES.map((item) => (
                       <option key={item.value} value={item.value}>
                         {item.label}
                       </option>

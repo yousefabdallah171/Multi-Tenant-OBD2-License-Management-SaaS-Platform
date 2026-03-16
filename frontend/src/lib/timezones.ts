@@ -141,25 +141,35 @@ function getSupportedTimezones() {
   return unique(['UTC', ...dynamic, ...FALLBACK_TIMEZONES]).filter((value) => isValidIanaTimezone(value))
 }
 
-function formatTimezoneLabel(value: string) {
-  if (value === 'UTC') {
-    return 'UTC'
+function formatUtcOffset(value: string) {
+  const now = new Date()
+  const utcParts = getZonedDateParts(now, 'UTC')
+  const targetParts = getZonedDateParts(now, value)
+
+  if (!utcParts || !targetParts) {
+    return 'UTC+00:00'
   }
 
-  return value.replace(/_/g, ' ')
+  const diffMinutes = toMinuteStamp(targetParts) - toMinuteStamp(utcParts)
+  const sign = diffMinutes >= 0 ? '+' : '-'
+  const absoluteMinutes = Math.abs(diffMinutes)
+  const hours = String(Math.floor(absoluteMinutes / 60)).padStart(2, '0')
+  const minutes = String(absoluteMinutes % 60).padStart(2, '0')
+
+  return `UTC${sign}${hours}:${minutes}`
 }
 
-export const COMMON_TIMEZONES: TimezoneOption[] = getSupportedTimezones().map((value) => ({
-  value,
-  label: formatTimezoneLabel(value),
-}))
-
-export const UTC_TIMEZONE_OPTION: TimezoneOption = {
-  value: 'UTC',
-  label: 'UTC',
+function formatTimezoneLabel(value: string) {
+  const regionLabel = value === 'UTC' ? 'UTC' : value.replace(/_/g, ' ')
+  return `${formatUtcOffset(value)} - ${regionLabel}`
 }
 
-export const UTC_ONLY_TIMEZONES: TimezoneOption[] = [UTC_TIMEZONE_OPTION]
+export const COMMON_TIMEZONES: TimezoneOption[] = getSupportedTimezones()
+  .map((value) => ({
+    value,
+    label: formatTimezoneLabel(value),
+  }))
+  .sort((left, right) => left.label.localeCompare(right.label))
 
 export function readBrowserTimezone(): string | null {
   if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
