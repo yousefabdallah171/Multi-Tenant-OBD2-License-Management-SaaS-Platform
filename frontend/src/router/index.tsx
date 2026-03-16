@@ -154,7 +154,7 @@ export function AppRouter() {
                   <Route path="api-status" element={<ApiStatusPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<SuperAdminProfilePage />} />
-                  <Route path="*" element={<Navigate to="dashboard" replace />} />
+                  <Route path="*" element={<Navigate to="../dashboard" replace relative="path" />} />
                 </Route>
               </Route>
               <Route element={<RoleGuard allowedRoles={['manager_parent']} />}>
@@ -239,7 +239,7 @@ export function AppRouter() {
                   <Route path="payment-status" element={<ResellerPaymentStatusPage />} />
                   <Route path="reports" element={<ResellerReportsPage />} />
                   <Route path="profile" element={<ResellerProfilePage />} />
-                  <Route path="*" element={<Navigate to="dashboard" replace />} />
+                  <Route path="*" element={<Navigate to="../dashboard" replace relative="path" />} />
                 </Route>
               </Route>
               <Route element={<RoleGuard allowedRoles={['customer']} />}>
@@ -248,7 +248,7 @@ export function AppRouter() {
                   <Route path="dashboard" element={<CustomerDashboardPage />} />
                   <Route path="software" element={<CustomerSoftwarePage />} />
                   <Route path="download" element={<CustomerDownloadPage />} />
-                  <Route path="*" element={<Navigate to="dashboard" replace />} />
+                  <Route path="*" element={<Navigate to="../dashboard" replace relative="path" />} />
                 </Route>
               </Route>
             </Route>
