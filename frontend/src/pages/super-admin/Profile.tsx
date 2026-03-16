@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
-import { COMMON_TIMEZONES } from '@/lib/timezones'
+import { COMMON_TIMEZONES, normalizeTimezoneOptionValue } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 
 export function ProfilePage() {
@@ -23,7 +23,7 @@ export function ProfilePage() {
       name: user?.name ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
-      timezone: user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
+      timezone: normalizeTimezoneOptionValue(user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC'),
     }),
     [browserTimezone, serverTimezone, user?.email, user?.name, user?.phone, user?.timezone],
   )
@@ -57,7 +57,7 @@ export function ProfilePage() {
         name: data.user.name ?? '',
         email: data.user.email ?? '',
         phone: data.user.phone ?? '',
-        timezone: data.user.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
+        timezone: normalizeTimezoneOptionValue(data.user.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC'),
       })
       setIsProfileDirty(false)
       toast.success(t('superAdmin.pages.profile.profileSaved'))

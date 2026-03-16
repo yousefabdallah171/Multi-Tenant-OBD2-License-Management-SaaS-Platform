@@ -12,7 +12,7 @@ import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { useAuth } from '@/hooks/useAuth'
 import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
-import { COMMON_TIMEZONES } from '@/lib/timezones'
+import { COMMON_TIMEZONES, normalizeTimezoneOptionValue } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 
 interface ProfileWorkspaceProps {
@@ -30,7 +30,7 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
       name: user?.name ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
-      timezone: user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
+      timezone: normalizeTimezoneOptionValue(user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC'),
       branding: {
         primary_color: user?.branding?.primary_color ?? '#0284c7',
       },
@@ -67,7 +67,7 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
         name: data.user.name ?? '',
         email: data.user.email ?? '',
         phone: data.user.phone ?? '',
-        timezone: data.user.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
+        timezone: normalizeTimezoneOptionValue(data.user.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC'),
         branding: {
           primary_color: data.user.branding?.primary_color ?? '#0284c7',
         },

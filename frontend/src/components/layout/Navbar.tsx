@@ -8,6 +8,7 @@ import { useBranding } from '@/hooks/useBranding'
 import { useLanguage } from '@/hooks/useLanguage'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
+import { formatTimezoneLabel } from '@/lib/timezones'
 import { useTheme } from '@/hooks/useTheme'
 import { useSidebarStore } from '@/stores/sidebarStore'
 
@@ -70,7 +71,7 @@ export function Navbar() {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="truncate text-sm font-semibold text-slate-950 dark:text-white">{title}</h1>
                 <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-700 dark:text-slate-300">
-                  {t('common.timezone', { defaultValue: 'Timezone' })}: {activeTimezone}
+                  {t('common.timezone', { defaultValue: 'Timezone' })}: {formatTimezoneLabel(activeTimezone)}
                 </span>
               </div>
             </div>

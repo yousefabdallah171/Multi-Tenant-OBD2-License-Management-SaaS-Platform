@@ -159,17 +159,96 @@ function formatUtcOffset(value: string) {
   return `UTC${sign}${hours}:${minutes}`
 }
 
-function formatTimezoneLabel(value: string) {
-  const regionLabel = value === 'UTC' ? 'UTC' : value.replace(/_/g, ' ')
-  return `${formatUtcOffset(value)} - ${regionLabel}`
+const PREFERRED_TIMEZONE_BY_OFFSET: Record<string, string> = {
+  'UTC-12:00': 'Etc/GMT+12',
+  'UTC-11:00': 'Pacific/Pago_Pago',
+  'UTC-10:00': 'Pacific/Honolulu',
+  'UTC-09:30': 'Pacific/Marquesas',
+  'UTC-09:00': 'Pacific/Gambier',
+  'UTC-08:00': 'Pacific/Pitcairn',
+  'UTC-07:00': 'America/Phoenix',
+  'UTC-06:00': 'America/Belize',
+  'UTC-05:00': 'America/Bogota',
+  'UTC-04:00': 'America/La_Paz',
+  'UTC-03:00': 'America/Argentina/Buenos_Aires',
+  'UTC-02:30': 'America/St_Johns',
+  'UTC-02:00': 'Atlantic/South_Georgia',
+  'UTC-01:00': 'Atlantic/Cape_Verde',
+  'UTC+00:00': 'UTC',
+  'UTC+01:00': 'Africa/Lagos',
+  'UTC+02:00': 'Africa/Johannesburg',
+  'UTC+03:00': 'Asia/Riyadh',
+  'UTC+03:30': 'Asia/Tehran',
+  'UTC+04:00': 'Asia/Dubai',
+  'UTC+04:30': 'Asia/Kabul',
+  'UTC+05:00': 'Asia/Karachi',
+  'UTC+05:30': 'Asia/Kolkata',
+  'UTC+05:45': 'Asia/Katmandu',
+  'UTC+06:00': 'Asia/Dhaka',
+  'UTC+06:30': 'Asia/Rangoon',
+  'UTC+07:00': 'Asia/Bangkok',
+  'UTC+08:00': 'Asia/Singapore',
+  'UTC+08:45': 'Australia/Eucla',
+  'UTC+09:00': 'Asia/Tokyo',
+  'UTC+09:30': 'Australia/Darwin',
+  'UTC+10:00': 'Australia/Brisbane',
+  'UTC+10:30': 'Australia/Adelaide',
+  'UTC+11:00': 'Pacific/Noumea',
+  'UTC+12:00': 'Pacific/Tarawa',
+  'UTC+13:00': 'Pacific/Tongatapu',
+  'UTC+13:45': 'Pacific/Chatham',
+  'UTC+14:00': 'Pacific/Kiritimati',
 }
 
-export const COMMON_TIMEZONES: TimezoneOption[] = getSupportedTimezones()
-  .map((value) => ({
-    value,
-    label: formatTimezoneLabel(value),
-  }))
-  .sort((left, right) => left.label.localeCompare(right.label))
+function parseUtcOffsetLabel(label: string) {
+  const match = label.match(/^UTC([+-])(\d{2}):(\d{2})$/)
+  if (!match) {
+    return 0
+  }
+
+  const sign = match[1] === '+' ? 1 : -1
+  return sign * (Number(match[2]) * 60 + Number(match[3]))
+}
+
+export function formatTimezoneLabel(value: string | null | undefined) {
+  return isValidIanaTimezone(value) ? formatUtcOffset(value) : 'UTC'
+}
+
+export function normalizeTimezoneOptionValue(value: string | null | undefined) {
+  if (!isValidIanaTimezone(value)) {
+    return 'UTC'
+  }
+
+  const offsetLabel = formatUtcOffset(value)
+  const preferred = PREFERRED_TIMEZONE_BY_OFFSET[offsetLabel]
+
+  if (preferred && isValidIanaTimezone(preferred)) {
+    return preferred
+  }
+
+  return value
+}
+
+const groupedTimezones = new Map<string, string[]>()
+
+for (const value of getSupportedTimezones()) {
+  const offsetLabel = formatUtcOffset(value)
+  const current = groupedTimezones.get(offsetLabel) ?? []
+  current.push(value)
+  groupedTimezones.set(offsetLabel, current)
+}
+
+export const COMMON_TIMEZONES: TimezoneOption[] = [...groupedTimezones.entries()]
+  .map(([offsetLabel, values]) => {
+    const preferred = PREFERRED_TIMEZONE_BY_OFFSET[offsetLabel]
+    const selected = preferred && values.includes(preferred) ? preferred : values.sort()[0]
+
+    return {
+      value: selected,
+      label: offsetLabel,
+    }
+  })
+  .sort((left, right) => parseUtcOffsetLabel(left.label) - parseUtcOffsetLabel(right.label))
 
 export function readBrowserTimezone(): string | null {
   if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {

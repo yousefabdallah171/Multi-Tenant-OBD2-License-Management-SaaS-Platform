@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
-import { COMMON_TIMEZONES, persistServerTimezone } from '@/lib/timezones'
+import { COMMON_TIMEZONES, normalizeTimezoneOptionValue, persistServerTimezone } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 import { settingsService } from '@/services/settings.service'
 import type { SystemSettings } from '@/types/super-admin.types'
@@ -27,7 +27,7 @@ export function SettingsPage() {
     name: user?.name ?? '',
     email: user?.email ?? '',
     phone: user?.phone ?? '',
-    timezone: user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
+    timezone: normalizeTimezoneOptionValue(user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC'),
   })
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
@@ -55,7 +55,20 @@ export function SettingsPage() {
     queryFn: () => settingsService.get(),
   })
 
-  const form = draft ?? settingsQuery.data?.data ?? null
+  const form = useMemo(() => {
+    const current = draft ?? settingsQuery.data?.data
+    if (!current) {
+      return null
+    }
+
+    return {
+      ...current,
+      general: {
+        ...current.general,
+        server_timezone: normalizeTimezoneOptionValue(current.general.server_timezone),
+      },
+    }
+  }, [draft, settingsQuery.data])
 
   const saveMutation = useMutation({
     mutationFn: () => settingsService.update(form as SystemSettings),
@@ -77,7 +90,7 @@ export function SettingsPage() {
         name: data.user.name ?? '',
         email: data.user.email ?? '',
         phone: data.user.phone ?? '',
-        timezone: data.user.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
+        timezone: normalizeTimezoneOptionValue(data.user.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC'),
       })
       toast.success(t('superAdmin.pages.profile.profileSaved'))
     },
@@ -99,7 +112,7 @@ export function SettingsPage() {
       name: user?.name ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
-      timezone: user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC',
+      timezone: normalizeTimezoneOptionValue(user?.timezone ?? browserTimezone ?? serverTimezone ?? 'UTC'),
     }),
     [browserTimezone, serverTimezone, user?.email, user?.name, user?.phone, user?.timezone],
   )
