@@ -14,6 +14,7 @@ import { apiCache } from '@/lib/apiCache'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { getLicenseDisplayStatus, isPausedPendingLicense, isPlainPendingLicense } from '@/lib/utils'
 import { licenseService } from '@/services/license.service'
+import { resellerService } from '@/services/reseller.service'
 import type { RenewLicenseData } from '@/types/manager-reseller.types'
 
 interface RenewLicensePageProps {
@@ -22,6 +23,7 @@ interface RenewLicensePageProps {
   eyebrow: string
   cachePattern?: RegExp
   activeLicenseTitle?: string
+  presetOnly?: boolean
 }
 
 export function RenewLicensePage({
@@ -30,6 +32,7 @@ export function RenewLicensePage({
   eyebrow,
   cachePattern,
   activeLicenseTitle,
+  presetOnly = false,
 }: RenewLicensePageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
@@ -53,6 +56,20 @@ export function RenewLicensePage({
   })
 
   const license = licenseQuery.data?.data
+  const resellerProgramsQuery = useQuery({
+    queryKey: ['reseller', 'software', 'renew-presets', license?.program_id],
+    queryFn: () => resellerService.getSoftware(),
+    enabled: presetOnly && Boolean(license?.program_id),
+    staleTime: 60_000,
+  })
+  const resellerPresetOptions = useMemo(() => {
+    if (!presetOnly || !license?.program_id) {
+      return []
+    }
+
+    const program = resellerProgramsQuery.data?.data.find((item) => item.id === license.program_id)
+    return program?.duration_presets ?? []
+  }, [license?.program_id, presetOnly, resellerProgramsQuery.data?.data])
   const displayStatus = license ? getLicenseDisplayStatus(license) : null
   const title = displayStatus === 'active'
     ? (activeLicenseTitle ?? t('common.increaseDuration', { defaultValue: 'Increase Duration' }))
@@ -117,10 +134,15 @@ export function RenewLicensePage({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {licenseQuery.isLoading ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.loading')}</p> : null}
+          {licenseQuery.isLoading || (presetOnly && resellerProgramsQuery.isLoading) ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.loading')}</p> : null}
           {!licenseQuery.isLoading && licenseQuery.isError ? (
             <p className="text-sm text-rose-600 dark:text-rose-400">
               {resolveApiErrorMessage(licenseQuery.error, t('common.noData'))}
+            </p>
+          ) : null}
+          {presetOnly && !resellerProgramsQuery.isLoading && resellerProgramsQuery.isError ? (
+            <p className="text-sm text-rose-600 dark:text-rose-400">
+              {resolveApiErrorMessage(resellerProgramsQuery.error, t('common.noData'))}
             </p>
           ) : null}
           {!licenseQuery.isLoading && !license ? (
@@ -141,6 +163,8 @@ export function RenewLicensePage({
               initialScheduledTimezone={license.scheduled_timezone}
               initialExpiresAt={license.expires_at}
               resetKey={license.id}
+              presetOnly={presetOnly}
+              presetOptions={resellerPresetOptions}
             />
           ) : null}
         </CardContent>
