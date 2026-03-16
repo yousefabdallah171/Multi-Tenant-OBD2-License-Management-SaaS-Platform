@@ -389,7 +389,7 @@ class TenantResetController extends BaseSuperAdminController
                 Log::info('tenant-backup table start', ['tenant_id' => $tenantId, 'table' => $key]);
 
                 if ($query !== null) {
-                    foreach ($query->orderBy($spec['order'])->cursor() as $row) {
+                    foreach ($this->streamBackupRows($query, $spec['order']) as $row) {
                         if (! $firstRow) {
                             fwrite($handle, ',');
                         }
@@ -460,6 +460,19 @@ class TenantResetController extends BaseSuperAdminController
         ]);
 
         return $envelope;
+    }
+
+    /**
+     * Stream backup rows without explicit ordering.
+     *
+     * Tenant reset/restore only requires a complete payload, not deterministic row
+     * order. Explicit `ORDER BY` clauses were triggering MySQL sort-buffer failures
+     * on larger tenant tables such as `api_logs`, so backups intentionally stream
+     * rows in natural database order instead.
+     */
+    private function streamBackupRows(\Illuminate\Database\Query\Builder $query, string $orderColumn): iterable
+    {
+        yield from $query->cursor();
     }
 
     /**

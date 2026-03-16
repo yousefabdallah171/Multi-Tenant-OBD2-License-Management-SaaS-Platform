@@ -20,7 +20,7 @@ class AdminManagementController extends BaseSuperAdminController
         $validated = $request->validate([
             'role' => ['nullable', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'status' => ['nullable', 'in:active,suspended,inactive'],
+            'status' => ['nullable', 'in:active,suspended,deactive'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -305,7 +305,7 @@ class AdminManagementController extends BaseSuperAdminController
             abort(response()->json(['message' => $message], Response::HTTP_UNPROCESSABLE_ENTITY));
         }
 
-        $willDeactivate = $isDelete || in_array($nextStatus, ['suspended', 'inactive'], true);
+        $willDeactivate = $isDelete || in_array($nextStatus, ['suspended', 'deactive'], true);
         if (! $willDeactivate) {
             return;
         }

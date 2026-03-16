@@ -1227,8 +1227,17 @@ Phase 7 — Production Deploy (this plan, Parts 7-8)
 
 | # | Plan | Sprint | Issue | Severity | Status | Fix |
 |---|------|--------|-------|----------|--------|-----|
-| 1 | | | | | Open | |
-| 2 | | | | | Open | |
+| 1 | Master | Session 1 / SC-1 | Shared DataTable third click does not clear sort state; sort toggles asc/desc but never returns to unsorted state on the super-admin tenants table. | High | Open | Inspect shared table sort-state cycle and clear-on-third-click behavior. |
+| 2 | Master | Session 1 / SC-1 | Shared DataTable empty-state fallback was previously broken on the super-admin tenants table; current regression retest now renders `EmptyState` correctly on 0-result filtering. | High | Verified fixed | Keep the tenants-table 0-result filter in the post-deploy regression pack to ensure the shared table stays on the `EmptyState` branch. |
+| 3 | Master | Session 1 / SC-2 | Shared status translation leaked raw key `common.inactive` on the super-admin tenants page. | Medium | Fixed locally | Added shared inactive status translation coverage in `StatusBadge`, shared status meanings, and `en`/`ar` locale keys. |
+| 4 | Master | Session 1 / SP-1 to SP-5 | Shared page coverage is partially complete: activate, renew, customer create, and reseller payments were validated on live routes, but deeper mutation/invalidation checks still remain for later master sessions. | Low | Open | Continue Session 1 follow-up pass after the first documentation checkpoint. |
+| 5 | Master | Session 2 / MW-5 | `ApiLogger` was only applied to external proxy routes, so general API calls and login requests were missing from the Logs pages. | High | Fixed locally | Applied `api.logger` to `POST /api/auth/login` and the main authenticated API group, and added sensitive-field redaction in the middleware. |
+| 6 | Master | Session 2 / CRI-1 | Inactive programs remained visible to manager and reseller catalogs through the shared `/api/programs` endpoint. | High | Fixed locally | Restricted manager/reseller program listing and direct program reads to `status=active` in the shared program controller. |
+| 7 | Master | Session 3 / SEC-1 | Unauthenticated API requests could explode into `Route [login] not defined` instead of returning a clean `401`, because the framework guest redirect still assumed a web login route. | High | Fixed locally | Added API-aware guest redirect handling and forced JSON exception rendering for `/api/*` in `bootstrap/app.php`. |
+| 8 | Master | Session 3 / PERF-2 | Manager dashboard API is borderline against the `< 500ms` target on uncached hits; sampled responses ranged from `451.89ms` to `578.32ms` with a `~499ms` average. | Medium | Open | Review aggregate queries and cache warm-up in `Manager\DashboardController`; customers API is comfortably within budget. |
+| 9 | Master | Session 5 / ACT-6 | Activation with URL-unsafe BIOS values containing `/` and `:` is not safe end to end; the external activation path surfaced an external `404 Not Found` response instead of a supported activation or controlled local validation error. | High | Open | Audit the activation contract for BIOS values with reserved characters and verify the upstream external endpoint/username-path handling remains safe for encoded BIOS identifiers. |
+| 10 | Master | Session 5 / ACT-7 | `program_id=99999` on `POST /api/licenses/activate` returns a model `404`/exception response instead of a clean validation-style `422`, and in local debug mode it exposes a full stack trace. | Medium | Open | Replace `findOrFail()` on activation program lookup with a tenant/role-aware validated lookup that returns a clean business validation error. |
+| 11 | Master | Session 5 / ACT-4 | Scheduled activations currently persist with `status=pending`; the written activation API plan still expects `status=scheduled`. | Low | Open | Decide whether to normalize the implementation to `scheduled` or update the written master plan to the actual lifecycle wording. |
 
 **Severity:**
 - 🔴 Critical — security breach, data loss, system outage
@@ -1799,3 +1808,407 @@ STEP 6: Verify program stats updated
   - live refresh
 - Open reseller findings were written back into the reseller plan issue tracker.
 - Most remaining reseller issues are navigation/UX/documentation mismatches, not core flow blockers.
+
+## Latest Master Session Status
+
+### Overall Readiness Verdict
+
+- Current status: **Not production-ready yet**
+- Reason:
+  - open `High` master issues still exist in shared components:
+    - `SC-1` DataTable third-click sort reset is still open
+  - master-plan execution is still incomplete:
+    - Session 1 follow-up shared-page mutation checks remain open
+    - Session 2 still has pending middleware / cross-role items
+    - Session 3 still has performance follow-up items
+    - Session 4 still has deployment-only verification items that require the real production host
+  - current local environment is not production-shaped:
+    - `APP_ENV=local`
+    - `APP_DEBUG=true`
+
+### Coverage Snapshot
+
+- Role-plan execution status:
+  - Reseller: completed through Sprint `15`
+  - Manager: completed through Sprint `23`
+  - Manager-Parent: completed through Sprint `25`
+  - Super-Admin: completed through Sprint `24`
+- Master-plan execution status:
+  - Session 1 / Parts `1–2`: partially complete
+  - Session 2 / Parts `3–4`: partially complete
+  - Session 3 / Parts `5–6`: complete for the first pass, with documented follow-up
+
+  - Session 4 / Parts `7-8`: complete for local pre-production validation, with deployment-only checks still pending on the real server
+
+### Go / No-Go Summary
+
+- `No-Go` for production if the release standard is:
+  - all `High` master issues closed
+  - master sessions fully completed
+  - production environment checklist confirmed on the real deployment target
+- `Conditional Go` only if:
+  - the remaining shared DataTable sort-cycle issue is accepted as non-blocking for this release
+  - the remaining master follow-up items are intentionally deferred
+  - production environment values are verified on the actual server:
+    - `APP_ENV=production`
+    - `APP_DEBUG=false`
+    - correct production domains / session / Sanctum settings
+    - migrations run successfully
+    - post-deploy smoke test completed
+
+### Session 1 - Parts 1 to 2
+
+- Date: 2026-03-15
+- Scope started:
+  - Shared components
+  - Shared pages (activation, renewal, customer create, reseller payments)
+
+### What was verified
+
+- Shared DataTable sticky header is working on the super-admin tenants table.
+- Shared DataTable rows-per-page selector is working on the super-admin tenants table.
+- Shared status badges render the expected active, scheduled, cancelled, and pending variants on customer tables.
+- Super-admin shared create-customer page is working with the role-unique tenant selector.
+- Super-admin reseller selector on create-customer now behaves as a dependent field:
+  - disabled before tenant selection
+  - loads reseller options after tenant selection
+  - correctly exposed `Ahmed Reseller (Reseller)` for `OBD2SW Main`
+- Shared reseller-payments list/detail pages are working on both manager-parent and manager routes:
+  - manager-parent: `/en/reseller-payments` and `/en/reseller-payments/:resellerId`
+  - manager: `/en/manager/reseller-payments` and `/en/manager/reseller-payments/:resellerId`
+- Shared renew page is reachable and renders role-correct shells on:
+  - manager-parent `/en/customers/licenses/26/renew`
+  - manager `/en/manager/customers/licenses/29/renew`
+  - reseller `/en/reseller/customers/licenses/26/renew`
+- Shared activate page is reachable and renders role-correct shells on:
+  - manager-parent `/en/software-management/1/activate`
+  - manager `/en/manager/software/1/activate`
+  - reseller `/en/reseller/software/1/activate`
+
+### Confirmed Session 1 findings so far
+
+- Shared DataTable sort clear is broken:
+  - third click on sortable headers does not return to an unsorted state
+- Shared DataTable empty-state rendering no longer reproduces:
+  - 0-result filtering on the super-admin tenants table now renders `EmptyState` correctly instead of blank rows
+- Shared status translation leak for `common.inactive` was fixed locally during this pass and no longer reproduces on the super-admin tenants page
+- Super-admin tenant-comparison labels were previously unreadable; the current local frontend change truncates them cleanly, but this still needs final retest after the next push
+
+### Session 1 still pending
+
+- ConfirmDialog deep pass:
+  - overlay close
+  - Escape close
+  - destructive styling
+  - loading-state verification
+- StatsCard slow-loading/skeleton verification
+- EmptyState CTA verification on more than one shared list
+- Remaining shared page mutation/invalidation checks beyond route-shell confirmation
+- Final post-fix retest of AR status labels and tenant-comparison chart after the next push
+
+### Session 2 - Parts 3 to 4
+
+- Date: 2026-03-15
+- Scope started:
+  - Backend middleware
+  - Cross-role interaction matrix
+
+### What was verified
+
+- `MW-1` RoleMiddleware is enforcing backend API access correctly:
+  - manager -> `GET /api/super-admin/tenants` returned `403`
+  - reseller -> `POST /api/super-admin/tenants/1/reset` returned `403`
+  - reseller -> `GET /api/manager/team` returned `403`
+  - reseller -> `GET /api/bios-blacklist` returned `403`
+  - manager -> `DELETE /api/bios-blacklist/:id` returned `403`
+  - reseller -> `GET /api/bios-conflicts` returned `403`
+  - manager -> `POST /api/balances/:user/adjust` returned `403`
+- `MW-2` TenantScope is enforcing cross-tenant isolation:
+  - reseller from tenant 1 -> tenant 2 customer `90` returned `404`
+  - manager from tenant 1 -> tenant 2 customer `90` returned `404`
+  - super-admin could read tenant 2 customer `90` in the same session
+- `MW-3` ActiveRoleMiddleware is enforcing suspension:
+  - manager suspended reseller `3`
+  - reseller login was blocked with `account_suspended`
+  - reseller active session API call returned `403`
+  - manager reactivated reseller `3`
+  - reseller login succeeded again
+- `MW-4` BiosBlacklistCheck is enforcing activation blocking:
+  - manager-parent blacklisted a BIOS
+  - reseller activation returned `422`
+  - manager activation returned `422`
+  - error message was human-readable: `This BIOS ID is blacklisted.`
+- `MW-5` ApiLogger now logs general API traffic after the local fix:
+  - login and authenticated GET requests increased `api_logs` count
+  - latest login log stored password as `[REDACTED]`
+- `MW-8` security headers are present on API responses:
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: DENY`
+  - `Content-Security-Policy` present
+  - `Referrer-Policy: no-referrer`
+  - no `Server` header version disclosure was returned
+
+### Cross-role flows verified
+
+- `CRI-1` Program Lifecycle:
+  - manager-parent created a program
+  - manager and reseller both saw it while active
+  - after deactivation, both still saw it at first
+  - this was fixed locally in the shared program controller
+  - after the fix, inactive programs disappeared for manager and reseller
+- `CRI-2` BIOS Blacklist:
+  - manager-parent blacklist add blocked reseller and manager activations
+  - both roles activated successfully again with clean BIOS values afterward
+- `CRI-4` User Suspension:
+  - manager -> reseller suspension path passed end to end
+  - super-admin -> manager suspension path passed end to end
+  - reseller remained unaffected when the manager account was suspended by super-admin
+- `CRI-7` Payment Recording:
+  - manager recorded a payment for reseller `3`
+  - manager payment detail totals increased from `2.00` to `9.50`
+  - reseller payment-status totals also increased from `2.00` to `9.50`
+  - reseller outstanding balance recalculated to `1202.18`
+- `CRI-12` Tenant Deactivation:
+  - super-admin deactivated tenant `2`
+  - tenant 2 manager-parent and reseller logins were blocked with `tenant_inactive`
+  - super-admin remained unaffected
+  - tenant reactivation restored both tenant 2 logins
+
+### Confirmed Session 2 findings so far
+
+- `ApiLogger` was under-scoped before this pass and did not cover the main API surface
+- manager/reseller program visibility rules were too loose before this pass and leaked inactive programs into operator catalogs
+- tenant-isolation and role-authorization logic are behaving correctly at the backend API level
+
+### Session 2 still pending
+
+- `MW-5` 500-error logging verification
+- `MW-6` IP tracking / proxy verification
+- `MW-7` scheduled-license processing verification
+- remaining cross-role flows:
+  - `CRI-3`
+  - `CRI-5`
+  - `CRI-6`
+  - `CRI-8`
+  - `CRI-9`
+  - `CRI-10`
+  - `CRI-11`
+
+### Session 3 - Parts 5 to 6
+
+- Date: 2026-03-15
+- Scope started:
+  - Security testing
+  - Performance testing
+
+### What was verified
+
+- `SEC-1` Authentication Security:
+  - brute-force protection triggered after 6 failed attempts on the same account/email
+  - lockout escalated through timed locks and eventually to a permanent IP block on repeated abuse
+  - super-admin `Security Locks` showed the locked account entry with IP / device context
+  - logout invalidated the old bearer token; post-logout API calls returned `401 Unauthenticated`
+  - cross-origin preflight to `POST /api/auth/login` from `http://evil.example.com` returned no `Access-Control-Allow-Origin`, so browser-origin abuse is blocked by CORS
+- `SEC-2` Input Validation & Injection Prevention:
+  - SQL injection probe `'; DROP TABLE users; --` on super-admin customer search returned an empty result set with no SQL error
+  - stored XSS probe `<script>alert('xss')</script> QA 20260315` was saved as plain text and rendered inert in the super-admin customers table; no dialog executed in the browser pass
+  - BIOS special-character create path accepted a test BIOS containing `/`, `%`, `#`, `'`, and `\` without crashing the save path
+  - API key exposure check passed: shared `/api/programs` responses did not expose `external_api_key` or `external_api_key_encrypted`
+- `SEC-3` Authorization Bypass Attempts:
+  - previously verified `403` / `404` protections from Parts 3 to 4 remain the effective backend result for IDOR, cross-tenant access, and privilege escalation attempts
+- `PERF-1` Page Load Times:
+  - super-admin dashboard browser navigation timing was fast in the local environment:
+    - `responseEnd ~= 35ms`
+    - `domContentLoaded ~= 341ms`
+    - `loadEvent ~= 343ms`
+  - route code-splitting is active: the router uses `lazy(...)` + `Suspense`, and production build output shows many on-demand page chunks rather than one monolithic bundle
+- `PERF-2` API Response Times:
+  - manager dashboard API sampled at:
+    - `578.32ms`
+    - `519.68ms`
+    - `480.64ms`
+    - `468.44ms`
+    - `451.89ms`
+  - manager customers API sampled at:
+    - `568.17ms`
+    - `433.72ms`
+    - `447.29ms`
+    - `455.34ms`
+    - `428.93ms`
+  - manager customers API is within the `< 800ms` target
+  - manager dashboard API is borderline on cold hits against the `< 500ms` target
+  - controller inspection shows eager loading on the manager customers path (`customerLicenses` + `program` + `reseller`), so no obvious N+1 pattern was found in code review
+- `PERF-3` Frontend Bundle Size:
+  - `npm run build` passed
+  - the build is chunk-split aggressively; largest gzip chunks observed:
+    - `vendor-misc`: `101.44 kB`
+    - `vendor-react`: `73.88 kB`
+    - `vendor-charts`: `65.69 kB`
+    - `vendor-ui`: `43.50 kB`
+  - no single gzip JS asset was anywhere near the `1 MB` threshold
+
+### Fixes made during Session 3
+
+- fixed a general API auth failure path in [bootstrap/app.php](/C:/laragon/www/LIcense/backend/bootstrap/app.php)
+  - unauthenticated `/api/*` requests now return a clean JSON `401`
+  - they no longer trigger `Route [login] not defined`
+  - API exceptions are now forced to render as JSON for `/api/*`
+
+### Confirmed Session 3 findings so far
+
+- brute-force, lockout, token invalidation, SQL injection resistance, XSS render escaping, and API key non-exposure all passed in this environment
+- the current environment is `APP_ENV=local` with `APP_DEBUG=true`, so raw 500 responses still include local debug detail; that is an environment mismatch against the production checklist, not a production-code conclusion
+- the manager dashboard API is the only measured endpoint in this pass that is still borderline against its target
+
+### Session 3 limits / follow-up
+
+- `PERF-1-T2` 100+ row table render was fixture-limited in this pass; the current local dataset does not naturally provide a large enough shared-table page to close that check honestly
+- `PERF-2-T3` query-count verification was partially covered by controller inspection and timing samples, but not by a clean automated query-count harness yet
+
+### Session 4 - Parts 7 to 8
+
+- Date: 2026-03-15
+- Scope covered:
+  - Production checklist
+  - Regression tests
+
+### Production checklist results
+
+- Local pre-production checks passed:
+  - `php artisan migrate:status` showed all migrations applied, including `tenant_backups` and nullable `commission_id`
+  - `php artisan config:cache`, `route:cache`, `view:cache`, and `optimize` all completed successfully
+  - `php artisan schedule:run` executed the scheduled license jobs without failure
+  - `php artisan storage:link` confirmed the public storage link already exists
+  - frontend `npm run build` passed
+- Local environment is still not production-shaped:
+  - backend `.env` still uses `APP_ENV=local`
+  - backend `.env` still uses `APP_DEBUG=true`
+  - `APP_URL` and `VITE_API_URL` still point to local/http hosts
+  - session / Sanctum domains are still local-only values
+- Deployment-only items remain unverified from this machine:
+  - real HTTPS certificate / redirect / HSTS behavior
+  - web-server file ownership and deploy-user permissions on the actual host
+  - production WAF / DDoS / Cloudflare posture
+  - off-site automated backup execution
+  - monitoring / alerting delivery on the production stack
+  - final smoke test on the real production URL
+- Additional operational note:
+  - `storage/logs/laravel.log` exists locally but is very large, so log rotation should be confirmed before release
+
+### Regression checklist results
+
+- `RG-1` Sticky table headers:
+  - retest passed on the super-admin tenants table
+  - the shared table header still renders with sticky behavior during scroll
+- `RG-2` Filter reset after sidebar navigation:
+  - retest passed on the super-admin tenants table
+  - applying a search filter, navigating away, and returning via the sidebar restored the unfiltered list
+- `RG-3` Manager filter missing from query key:
+  - current customer pages include `managerId` in the query key and filter dependency chain on both manager and manager-parent routes
+  - no missing-query-key regression is visible in the current code path
+- `RG-4` Tenant backup datetime restore error:
+  - restore flow was already re-proven in the super-admin tenant reset/restore pass
+  - no 500 datetime-format restore failure reproduced
+- `RG-5` Missing `tenant_backups` table:
+  - retest passed
+  - migration status includes the `tenant_backups` table migration, and reset/backup flows are working
+- `RG-6` Missing `password` field in user restore:
+  - restore flow remains healthy enough to re-enable login for restored tenant users after backup restore
+  - no missing-password restore failure reproduced in the current restore path
+- `RG-7` Settings `primary_color` default:
+  - retest passed
+  - frontend build completed successfully and super-admin settings/profile pages load without the old type/default crash
+- `RG-8` `setUser` auth export / navbar refresh:
+  - retest passed
+  - saving the super-admin profile updated the navbar name immediately, then was reverted to the original value
+
+### Confirmed Session 4 findings
+
+- Shared DataTable third-click sort reset is still reproducing on the super-admin tenants table and remains the main open shared-component regression.
+- Shared DataTable empty-state fallback no longer reproduces in the live tenants-table regression retest.
+- The application can be prepared locally for production, but the real production checklist cannot be honestly closed until the actual deployment host is checked with production env values and HTTPS.
+
+### Session 4 conclusion
+
+- App behavior is close to release-ready from the local validation perspective.
+- Release readiness is still blocked by:
+  - the open shared DataTable third-click sort regression
+  - production-host verification still pending for env, HTTPS, permissions, monitoring, and smoke checks
+
+### Session 5 - Part 9
+
+- Date: 2026-03-15
+- Scope started:
+  - Software Activation API (`ACT-1` to `ACT-18`)
+
+### Session 5 first-pass coverage
+
+- `ACT-1` Activation by all roles passed on the shared `POST /api/licenses/activate` endpoint:
+  - reseller immediate activation succeeded with preset mode
+  - manager immediate activation succeeded
+  - manager-parent immediate activation succeeded
+  - super-admin cross-tenant activation succeeded for tenant `2` via `seller_id=58`
+- `ACT-3-T2` preset validation passed:
+  - sending preset `15` against program `1` returned clean `422`
+- `ACT-5` custom scheduling validation passed:
+  - invalid timezone string returned clean `422`
+  - `UTC` scheduled date stored exactly as `2026-04-01T12:00:00Z`
+  - `Asia/Dubai` scheduled date converted correctly to `2026-04-01T08:00:00Z`
+- `ACT-4-T3` scheduled processing passed:
+  - scheduled license created in a future minute
+  - follow-up API request triggered `ProcessDueScheduledLicenses`
+  - license status moved from `pending` to `active`
+- `ACT-6` BIOS validation mostly passed:
+  - empty BIOS returned clean `422`
+  - blacklisted BIOS returned clean `422`
+  - duplicate BIOS in the same tenant/program returned clean `422`
+- `ACT-7` program validation is partly working:
+  - inactive program returned clean `422`
+  - cross-tenant program lookup was blocked
+- `ACT-8` custom pricing passed for manager:
+  - custom `price=99.99` was stored on the created license
+  - reseller price override did not win over preset pricing; stored price remained preset-derived (`250`)
+- `ACT-9` renewal flow passed on the API:
+  - renew response returned `active`
+  - future-active license renewal extended from prior expiry, not from now
+- `ACT-10` deactivation passed:
+  - active license moved cleanly to `cancelled`
+- `ACT-11` pause/resume passed:
+  - pause moved status to `pending`
+  - paused remaining minutes stayed frozen after a short wait
+  - resume returned the license to `active`
+- `ACT-14` external API role/path checks passed at baseline:
+  - manager-parent could call `/api/external/users`
+  - reseller received `403`
+  - not-found BIOS lookup returned a graceful `exists=false` response, not a crash
+
+### Session 5 first-pass findings
+
+- `ACT-4` status wording drift:
+  - scheduled activations are created with `status="pending"`, not `status="scheduled"` as the written plan expects
+- `ACT-6-T4` URL-unsafe BIOS activation is not safe end to end:
+  - activating BIOS values containing `/` and `:` failed through the external activation path
+  - current failure surfaced as an external `404 Not Found` response instead of a safe supported activation path or a controlled local validation message
+- `ACT-7-T1` non-existent program handling is not production-clean:
+  - `program_id=99999` throws a model `404` / exception response instead of a clean validation-style `422`
+  - because the local environment still has `APP_DEBUG=true`, the response includes a full stack trace
+- `ACT-2` end-date mode does not match the current backend API contract:
+  - the implemented shared endpoint does not accept a dedicated `end_date` field
+  - current API shape is duration / preset / absolute scheduled datetime, so the written ACT-2 checklist is now partly plan drift
+- `ACT-4` relative scheduling is not a direct backend payload mode:
+  - the current shared API accepts absolute `scheduled_date_time`, so any relative-offset scheduling is a frontend transformation concern rather than a first-class API field
+
+### Session 5 still pending
+
+- `ACT-2` end-date flow verification against the current UI implementation
+- `ACT-3-T1` and `ACT-3-T3` preset autofill / all-role form visibility checks
+- `ACT-5-T4` scheduled failure handling and retry path with a true `scheduled_failed` license
+- `ACT-9-T3` scheduled renewal
+- `ACT-9-T4` renewal history visibility across different roles
+- `ACT-10` and `ACT-11` cross-dashboard visibility checks
+- `ACT-12` bulk operations
+- `ACT-13` retry scheduled license
+- `ACT-15` full 4-role activation data-flow proof
+- `ACT-16` full program-catalog UI flow per role
+- `ACT-17` cache invalidation / live-query completeness
+- `ACT-18` `useResolvedTimezone` display checks

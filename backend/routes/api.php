@@ -82,10 +82,10 @@ Route::get('/health', function (): JsonResponse {
 })->name('health');
 
 Route::prefix('auth')->group(function (): void {
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('api.logger');
 });
 
-Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 'ip.tracker', 'update.last_seen', 'track.online', ProcessDueScheduledLicenses::class])->group(function (): void {
+Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 'ip.tracker', 'update.last_seen', 'track.online', ProcessDueScheduledLicenses::class, 'api.logger'])->group(function (): void {
     Route::prefix('auth')->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
@@ -98,7 +98,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
 
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
-    Route::prefix('external')->middleware(['api.logger'])->group(function (): void {
+    Route::prefix('external')->group(function (): void {
         Route::get('/status', [ApiProxyController::class, 'status']);
         Route::get('/check/{bios}', [ApiProxyController::class, 'check'])->middleware(['role:super_admin,manager_parent,manager,reseller', 'bios.blacklist']);
         Route::get('/users', [ApiProxyController::class, 'users'])->middleware('role:super_admin,manager_parent');

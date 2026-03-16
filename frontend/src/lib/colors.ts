@@ -121,7 +121,7 @@ export const COMPONENT_COLORS = {
  */
 export const STATUS_COLORS = {
   active: { light: '#dcfce7', main: '#16a34a', dark: '#15803d' },
-  inactive: { light: '#fee2e2', main: '#dc2626', dark: '#b91c1c' },
+  deactive: { light: '#fee2e2', main: '#dc2626', dark: '#b91c1c' },
   suspended: { light: '#fef3c7', main: '#f59e0b', dark: '#b45309' },
   pending: { light: '#e0f2fe', main: '#0ea5e9', dark: '#0369a1' },
 } as const

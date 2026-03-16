@@ -11,6 +11,7 @@ use App\Http\Middleware\UpdateLastSeen;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Illuminate\Console\Scheduling\Schedule;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -23,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(ApiSecurityHeaders::class);
+        $middleware->redirectGuestsTo(static function (Request $request): ?string {
+            return $request->is('api/*') ? null : '/';
+        });
 
         $middleware->alias([
             'role' => RoleMiddleware::class,
@@ -39,5 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('licenses:schedule-activate')->everyMinute()->withoutOverlapping();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->shouldRenderJsonWhen(static function (Request $request, \Throwable $exception): bool {
+            return $request->is('api/*') || $request->expectsJson();
+        });
     })->create();

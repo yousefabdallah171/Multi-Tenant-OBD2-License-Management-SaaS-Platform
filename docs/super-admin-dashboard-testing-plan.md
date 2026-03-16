@@ -994,6 +994,29 @@ These end-to-end flows verify that super-admin actions ripple correctly across t
 | 5 | 3 | Create Tenant | Create tenant dialog no longer exposes a visible `Slug` field; slug is auto-generated from the tenant name. | Low | Open | No |
 | 6 | 3 | Tenant Edit | Tenant edit dialog only exposed `Name` and `Status` in the tested state, which is narrower than the original sprint description. | Low | Open | No |
 | 7 | 1 | Route Guard | Manager-parent and reseller are blocked from super-admin routes, but they are redirected back to their own dashboards instead of login or a 403-style page. | Medium | Open | No |
+| 8 | 4 | Customers | Pause and resume mutations succeed, but success toasts leak raw translation keys (`common.paused`, `common.resumed`). | Medium | Open | No |
+| 9 | 4 | Customers | Active customer rows still expose `Delete` in the actions menu. | Medium | Open | No |
+| 10 | 4 | Customers | Customers list can briefly show stale counts and transient reload states after create or mutation flows before settling. | Medium | Open | No |
+| 11 | 5 | Customer Detail | `Recent activity` still exposes raw action keys like `license.activated` instead of humanized labels. | Medium | Open | No |
+| 12 | 5 | Customer Detail | Fresh-customer `IP Analytics` tab rendered only the section heading in the tested state, with no visible empty-state messaging. | Low | Open | No |
+| 13 | 6 | Create Customer | Duplicate BIOS IDs are still accepted. Super-admin create accepted BIOS `EEEE` and created customer `87` instead of returning an API validation error. | High | Open | No |
+| 14 | 6 | Create Customer | Scheduled activation succeeded, but the success toast still said `License Activated` even though the resulting customer row status was `Scheduled`. | Low | Open | No |
+| 15 | 7 | Renew License | Renew/increase-duration succeeds, but the success toast is still the generic `Saved` instead of renew-specific confirmation. | Medium | Open | No |
+| 16 | 8 | Users | Users page no longer matches the older sprint shape exactly: role summary cards replaced the older dedicated role filter flow, and the table omits separate `Last Seen` coverage in the tested state. | Low | Open | No |
+| 17 | 10 | Admin Management | Clicking the selection checkbox on an admin row bubbled into row navigation and opened that admin's detail page instead of staying on the list. Bulk-selection UX is therefore fragile on the table. | Medium | Open | No |
+| 18 | 10 | Admin Management | Self-delete is guarded, but the protection is asymmetric in the current UI: the current super-admin row disables selection and omits `Delete`, rather than surfacing the explicit `Cannot delete your own account` message described in the plan. | Low | Open | No |
+| 19 | 11 | BIOS Blacklist | BIOS Blacklist page shape differs from the older sprint description: it exposes a trend chart plus table and status filter, not the original stats-card layout. | Low | Open | No |
+| 20 | 12 | BIOS History | `/en/super-admin/bios-history` is not a standalone history page in the current app. The route redirects to `/en/super-admin/bios-conflicts`, so the planned cross-tenant BIOS history table/filter workflow is unavailable. | High | Open | No |
+| 21 | 11 | BIOS Blacklist | CSV import does not skip the header row. Importing `BIOS ID,Reason` created a real blacklist entry with BIOS `BIOS ID` and reason `Reason`. | High | Open | No |
+| 22 | 13 | BIOS Details | Short-query BIOS search still throws backend errors. Searching `EE` triggered repeated `500` responses from `/api/super-admin/bios/search?query=EE` plus duplicate error toasts. | High | Open | No |
+| 23 | 13 | BIOS Details | `Activity Log` tab still renders raw/internal action keys (`license.activated`, `bios.activate`, `license.renewed`, etc.) instead of humanized text. | Medium | Open | No |
+| 24 | 15 | Security Locks | Empty-state messaging is weak on all three tabs (`Locked Accounts`, `Blocked IPs`, `Audit Log`). The tables render with headers and no rows, but no clear empty-state guidance is shown. | Low | Open | No |
+| 25 | 17 | Logs | Logs page shape differs from the written sprint: it is an external API log console with endpoint/method/status-style filtering, not the older raw HTTP audit schema described in the plan. | Low | Open | No |
+| 26 | 18 | API Status | `API Health Monitor` is functional, but it no longer exposes the cross-tenant multi-program board described in the sprint. The current view shows one health monitor with no visible tenant/program labeling. | Medium | Open | No |
+| 27 | 19 | Settings | Settings page is now a tabbed system workspace (`General`, `API`, `Notifications`, `Security`, `Profile`) rather than the older single-form timezone/email settings page from the plan. | Low | Open | No |
+| 28 | 19 | Settings | Saving `Server Timezone` succeeds, but the navbar timezone label does not follow it. After saving `Asia/Dubai`, the header still showed `Timezone: Africa/Banjul`, indicating the header is reading the user/profile timezone instead of the saved server timezone. | High | Open | No |
+| 29 | 21 | Tenant Reset | Resetting a populated tenant initially failed with MySQL `Out of sort memory` while streaming backup tables (notably `api_logs`) in `TenantResetController`. The backup streamer was changed to natural-order cursor reads, and the reset/restore flow now succeeds on Tenant 1. | High | Closed | Yes |
+| 30 | 24 | Tenants (AR) | Arabic tenants page still leaks raw/broken status labels: the `Deactive` card renders as `????` and the inactive card renders `common.inactive`. | High | Open | No |
 
 **Severity:**
 - 🔴 Critical — data loss, system-wide outage, or cross-tenant breach
@@ -1092,6 +1115,328 @@ QA Data Touched:
 - Backup created during reset: `Wrong-name-check backup`
 - Pagination fixtures created: 9 disposable `QA SA Pagination ...` tenants, bringing the tenant list to `12 total`
 
+### 2026-03-15 - Sprint 4 to Sprint 7 completion
+
+Completed in this pass:
+- Sprint 4: cross-tenant customers filters, search, sidebar reset, pause/resume, deactivate, delete, view detail, create entry-point
+- Sprint 5: customer detail overview, license history, BIOS tab, IP analytics tab, recent activity, back navigation
+- Sprint 6: create customer tenant/reseller/program cascade, immediate activation, scheduled activation, validation behavior, duplicate BIOS check
+- Sprint 7: renew/increase-duration flow
+
+Confirmed working:
+- Customers page shows cross-tenant rows with tenant column visible
+- Filters work in the tested state:
+  - tenant filter
+  - reseller filter
+  - program filter
+  - status filter
+  - BIOS/name search
+- Clicking sidebar `Customers` resets applied filters and URL params
+- Pause on active customer succeeded
+- Resume/continue on the paused customer succeeded and returned the row to active state
+- Deactivate on customer `42` succeeded and moved the row to `Cancelled`
+- Add Customer route works and the reseller dropdown cascade is now verified:
+  - before tenant selection it stays disabled with `Select a tenant first`
+  - after selecting tenant `OBD2SW Main`, reseller options load correctly
+- Immediate activation succeeded:
+  - customer `85`
+  - username `saimm96526202`
+  - BIOS `BIOS-SA-IMM-96526202`
+- Scheduled activation succeeded:
+  - customer `86`
+  - username `sasch96545690`
+  - BIOS `BIOS-SA-SCH-96545690`
+  - resulting row status `Scheduled`
+- Customer detail loads tenant, reseller, status, timestamps, BIOS link, and license history correctly
+- Back navigation from customer detail returns to `/en/super-admin/customers`
+- Renew/increase-duration on license `26` succeeded and updated expiry for customer `61` from `Mar 15, 2026, 10:19 PM` to `Mar 16, 2026, 10:19 PM`
+- Delete flow succeeds; temporary duplicate-BIOS customer `87` was removed after verification
+
+Confirmed issues from Sprint 4 to Sprint 7:
+- Pause/resume toasts leak raw i18n keys:
+  - `common.paused`
+  - `common.resumed`
+- Active customer actions still expose `Delete`
+- Customers page can briefly show stale counts/transient reload states after create or mutation flows before settling
+- Customer detail `Recent activity` still shows raw action key `license.activated`
+- Fresh customer `IP Analytics` tab showed only the section heading in the tested state
+- Duplicate BIOS protection is missing on super-admin create:
+  - BIOS `EEEE` was accepted
+  - duplicate customer `87` was created successfully
+- Scheduled activation success toast still says `License Activated`
+- Renew success toast is still generic `Saved`
+
+QA Data Touched:
+- Created and later deleted duplicate-BIOS test customer:
+  - customer `87`
+  - `QA SA Duplicate BIOS 20260315194537`
+  - username `sa_dup_20260315194537`
+  - BIOS `EEEE`
+- Created customer:
+  - customer `85`
+  - `QA SA Immediate 96526202`
+  - username `saimm96526202`
+  - BIOS `BIOS-SA-IMM-96526202`
+  - later deleted during earlier validation
+- Created customer:
+  - customer `86`
+  - `QA SA Scheduled 96545690`
+  - username `sasch96545690`
+  - BIOS `BIOS-SA-SCH-96545690`
+- Mutated existing customer:
+  - customer `42`
+  - deactivated to `Cancelled`
+
+Still pending after Sprint 4 to Sprint 7:
+- none for this sprint block
+
+### 2026-03-15 - Sprint 8 to Sprint 12 completion
+
+Completed in this pass:
+- Sprint 8: users list search, role-card filtering, cross-tenant visibility, pagination
+- Sprint 9: user detail overview, empty-state verification, edit-dialog field coverage
+- Sprint 10: admin create, edit, self-delete guard verification, delete cleanup
+- Sprint 11: BIOS blacklist add, search, status filter, remove, import/export control presence
+- Sprint 12: BIOS history route verification
+
+Confirmed working:
+- Users page loads cross-tenant rows correctly and shows `31 total` users with working pagination in the tested state
+- Users role-card filtering works; selecting `Reseller` narrowed the list to reseller-only rows
+- Users search works for created accounts such as `qa.superadmin.parent.20260315@obd2sw.local`
+- User detail page for user `75` loads correctly with username, phone, role, status, tenant, and summary cards
+- User detail `Recent Licenses` and `Recent activity` empty states render correctly for fresh users
+- User detail `Edit` dialog still exposes super-admin controls for:
+  - name
+  - email
+  - username
+  - phone
+  - role
+  - tenant
+  - status
+- Admin Management create succeeded for a disposable manager account:
+  - user `88`
+  - `QA SA Admin 20260315`
+  - `qa.sa.admin.20260315@obd2sw.local`
+- Admin edit succeeded; the temporary account was renamed to `QA SA Admin Updated 20260315`
+- Current logged-in super-admin account is protected from self-delete in the tested UI:
+  - bulk-selection checkbox is disabled
+  - row menu omits `Delete`
+- Admin delete succeeds for disposable non-self accounts; temporary account `88` was deleted successfully
+- BIOS Blacklist add succeeded:
+  - BIOS `SA-BLACKLIST-20260315`
+  - reason `super-admin sprint11 test`
+  - tenant shown as `Global`
+- BIOS Blacklist search works for exact BIOS IDs
+- BIOS Blacklist status filter works for `Removed`
+- BIOS Blacklist remove succeeds; the temporary BIOS moved from `Active` to `Removed`
+- BIOS History route verification is complete:
+  - navigating to `/en/super-admin/bios-history` redirects to `/en/super-admin/bios-conflicts`
+
+Confirmed issues from Sprint 8 to Sprint 12:
+- Users page structure has drifted from the older plan:
+  - role summary cards replace the older dedicated role-filter flow
+  - `Last Seen` was not present in the tested table
+- Admin Management checkbox clicks can bubble into row navigation; clicking the temp account checkbox opened `/en/super-admin/users/88`
+- BIOS History is not currently implemented as a separate page; the route redirects into BIOS Conflicts
+
+QA Data Touched:
+- Temporary admin created and deleted:
+  - user `88`
+  - `QA SA Admin Updated 20260315`
+  - `qa.sa.admin.20260315@obd2sw.local`
+  - role `Manager`
+  - tenant `OBD2SW Main`
+- Temporary BIOS blacklist entry created and removed:
+  - `SA-BLACKLIST-20260315`
+  - reason `super-admin sprint11 test`
+
+Still pending after Sprint 8 to Sprint 12:
+- cross-tenant reseller-side proof for a newly added super-admin global blacklist entry was not rerun in this block
+- BIOS Blacklist CSV import execution was not exercised; control presence only was verified
+
+### 2026-03-15 - Sprint 13 to Sprint 17 completion
+
+Completed in this pass:
+- Closed the previously untested BIOS Blacklist gaps:
+  - CSV import execution
+  - live cross-tenant blacklist proof
+- Sprint 13: BIOS details search, deep-link load, recent BIOS list, and tab coverage
+- Sprint 14: BIOS conflicts list, detail modal, and resolve flow
+- Sprint 15: security-locks page structure and tab coverage
+- Sprint 16: cross-tenant reports load, range preset update, export control behavior
+- Sprint 17: logs load, endpoint search, log detail modal
+
+Confirmed working:
+- BIOS Blacklist CSV import executes from the UI
+- Fresh global blacklist proof is now complete:
+  - `SA-IMPORT-20260315` was blacklisted globally
+  - reseller in tenant `OBD2SW Main` received `This BIOS ID is blacklisted.`
+  - reseller in tenant `E2E Tenant 1773515764060` also received `This BIOS ID is blacklisted.`
+- BIOS Details deep-link works:
+  - `/en/super-admin/bios-details?bios=EEEE` auto-loads the selected BIOS
+- BIOS Details tabs load in the tested state:
+  - `Overview`
+  - `License History`
+  - `Resellers`
+  - `IP Analytics`
+  - `Activity Log`
+  - `Blacklist Status`
+- BIOS Conflicts page loads cross-tenant rows correctly
+- Conflict details modal opens with BIOS, tenant, conflict type, program, user, and affected-customer context
+- Super-admin can resolve a conflict with notes
+  - resolving `SA-IMPORT-20260315` for tenant `OBD2SW Main` succeeded
+  - counts updated from `Open 3 / Resolved 0` to `Open 2 / Resolved 1`
+- Security Locks page loads and exposes all three tabs:
+  - `Locked Accounts`
+  - `Blocked IPs`
+  - `Audit Log`
+- Reports page loads with system-wide stats, charts, tables, date presets, and CSV/PDF controls
+- Reports date preset updates the visible date range
+  - `Last 30 Days` changed `From` to `2026-02-14`
+- Logs page loads with live entries, endpoint search, tenant/method/status-style controls, auto-refresh toggle, and pagination
+- Logs endpoint search works; filtering by `/apideluser` reduced the list to `24 total`
+- Logs detail modal opens and shows request/response payload snippets
+
+Confirmed issues from Sprint 13 to Sprint 17:
+- BIOS Blacklist CSV import does not skip the header row:
+  - imported CSV created a bad blacklist row with BIOS `BIOS ID`
+  - reason `Reason`
+- Super-admin BIOS search still breaks on short queries:
+  - entering `EE` triggered repeated server failures from `/api/super-admin/bios/search?query=EE`
+  - duplicate error toasts were shown
+- BIOS Details `Activity Log` still exposes raw/internal event keys
+- Security Locks tabs currently render weak empty states: table headers appear with no rows, but no explicit empty-state guidance is shown
+- Logs page is no longer the raw HTTP audit shape described by the old sprint; it is now an external API log console
+
+QA Data Touched:
+- BIOS imported via CSV:
+  - `SA-IMPORT-20260315`
+  - reason `super-admin csv import test`
+- Bad CSV header row accidentally imported by the app:
+  - BIOS `BIOS ID`
+  - reason `Reason`
+- Cross-tenant proof fixture:
+  - temporarily activated tenant `2` (`E2E Tenant 1773515764060`) to run the reseller-side blacklist proof
+  - created a temporary tenant-2 program `OBD2SW Pro E2E` with one preset
+  - removed the temporary program/preset afterward
+  - restored tenant `2` to `inactive`
+- Resolved conflict:
+  - BIOS `SA-IMPORT-20260315`
+  - tenant `OBD2SW Main`
+
+### 2026-03-15 - Sprint 18 to Sprint 19 completion
+
+Completed in this pass:
+- Sprint 18: API Status load, manual ping, metrics refresh, and history-row verification
+- Sprint 19: settings tabs review, real server-timezone save, and timezone-label verification
+
+Confirmed working:
+- `/en/super-admin/api-status` loads and shows a healthy monitor state
+- `Ping now` succeeds and shows `API ping completed successfully.`
+- `Response time` updated from `312ms` to `307ms` after a manual ping
+- `Last checked` updated and the history table recorded an `Online / 200` row
+- `/en/super-admin/settings` loads with the current tabbed settings workspace
+- General settings save succeeds and shows `Settings saved successfully.`
+- API tab exposes editable `External API URL`, `API key`, `Timeout`, and `Retries`
+- Notifications tab exposes the three current notification toggles
+- Security tab exposes password-length and session-timeout controls
+- Profile tab is embedded inside settings and currently shows the super-admin profile form plus password section
+
+Confirmed issues from Sprint 18 to Sprint 19:
+- API Status no longer matches the older cross-tenant board described in the plan; the current monitor shows no visible tenant/program labeling
+- Saving `Server Timezone` did not update the navbar timezone label
+- The saved `Server Timezone` and the header label are currently inconsistent:
+  - General settings selected value: `America/Thule` (restored after test)
+  - Header label: `Timezone: Africa/Banjul`
+
+QA Data Touched:
+- Server timezone temporarily changed to `Asia/Dubai`, saved successfully, then restored to `America/Thule`
+
+### 2026-03-15 - Sprint 21 to Sprint 24 continuation
+
+Completed in this pass:
+- Sprint 21: full cross-tenant E2E verification
+- Sprint 22: high-value edge-case pass
+- Sprint 23: partial live-data verification
+- Sprint 24: Arabic / RTL verification on core super-admin pages
+
+Confirmed working:
+- Sprint 21 full tenant reset + restore cycle now works on populated `OBD2SW Main`
+  - manager-parent customer count: `14 -> 0 -> 14`
+  - reseller customer count: `5 -> 0 -> 5`
+  - backup `8` (`pre-reset-s21`) restored successfully
+- Sprint 21 role change flow works for user `3` (`reseller1@obd2sw.com`)
+  - role changed `reseller -> manager -> reseller`
+  - login role changed immediately on the next login each time
+  - tenant-scoped customer access remained available during the temporary manager role
+- Sprint 21 tenant deactivation flow works for tenant `2`
+  - inactive tenant blocked both manager-parent and reseller login with `tenant_inactive`
+  - reactivation allowed login again
+  - deactivation blocked login again
+- Sprint 21 security lock -> unblock flow works
+  - repeated failed logins locked `qa.superadmin.parent.20260315@obd2sw.local`
+  - lock appeared via super-admin security API
+  - `unblock-email` cleared the lock
+  - successful login worked immediately afterward
+- Sprint 21 global BIOS blacklist flow works end to end
+  - BIOS `GLOBAL-BLOCK-S21-20260315` was blocked for reseller activation in both tenant `1` and tenant `2`
+  - removing the blacklist entry restored activation in both tenants
+- Sprint 21 admin creation -> tenant change -> suspension flow works
+  - temp manager-parent `91` was created in tenant `3`
+  - login succeeded
+  - tenant reassignment to tenant `1` succeeded
+  - suspension blocked login with `This account is currently suspended.`
+  - temp admin was deleted after verification
+- Sprint 21 BIOS conflict resolution propagates cross-role
+  - conflict `10` was visible to both super-admin and manager-parent
+  - resolving it in super-admin removed it from manager-parent's open-conflicts view
+- Sprint 22 empty-tenant reset works
+  - tenant `3` reset completed with all-zero backup stats and restored successfully from backup `9`
+- Sprint 22 hard refresh on deep URLs works
+  - `/en/super-admin/users/3` reloaded correctly
+- Sprint 22 mobile layout is usable on the tenants page at `375x812`
+  - mobile header collapsed correctly to a hamburger menu
+  - tenant table remained reachable/scrollable
+- Sprint 24 Arabic / RTL baseline works
+  - `/ar/super-admin/security-locks` and `/ar/super-admin/tenants` rendered with `lang=\"ar\"` and `dir=\"rtl\"`
+
+Confirmed issues from Sprint 21 to Sprint 24:
+- Populated-tenant reset was broken until the tenant-backup streaming logic was patched to avoid MySQL sort-buffer failures
+- Arabic tenants page still leaks broken/raw status labels:
+  - `????`
+  - `common.inactive`
+- Sprint 23 live auto-refresh is still not fully proven in this pass
+  - the timed background polling checks were not stable enough to close definitively for `Security Locks`, `Logs`, or `API Status`
+
+Still partial after Sprint 21 to Sprint 24:
+- Sprint 22 restore-over-existing-data replacement test
+- Sprint 22 explicit offline/network-failure page handling
+- Sprint 22 large-dataset performance validation
+- Sprint 22 double-submit race test on destructive actions
+- Sprint 23 live auto-refresh proof for all three pages
+
+QA Data Touched:
+- Backup `8`: `pre-reset-s21`
+- Backup `9`: `empty-tenant-s22`
+- Temporary tenant-2 fixture program:
+  - program `6` (`OBD2SW Pro E2E`)
+  - preset `15` (`Month`)
+- Global blacklist BIOS used in the flow:
+  - `GLOBAL-BLOCK-S21-20260315`
+- Created customers from the post-unblacklist activation proof:
+  - tenant `1` customer `89`
+  - tenant `2` customer `90`
+- Resolved conflict:
+  - conflict `10`
+  - BIOS `GLOBAL-BLOCK-S21-20260315`
+  - note `Resolved during super-admin sprint14 validation.`
+
+Still pending after Sprint 13 to Sprint 17:
+- Security Locks unblock flows were not exercised because no safe preexisting locked-account or blocked-IP fixture was present, and inducing one from localhost risks blocking the active QA environment
+- Security Locks auto-refresh was not proven
+- Reports export download completion was not independently verified beyond button execution/loading state
+- Logs tenant/method/status combinations were only partially sampled in this block
+
 ---
 
 ## Definition of Done per Sprint
@@ -1106,6 +1451,7 @@ QA Data Touched:
 
 ---
 
-*Last updated: 2026-03-14 | Super-admin dashboard QA — 24 sprints, 150+ test cases*
+*Last updated: 2026-03-15 | Super-admin dashboard QA — 24 sprints, 150+ test cases*
 *Includes 7 end-to-end cross-tenant/cross-role flows in Sprint 21*
 *Special focus: Tenant Reset/Backup/Restore (Sprint 3, S3-T9 to S3-T15 + S21-T1)*
+

@@ -30,6 +30,8 @@ class ProgramController extends BaseManagerParentController
 
         if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
+        } elseif ($this->shouldRestrictToActivePrograms($request)) {
+            $query->where('status', 'active');
         }
 
         if (! empty($validated['search'])) {
@@ -124,6 +126,8 @@ class ProgramController extends BaseManagerParentController
 
     public function show(Program $program, Request $request): JsonResponse
     {
+        $this->abortIfProgramHidden($program, $request);
+
         return response()->json(['data' => $this->serializeProgram($program->loadCount('licenses')->load('durationPresets'), $request)]);
     }
 
@@ -227,8 +231,10 @@ class ProgramController extends BaseManagerParentController
         return response()->json(['message' => 'Program deleted successfully.']);
     }
 
-    public function stats(Program $program): JsonResponse
+    public function stats(Program $program, Request $request): JsonResponse
     {
+        $this->abortIfProgramHidden($program, $request);
+
         return response()->json([
             'data' => [
                 'licenses_sold' => $program->licenses()->count(),
@@ -237,6 +243,20 @@ class ProgramController extends BaseManagerParentController
                 'revenue' => round((float) $program->licenses()->sum('price'), 2),
             ],
         ]);
+    }
+
+    private function shouldRestrictToActivePrograms(Request $request): bool
+    {
+        $role = $request->user()?->role?->value ?? (string) $request->user()?->role;
+
+        return in_array($role, ['manager', 'reseller'], true);
+    }
+
+    private function abortIfProgramHidden(Program $program, Request $request): void
+    {
+        if ($this->shouldRestrictToActivePrograms($request) && $program->status !== 'active') {
+            abort(404);
+        }
     }
 
     private function serializeProgram(Program $program, Request $request = null): array

@@ -10,6 +10,20 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ApiLogger
 {
+    /**
+     * @var list<string>
+     */
+    private array $sensitiveKeys = [
+        'password',
+        'password_confirmation',
+        'token',
+        'api_key',
+        'external_api_key',
+        'authorization',
+        'current_password',
+        'new_password',
+    ];
+
     public function handle(Request $request, Closure $next): Response
     {
         $startedAt = microtime(true);
@@ -21,8 +35,8 @@ class ApiLogger
                 'user_id' => $request->user()?->id,
                 'endpoint' => $request->path(),
                 'method' => $request->method(),
-                'request_body' => $request->all() ?: null,
-                'response_body' => $this->extractResponseBody($response),
+                'request_body' => $this->sanitizePayload($request->all()),
+                'response_body' => $this->sanitizePayload($this->extractResponseBody($response)),
                 'status_code' => $response->getStatusCode(),
                 'response_time_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             ]);
@@ -47,5 +61,36 @@ class ApiLogger
         $decoded = json_decode($content, true);
 
         return is_array($decoded) ? $decoded : ['content' => $content];
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $payload
+     * @return array<string, mixed>|null
+     */
+    private function sanitizePayload(?array $payload): ?array
+    {
+        if (! is_array($payload) || $payload === []) {
+            return null;
+        }
+
+        $sanitized = [];
+
+        foreach ($payload as $key => $value) {
+            $normalizedKey = strtolower((string) $key);
+
+            if (in_array($normalizedKey, $this->sensitiveKeys, true)) {
+                $sanitized[$key] = '[REDACTED]';
+                continue;
+            }
+
+            if (is_array($value)) {
+                $sanitized[$key] = $this->sanitizePayload($value);
+                continue;
+            }
+
+            $sanitized[$key] = $value;
+        }
+
+        return $sanitized;
     }
 }
