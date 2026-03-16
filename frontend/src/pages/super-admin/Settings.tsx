@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
+import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { COMMON_TIMEZONES, persistServerTimezone } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
@@ -36,6 +37,18 @@ export function SettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const profilePhoneError = useMemo(() => {
+    const value = profileForm.phone?.trim() ?? ''
+    if (!value) {
+      return ''
+    }
+
+    if (!isStrictPhoneCharacters(value) || !isValidStrictPhone(value)) {
+      return t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
+    }
+
+    return ''
+  }, [profileForm.phone, t])
 
   const settingsQuery = useQuery({
     queryKey: ['super-admin', 'settings'],
@@ -262,7 +275,15 @@ export function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-phone">{t('common.phone')}</Label>
-                  <Input id="profile-phone" type="tel" value={profileForm.phone ?? ''} onChange={(event) => setProfileForm((current) => ({ ...current, phone: event.target.value }))} />
+                  <Input
+                    id="profile-phone"
+                    type="tel"
+                    inputMode="tel"
+                    pattern="^\+?\d{6,20}$"
+                    value={profileForm.phone ?? ''}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, phone: normalizeStrictPhoneInput(event.target.value) }))}
+                  />
+                  {profilePhoneError ? <p className="text-xs text-rose-600 dark:text-rose-400">{profilePhoneError}</p> : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-timezone">{t('common.timezone', { defaultValue: 'Timezone' })}</Label>
@@ -279,7 +300,7 @@ export function SettingsPage() {
                     ))}
                   </select>
                 </div>
-                <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending}>
+                <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending || Boolean(profilePhoneError)}>
                   {profileMutation.isPending ? t('common.saving') : t('superAdmin.pages.settings.saveProfile')}
                 </Button>
               </CardContent>

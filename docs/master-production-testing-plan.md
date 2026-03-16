@@ -1,6 +1,13 @@
 # Master Production Testing Plan — All Roles + Shared Components
 # Full Cross-Role Interaction Matrix + Production Readiness
 
+> 2026-03-16 shared regression note:
+> - profile timezone behavior was revalidated across the shared profile flows
+> - saved user timezone still wins for display
+> - browser timezone is the default for users without a saved timezone
+> - customer-create scheduling defaults were switched to `UTC`
+> - profile phone validation was tightened to allow only `+` and digits
+
 > **Scope:** Every shared component, every shared page, every cross-role effect,
 > every middleware, every backend guard, and production deployment verification.
 >

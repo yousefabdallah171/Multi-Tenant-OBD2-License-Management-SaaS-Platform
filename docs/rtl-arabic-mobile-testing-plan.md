@@ -23,6 +23,12 @@
 >
 > **All 3 tests (RTL layout, Arabic text, Mobile) must be run for EVERY page below.**
 
+> **2026-03-16 shared regression note:**
+> - `/ar/super-admin/profile` timezone rendering rechecked after shared profile updates
+> - no `????` or raw timezone key leak on the tested route
+> - shared profile phone handling was tightened to `+` and digits only
+> - reseller customer-create schedule defaults were revalidated to start in `UTC`
+
 ---
 
 ## How to Use This Plan

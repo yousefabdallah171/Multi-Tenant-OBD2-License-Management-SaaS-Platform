@@ -23,6 +23,12 @@
 > - `ConfirmDialog`, `ExportButtons`, `DateRangePicker`
 > - `LineChartWidget`, `BarChartWidget`
 
+> **2026-03-16 shared regression note:**
+> - `/ar/super-admin/profile` was rechecked after the shared timezone/phone changes
+> - the tested super-admin account still displays its saved timezone (`Africa/Banjul`) correctly
+> - shared profile phone validation now allows only `+` and digits and is enforced server-side
+> - this does not change system `server timezone`; it changes only per-user profile timezone behavior
+
 ---
 
 ## Pre-Test Setup Checklist

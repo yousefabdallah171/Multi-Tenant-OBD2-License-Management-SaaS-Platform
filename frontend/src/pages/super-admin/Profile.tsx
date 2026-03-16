@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
+import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { COMMON_TIMEZONES } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
@@ -36,6 +37,18 @@ export function ProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const profilePhoneError = useMemo(() => {
+    const value = profileForm.phone?.trim() ?? ''
+    if (!value) {
+      return ''
+    }
+
+    if (!isStrictPhoneCharacters(value) || !isValidStrictPhone(value)) {
+      return t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
+    }
+
+    return ''
+  }, [profileForm.phone, t])
   const profileMutation = useMutation({
     mutationFn: () => profileService.updateProfile(profileForm),
     onSuccess: (data) => {
@@ -112,7 +125,15 @@ export function ProfilePage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="profile-phone">{t('common.phone')}</Label>
-              <Input id="profile-phone" value={profileForm.phone ?? ''} onChange={(event) => updateProfileField('phone', event.target.value)} />
+              <Input
+                id="profile-phone"
+                type="tel"
+                inputMode="tel"
+                pattern="^\+?\d{6,20}$"
+                value={profileForm.phone ?? ''}
+                onChange={(event) => updateProfileField('phone', normalizeStrictPhoneInput(event.target.value))}
+              />
+              {profilePhoneError ? <p className="text-xs text-rose-600 dark:text-rose-400">{profilePhoneError}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="profile-timezone">{t('common.timezone', { defaultValue: 'Timezone' })}</Label>
@@ -129,7 +150,7 @@ export function ProfilePage() {
                 ))}
               </select>
             </div>
-            <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending}>
+            <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending || Boolean(profilePhoneError)}>
               {profileMutation.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </CardContent>

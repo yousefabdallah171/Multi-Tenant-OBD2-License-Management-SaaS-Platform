@@ -50,6 +50,15 @@
    - total row count increased
    - `Pending` summary card did not increment in the observed state
 
+### 2026-03-16 Shared Regression Recheck
+
+- Reseller profile timezone remains `Africa/Cairo` in both navbar and profile selector for the tested account.
+- Shared profile phone validation is now strict:
+  - only `+` and digits are accepted
+  - backend profile save rejects invalid phone shapes
+- Reseller customer-create keeps header date display in the user timezone, but schedule defaults now initialize in `UTC`.
+- Reseller customer-create still persists `scheduled_timezone` per action as before.
+
 ### Temporary QA Data Created During This Run
 
 - Customer `60`: `QA Sprint3 Customer Updated 20260314235617` (`cancelled`)

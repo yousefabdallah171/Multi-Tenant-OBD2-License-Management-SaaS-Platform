@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -13,7 +13,7 @@ import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
-import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
+import { normalizeStrictPhoneInput } from '@/lib/phone'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { activateLicense } from '@/services/activation.service'
 import { programService } from '@/services/program.service'
@@ -30,6 +30,7 @@ type DurationUnit = 'minutes' | 'hours' | 'days'
 type ScheduleMode = 'after' | 'on'
 
 const MIN_DURATION_DAYS = 1 / 1440
+const SCHEDULE_DEFAULT_TIMEZONE = 'UTC'
 
 function getDefaultEndDate(timeZone: string, days = 1) {
   const next = new Date()
@@ -41,15 +42,6 @@ function getDefaultScheduleDate(timeZone: string) {
   const next = new Date()
   next.setHours(next.getHours() + 1)
   return formatDateTimeLocalInTimezone(next, timeZone)
-}
-
-function normalizePhoneInput(value: string) {
-  const compact = value.replace(/[^\d+]/g, '')
-  if (compact.startsWith('+')) {
-    return `+${compact.slice(1).replace(/\+/g, '')}`
-  }
-
-  return compact.replace(/\+/g, '')
 }
 
 function durationToDays(value: number, unit: DurationUnit) {
@@ -77,8 +69,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const navigate = useNavigate()
   const isReseller = user?.role === 'reseller'
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const { timezone: displayTimezone } = useResolvedTimezone()
-  const previousDisplayTimezoneRef = useRef(displayTimezone)
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [customerName, setCustomerName] = useState('')
   const [clientName, setClientName] = useState('')
@@ -90,29 +80,17 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
-  const [endDate, setEndDate] = useState(() => getDefaultEndDate(displayTimezone))
+  const [endDate, setEndDate] = useState(() => getDefaultEndDate(SCHEDULE_DEFAULT_TIMEZONE))
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('on')
   const [scheduleAfterValue, setScheduleAfterValue] = useState('1')
   const [scheduleAfterUnit, setScheduleAfterUnit] = useState<DurationUnit>('hours')
-  const [scheduleAt, setScheduleAt] = useState(() => getDefaultScheduleDate(displayTimezone))
-  const [scheduleTimezone, setScheduleTimezone] = useState(displayTimezone)
+  const [scheduleAt, setScheduleAt] = useState(() => getDefaultScheduleDate(SCHEDULE_DEFAULT_TIMEZONE))
+  const [scheduleTimezone, setScheduleTimezone] = useState(SCHEDULE_DEFAULT_TIMEZONE)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null)
   const [submitError, setSubmitError] = useState('')
-
-  useEffect(() => {
-    const previousDisplayTimezone = previousDisplayTimezoneRef.current
-    if (previousDisplayTimezone === displayTimezone) {
-      return
-    }
-
-    setEndDate((current) => current === getDefaultEndDate(previousDisplayTimezone) ? getDefaultEndDate(displayTimezone) : current)
-    setScheduleTimezone((current) => current === previousDisplayTimezone ? displayTimezone : current)
-    setScheduleAt((current) => !current || current === getDefaultScheduleDate(previousDisplayTimezone) ? getDefaultScheduleDate(displayTimezone) : current)
-    previousDisplayTimezoneRef.current = displayTimezone
-  }, [displayTimezone])
 
   const programsQuery = useQuery({
     queryKey: ['customer-create', 'programs'],
@@ -176,14 +154,14 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
     if (mode === 'end_date') {
       if (!endDate) return 0
-      const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, displayTimezone)
+      const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, SCHEDULE_DEFAULT_TIMEZONE)
       if (!zonedEndDate) return 0
       const diff = zonedEndDate.getTime() - effectiveStartDate.getTime()
       return diff > 0 ? diff / 86400000 : 0
     }
 
     return durationToDays(Number(durationValue), durationUnit)
-  }, [createLicenseNow, displayTimezone, durationUnit, durationValue, effectiveStartDate, endDate, isReseller, mode, selectedPreset?.duration_days])
+  }, [createLicenseNow, durationUnit, durationValue, effectiveStartDate, endDate, isReseller, mode, selectedPreset?.duration_days])
 
   const autoPrice = useMemo(() => {
     if (!selectedProgram || !createLicenseNow) return 0
@@ -209,11 +187,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       return new Date(effectiveStartDate.getTime() + durationDays * 86400000).toISOString()
     }
     if (mode === 'end_date') {
-      const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, displayTimezone)
+      const zonedEndDate = zonedDateTimeInputToUtcDate(endDate, SCHEDULE_DEFAULT_TIMEZONE)
       return zonedEndDate ? zonedEndDate.toISOString() : ''
     }
     return new Date(effectiveStartDate.getTime() + durationDays * 86400000).toISOString()
-  }, [createLicenseNow, displayTimezone, durationDays, effectiveStartDate, endDate, isReseller, mode])
+  }, [createLicenseNow, durationDays, effectiveStartDate, endDate, isReseller, mode])
 
   const startSummary = useMemo(() => {
     if (!createLicenseNow) {
@@ -241,8 +219,8 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
     }
 
-    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(expiryPreview, locale, mode === 'end_date' ? displayTimezone : scheduleEnabled ? scheduleTimezone : displayTimezone)}`
-  }, [createLicenseNow, displayTimezone, expiryPreview, locale, mode, scheduleEnabled, scheduleTimezone, t])
+    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(expiryPreview, locale, mode === 'end_date' ? SCHEDULE_DEFAULT_TIMEZONE : scheduleEnabled ? scheduleTimezone : SCHEDULE_DEFAULT_TIMEZONE)}`
+  }, [createLicenseNow, expiryPreview, locale, mode, scheduleEnabled, scheduleTimezone, t])
 
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
@@ -349,7 +327,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
             </Field>
             <Field label={t('common.phone')} error={errors.phone}>
-              <Input type="tel" value={phone} onChange={(event) => setPhone(normalizePhoneInput(event.target.value))} placeholder="+966..." />
+              <Input type="tel" value={phone} onChange={(event) => setPhone(normalizeStrictPhoneInput(event.target.value))} placeholder="+966..." />
             </Field>
           </div>
 
@@ -538,7 +516,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 </p>
                 <div className="grid gap-3 md:grid-cols-3">
                   <Summary label={t('activate.durationDays', { defaultValue: 'Duration in Days' })} value={durationDays > 0 ? durationDays.toFixed(3) : '0'} />
-                  <Summary label={t('activate.expiryPreview', { defaultValue: 'Expiry Preview' })} value={expiryPreview ? formatDate(expiryPreview, locale, mode === 'end_date' ? displayTimezone : scheduleEnabled ? scheduleTimezone : displayTimezone) : '-'} />
+                  <Summary label={t('activate.expiryPreview', { defaultValue: 'Expiry Preview' })} value={expiryPreview ? formatDate(expiryPreview, locale, mode === 'end_date' ? SCHEDULE_DEFAULT_TIMEZONE : scheduleEnabled ? scheduleTimezone : SCHEDULE_DEFAULT_TIMEZONE) : '-'} />
                   <Summary label={t('activate.price', { defaultValue: 'Price' })} value={formatCurrency(totalPrice, 'USD', locale)} />
                 </div>
               </div>
