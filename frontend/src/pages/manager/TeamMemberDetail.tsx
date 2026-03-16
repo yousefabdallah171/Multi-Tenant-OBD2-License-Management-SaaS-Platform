@@ -328,11 +328,11 @@ function MetricCard({ label, value }: { label: string; value: React.ReactNode })
 }
 
 function normalizeRole(role?: string | null): UserRole | null {
-  if (!role) {
+  if (typeof role !== 'string') {
     return null
   }
 
-  const normalized = role.toLowerCase()
+  const normalized = role.trim().toLowerCase()
   if (normalized === 'manager' || normalized === 'reseller') {
     return normalized
   }
