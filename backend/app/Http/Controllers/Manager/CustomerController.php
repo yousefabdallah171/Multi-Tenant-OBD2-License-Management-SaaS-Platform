@@ -780,7 +780,7 @@ class CustomerController extends BaseManagerController
             return null;
         }
 
-        return str_ends_with($email, '@obd2sw.local') ? null : $email;
+        return str_starts_with($email, 'no-email+') && str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 
     private function resolveCustomerEmail(User $customer, ?string $email, int $tenantId): string

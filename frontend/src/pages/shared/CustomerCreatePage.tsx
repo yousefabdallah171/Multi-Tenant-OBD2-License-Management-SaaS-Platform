@@ -284,15 +284,16 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
+    const requiresPendingLicenseFields = createLicenseNow || biosId.trim().length > 0 || Boolean(programId)
     if (customerName.trim().length < 2) next.customerName = t('validation.required', { defaultValue: 'Field required' })
     // When username is auto-filled from BIOS link, skip the availability error —
     // the backend allows the same customer to be re-activated with their linked BIOS
     if (usernameCheckResult && !usernameCheckResult.available && !usernameIsLocked) next.customerName = usernameCheckResult.message
     if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) next.email = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
     if (phone.trim() && !/^\+?\d{6,20}$/.test(phone.trim())) next.phone = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
-    if (biosId.trim().length < 3) next.biosId = t('validation.required', { defaultValue: 'Field required' })
-    if (biosCheckResult && !biosCheckResult.available) next.biosId = biosCheckResult.message
-    if (!programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
+    if (requiresPendingLicenseFields && biosId.trim().length < 3) next.biosId = t('validation.required', { defaultValue: 'Field required' })
+    if (requiresPendingLicenseFields && biosCheckResult && !biosCheckResult.available) next.biosId = biosCheckResult.message
+    if (requiresPendingLicenseFields && !programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
 
     if (createLicenseNow) {
       if (isReseller) {
@@ -309,7 +310,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }
 
     return next
-  }, [biosCheckResult, biosId, createLicenseNow, customerName, durationDays, email, isReseller, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, usernameCheckResult])
+  }, [biosCheckResult, biosId, createLicenseNow, customerName, durationDays, email, isReseller, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, usernameCheckResult, usernameIsLocked])
 
   const createOnlyMutation = useMutation({
     mutationFn: () => createCustomer({

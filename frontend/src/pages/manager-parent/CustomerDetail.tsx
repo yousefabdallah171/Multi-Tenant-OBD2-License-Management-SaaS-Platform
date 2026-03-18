@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Lock, XCircle } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { availabilityService } from '@/services/availability.service'
 import { toast } from 'sonner'

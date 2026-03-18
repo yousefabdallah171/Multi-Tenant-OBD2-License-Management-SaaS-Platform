@@ -530,7 +530,7 @@ class CustomerController extends BaseSuperAdminController
             return null;
         }
 
-        return str_ends_with($email, '@obd2sw.local') ? null : $email;
+        return str_starts_with($email, 'no-email+') && str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 
     private function resolveCustomerUsername(User $user, ?License $license): ?string
