@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Reseller;
 
+use App\Models\BiosBlacklist;
 use App\Models\BiosChangeRequest;
 use App\Models\License;
 use Illuminate\Http\JsonResponse;
@@ -65,6 +66,13 @@ class BiosChangeRequestController extends BaseResellerController
         if (mb_strtolower($newBiosId) === mb_strtolower(trim((string) $license->bios_id))) {
             return response()->json([
                 'message' => 'This BIOS ID is the same as the current BIOS ID.',
+            ], 422);
+        }
+
+        $tenantId = $this->currentTenantId($request);
+        if (BiosBlacklist::blocksBios($newBiosId, $tenantId)) {
+            return response()->json([
+                'message' => 'This BIOS ID is blacklisted and cannot be used.',
             ], 422);
         }
 

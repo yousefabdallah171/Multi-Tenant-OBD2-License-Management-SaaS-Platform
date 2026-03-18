@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Enums\UserRole;
+use App\Models\BiosBlacklist;
 use App\Models\BiosChangeRequest;
 use App\Models\BiosUsernameLink;
 use App\Services\LicenseService;
@@ -54,6 +55,13 @@ class BiosChangeRequestController extends BaseManagerParentController
         if (! in_array($biosChangeRequest->status, ['pending', 'approved_pending_sync'], true)) {
             return response()->json([
                 'message' => 'Only pending BIOS change requests can be approved.',
+            ], 422);
+        }
+
+        $tenantId = $biosChangeRequest->tenant_id;
+        if (BiosBlacklist::blocksBios($biosChangeRequest->new_bios_id, $tenantId)) {
+            return response()->json([
+                'message' => 'The requested new BIOS ID is blacklisted and cannot be approved.',
             ], 422);
         }
 

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Lock } from 'lucide-react'
+import { useDebounce } from '@/hooks/useDebounce'
+import { availabilityService } from '@/services/availability.service'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -31,6 +33,16 @@ export function CustomerDetailPage() {
   const [requestDialogOpen, setRequestDialogOpen] = useState(false)
   const [newBiosId, setNewBiosId] = useState('')
   const [requestReason, setRequestReason] = useState('')
+  const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string } | null>(null)
+  const debouncedNewBiosId = useDebounce(newBiosId.trim(), 400)
+
+  useEffect(() => {
+    if (debouncedNewBiosId.length < 3) {
+      setBiosCheckResult(null)
+      return
+    }
+    availabilityService.checkBios(debouncedNewBiosId).then(setBiosCheckResult)
+  }, [debouncedNewBiosId])
 
   const query = useQuery({
     queryKey: ['reseller', 'customer-detail', customerId],
@@ -64,6 +76,7 @@ export function CustomerDetailPage() {
       setRequestDialogOpen(false)
       setNewBiosId('')
       setRequestReason('')
+      setBiosCheckResult(null)
       void queryClient.invalidateQueries({ queryKey: ['reseller', 'customer-detail', customerId] })
     },
     onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
@@ -161,11 +174,18 @@ export function CustomerDetailPage() {
                 {requestableLicense?.is_blacklisted ? <BlockBadge /> : null}
               </div>
             </div>
-            <Input
-              value={newBiosId}
-              onChange={(event) => setNewBiosId(event.target.value)}
-              placeholder={t('biosChangeRequests.newBiosPlaceholder')}
-            />
+            <div className="space-y-1">
+              <Input
+                value={newBiosId}
+                onChange={(event) => { setNewBiosId(event.target.value); setBiosCheckResult(null) }}
+                placeholder={t('biosChangeRequests.newBiosPlaceholder')}
+              />
+              {biosCheckResult && (
+                <p className={`text-xs ${biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  {biosCheckResult.is_blacklisted || !biosCheckResult.available ? '✗ ' : '✓ '}{biosCheckResult.message}
+                </p>
+              )}
+            </div>
             <Textarea
               value={requestReason}
               onChange={(event) => setRequestReason(event.target.value)}
@@ -192,6 +212,11 @@ export function CustomerDetailPage() {
 
                 if ((requestableLicense.bios_id ?? '').trim().toLowerCase() === newBiosId.trim().toLowerCase()) {
                   toast.error(t('biosChangeRequests.sameBiosValidation'))
+                  return
+                }
+
+                if (biosCheckResult?.is_blacklisted) {
+                  toast.error(t('customers.biosBlacklisted'))
                   return
                 }
 
