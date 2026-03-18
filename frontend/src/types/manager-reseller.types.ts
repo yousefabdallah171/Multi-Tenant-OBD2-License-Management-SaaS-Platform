@@ -722,3 +722,16 @@ export interface ActivateManagerSoftwareData {
   username: string
   bios_id: string
 }
+
+
+export interface BiosChangeHistoryItem {
+  id: number
+  old_bios_id: string
+  new_bios_id: string
+  reason: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  reviewed_by: string | null
+  reviewer_notes: string | null
+  created_at: string | null
+  reviewed_at: string | null
+}

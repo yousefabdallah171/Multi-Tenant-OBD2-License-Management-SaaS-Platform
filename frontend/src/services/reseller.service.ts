@@ -2,6 +2,7 @@ import { api } from '@/services/api'
 import { apiCache } from '@/lib/apiCache'
 import type { IpAnalyticsEntry, PaginatedResponse } from '@/types/manager-parent.types'
 import type {
+  BiosChangeHistoryItem,
   DashboardSeriesPoint,
   ReportRangeFilters,
   ResellerCustomerDetails,
@@ -82,6 +83,10 @@ export const resellerService = {
   },
   async getCustomer(id: number) {
     const { data } = await api.get<{ data: ResellerCustomerDetails }>(`/reseller/customers/${id}`)
+    return data
+  },
+  async getCustomerBiosChangeHistory(id: number) {
+    const { data } = await api.get<{ data: BiosChangeHistoryItem[] }>(`/reseller/customers/${id}/bios-change-history`)
     return data
   },
   async submitBiosChangeRequest(payload: SubmitBiosChangeRequestData) {

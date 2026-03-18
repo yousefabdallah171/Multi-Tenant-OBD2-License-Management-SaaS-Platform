@@ -1785,7 +1785,11 @@
       "approved": "تمت الموافقة",
       "rejected": "مرفوض",
       "approvedPendingSync": "تمت الموافقة، بانتظار المزامنة"
-    }
+    },
+    "history": "سجل تغيير BIOS",
+    "reason": "السبب",
+    "reviewerNotes": "ملاحظات المراجع",
+    "reviewedAt": "تاريخ المراجعة"
   },
   "payments": {
     "title": "مدفوعات الموزعين",

@@ -290,6 +290,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/customers', [ResellerCustomerController::class, 'store']);
         Route::put('/customers/{user}', [ResellerCustomerController::class, 'update']);
         Route::get('/customers/{user}', [ResellerCustomerController::class, 'show']);
+        Route::get('/customers/{user}/bios-change-history', [ResellerCustomerController::class, 'biosChangeHistory']);
         Route::delete('/customers/{user}', [ResellerCustomerController::class, 'destroy']);
 
         Route::get('/licenses/expiring', [ResellerLicenseController::class, 'expiring']);

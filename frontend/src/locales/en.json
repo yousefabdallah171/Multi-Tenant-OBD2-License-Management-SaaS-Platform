@@ -1785,7 +1785,11 @@
       "approved": "Approved",
       "rejected": "Rejected",
       "approvedPendingSync": "Approved, Sync Pending"
-    }
+    },
+    "history": "BIOS Change History",
+    "reason": "Reason",
+    "reviewerNotes": "Reviewer Notes",
+    "reviewedAt": "Reviewed At"
   },
   "payments": {
     "title": "Reseller Payments",

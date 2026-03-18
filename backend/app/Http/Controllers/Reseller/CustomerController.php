@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Reseller;
 
 use App\Enums\UserRole;
 use App\Models\BiosBlacklist;
+use App\Models\BiosChangeRequest;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
@@ -307,6 +308,34 @@ class CustomerController extends BaseResellerController
         ]);
     }
 
+    public function biosChangeHistory(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveCustomer($request, $user);
+        $resellerId = $this->currentReseller($request)->id;
+
+        $changes = BiosChangeRequest::query()
+            ->where('reseller_id', $resellerId)
+            ->whereHas('license', fn ($q) => $q->where('customer_id', $customer->id))
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (BiosChangeRequest $change): array => [
+                'id' => $change->id,
+                'old_bios_id' => $change->old_bios_id,
+                'new_bios_id' => $change->new_bios_id,
+                'reason' => $change->reason !== '' ? $change->reason : null,
+                'status' => $change->status === 'approved_pending_sync' ? 'approved' : $change->status,
+                'reviewed_by' => null,
+                'reviewer_notes' => $change->reviewer_notes,
+                'created_at' => $change->created_at?->toIso8601String(),
+                'reviewed_at' => $change->reviewed_at?->toIso8601String(),
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => $changes,
+        ]);
+    }
+
     public function destroy(Request $request, User $user): JsonResponse
     {
         $customer = $this->resolveCustomer($request, $user);
@@ -548,9 +577,13 @@ class CustomerController extends BaseResellerController
             ->first();
 
         if ($existingLicense) {
-            throw ValidationException::withMessages([
-                'bios_id' => 'A license already exists for this BIOS ID.',
-            ]);
+            // Allow the same reseller to activate their own pending BIOS (upgrade pending → active)
+            $isSameReseller = $existingLicense->reseller_id === $seller->id;
+            if (! $isSameReseller || $existingLicense->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'bios_id' => 'A license already exists for this BIOS ID.',
+                ]);
+            }
         }
 
         return $program;

@@ -41,17 +41,29 @@ class BiosAvailabilityController extends Controller
         }
 
         // Check if BIOS is active in ANY license across ALL tenants
-        $activeLicense = License::whereRaw('LOWER(bios_id) = ?', [$biosId])
+        $existingLicense = License::whereRaw('LOWER(bios_id) = ?', [$biosId])
             ->whereIn('status', ['active', 'pending', 'suspended'])
             ->first();
 
-        if ($activeLicense) {
-            return response()->json([
-                'available' => false,
-                'linked_username' => null,
-                'is_blacklisted' => false,
-                'message' => 'BIOS ID is already working with another reseller',
-            ]);
+        if ($existingLicense) {
+            $isOwnReseller = $user && $existingLicense->reseller_id === $user->id;
+            if ($existingLicense->status === 'active' || $existingLicense->status === 'suspended') {
+                return response()->json([
+                    'available' => false,
+                    'linked_username' => null,
+                    'is_blacklisted' => false,
+                    'message' => 'BIOS ID is already active with another reseller',
+                ]);
+            }
+            // pending license — only block if it belongs to a different reseller
+            if (! $isOwnReseller) {
+                return response()->json([
+                    'available' => false,
+                    'linked_username' => null,
+                    'is_blacklisted' => false,
+                    'message' => 'BIOS ID has a pending license with another reseller',
+                ]);
+            }
         }
 
         // BIOS not active — check if it has a linked username from history
