@@ -182,6 +182,20 @@ class LicenseService
         ];
 
         if (! $isScheduled) {
+            // Race-condition guard: BIOS must not be active under a different license
+            $renewBiosLower = strtolower((string) $license->bios_id);
+            $renewConflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$renewBiosLower])
+                ->where('id', '!=', $license->id)
+                ->whereIn('status', ['active', 'suspended'])
+                ->first();
+
+            if ($renewConflict) {
+                throw ValidationException::withMessages([
+                    'license' => 'This BIOS ID is currently active with another reseller and cannot be renewed.',
+                ]);
+            }
+
             $program = $license->program;
             $apiKey = $program?->getDecryptedApiKey();
 
@@ -424,6 +438,20 @@ class LicenseService
             ]);
         }
 
+        // Race-condition guard: check if this BIOS is already active under a DIFFERENT license
+        $biosIdLower = strtolower((string) $license->bios_id);
+        $conflictingLicense = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->where('id', '!=', $license->id)
+            ->whereIn('status', ['active', 'suspended'])
+            ->first();
+
+        if ($conflictingLicense) {
+            throw ValidationException::withMessages([
+                'license' => 'This BIOS ID is currently active with another reseller and cannot be reactivated.',
+            ]);
+        }
+
         $program = $license->program()->first();
         $apiKey = $program?->getDecryptedApiKey();
         $apiResponse = [
@@ -452,7 +480,21 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending): License {
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending, $biosIdLower): License {
+            // Re-check inside transaction with a lock to prevent race condition
+            $conflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->where('id', '!=', $license->id)
+                ->whereIn('status', ['active', 'suspended'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($conflict) {
+                throw ValidationException::withMessages([
+                    'license' => 'This BIOS ID was just activated by another reseller. Cannot reactivate.',
+                ]);
+            }
+
             $remainingMinutes = $isPausedPending
                 ? max(1, (int) ($license->pause_remaining_minutes ?? 0))
                 : null;
