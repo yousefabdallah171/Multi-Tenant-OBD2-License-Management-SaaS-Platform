@@ -391,11 +391,17 @@ export function CustomersPage() {
       sortable: true,
       sortValue: (row) => getLicenseDisplayStatus(row),
       render: (row) => (row.status ? (
-        <div className="relative inline-flex">
+        <div className="relative inline-flex flex-col gap-1">
           <LicenseStatusBadges status={getLicenseDisplayStatus(row)} isBlocked={Boolean(row.is_blacklisted)} />
           {isPlainPendingLicense(row) ? (
             <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
               {t('common.new', { defaultValue: lang === 'ar' ? 'جديد' : 'New' })}
+            </span>
+          ) : null}
+          {row.bios_active_elsewhere ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300">
+              <ShieldOff className="h-2.5 w-2.5" />
+              {t('customers.biosActiveElsewhere', { defaultValue: 'Active w/ other reseller' })}
             </span>
           ) : null}
         </div>
@@ -414,6 +420,7 @@ export function CustomersPage() {
         const isPlainPending = isPlainPendingLicense(row)
         const canDeleteRow = canDeleteCustomerRow(row)
         const isBlacklisted = Boolean(row.is_blacklisted)
+        const isBiosActiveElsewhere = Boolean(row.bios_active_elsewhere)
         const renewActionLabel = displayStatus === 'active'
           ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
           : isScheduleEditable
@@ -439,7 +446,7 @@ export function CustomersPage() {
               <Pencil className="me-2 h-4 w-4" />
               {t('common.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
-            {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) && !isBlacklisted ? (
+            {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) && !isBlacklisted && !isBiosActiveElsewhere ? (
               <DropdownMenuItem onClick={() => navigate(routePaths.manager.licenseRenew(lang, row.license_id!), { state: { returnTo: `${location.pathname}${location.search}` } })}>
                 <RotateCw className="me-2 h-4 w-4" />
                 {renewActionLabel}
@@ -463,7 +470,7 @@ export function CustomersPage() {
                 </DropdownMenuItem>
               </>
             ) : null}
-            {typeof row.license_id === 'number' && canReactivateLicense(row) ? (
+            {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBiosActiveElsewhere ? (
               <DropdownMenuItem onClick={() => resumeMutation.mutate(row.license_id!)}>
                 <Play className="me-2 h-4 w-4" />
                 {isPausedPending ? t('common.continue', { defaultValue: 'Continue' }) : t('common.reactivate')}

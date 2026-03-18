@@ -266,6 +266,7 @@ export interface CustomerSummary {
   pause_remaining_minutes?: number | null
   pause_reason?: string | null
   is_blacklisted?: boolean
+  bios_active_elsewhere?: boolean
   username_locked?: boolean
   license_count: number
   has_active_license?: boolean

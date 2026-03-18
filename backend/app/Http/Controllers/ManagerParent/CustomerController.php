@@ -604,6 +604,13 @@ class CustomerController extends BaseManagerParentController
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'pause_reason' => $license?->pause_reason,
             'is_blacklisted' => $license ? BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id) : false,
+            'bios_active_elsewhere' => $license && $license->bios_id
+                ? License::query()
+                    ->whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])
+                    ->where('id', '!=', $license->id)
+                    ->whereIn('status', ['active', 'suspended'])
+                    ->exists()
+                : false,
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
         ];
