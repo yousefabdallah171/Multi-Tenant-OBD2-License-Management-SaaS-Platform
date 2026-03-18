@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -536,22 +537,52 @@ class CustomerController extends BaseResellerController
     {
         $program = $this->assertPendingLicenseCanBeCreated($request, $biosId, $programId, $seller, (string) $customer->username);
         $normalizedBiosId = trim($biosId);
+        $biosIdLower = strtolower($normalizedBiosId);
 
-        License::query()->create([
-            'tenant_id' => $this->currentTenantId($request),
-            'customer_id' => $customer->id,
-            'reseller_id' => $seller->id,
-            'program_id' => $program->id,
-            'bios_id' => $normalizedBiosId,
-            'external_username' => $customer->username,
-            'external_activation_response' => 'Pending activation.',
-            'duration_days' => 0,
-            'price' => 0,
-            'activated_at' => now(),
-            'expires_at' => now(),
-            'status' => 'pending',
-            'is_scheduled' => false,
-        ]);
+        DB::transaction(function () use ($request, $customer, $normalizedBiosId, $biosIdLower, $program, $seller): void {
+            // Race condition guard: re-check with lock inside transaction
+            // Allow same reseller's own pending (they can upgrade it), block everything else
+            $raceConflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->whereIn('status', ['active', 'suspended'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($raceConflict) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID was just activated by another reseller.',
+                ]);
+            }
+
+            $pendingRace = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->where('reseller_id', '!=', $seller->id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->first();
+
+            if ($pendingRace) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'bios_id' => 'A pending license for this BIOS ID already exists with another reseller.',
+                ]);
+            }
+
+            License::query()->create([
+                'tenant_id' => $this->currentTenantId($request),
+                'customer_id' => $customer->id,
+                'reseller_id' => $seller->id,
+                'program_id' => $program->id,
+                'bios_id' => $normalizedBiosId,
+                'external_username' => $customer->username,
+                'external_activation_response' => 'Pending activation.',
+                'duration_days' => 0,
+                'price' => 0,
+                'activated_at' => now(),
+                'expires_at' => now(),
+                'status' => 'pending',
+                'is_scheduled' => false,
+            ]);
+        });
     }
 
     private function assertPendingLicenseCanBeCreated(Request $request, string $biosId, int $programId, User $seller, string $username = ''): Program
@@ -577,6 +608,18 @@ class CustomerController extends BaseResellerController
         if (BiosBlacklist::blocksBios($normalizedBiosId, $this->currentTenantId($request))) {
             throw ValidationException::withMessages([
                 'bios_id' => 'This BIOS ID is blacklisted.',
+            ]);
+        }
+
+        // GLOBAL cross-tenant check: BIOS must not be active or suspended in ANY tenant
+        $biosIdLowerGlobal = strtolower($normalizedBiosId);
+        $globalActive = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLowerGlobal])
+            ->whereIn('status', ['active', 'suspended'])
+            ->first();
+        if ($globalActive) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'This BIOS ID is currently active with another reseller.',
             ]);
         }
 

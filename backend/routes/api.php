@@ -238,6 +238,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/customers', [ManagerCustomerController::class, 'store']);
         Route::put('/customers/{user}', [ManagerCustomerController::class, 'update']);
         Route::get('/customers/{user}/license-history', [ManagerCustomerController::class, 'licenseHistory']);
+        Route::get('/customers/{user}/bios-change-history', [ManagerCustomerController::class, 'biosChangeHistory']);
         Route::get('/customers/{user}', [ManagerCustomerController::class, 'show']);
         Route::delete('/customers/{user}', [ManagerCustomerController::class, 'destroy']);
         Route::get('/licenses', [ManagerLicenseController::class, 'index']);

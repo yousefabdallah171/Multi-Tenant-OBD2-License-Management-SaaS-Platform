@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ManagerParent;
 use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\BiosBlacklist;
+use App\Models\BiosUsernameLink;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\UserIpLog;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -442,22 +444,38 @@ class CustomerController extends BaseManagerParentController
     {
         $program = $this->assertPendingLicenseCanBeCreated($request, $biosId, $programId, $seller);
         $normalizedBiosId = trim($biosId);
+        $biosIdLower = strtolower($normalizedBiosId);
 
-        License::query()->create([
-            'tenant_id' => $this->currentTenantId($request),
-            'customer_id' => $customer->id,
-            'reseller_id' => $seller->id,
-            'program_id' => $program->id,
-            'bios_id' => $normalizedBiosId,
-            'external_username' => $customer->username,
-            'external_activation_response' => 'Pending activation.',
-            'duration_days' => 0,
-            'price' => 0,
-            'activated_at' => now(),
-            'expires_at' => now(),
-            'status' => 'pending',
-            ...($this->supportsScheduledLicenses() ? ['is_scheduled' => false] : []),
-        ]);
+        DB::transaction(function () use ($request, $customer, $normalizedBiosId, $biosIdLower, $program, $seller): void {
+            // Race condition guard: re-check with lock inside transaction
+            $raceConflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->whereIn('status', ['active', 'suspended', 'pending'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($raceConflict) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID was just claimed by another user. Please try a different BIOS ID.',
+                ]);
+            }
+
+            License::query()->create([
+                'tenant_id' => $this->currentTenantId($request),
+                'customer_id' => $customer->id,
+                'reseller_id' => $seller->id,
+                'program_id' => $program->id,
+                'bios_id' => $normalizedBiosId,
+                'external_username' => $customer->username,
+                'external_activation_response' => 'Pending activation.',
+                'duration_days' => 0,
+                'price' => 0,
+                'activated_at' => now(),
+                'expires_at' => now(),
+                'status' => 'pending',
+                ...($this->supportsScheduledLicenses() ? ['is_scheduled' => false] : []),
+            ]);
+        });
     }
 
     private function assertPendingLicenseCanBeCreated(Request $request, string $biosId, int $programId, User $seller): Program
@@ -486,19 +504,48 @@ class CustomerController extends BaseManagerParentController
             ]);
         }
 
+        // GLOBAL cross-tenant check: BIOS must not be active or suspended in ANY tenant
+        $biosIdLower = strtolower($normalizedBiosId);
+        $globalActive = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->whereIn('status', ['active', 'suspended'])
+            ->first();
+
+        if ($globalActive) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'This BIOS ID is currently active with another reseller.',
+            ]);
+        }
+
+        // Enforce permanent BIOS↔username link
+        $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+        if ($linkByBios) {
+            $linkedUsername = strtolower((string) $linkByBios->username);
+            $customerName = strtolower(trim((string) request()->input('name', '')));
+            $derivedUsername = (string) \Illuminate\Support\Str::of($customerName)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+            if ($derivedUsername !== '' && $derivedUsername !== $linkedUsername) {
+                $existingLinkedCustomer = User::query()
+                    ->where('tenant_id', $this->currentTenantId($request))
+                    ->whereRaw('LOWER(username) = ?', [$linkedUsername])
+                    ->where('role', UserRole::CUSTOMER->value)
+                    ->exists();
+                if (! $existingLinkedCustomer) {
+                    throw ValidationException::withMessages([
+                        'bios_id' => 'This BIOS ID is permanently linked to a different username (' . $linkByBios->username . ').',
+                    ]);
+                }
+            }
+        }
+
+        // Pending-only check globally
         $existingLicense = License::query()
-            ->where('tenant_id', $this->currentTenantId($request))
-            ->where('bios_id', $normalizedBiosId)
-            ->where(function ($query): void {
-                $query
-                    ->whereEffectivelyActive()
-                    ->orWhereIn('status', ['pending', 'suspended']);
-            })
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->whereIn('status', ['pending'])
             ->first();
 
         if ($existingLicense) {
             throw ValidationException::withMessages([
-                'bios_id' => 'A license already exists for this BIOS ID.',
+                'bios_id' => 'A pending license already exists for this BIOS ID.',
             ]);
         }
 

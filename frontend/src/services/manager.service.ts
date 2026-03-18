@@ -150,6 +150,10 @@ export const managerService = {
     const { data } = await api.get<{ data: LicenseHistoryEntry[] }>(`/manager/customers/${id}/license-history`)
     return data
   },
+  async getCustomerBiosChangeHistory(id: number) {
+    const { data } = await api.get<{ data: Array<{ id: number; old_bios_id: string; new_bios_id: string; reason: string | null; reviewer_notes?: string | null; status: string; requested_by: string | null; reviewed_by: string | null; created_at: string; reviewed_at: string | null }> }>(`/manager/customers/${id}/bios-change-history`)
+    return data
+  },
   async getBiosChangeRequests(params?: BiosChangeRequestFilters) {
     const { data } = await api.get<PaginatedResponse<BiosChangeRequest>>('/manager/bios-change-requests', { params })
     return data
