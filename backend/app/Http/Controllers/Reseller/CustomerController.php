@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Reseller;
 use App\Enums\UserRole;
 use App\Models\BiosBlacklist;
 use App\Models\BiosChangeRequest;
+use App\Models\BiosUsernameLink;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
@@ -173,6 +174,7 @@ class CustomerController extends BaseResellerController
                 (string) $validated['bios_id'],
                 (int) $validated['program_id'],
                 $this->currentReseller($request),
+                $username,
             );
         }
 
@@ -520,7 +522,7 @@ class CustomerController extends BaseResellerController
 
     private function createPendingLicense(Request $request, User $customer, string $biosId, int $programId, User $seller): void
     {
-        $program = $this->assertPendingLicenseCanBeCreated($request, $biosId, $programId, $seller);
+        $program = $this->assertPendingLicenseCanBeCreated($request, $biosId, $programId, $seller, (string) $customer->username);
         $normalizedBiosId = trim($biosId);
 
         License::query()->create([
@@ -540,7 +542,7 @@ class CustomerController extends BaseResellerController
         ]);
     }
 
-    private function assertPendingLicenseCanBeCreated(Request $request, string $biosId, int $programId, User $seller): Program
+    private function assertPendingLicenseCanBeCreated(Request $request, string $biosId, int $programId, User $seller, string $username = ''): Program
     {
         $program = Program::query()
             ->whereKey($programId)
@@ -564,6 +566,18 @@ class CustomerController extends BaseResellerController
             throw ValidationException::withMessages([
                 'bios_id' => 'This BIOS ID is blacklisted.',
             ]);
+        }
+
+        // Enforce permanent BIOS-username link
+        if ($username !== '') {
+            $biosIdLower = strtolower($normalizedBiosId);
+            $usernameLower = strtolower($username);
+            $existingLink = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            if ($existingLink && strtolower((string) $existingLink->username) !== $usernameLower) {
+                throw ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID is permanently linked to a different username and cannot be assigned to a new customer.',
+                ]);
+            }
         }
 
         $existingLicense = License::query()

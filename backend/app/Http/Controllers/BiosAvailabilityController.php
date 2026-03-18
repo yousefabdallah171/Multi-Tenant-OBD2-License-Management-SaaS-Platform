@@ -66,8 +66,19 @@ class BiosAvailabilityController extends Controller
             }
         }
 
-        // BIOS not active — check if it has a linked username from history
+        // Check BIOS-username permanent link — return linked username for auto-fill
         $link = BiosUsernameLink::where('bios_id', $biosId)->first();
+
+        // Also check if any historical license tied this BIOS to a different username
+        if (! $link) {
+            $historicalLicense = License::whereRaw('LOWER(bios_id) = ?', [$biosId])
+                ->whereNotNull('external_username')
+                ->latest('updated_at')
+                ->first();
+            if ($historicalLicense) {
+                $link = (object) ['username' => $historicalLicense->external_username];
+            }
+        }
 
         return response()->json([
             'available' => true,
