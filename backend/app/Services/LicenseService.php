@@ -950,7 +950,8 @@ class LicenseService
                         'seller_id' => ['Reseller does not belong to your organization.'],
                     ]);
                 }
-                if ($relatedReseller->role !== UserRole::RESELLER->value) {
+                $relatedResellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
+                if ($relatedResellerRole !== UserRole::RESELLER->value) {
                     throw ValidationException::withMessages([
                         'seller_id' => ['The specified user is not a reseller.'],
                     ]);
