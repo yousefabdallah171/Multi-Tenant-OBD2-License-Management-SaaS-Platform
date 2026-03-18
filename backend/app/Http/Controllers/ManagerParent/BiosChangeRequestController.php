@@ -82,20 +82,31 @@ class BiosChangeRequestController extends BaseManagerParentController
             );
         }
 
-        $result = $this->licenseService->changeBiosId($biosChangeRequest->license, $biosChangeRequest->new_bios_id);
+        try {
+            $result = $this->licenseService->changeBiosId($biosChangeRequest->license, $biosChangeRequest->new_bios_id);
 
-        \Log::info('BIOS change result:', [
-            'request_id' => $biosChangeRequest->id,
-            'license_id' => $biosChangeRequest->license_id,
-            'old_bios' => $biosChangeRequest->old_bios_id,
-            'new_bios' => $biosChangeRequest->new_bios_id,
-            'result' => $result,
-        ]);
+            \Log::info('BIOS change result:', [
+                'request_id' => $biosChangeRequest->id,
+                'license_id' => $biosChangeRequest->license_id,
+                'old_bios' => $biosChangeRequest->old_bios_id,
+                'new_bios' => $biosChangeRequest->new_bios_id,
+                'result' => $result,
+            ]);
 
-        if (! ($result['success'] ?? false)) {
+            if (! ($result['success'] ?? false)) {
+                $biosChangeRequest->forceFill([
+                    'status' => 'approved_pending_sync',
+                    'reviewer_notes' => $result['message'] ?? 'External sync pending.',
+                ])->save();
+            }
+        } catch (\Throwable $e) {
+            \Log::error('BIOS change exception:', [
+                'request_id' => $biosChangeRequest->id,
+                'error' => $e->getMessage(),
+            ]);
             $biosChangeRequest->forceFill([
                 'status' => 'approved_pending_sync',
-                'reviewer_notes' => $result['message'] ?? 'External sync pending.',
+                'reviewer_notes' => 'Error: ' . $e->getMessage(),
             ])->save();
         }
 
