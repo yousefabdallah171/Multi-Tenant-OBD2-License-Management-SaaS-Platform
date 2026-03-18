@@ -91,6 +91,8 @@ class BiosChangeRequestController extends BaseManagerParentController
             ])->save();
         }
 
+        // Reload license to get the updated BIOS ID
+        $biosChangeRequest->license->refresh();
         $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email', 'reviewer:id,name']);
 
         $this->logActivity($request, 'bios.change_approved', sprintf('Approved BIOS change request %d.', $biosChangeRequest->id), [
