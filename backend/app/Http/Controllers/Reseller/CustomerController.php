@@ -105,7 +105,7 @@ class CustomerController extends BaseResellerController
         $customers = $query->paginate((int) ($validated['per_page'] ?? 25));
 
         return response()->json([
-            'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user, $validated))->values(),
+            'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user, $validated, $resellerId))->values(),
             'meta' => $this->paginationMeta($customers),
         ]);
     }
@@ -238,7 +238,7 @@ class CustomerController extends BaseResellerController
             ->with(['program:id,name'])
             ->latest('activated_at')]);
 
-        return response()->json(['data' => $this->serializeCustomer($customer)], 201);
+        return response()->json(['data' => $this->serializeCustomer($customer, [], $this->currentReseller($request)->id)], 201);
     }
 
     public function update(Request $request, User $user): JsonResponse
@@ -270,7 +270,7 @@ class CustomerController extends BaseResellerController
             ->with(['program:id,name'])
             ->latest('activated_at')]);
 
-        return response()->json(['data' => $this->serializeCustomer($customer)]);
+        return response()->json(['data' => $this->serializeCustomer($customer, [], $this->currentReseller($request)->id)]);
     }
 
     public function show(Request $request, User $user): JsonResponse
@@ -285,7 +285,7 @@ class CustomerController extends BaseResellerController
 
         return response()->json([
             'data' => [
-                ...$this->serializeCustomer($customer),
+                ...$this->serializeCustomer($customer, [], $resellerId),
                 'licenses' => $customer->customerLicenses->map(fn ($license): array => [
                     'id' => $license->id,
                     'bios_id' => $license->bios_id,
@@ -382,9 +382,20 @@ class CustomerController extends BaseResellerController
     /**
      * @param array<string, mixed> $filters
      */
-    private function serializeCustomer(User $user, array $filters = []): array
+    private function serializeCustomer(User $user, array $filters = [], ?int $currentResellerId = null): array
     {
         $license = $this->resolveDisplayLicense($user, $filters);
+
+        // Check if this customer's BIOS is currently active under a DIFFERENT reseller
+        $biosActiveElsewhere = false;
+        if ($license && $license->bios_id && $currentResellerId !== null) {
+            $biosIdLower = strtolower((string) $license->bios_id);
+            $biosActiveElsewhere = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->where('reseller_id', '!=', $currentResellerId)
+                ->whereIn('status', ['active', 'suspended'])
+                ->exists();
+        }
 
         return [
             'id' => $user->id,
@@ -413,6 +424,7 @@ class CustomerController extends BaseResellerController
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'pause_reason' => $license?->pause_reason,
             'is_blacklisted' => $license ? BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id) : false,
+            'bios_active_elsewhere' => $biosActiveElsewhere,
             'license_count' => $user->customerLicenses->count(),
         ];
     }
