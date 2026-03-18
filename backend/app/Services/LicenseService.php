@@ -664,7 +664,8 @@ class LicenseService
             ]);
         }
 
-        if ($apiKey === null) {
+        // For non-active licenses or when no API key, update locally without external API
+        if ($apiKey === null || $license->status !== 'active') {
             return DB::transaction(function () use ($license, $trimmedBiosId, $reseller): array {
                 $oldBiosId = (string) $license->bios_id;
 
@@ -692,7 +693,7 @@ class LicenseService
                 return [
                     'success' => true,
                     'message' => null,
-                    'response' => ['response' => 'BIOS updated locally.'],
+                    'response' => ['response' => $license->status === 'active' ? 'BIOS updated locally.' : 'BIOS updated (license is not active).'],
                 ];
             });
         }
