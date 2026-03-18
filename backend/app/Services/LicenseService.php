@@ -107,6 +107,7 @@ class LicenseService
                 'tenant_id' => $reseller->tenant_id,
                 'customer_id' => $customer->id,
                 'reseller_id' => $reseller->id,
+                'created_by_reseller_id' => $reseller->id,
                 'program_id' => $program->id,
                 'bios_id' => $biosId,
                 'external_username' => $externalUsername,
