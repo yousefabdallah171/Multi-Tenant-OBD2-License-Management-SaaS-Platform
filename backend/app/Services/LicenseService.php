@@ -940,10 +940,11 @@ class LicenseService
         }
 
         // GLOBAL CROSS-TENANT CHECK: check if BIOS is active in ANY tenant
+        // Pending licenses do NOT block — any reseller can activate a pending BIOS (first to activate wins)
         $biosIdLower = strtolower($biosId);
         $globalDuplicate = License::query()
             ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
-            ->whereIn('status', ['active', 'pending', 'suspended'])
+            ->whereIn('status', ['active', 'suspended'])
             ->first();
 
         if ($globalDuplicate) {
