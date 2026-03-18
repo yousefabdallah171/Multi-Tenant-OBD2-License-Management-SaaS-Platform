@@ -677,23 +677,46 @@ class CustomerController extends BaseSuperAdminController
             ]);
         }
 
-        // Enforce permanent BIOS↔username link
-        $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
-        if ($linkByBios) {
-            $linkedUsername = strtolower((string) $linkByBios->username);
-            $customerName = strtolower(trim((string) request()->input('name', '')));
-            $derivedUsername = (string) \Illuminate\Support\Str::of($customerName)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
-            if ($derivedUsername !== '' && $derivedUsername !== $linkedUsername) {
-                $existingLinkedCustomer = User::query()
-                    ->where('tenant_id', $tenantId)
-                    ->whereRaw('LOWER(username) = ?', [$linkedUsername])
-                    ->where('role', UserRole::CUSTOMER->value)
-                    ->exists();
-                if (! $existingLinkedCustomer) {
+        // Enforce permanent BIOS↔username link (both directions)
+        $customerName = strtolower(trim((string) request()->input('name', '')));
+        $derivedUsername = (string) \Illuminate\Support\Str::of($customerName)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+
+        if ($derivedUsername !== '') {
+            $usernameLower = $derivedUsername;
+
+            // Check if customer already exists (re-activation)
+            $existingCustomer = User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereRaw('LOWER(username) = ?', [$usernameLower])
+                ->where('role', UserRole::CUSTOMER->value)
+                ->first();
+
+            // BIOS → username: this BIOS must not be linked to a different username
+            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            if ($linkByBios && strtolower((string) $linkByBios->username) !== $usernameLower) {
+                throw ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID is permanently linked to a different username (' . $linkByBios->username . ').',
+                ]);
+            }
+
+            // Username → BIOS: only block for new customers (existing may have had BIOS changed)
+            if (! $existingCustomer) {
+                $linkByUsername = BiosUsernameLink::where('username', $usernameLower)
+                    ->where('bios_id', '!=', $biosIdLower)
+                    ->first();
+                if ($linkByUsername) {
                     throw ValidationException::withMessages([
-                        'bios_id' => 'This BIOS ID is permanently linked to a different username (' . $linkByBios->username . ').',
+                        'customer_name' => 'This username is permanently linked to a different BIOS ID (' . $linkByUsername->bios_id . ').',
                     ]);
                 }
+            }
+        } else {
+            // No derived username — still check BIOS→username link
+            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            if ($linkByBios) {
+                throw ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID is permanently linked to a specific username. Please provide the correct customer name.',
+                ]);
             }
         }
 

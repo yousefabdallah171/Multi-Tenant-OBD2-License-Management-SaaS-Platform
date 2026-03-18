@@ -527,38 +527,53 @@ class CustomerController extends BaseManagerController
             ]);
         }
 
-        // Enforce permanent BIOS↔username link
-        $username = strtolower((string) $seller->username);
-        $externalUsername = strtolower($normalizedBiosId); // pending licenses use bios_id as placeholder; check link table
-        // Check the link table using the customer name that will be derived
-        $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
-        if ($linkByBios) {
-            // BIOS has a permanent link — check if the customer being created matches
-            // We allow this if the customer already exists in this tenant with that username
-            $linkedUsername = strtolower((string) $linkByBios->username);
-            $customerName = strtolower(trim((string) request()->input('name', '')));
-            $derivedUsername = (string) \Illuminate\Support\Str::of($customerName)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
-            if ($derivedUsername !== '' && $derivedUsername !== $linkedUsername) {
-                // Allow if the existing customer with the linked username already exists in our tenant
-                $existingLinkedCustomer = User::query()
-                    ->where('tenant_id', $this->currentTenantId($request))
-                    ->whereRaw('LOWER(username) = ?', [$linkedUsername])
-                    ->where('role', UserRole::CUSTOMER->value)
-                    ->exists();
-                if (! $existingLinkedCustomer) {
+        // Enforce permanent BIOS↔username link (both directions)
+        $customerName = strtolower(trim((string) $request->input('name', '')));
+        $derivedUsername = (string) \Illuminate\Support\Str::of($customerName)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+
+        if ($derivedUsername !== '') {
+            $usernameLower = $derivedUsername;
+
+            // Check if customer already exists (re-activation)
+            $existingCustomer = User::query()
+                ->where('tenant_id', $this->currentTenantId($request))
+                ->whereRaw('LOWER(username) = ?', [$usernameLower])
+                ->where('role', UserRole::CUSTOMER->value)
+                ->first();
+
+            // BIOS → username: this BIOS must not be linked to a different username
+            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            if ($linkByBios && strtolower((string) $linkByBios->username) !== $usernameLower) {
+                throw ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID is permanently linked to a different username (' . $linkByBios->username . ').',
+                ]);
+            }
+
+            // Username → BIOS: only block for new customers (existing may have had BIOS changed)
+            if (! $existingCustomer) {
+                $linkByUsername = BiosUsernameLink::where('username', $usernameLower)
+                    ->where('bios_id', '!=', $biosIdLower)
+                    ->first();
+                if ($linkByUsername) {
                     throw ValidationException::withMessages([
-                        'bios_id' => 'This BIOS ID is permanently linked to a different username (' . $linkByBios->username . ').',
+                        'customer_name' => 'This username is permanently linked to a different BIOS ID (' . $linkByUsername->bios_id . ').',
                     ]);
                 }
             }
+        } else {
+            // No derived username — still check BIOS→username link
+            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            if ($linkByBios) {
+                throw ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID is permanently linked to a specific username. Please provide the correct customer name.',
+                ]);
+            }
         }
 
-        // Pending-only check within same tenant (same-seller pending is allowed by reseller but managers block all conflicts)
+        // Pending check globally — block if another pending license already exists for this BIOS
         $existingLicense = License::query()
             ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
-            ->where(function ($query): void {
-                $query->whereIn('status', ['pending', 'suspended']);
-            })
+            ->whereIn('status', ['pending'])
             ->first();
 
         if ($existingLicense) {

@@ -86,15 +86,9 @@ class BiosChangeRequestController extends BaseManagerController
             'reviewed_at' => now(),
         ])->save();
 
-        // Transfer BIOS-username link to new BIOS ID
-        BiosUsernameLink::where('bios_id', strtolower($biosChangeRequest->old_bios_id))->delete();
+        $oldBiosLower = strtolower($biosChangeRequest->old_bios_id);
+        $newBiosLower = strtolower($biosChangeRequest->new_bios_id);
         $customerUsername = $biosChangeRequest->license->customer->username;
-        if ($customerUsername) {
-            BiosUsernameLink::updateOrCreate(
-                ['bios_id' => strtolower($biosChangeRequest->new_bios_id)],
-                ['username' => $customerUsername, 'tenant_id' => $biosChangeRequest->license->tenant_id]
-            );
-        }
 
         try {
             $result = $this->licenseService->changeBiosId($biosChangeRequest->license, $biosChangeRequest->new_bios_id);
@@ -112,6 +106,15 @@ class BiosChangeRequestController extends BaseManagerController
                     'status' => 'approved_pending_sync',
                     'reviewer_notes' => $result['message'] ?? 'External sync pending.',
                 ])->save();
+            } else {
+                // Transfer BIOS-username link only after successful changeBiosId
+                BiosUsernameLink::where('bios_id', $oldBiosLower)->delete();
+                if ($customerUsername) {
+                    BiosUsernameLink::updateOrCreate(
+                        ['bios_id' => $newBiosLower],
+                        ['username' => $customerUsername, 'tenant_id' => $biosChangeRequest->license->tenant_id]
+                    );
+                }
             }
         } catch (\Throwable $e) {
             \Log::error('BIOS change exception:', [
