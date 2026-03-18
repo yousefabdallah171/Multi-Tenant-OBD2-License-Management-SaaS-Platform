@@ -716,7 +716,7 @@ export function CustomersPage() {
                   {text.actions.view}
                 </Link>
               </DropdownMenuItem>
-              {typeof row.license_id === 'number' && !isBlacklisted ? (
+              {typeof row.license_id === 'number' && !isBlacklisted && !isBiosActiveElsewhere ? (
                 <DropdownMenuItem asChild>
                   <Link to={`${routePaths.reseller.customerDetail(lang, row.id)}?request-bios=1`}>
                     <Cpu className="me-2 h-4 w-4" />
