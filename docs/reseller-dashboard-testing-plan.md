@@ -62,7 +62,8 @@
 ### 2026-03-18 Scheduling + Logs Recheck
 
 - Reseller customer-create schedule flow is working end to end with the shared activation API.
-- Reseller scheduled renew/edit flow now exposes schedule controls and blocks past datetimes before submit.
+- Reseller plain pending-license activate/renew flow now exposes schedule controls on the shared renew page.
+- Reseller scheduled renew/edit flow also exposes schedule controls and blocks past datetimes before submit.
 - Reseller sidebar now shows `Reseller Logs`.
 - Reseller `Activity` has been removed from reseller access and replaced by `/en/reseller/reseller-logs`.
 - Reseller logs now load from `GET /api/reseller/reseller-logs` and were re-verified in browser and API on `2026-03-18`.

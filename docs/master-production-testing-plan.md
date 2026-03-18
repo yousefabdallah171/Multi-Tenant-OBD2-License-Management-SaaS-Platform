@@ -2179,7 +2179,9 @@ STEP 6: Verify program stats updated
   - renew response returned `active`
   - future-active license renewal extended from prior expiry, not from now
 - `ACT-9` pending-license scheduling was rechecked on `2026-03-18`:
-  - manager renew route `/en/manager/customers/licenses/32/renew` now exposes schedule controls again for a plain pending license
+  - the shared renew page now exposes schedule controls for plain pending licenses across all roles, including reseller
+  - manager renew route `/en/manager/customers/licenses/32/renew` exposes schedule controls again for a plain pending license
+  - reseller pending-license renew route was rechecked in browser after the shared gate fix
   - `POST /api/licenses/32/renew` with `is_scheduled=true`, future `scheduled_date_time`, and `scheduled_timezone="UTC"` persisted successfully
   - resulting license state remained `pending` with `is_scheduled=true`, `scheduled_at`, and `scheduled_timezone="UTC"`
 - `ACT-10` deactivation passed:

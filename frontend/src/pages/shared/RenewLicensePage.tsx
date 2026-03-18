@@ -73,7 +73,7 @@ export function RenewLicensePage({
   const displayStatus = license ? getLicenseDisplayStatus(license) : null
   const isScheduleEdit = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
   const isPendingActivation = Boolean(license && isPlainPendingLicense(license))
-  const allowScheduleControls = isScheduleEdit || (!presetOnly && isPendingActivation)
+  const allowScheduleControls = isScheduleEdit || isPendingActivation
   const title = displayStatus === 'active'
     ? (activeLicenseTitle ?? t('common.increaseDuration', { defaultValue: 'Increase Duration' }))
     : isScheduleEdit
