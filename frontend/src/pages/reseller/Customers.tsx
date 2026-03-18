@@ -684,6 +684,7 @@ export function CustomersPage() {
         const isPausedPending = isPausedPendingLicense(row)
         const isPlainPending = isPlainPendingLicense(row)
         const canDeleteRow = canDeleteCustomerRow(row)
+        const isBlacklisted = Boolean(row.is_blacklisted)
         const renewActionLabel = displayStatus === 'active'
           ? text.actions.renew
           : isScheduleEditable
@@ -706,7 +707,7 @@ export function CustomersPage() {
                   {text.actions.view}
                 </Link>
               </DropdownMenuItem>
-              {typeof row.license_id === 'number' && displayStatus === 'active' ? (
+              {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted ? (
                 <DropdownMenuItem asChild>
                   <Link to={`${routePaths.reseller.customerDetail(lang, row.id)}?request-bios=1`}>
                     <Cpu className="me-2 h-4 w-4" />
@@ -715,6 +716,7 @@ export function CustomersPage() {
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem
+                disabled={isBlacklisted}
                 onClick={(event) => {
                   event.stopPropagation()
                   setEditTarget(row)
@@ -723,7 +725,7 @@ export function CustomersPage() {
                 <Pencil className="me-2 h-4 w-4" />
                 {t('common.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
-                {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) && (
+                {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) && !isBlacklisted && (
                   <DropdownMenuItem
                     onClick={(event) => {
                       event.stopPropagation()
@@ -760,7 +762,7 @@ export function CustomersPage() {
                     {isPausedPending ? text.actions.continue : text.actions.reactivate}
                   </DropdownMenuItem>
                 )}
-                {typeof row.license_id === 'number' && displayStatus === 'active' && (
+                {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted && (
                   <>
                     <DropdownMenuItem
                       onClick={(event) => {

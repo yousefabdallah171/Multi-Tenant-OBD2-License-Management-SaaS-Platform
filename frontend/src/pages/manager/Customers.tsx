@@ -413,6 +413,7 @@ export function CustomersPage() {
         const isPausedPending = isPausedPendingLicense(row)
         const isPlainPending = isPlainPendingLicense(row)
         const canDeleteRow = canDeleteCustomerRow(row)
+        const isBlacklisted = Boolean(row.is_blacklisted)
         const renewActionLabel = displayStatus === 'active'
           ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
           : isScheduleEditable
@@ -434,11 +435,11 @@ export function CustomersPage() {
                 {t('common.view')}
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setEditTarget(row)}>
+            <DropdownMenuItem disabled={isBlacklisted} onClick={() => setEditTarget(row)}>
               <Pencil className="me-2 h-4 w-4" />
               {t('common.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
-            {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) ? (
+            {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) && !isBlacklisted ? (
               <DropdownMenuItem onClick={() => navigate(routePaths.manager.licenseRenew(lang, row.license_id!), { state: { returnTo: `${location.pathname}${location.search}` } })}>
                 <RotateCw className="me-2 h-4 w-4" />
                 {renewActionLabel}
@@ -450,7 +451,7 @@ export function CustomersPage() {
                 {t('common.retryNow', { defaultValue: 'Retry Now' })}
               </DropdownMenuItem>
             ) : null}
-            {typeof row.license_id === 'number' && displayStatus === 'active' ? (
+            {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted ? (
               <>
                 <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
                   <ShieldOff className="me-2 h-4 w-4" />

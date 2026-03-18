@@ -276,6 +276,7 @@ export function CustomersPage() {
         const isPausedPending = isPausedPendingLicense(row)
         const isPlainPending = isPlainPendingLicense(row)
         const canDeleteRow = canDeleteCustomerRow(row)
+        const isBlacklisted = Boolean(row.is_blacklisted)
         const renewActionLabel = displayStatus === 'active'
             ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
             : isScheduleEditable
@@ -294,23 +295,23 @@ export function CustomersPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.customerDetail(lang, row.id))}>{t('common.view')}</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setEditTarget(row)}>
+                <DropdownMenuItem disabled={isBlacklisted} onSelect={() => setEditTarget(row)}>
                   <Pencil className="me-2 h-4 w-4" />
                   {t('common.edit')}
                 </DropdownMenuItem>
-                {row.license_id && (displayStatus === 'active' || shouldRenewLicense(row)) ? (
+                {row.license_id && (displayStatus === 'active' || shouldRenewLicense(row)) && !isBlacklisted ? (
                   <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.licenseRenew(lang, row.license_id ?? 0), { state: { returnTo: `${location.pathname}${location.search}` } })}>
                     <RotateCw className="me-2 h-4 w-4" />
                     {renewActionLabel}
                   </DropdownMenuItem>
                 ) : null}
-                {row.license_id && row.status === 'active' ? (
+                {row.license_id && row.status === 'active' && !isBlacklisted ? (
                   <DropdownMenuItem onSelect={() => setDeactivateTarget(row)}>
                     <ShieldOff className="me-2 h-4 w-4" />
                     {t('common.deactivate')}
                   </DropdownMenuItem>
                 ) : null}
-                {row.license_id && row.status === 'active' && !row.paused_at ? (
+                {row.license_id && row.status === 'active' && !row.paused_at && !isBlacklisted ? (
                   <DropdownMenuItem onSelect={() => setPauseTarget(row)}>
                     <Pause className="me-2 h-4 w-4" />
                     {t('common.pause')}
