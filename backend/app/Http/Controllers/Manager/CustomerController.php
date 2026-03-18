@@ -570,15 +570,16 @@ class CustomerController extends BaseManagerController
             }
         }
 
-        // Pending check globally — block if another pending license already exists for this BIOS
-        $existingLicense = License::query()
+        // Pending licenses do NOT block — any role may create a pending license for this BIOS.
+        // Only block if there's a suspended license (active/suspended already caught globally above).
+        $existingSuspended = License::query()
             ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
-            ->whereIn('status', ['pending'])
+            ->where('status', 'suspended')
             ->first();
 
-        if ($existingLicense) {
+        if ($existingSuspended) {
             throw ValidationException::withMessages([
-                'bios_id' => 'A pending license already exists for this BIOS ID.',
+                'bios_id' => 'This BIOS ID belongs to a suspended license and cannot be used.',
             ]);
         }
 
