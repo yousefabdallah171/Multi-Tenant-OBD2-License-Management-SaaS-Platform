@@ -285,7 +285,9 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
     if (customerName.trim().length < 2) next.customerName = t('validation.required', { defaultValue: 'Field required' })
-    if (usernameCheckResult && !usernameCheckResult.available) next.customerName = usernameCheckResult.message
+    // When username is auto-filled from BIOS link, skip the availability error —
+    // the backend allows the same customer to be re-activated with their linked BIOS
+    if (usernameCheckResult && !usernameCheckResult.available && !usernameIsLocked) next.customerName = usernameCheckResult.message
     if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) next.email = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
     if (phone.trim() && !/^\+?\d{6,20}$/.test(phone.trim())) next.phone = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
     if (biosId.trim().length < 3) next.biosId = t('validation.required', { defaultValue: 'Field required' })
@@ -407,7 +409,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                   <span>{t('validate.checking', { defaultValue: 'Checking...' })}</span>
                 </div>
               )}
-              {usernameCheckResult && !usernameCheckLoading && (
+              {usernameCheckResult && !usernameCheckLoading && !usernameIsLocked && (
                 <div className={`mt-2 flex items-center gap-2 text-xs ${usernameCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                   {usernameCheckResult.available ? (
                     <>

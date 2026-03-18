@@ -40,30 +40,33 @@ class BiosAvailabilityController extends Controller
             ]);
         }
 
-        // Check if BIOS is active in ANY license across ALL tenants
-        $existingLicense = License::whereRaw('LOWER(bios_id) = ?', [$biosId])
-            ->whereIn('status', ['active', 'pending', 'suspended'])
+        // Check if BIOS is active or suspended in ANY license across ALL tenants
+        // Pending licenses do NOT block — any reseller can create/activate a pending BIOS
+        $existingActive = License::whereRaw('LOWER(bios_id) = ?', [$biosId])
+            ->whereIn('status', ['active', 'suspended'])
             ->first();
 
-        if ($existingLicense) {
-            $isOwnReseller = $user && $existingLicense->reseller_id === $user->id;
-            if ($existingLicense->status === 'active' || $existingLicense->status === 'suspended') {
-                return response()->json([
-                    'available' => false,
-                    'linked_username' => null,
-                    'is_blacklisted' => false,
-                    'message' => 'BIOS ID is already active with another reseller',
-                ]);
-            }
-            // pending license — only block if it belongs to a different reseller
-            if (! $isOwnReseller) {
-                return response()->json([
-                    'available' => false,
-                    'linked_username' => null,
-                    'is_blacklisted' => false,
-                    'message' => 'BIOS ID has a pending license with another reseller',
-                ]);
-            }
+        if ($existingActive) {
+            return response()->json([
+                'available' => false,
+                'linked_username' => null,
+                'is_blacklisted' => false,
+                'message' => 'BIOS ID is already active with another reseller',
+            ]);
+        }
+
+        // Also block if another pending BIOS change request is already targeting this BIOS ID
+        $pendingChangeRequest = \App\Models\BiosChangeRequest::whereRaw('LOWER(new_bios_id) = ?', [$biosId])
+            ->where('status', 'pending')
+            ->first();
+
+        if ($pendingChangeRequest) {
+            return response()->json([
+                'available' => false,
+                'linked_username' => null,
+                'is_blacklisted' => false,
+                'message' => 'Another pending BIOS change request is already targeting this BIOS ID',
+            ]);
         }
 
         // Check BIOS-username permanent link — return linked username for auto-fill
@@ -102,10 +105,12 @@ class BiosAvailabilityController extends Controller
             ]);
         }
 
-        // Check if username is active in ANY customer's license across ALL tenants
+        // Check if username is active/suspended in ANY customer's license across ALL tenants
+        // Pending licenses do NOT block — the same username may have a pending license
+        // waiting to be activated (another reseller is allowed to activate it)
         $activeLicense = License::join('users', 'licenses.customer_id', '=', 'users.id')
             ->whereRaw('LOWER(users.username) = ?', [$username])
-            ->whereIn('licenses.status', ['active', 'pending', 'suspended'])
+            ->whereIn('licenses.status', ['active', 'suspended'])
             ->exists();
 
         return response()->json([

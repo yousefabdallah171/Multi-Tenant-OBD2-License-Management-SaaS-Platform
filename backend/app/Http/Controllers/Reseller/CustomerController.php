@@ -670,24 +670,18 @@ class CustomerController extends BaseResellerController
             }
         }
 
-        $existingLicense = License::query()
-            ->where('tenant_id', $this->currentTenantId($request))
-            ->where('bios_id', $normalizedBiosId)
-            ->where(function ($query): void {
-                $query
-                    ->whereEffectivelyActive()
-                    ->orWhereIn('status', ['pending', 'suspended']);
-            })
+        // Block only if there's an active or suspended license for this BIOS (already caught above globally,
+        // but also check locally for suspended within-tenant). Pending licenses do NOT block —
+        // any reseller may create/activate a pending BIOS (first one to activate wins).
+        $existingSuspended = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [strtolower($normalizedBiosId)])
+            ->where('status', 'suspended')
             ->first();
 
-        if ($existingLicense) {
-            // Allow the same reseller to activate their own pending BIOS (upgrade pending → active)
-            $isSameReseller = $existingLicense->reseller_id === $seller->id;
-            if (! $isSameReseller || $existingLicense->status !== 'pending') {
-                throw ValidationException::withMessages([
-                    'bios_id' => 'A license already exists for this BIOS ID.',
-                ]);
-            }
+        if ($existingSuspended) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'This BIOS ID belongs to a suspended license and cannot be used.',
+            ]);
         }
 
         return $program;
