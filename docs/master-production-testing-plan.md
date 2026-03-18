@@ -2178,6 +2178,10 @@ STEP 6: Verify program stats updated
 - `ACT-9` renewal flow passed on the API:
   - renew response returned `active`
   - future-active license renewal extended from prior expiry, not from now
+- `ACT-9` pending-license scheduling was rechecked on `2026-03-18`:
+  - manager renew route `/en/manager/customers/licenses/32/renew` now exposes schedule controls again for a plain pending license
+  - `POST /api/licenses/32/renew` with `is_scheduled=true`, future `scheduled_date_time`, and `scheduled_timezone="UTC"` persisted successfully
+  - resulting license state remained `pending` with `is_scheduled=true`, `scheduled_at`, and `scheduled_timezone="UTC"`
 - `ACT-10` deactivation passed:
   - active license moved cleanly to `cancelled`
 - `ACT-11` pause/resume passed:

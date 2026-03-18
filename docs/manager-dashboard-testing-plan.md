@@ -78,6 +78,21 @@
 - Mobile manager customer detail remains usable at `375x812`.
 - Arabic reports render with RTL layout and Arabic currency formatting, but manager BIOS pages in Arabic still contain untranslated/garbled text including `biosDetails.description` and mixed `????` labels.
 
+### 2026-03-18 Pending-License Scheduling Recheck
+
+- Manager pending-license renew/activate flow now exposes schedule controls on the shared renew page.
+- Browser recheck passed on `/en/manager/customers/licenses/32/renew`:
+  - `Schedule activation for later` is visible for a plain pending license
+  - schedule fields can be edited from the manager flow again
+- API recheck passed on `POST /api/licenses/32/renew` with:
+  - `is_scheduled=true`
+  - future `scheduled_date_time`
+  - `scheduled_timezone="UTC"`
+- The persisted license state stayed `pending` with:
+  - `is_scheduled=true`
+  - `scheduled_at` stored
+  - `scheduled_timezone="UTC"`
+
 ### Partial / Not Yet Executed In This Pass
 
 - Sprint 3 pagination stress test could not be fully exercised because the dataset stayed on a single page.

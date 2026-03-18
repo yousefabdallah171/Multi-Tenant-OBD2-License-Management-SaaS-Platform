@@ -28,25 +28,25 @@
   - activate
   - renew
   - deactivate
+  - reseller logs
   - reports
   - payment status
   - profile
   - RTL Arabic
   - live query refresh
 - This file is partially behind the current UI:
-  - reseller sidebar does not currently show `Activations` or `Activity`, although both routes still work directly
+  - reseller sidebar now exposes `Reseller Logs`
+  - reseller `Activity` has been removed and replaced by reseller logs
+  - reseller `Activations` still works directly but is intentionally hidden from the sidebar
   - create customer is now a full page, not an inline dialog
   - several labels and workflow details differ from the older expectations in this plan
 
 ### Confirmed Findings From This Run
 
-1. Reseller sidebar is missing `Activations` and `Activity` links even though `/en/reseller/activations` and `/en/reseller/activity` are functional.
-2. Unauthorized reseller access to `/en/super-admin/tenants` redirects to `/en/reseller/dashboard` instead of a login or 403-style page.
-3. Renew success toast is generic `Saved` instead of a renew-specific success message.
-4. Activity page still shows some raw/internal event labels such as `bios.change_requested` and `customer.created`.
-5. Activate form field targeting/accessibility is brittle enough to make automation less reliable than expected.
-6. Broad API failure handling is safe but noisy: the page stays rendered, but duplicate error toasts stack aggressively.
-7. Customer create-only flow showed a status-count mismatch during QA:
+1. Unauthorized reseller access to `/en/super-admin/tenants` redirects to `/en/reseller/dashboard` instead of a login or 403-style page.
+2. Activate form field targeting/accessibility is brittle enough to make automation less reliable than expected.
+3. Broad API failure handling is safe but noisy: the page stays rendered, but duplicate error toasts stack aggressively.
+4. Customer create-only flow showed a status-count mismatch during QA:
    - total row count increased
    - `Pending` summary card did not increment in the observed state
 
@@ -58,6 +58,14 @@
   - backend profile save rejects invalid phone shapes
 - Reseller customer-create keeps header date display in the user timezone, but schedule defaults now initialize in `UTC`.
 - Reseller customer-create still persists `scheduled_timezone` per action as before.
+
+### 2026-03-18 Scheduling + Logs Recheck
+
+- Reseller customer-create schedule flow is working end to end with the shared activation API.
+- Reseller scheduled renew/edit flow now exposes schedule controls and blocks past datetimes before submit.
+- Reseller sidebar now shows `Reseller Logs`.
+- Reseller `Activity` has been removed from reseller access and replaced by `/en/reseller/reseller-logs`.
+- Reseller logs now load from `GET /api/reseller/reseller-logs` and were re-verified in browser and API on `2026-03-18`.
 
 ### Temporary QA Data Created During This Run
 
@@ -87,7 +95,7 @@
 - [ ] Enter reseller username + password
 - [ ] Click login → should redirect to `/en/reseller/dashboard`
 - [ ] Verify navbar shows reseller name and role badge
-- [ ] Verify sidebar shows: Dashboard, Customers, Software, Activations, Activity, Reports, Payment Status, Profile
+- [ ] Verify sidebar shows: Dashboard, Customers, Software, Reseller Logs, Reports, Payment Status, Profile
 - [ ] **Fix:** If wrong redirect happens after login, check `AuthController` role routing
 
 ### S1-T2: Sidebar Navigation
@@ -358,9 +366,9 @@
 - [ ] Verify each status (active, expired, cancelled, pending, scheduled) shows correct colored badge
 - [ ] **Fix:** Wrong color → check `getLicenseDisplayStatus()` return value
 
-### S8-T6: Sidebar Reset
+### S8-T6: Route Reload Reset
 - [ ] Apply date range + search
-- [ ] Click "Activations" in sidebar
+- [ ] Navigate directly back to `/en/reseller/activations`
 - [ ] Verify URL resets and all filters cleared
 - [ ] **Fix:** Filters persist → check `useEffect` reset logic
 
@@ -557,18 +565,25 @@
 
 ---
 
+## 2026-03-18 Supersession Notes
+
+- Reseller `Activity` is no longer part of the product surface.
+- Use reseller logs validation on `/en/reseller/reseller-logs` in place of the old Sprint 9 route.
+- Current reseller log source is `GET /api/reseller/reseller-logs`.
+- Reseller scheduled activation and scheduled renew/edit flows are API-verified and currently working with persisted `scheduled_date_time` and `scheduled_timezone`.
+
 ## Issue Tracker
 
 | # | Page | Issue Description | Status | Fix Applied |
 |---|------|-------------------|--------|-------------|
-| 1 | Sprint 1 / Reseller Layout | Sidebar is missing `Activations` and `Activity` links, although both reseller routes work when opened directly. | Open | No |
+| 1 | Sprint 1 / Reseller Layout | Sidebar now uses `Reseller Logs`; `Activations` is intentionally hidden and reseller `Activity` is removed. | Closed | Yes |
 | 2 | Sprint 2 / Dashboard | Dashboard and quick-action labels no longer match the current plan exactly; plan drift confirmed. | Open | No |
-| 3 | Sprint 3 / Customers | Renew success toast is generic `Saved` instead of a renew-specific confirmation. | Open | No |
-| 4 | Sprint 3 / Customers | Active customer action menu still exposes `Delete` alongside active-license actions. | Open | No |
+| 3 | Sprint 3 / Customers | Renew success toast is generic `Saved` instead of a renew-specific confirmation. | Closed | Yes |
+| 4 | Sprint 3 / Customers | Active customer action menu still exposes `Delete` alongside active-license actions. | Closed | Yes |
 | 5 | Sprint 6 / Activate | Activate page field accessibility/targeting is brittle; input targeting required fresh refs/reload for reliable automation. | Open | No |
-| 6 | Sprint 8 / Activations | Activations page works, but reseller sidebar does not expose it. | Open | No |
-| 7 | Sprint 9 / Activity | Activity page works, but reseller sidebar does not expose it. | Open | No |
-| 8 | Sprint 9 / Activity | Some activity entries still show raw/internal action labels such as `bios.change_requested` and `customer.created`. | Open | No |
+| 6 | Sprint 8 / Activations | Activations page still works directly, but reseller sidebar intentionally does not expose it. | Closed | Yes |
+| 7 | Sprint 9 / Activity | Old reseller `Activity` page was removed and replaced by `Reseller Logs`. | Closed | Yes |
+| 8 | Sprint 9 / Activity | Reseller logs are now exposed through `/en/reseller/reseller-logs` and the dedicated reseller logs API. | Closed | Yes |
 | 9 | Sprint 11 / Payment Status | Stat naming differs from plan (`Total Owed` vs `Amount You Owe`). | Open | No |
 | 10 | Sprint 13 / Unauthorized Access | Unauthorized reseller access redirects to reseller dashboard instead of login or a 403-style page. | Open | No |
 | 11 | Sprint 13 / Error Handling | API failure handling does not white-screen, but it floods the UI with duplicate error toasts. | Open | No |
