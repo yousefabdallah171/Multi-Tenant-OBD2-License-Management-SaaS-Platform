@@ -95,6 +95,7 @@ export interface SuperAdminCustomerSummary {
   pause_remaining_minutes?: number | null
   pause_reason?: string | null
   is_blacklisted?: boolean
+  username_locked?: boolean
   license_count: number
   has_active_license?: boolean
 }
