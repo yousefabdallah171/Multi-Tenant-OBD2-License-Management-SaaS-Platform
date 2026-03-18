@@ -84,6 +84,14 @@ class BiosChangeRequestController extends BaseManagerParentController
 
         $result = $this->licenseService->changeBiosId($biosChangeRequest->license, $biosChangeRequest->new_bios_id);
 
+        \Log::info('BIOS change result:', [
+            'request_id' => $biosChangeRequest->id,
+            'license_id' => $biosChangeRequest->license_id,
+            'old_bios' => $biosChangeRequest->old_bios_id,
+            'new_bios' => $biosChangeRequest->new_bios_id,
+            'result' => $result,
+        ]);
+
         if (! ($result['success'] ?? false)) {
             $biosChangeRequest->forceFill([
                 'status' => 'approved_pending_sync',
@@ -94,6 +102,11 @@ class BiosChangeRequestController extends BaseManagerParentController
         // Reload license to get the updated BIOS ID
         $biosChangeRequest->license->refresh();
         $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email', 'reviewer:id,name']);
+
+        \Log::info('BIOS after change:', [
+            'license_id' => $biosChangeRequest->license_id,
+            'bios_id' => $biosChangeRequest->license->bios_id,
+        ]);
 
         $this->logActivity($request, 'bios.change_approved', sprintf('Approved BIOS change request %d.', $biosChangeRequest->id), [
             'request_id' => $biosChangeRequest->id,
