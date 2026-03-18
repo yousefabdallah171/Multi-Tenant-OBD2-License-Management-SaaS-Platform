@@ -371,6 +371,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::put('/customers/{user}', [SuperAdminCustomerController::class, 'update']);
         Route::delete('/customers/{user}', [SuperAdminCustomerController::class, 'destroy']);
         Route::get('/licenses/expiring', [SuperAdminLicenseController::class, 'expiring']);
+        Route::post('/licenses/force-activate', [SuperAdminLicenseController::class, 'forceActivate']);
         Route::get('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'index']);
         Route::get('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'show']);
         Route::post('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'store']);

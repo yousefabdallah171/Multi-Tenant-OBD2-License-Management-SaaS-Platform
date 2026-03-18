@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -52,7 +52,12 @@ export function CustomerDetailPage() {
             <CardHeader><CardTitle>{t('managerParent.pages.customers.customerDetails')}</CardTitle></CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-4">
               <Info label={t('common.name')} value={customer.name} />
-              <Info label={t('common.username')} value={resolveCustomerDetailUsername(customer) ?? '-'} />
+              <Info
+                label={t('common.username')}
+                value={resolveCustomerDetailUsername(customer) ?? '-'}
+                isLocked={customer.username_locked}
+                lockTooltip={t('activate.biosLockedHint')}
+              />
               <Info label={t('common.tenant')} value={customer.tenant?.name ?? '-'} />
               <Info label={t('common.email')} value={customer.email ?? '-'} />
               <Info label={t('common.phone')} value={customer.phone ?? '-'} />
@@ -167,11 +172,29 @@ function resolveLicenseUsername(customer: { name?: string | null; client_name?: 
   return storedUsername || candidate || null
 }
 
-function Info({ label, value }: { label: string; value: ReactNode }) {
+function Info({
+  label,
+  value,
+  isLocked,
+  lockTooltip,
+}: {
+  label: string
+  value: ReactNode
+  isLocked?: boolean
+  lockTooltip?: string
+}) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-      <div className="mt-1 whitespace-pre-line font-medium">{value}</div>
+    <div
+      className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40"
+      title={isLocked ? lockTooltip : undefined}
+    >
+      <div className="flex items-center gap-1">
+        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        {isLocked && <Lock className="h-3 w-3 text-amber-600" />}
+      </div>
+      <div className={`mt-1 whitespace-pre-line font-medium ${isLocked ? 'text-slate-400 dark:text-slate-600' : ''}`}>
+        {value}
+      </div>
     </div>
   )
 }
