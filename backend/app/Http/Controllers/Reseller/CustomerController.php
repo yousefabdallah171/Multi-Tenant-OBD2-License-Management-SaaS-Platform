@@ -387,8 +387,8 @@ class CustomerController extends BaseResellerController
     {
         $license = $this->resolveDisplayLicense($user, $filters);
 
-        // Check if this customer's BIOS is currently active/paused under a DIFFERENT reseller
-        // Paused-pending = reseller still owns the BIOS temporarily; block others from taking it
+        // Check if this customer's BIOS is owned by a DIFFERENT reseller
+        // (active, suspended, scheduled, or paused — all block others from taking it)
         $biosActiveElsewhere = false;
         if ($license && $license->bios_id && $currentResellerId !== null) {
             $biosIdLower = strtolower((string) $license->bios_id);
@@ -398,6 +398,11 @@ class CustomerController extends BaseResellerController
                 ->where(function ($q): void {
                     $q->whereIn('status', ['active', 'suspended'])
                       ->orWhere(function ($q2): void {
+                          // scheduled-pending
+                          $q2->where('status', 'pending')->where('is_scheduled', true);
+                      })
+                      ->orWhere(function ($q2): void {
+                          // paused-pending
                           $q2->where('status', 'pending')
                              ->where(function ($q3): void {
                                  $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
@@ -609,13 +614,15 @@ class CustomerController extends BaseResellerController
             ]);
         }
 
-        // GLOBAL cross-tenant check: BIOS must not be active, suspended, or paused in ANY tenant
-        // Paused-pending = another reseller still owns the BIOS (temporarily paused)
+        // GLOBAL cross-tenant check: BIOS must not be owned (active, suspended, scheduled, or paused)
         $biosIdLowerGlobal = strtolower($normalizedBiosId);
         $globalActive = License::query()
             ->whereRaw('LOWER(bios_id) = ?', [$biosIdLowerGlobal])
             ->where(function ($q): void {
                 $q->whereIn('status', ['active', 'suspended'])
+                  ->orWhere(function ($q2): void {
+                      $q2->where('status', 'pending')->where('is_scheduled', true);
+                  })
                   ->orWhere(function ($q2): void {
                       $q2->where('status', 'pending')
                          ->where(function ($q3): void {
