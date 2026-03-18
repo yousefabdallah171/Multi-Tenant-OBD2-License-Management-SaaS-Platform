@@ -1181,6 +1181,7 @@
       "dashboard": "لوحة التحكم",
       "customers": "العملاء",
       "software": "البرامج",
+      "ipAnalytics": "تحليلات IP",
       "activations": "التفعيلات",
       "licenses": "التراخيص",
       "reports": "التقارير",
@@ -1216,6 +1217,11 @@
       },
       "resellerLogs": {
         "description": "راجع سجل التفعيل والتجديد والإلغاء وطلبات تغيير BIOS الخاصة بك."
+      },
+      "ipAnalytics": {
+        "title": "تحليلات IP",
+        "description": "افحص وصول IP لعملائك فقط، وصفّ النشاط المشبوه، وراجع المواقع ومزودي الخدمة والطوابع الزمنية.",
+        "searchPlaceholder": "ابحث باسم المستخدم أو معرّف BIOS أو البرنامج أو عنوان IP"
       },
       "customers": {
         "title": "العملاء",

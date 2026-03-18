@@ -79,6 +79,7 @@ export const routePaths = {
     customerCreate: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/customers/create`,
     licenseRenew: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/reseller/customers/licenses/${id}/renew`,
     customerDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/reseller/customers/${id}`,
+    ipAnalytics: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/ip-analytics`,
     licenses: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/customers`,
     activations: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/activations`,
     resellerLogs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/reseller-logs`,

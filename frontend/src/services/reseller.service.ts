@@ -1,6 +1,6 @@
 import { api } from '@/services/api'
 import { apiCache } from '@/lib/apiCache'
-import type { PaginatedResponse } from '@/types/manager-parent.types'
+import type { IpAnalyticsEntry, PaginatedResponse } from '@/types/manager-parent.types'
 import type {
   DashboardSeriesPoint,
   ReportRangeFilters,
@@ -152,6 +152,10 @@ export const resellerService = {
   },
   async getSellerLogs(params?: { page?: number; per_page?: number; action?: string; from?: string; to?: string }) {
     const { data } = await api.get<{ data: ResellerSellerLogEntry[]; summary: ResellerSellerLogSummary; meta: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }>('/reseller/reseller-logs', { params })
+    return data
+  },
+  async getIpAnalytics(params: { page?: number; per_page?: number; search?: string; reputation?: 'all' | 'safe' | 'proxy'; from?: string; to?: string; country?: string; program_id?: number }) {
+    const { data } = await api.get<{ data: IpAnalyticsEntry[]; meta: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }>('/reseller/ip-analytics', { params })
     return data
   },
   async exportCsv(params: ResellerReportFilters) {

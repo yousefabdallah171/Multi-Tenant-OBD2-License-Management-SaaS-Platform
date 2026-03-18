@@ -47,6 +47,7 @@ use App\Http\Controllers\ExportTaskController;
 use App\Http\Controllers\Reseller\CustomerController as ResellerCustomerController;
 use App\Http\Controllers\Reseller\DashboardController as ResellerDashboardController;
 use App\Http\Controllers\Reseller\BiosChangeRequestController as ResellerBiosChangeRequestController;
+use App\Http\Controllers\Reseller\IpAnalyticsController as ResellerIpAnalyticsController;
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
 use App\Http\Controllers\Reseller\PaymentStatusController as ResellerPaymentStatusController;
 use App\Http\Controllers\Reseller\ReportController as ResellerReportController;
@@ -300,6 +301,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/bios-change-requests', [ResellerBiosChangeRequestController::class, 'store']);
         Route::get('/online-users', [OnlineUsersController::class, 'index']);
         Route::get('/reseller-logs', [ResellerResellerLogController::class, 'index']);
+        Route::get('/ip-analytics', [ResellerIpAnalyticsController::class, 'index']);
 
         Route::prefix('reports')->group(function (): void {
             Route::get('/summary', [ResellerReportController::class, 'summary']);

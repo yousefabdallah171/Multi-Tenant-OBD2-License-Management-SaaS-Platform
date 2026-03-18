@@ -1181,6 +1181,7 @@
       "dashboard": "Dashboard",
       "customers": "Customers",
       "software": "Software",
+      "ipAnalytics": "IP Analytics",
       "activations": "Activations",
       "paymentStatus": "Payment Status",
       "licenses": "Licenses",
@@ -1216,6 +1217,11 @@
       },
       "resellerLogs": {
         "description": "Review your own activation, renewal, deactivation, and BIOS change request history."
+      },
+      "ipAnalytics": {
+        "title": "IP Analytics",
+        "description": "Inspect IP access for your own customers, filter suspicious activity, and review locations, providers, and timestamps.",
+        "searchPlaceholder": "Search by username, BIOS ID, program, or IP"
       },
       "customers": {
         "title": "Customers",
