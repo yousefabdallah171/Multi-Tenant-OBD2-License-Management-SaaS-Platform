@@ -617,6 +617,10 @@ export interface ManagerSellerLogSummary {
   revenue: number
 }
 
+export type ResellerSellerLogEntry = ManagerSellerLogEntry
+
+export type ResellerSellerLogSummary = ManagerSellerLogSummary
+
 export interface ResellerReportPoint {
   period: string
   revenue: number

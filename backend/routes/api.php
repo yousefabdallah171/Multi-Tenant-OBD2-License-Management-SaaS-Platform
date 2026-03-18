@@ -50,6 +50,7 @@ use App\Http\Controllers\Reseller\BiosChangeRequestController as ResellerBiosCha
 use App\Http\Controllers\Reseller\LicenseController as ResellerLicenseController;
 use App\Http\Controllers\Reseller\PaymentStatusController as ResellerPaymentStatusController;
 use App\Http\Controllers\Reseller\ReportController as ResellerReportController;
+use App\Http\Controllers\Reseller\ResellerLogController as ResellerResellerLogController;
 use App\Http\Controllers\Reseller\SoftwareController as ResellerSoftwareController;
 use App\Http\Middleware\ActiveRoleMiddleware;
 use App\Http\Controllers\SuperAdmin\ApiStatusController;
@@ -298,6 +299,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/bios-change-requests', [ResellerBiosChangeRequestController::class, 'index']);
         Route::post('/bios-change-requests', [ResellerBiosChangeRequestController::class, 'store']);
         Route::get('/online-users', [OnlineUsersController::class, 'index']);
+        Route::get('/reseller-logs', [ResellerResellerLogController::class, 'index']);
 
         Route::prefix('reports')->group(function (): void {
             Route::get('/summary', [ResellerReportController::class, 'summary']);

@@ -13,10 +13,11 @@ import type {
   ResellerReportSummary,
   ResellerSoftwareProgram,
   RoleActivityEntry,
-  RoleActivityFilters,
   SubmitBiosChangeRequestData,
   TopProgramRow,
   ResellerPaymentStatusData,
+  ResellerSellerLogEntry,
+  ResellerSellerLogSummary,
 } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
@@ -149,8 +150,8 @@ export const resellerService = {
     apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
     return data
   },
-  async getActivity(params: RoleActivityFilters) {
-    const { data } = await api.get<PaginatedResponse<RoleActivityEntry>>('/reseller/activity', { params })
+  async getSellerLogs(params?: { page?: number; per_page?: number; action?: string; from?: string; to?: string }) {
+    const { data } = await api.get<{ data: ResellerSellerLogEntry[]; summary: ResellerSellerLogSummary; meta: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }>('/reseller/reseller-logs', { params })
     return data
   },
   async exportCsv(params: ResellerReportFilters) {

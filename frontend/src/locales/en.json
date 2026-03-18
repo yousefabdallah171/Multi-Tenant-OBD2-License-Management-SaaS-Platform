@@ -1185,6 +1185,7 @@
       "paymentStatus": "Payment Status",
       "licenses": "Licenses",
       "reports": "Reports",
+      "resellerLogs": "Reseller Logs",
       "activity": "Panel Activity",
       "profile": "Profile"
     },
@@ -1212,6 +1213,9 @@
           "manageLicenses": "Manage Licenses",
           "exportReports": "Reports"
         }
+      },
+      "resellerLogs": {
+        "description": "Review your own activation, renewal, deactivation, and BIOS change request history."
       },
       "customers": {
         "title": "Customers",

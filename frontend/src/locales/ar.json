@@ -1184,6 +1184,7 @@
       "activations": "التفعيلات",
       "licenses": "التراخيص",
       "reports": "التقارير",
+      "resellerLogs": "سجلات الموزع",
       "activity": "نشاط اللوحة",
       "profile": "الملف الشخصي",
       "paymentStatus": "حالة المدفوعات"
@@ -1212,6 +1213,9 @@
           "manageLicenses": "إدارة التراخيص",
           "exportReports": "التقارير"
         }
+      },
+      "resellerLogs": {
+        "description": "راجع سجل التفعيل والتجديد والإلغاء وطلبات تغيير BIOS الخاصة بك."
       },
       "customers": {
         "title": "العملاء",

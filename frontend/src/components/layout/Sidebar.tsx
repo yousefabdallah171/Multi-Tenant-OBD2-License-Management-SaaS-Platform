@@ -69,6 +69,7 @@ const resellerItems: NavItem[] = [
   { key: 'software', icon: Package, href: routePaths.reseller.software, translationKey: 'reseller.nav.software' },
   { key: 'paymentStatus', icon: BarChart3, href: routePaths.reseller.paymentStatus, translationKey: 'reseller.nav.paymentStatus' },
   { key: 'reports', icon: BarChart3, href: routePaths.reseller.reports, translationKey: 'reseller.nav.reports' },
+  { key: 'resellerLogs', icon: ScrollText, href: routePaths.reseller.resellerLogs, translationKey: 'reseller.nav.resellerLogs' },
   { key: 'profile', icon: User, href: routePaths.reseller.profile, translationKey: 'reseller.nav.profile' },
 ]
 

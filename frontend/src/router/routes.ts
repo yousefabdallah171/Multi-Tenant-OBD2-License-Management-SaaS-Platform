@@ -81,6 +81,7 @@ export const routePaths = {
     customerDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/reseller/customers/${id}`,
     licenses: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/customers`,
     activations: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/activations`,
+    resellerLogs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/reseller-logs`,
     software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/software`,
     activateLicense: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/reseller/software/${id}/activate`,
     paymentStatus: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller/payment-status`,
