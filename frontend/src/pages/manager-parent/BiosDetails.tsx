@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -22,12 +23,13 @@ export function BiosDetailsPage() {
   const params = useParams()
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search.trim(), 400)
   const biosId = params.biosId ?? searchParams.get('bios') ?? ''
 
   const searchQuery = useQuery({
-    queryKey: ['bios-details', 'search', search],
-    queryFn: () => managerParentBiosDetailsService.searchBiosIds(search),
-    enabled: search.trim().length >= 3,
+    queryKey: ['bios-details', 'search', debouncedSearch],
+    queryFn: () => managerParentBiosDetailsService.searchBiosIds(debouncedSearch),
+    enabled: debouncedSearch.length >= 3,
   })
 
   const recentQuery = useQuery({
@@ -65,7 +67,7 @@ export function BiosDetailsPage() {
     enabled: biosId !== '',
   })
 
-  const visibleBiosList = search.trim().length >= 3 ? (searchQuery.data ?? []) : (biosId ? [] : (recentQuery.data ?? []))
+  const visibleBiosList = debouncedSearch.length >= 3 ? (searchQuery.data ?? []) : (biosId ? [] : (recentQuery.data ?? []))
   const latestLicense = overviewQuery.data?.latest_license
   const latestCustomer = latestLicense?.customer ?? overviewQuery.data?.customer
   const latestReseller = latestLicense?.reseller ?? overviewQuery.data?.reseller

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -20,12 +21,13 @@ export function BiosDetailsPage() {
   const params = useParams()
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search.trim(), 400)
   const biosId = params.biosId ?? searchParams.get('bios') ?? ''
 
   const searchQuery = useQuery({
-    queryKey: ['super-admin', 'bios-details', 'search', search],
-    queryFn: () => superAdminBiosDetailsService.searchBiosIds(search),
-    enabled: search.trim().length >= 3,
+    queryKey: ['super-admin', 'bios-details', 'search', debouncedSearch],
+    queryFn: () => superAdminBiosDetailsService.searchBiosIds(debouncedSearch),
+    enabled: debouncedSearch.length >= 3,
   })
   const recentQuery = useQuery({
     queryKey: ['super-admin', 'bios-details', 'recent'],
@@ -73,7 +75,7 @@ export function BiosDetailsPage() {
     ] as Array<[string, React.ReactNode]>
   }, [locale, overviewQuery.data, t])
 
-  const visibleBiosList = search.trim().length >= 3 ? (searchQuery.data ?? []) : (biosId ? [] : (recentQuery.data ?? []))
+  const visibleBiosList = debouncedSearch.length >= 3 ? (searchQuery.data ?? []) : (biosId ? [] : (recentQuery.data ?? []))
   const latestLicense = overviewQuery.data?.latest_license
   const latestCustomer = latestLicense?.customer ?? overviewQuery.data?.customer
   const latestReseller = latestLicense?.reseller ?? overviewQuery.data?.reseller
@@ -103,7 +105,7 @@ export function BiosDetailsPage() {
             </div>
           ) : biosId ? null : (
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {search.trim().length >= 3 ? t('common.noData') : t('biosDetails.description')}
+              {debouncedSearch.length >= 3 ? t('common.noData') : t('biosDetails.description')}
             </p>
           )}
         </CardContent>

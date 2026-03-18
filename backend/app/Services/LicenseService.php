@@ -812,6 +812,14 @@ class LicenseService
             throw ValidationException::withMessages(['bios_id' => 'BIOS ID is already working with another reseller']);
         }
 
+        // BIOS-USERNAME LINK CHECK: if this BIOS already has a permanent username link, enforce it
+        $existingLink = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+        if ($existingLink && strtolower((string) $existingLink->username) !== strtolower($externalUsername)) {
+            throw ValidationException::withMessages([
+                'customer_name' => 'This BIOS ID is permanently linked to a different username. Please use the linked username.',
+            ]);
+        }
+
         $usernameConflict = License::query()
             ->where('program_id', $program->id)
             ->where('external_username', $externalUsername)

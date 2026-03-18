@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Loader2, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
@@ -69,6 +69,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const { user } = useAuth()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const isReseller = user?.role === 'reseller'
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
@@ -317,6 +318,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }),
     onSuccess: () => {
       setSubmitError('')
+      void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[1] === 'customers' })
       toast.success(t('common.customerCreatedSuccess', { defaultValue: 'Customer created successfully.' }))
       navigate(backPath(lang))
     },
@@ -345,6 +347,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }),
     onSuccess: () => {
       setSubmitError('')
+      void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[1] === 'customers' })
       toast.success(
         scheduleEnabled
           ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })

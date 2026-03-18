@@ -707,7 +707,7 @@ export function CustomersPage() {
                   {text.actions.view}
                 </Link>
               </DropdownMenuItem>
-              {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted ? (
+              {typeof row.license_id === 'number' && !isBlacklisted ? (
                 <DropdownMenuItem asChild>
                   <Link to={`${routePaths.reseller.customerDetail(lang, row.id)}?request-bios=1`}>
                     <Cpu className="me-2 h-4 w-4" />
@@ -750,7 +750,7 @@ export function CustomersPage() {
                     {t('common.retryNow', { defaultValue: 'Retry Now' })}
                   </DropdownMenuItem>
                 )}
-                {typeof row.license_id === 'number' && canReactivateLicense(row) && (
+                {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBlacklisted && (
                   <DropdownMenuItem
                     disabled={resumeMutation.isPending}
                     onClick={(event) => {
