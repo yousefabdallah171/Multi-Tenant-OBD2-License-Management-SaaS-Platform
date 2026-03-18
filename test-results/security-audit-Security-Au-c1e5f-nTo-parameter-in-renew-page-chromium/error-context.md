@@ -1,77 +1,48 @@
 # Page snapshot
 
 ```yaml
-- generic [ref=e3]:
-  - link "Skip to content" [ref=e4] [cursor=pointer]:
-    - /url: "#dashboard-main-content"
-  - banner [ref=e5]:
-    - generic [ref=e7]:
-      - generic [ref=e9]:
-        - img [ref=e11]
-        - generic [ref=e18]:
-          - heading "Reseller" [level=1] [ref=e19]
-          - generic [ref=e20]: "Timezone: UTC+02:00"
-      - generic [ref=e21]:
-        - button "Toggle theme" [ref=e22] [cursor=pointer]:
-          - img [ref=e23]
-          - generic [ref=e25]: Dark mode
-        - button "Switch language" [ref=e26] [cursor=pointer]:
-          - img [ref=e27]
-          - generic [ref=e30]: AR
-        - button "Open user menu" [ref=e31] [cursor=pointer]:
-          - generic [ref=e32]:
-            - generic [ref=e33]: Ahmed Reseller
-            - generic [ref=e34]: reseller1@obd2sw.com
-          - generic [ref=e36]: Reseller
-  - generic [ref=e37]:
-    - complementary [ref=e39]:
-      - navigation [ref=e40]:
-        - link "Dashboard" [ref=e41] [cursor=pointer]:
-          - /url: /en/reseller/dashboard
-          - img [ref=e42]
-          - generic [ref=e47]: Dashboard
-        - link "Customers" [ref=e48] [cursor=pointer]:
-          - /url: /en/reseller/customers
-          - img [ref=e49]
-          - generic [ref=e54]: Customers
-        - link "Software" [ref=e55] [cursor=pointer]:
-          - /url: /en/reseller/software
-          - img [ref=e56]
-          - generic [ref=e60]: Software
-        - link "IP Analytics" [ref=e61] [cursor=pointer]:
-          - /url: /en/reseller/ip-analytics
-          - img [ref=e62]
-          - generic [ref=e64]: IP Analytics
-        - link "Payment Status" [ref=e65] [cursor=pointer]:
-          - /url: /en/reseller/payment-status
-          - img [ref=e66]
-          - generic [ref=e68]: Payment Status
-        - link "Reports" [ref=e69] [cursor=pointer]:
-          - /url: /en/reseller/reports
-          - img [ref=e70]
-          - generic [ref=e72]: Reports
-        - link "Reseller Logs" [ref=e73] [cursor=pointer]:
-          - /url: /en/reseller/reseller-logs
-          - img [ref=e74]
-          - generic [ref=e77]: Reseller Logs
-        - link "Profile" [ref=e78] [cursor=pointer]:
-          - /url: /en/reseller/profile
-          - img [ref=e79]
-          - generic [ref=e82]: Profile
-    - generic [ref=e83]:
-      - main [ref=e84]:
-        - generic [ref=e86]:
-          - button "Back" [ref=e88] [cursor=pointer]:
-            - img [ref=e89]
-            - text: Back
-          - generic [ref=e92]:
-            - paragraph [ref=e93]: Reseller
-            - heading "Renew" [level=2] [ref=e94]
-            - paragraph [ref=e95]: Update duration and price, then renew.
-          - generic [ref=e96]:
-            - heading "Renew" [level=2] [ref=e98]
-            - paragraph [ref=e100]: Loading...
-      - contentinfo [ref=e101]: 2026 OBD2SW License Platform
-  - generic:
-    - region "Notifications alt+T"
+- generic [ref=e2]:
+  - link "Skip to content" [ref=e3] [cursor=pointer]:
+    - /url: "#auth-main-content"
+  - main [ref=e4]:
+    - button "Toggle theme" [ref=e5] [cursor=pointer]:
+      - img [ref=e6]
+      - generic [ref=e8]: Dark mode
+    - button "AR" [ref=e9] [cursor=pointer]
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - paragraph [ref=e13]: License Platform
+          - generic [ref=e14]:
+            - heading "Sign in" [level=2] [ref=e15]
+            - paragraph [ref=e16]: OBD2SW License Management Platform
+        - generic [ref=e17]:
+          - generic [ref=e19]:
+            - img [ref=e20]
+            - generic [ref=e23]:
+              - paragraph [ref=e24]: IP Address Permanently Blocked
+              - paragraph [ref=e25]: This IP was permanently blocked after repeated failed login attempts.
+              - paragraph [ref=e26]:
+                - text: "Contact support:"
+                - link "support@obd2sw.com" [ref=e27] [cursor=pointer]:
+                  - /url: mailto:support@obd2sw.com
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - text: Email Address
+              - textbox "Email Address" [disabled] [ref=e30]:
+                - /placeholder: Enter your email
+                - text: reseller1@obd2sw.com
+            - generic [ref=e31]:
+              - text: Password
+              - generic [ref=e32]:
+                - textbox "Password" [disabled] [ref=e33]:
+                  - /placeholder: Enter your password
+                  - text: password
+                - button "Show" [disabled] [ref=e34]:
+                  - img [ref=e35]
+            - generic [ref=e38]:
+              - checkbox "Keep me signed in" [checked] [disabled] [ref=e39]
+              - generic [ref=e40]: Keep me signed in
+            - button "Sign in" [disabled]
+      - paragraph [ref=e41]: © 2026 OBD2SW. All rights reserved.
 ```

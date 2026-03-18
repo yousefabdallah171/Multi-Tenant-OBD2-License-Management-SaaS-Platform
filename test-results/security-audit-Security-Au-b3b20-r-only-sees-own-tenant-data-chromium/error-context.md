@@ -31,7 +31,7 @@
               - text: Email Address
               - textbox "Email Address" [disabled] [ref=e30]:
                 - /placeholder: Enter your email
-                - text: reseller1@obd2sw.com
+                - text: manager@obd2sw.com
             - generic [ref=e31]:
               - text: Password
               - generic [ref=e32]:
