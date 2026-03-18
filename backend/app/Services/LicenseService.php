@@ -715,7 +715,8 @@ class LicenseService
             ];
         }
 
-        if ($program?->external_software_id) {
+        // Only verify BIOS change for active licenses (expired licenses won't be in getActiveUsers)
+        if ($program?->external_software_id && $license->status === 'active') {
             $verification = $this->externalApiService->getActiveUsers((int) $program->external_software_id, $program->external_api_base_url);
             $verifiedUsers = is_array($verification['data']['users'] ?? null) ? $verification['data']['users'] : [];
             $verifiedBiosId = $verifiedUsers[$externalUsername] ?? null;
