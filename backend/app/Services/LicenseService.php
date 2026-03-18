@@ -418,6 +418,12 @@ class LicenseService
             ]);
         }
 
+        if (BiosBlacklist::blocksBios((string) $license->bios_id, (int) $reseller->tenant_id)) {
+            throw ValidationException::withMessages([
+                'license' => 'This BIOS ID is blacklisted and cannot be reactivated.',
+            ]);
+        }
+
         $program = $license->program()->first();
         $apiKey = $program?->getDecryptedApiKey();
         $apiResponse = [
