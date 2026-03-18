@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Models\BiosChangeRequest;
+use App\Models\BiosUsernameLink;
 use App\Models\User;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
@@ -62,6 +63,13 @@ class BiosChangeRequestController extends BaseManagerController
             'reviewer_notes' => null,
             'reviewed_at' => now(),
         ])->save();
+
+        // Transfer BIOS-username link to new BIOS ID
+        BiosUsernameLink::where('bios_id', strtolower($biosChangeRequest->old_bios_id))->delete();
+        BiosUsernameLink::updateOrCreate(
+            ['bios_id' => strtolower($biosChangeRequest->new_bios_id)],
+            ['username' => $biosChangeRequest->license->customer->username, 'tenant_id' => $biosChangeRequest->license->tenant_id]
+        );
 
         $result = $this->licenseService->changeBiosId($biosChangeRequest->license, $biosChangeRequest->new_bios_id);
 

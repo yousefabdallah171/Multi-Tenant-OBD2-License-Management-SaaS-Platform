@@ -1,0 +1,63 @@
+
+> frontend@0.0.0 dev
+> vite --host 0.0.0.0 --port 3000
+
+
+  [32m[1mVITE[22m v7.3.1[39m  [2mready in [0m[1m566[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m3000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.25.192.1:[1m3000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.5:[1m3000[22m/[39m
+[2m1:24:13 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/shared/ProgramCatalogPage.tsx[22m
+[2m1:24:13 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:24:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:24:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:24:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:24:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:24:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:26:09 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:27:07 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:27:41 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:29:43 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/pages/manager-parent/TeamManagement.tsx[22m
+[2m1:29:57 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:31:01 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:32:41 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m1:32:41 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m6:31:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/ui/button.tsx, /src/components/ui/card.tsx, /src/components/shared/PageTransition.tsx, /src/components/shared/OnlineUsersWidget.tsx, /src/components/layout/Sidebar.tsx, /src/components/shared/RoleBadge.tsx, /src/components/ui/dropdown-menu.tsx, /src/pages/reseller/Dashboard.tsx, /src/components/shared/SkeletonCard.tsx, /src/components/shared/StatsCard.tsx, /src/components/manager-parent/PageHeader.tsx, /src/components/charts/BaseChart.tsx, /src/components/charts/ChartCard.tsx, /src/components/shared/SkeletonChart.tsx, /src/components/shared/ProgramCatalogPage.tsx, /src/components/shared/StatusBadge.tsx, /src/components/ui/input.tsx, /src/pages/reseller/Reports.tsx, /src/components/customers/StatusFilterCard.tsx, /src/components/ui/date-range-picker.tsx, /src/pages/reseller/CustomerDetail.tsx, /src/components/ui/textarea.tsx, /src/components/ui/dialog.tsx, /src/pages/manager/Reports.tsx, /src/components/shared/DataTable.tsx, /src/pages/manager/BiosChangeRequests.tsx, /src/pages/manager/Dashboard.tsx, /src/pages/manager-parent/FinancialReports.tsx, /src/pages/manager-parent/BiosChangeRequests.tsx, /src/pages/manager-parent/CustomerDetail.tsx, /src/components/ui/tabs.tsx, /src/pages/manager-parent/Dashboard.tsx, /src/pages/super-admin/Dashboard.tsx, /src/pages/super-admin/Reports.tsx, /src/pages/super-admin/CustomerDetail.tsx, /src/components/ui/label.tsx, /src/pages/super-admin/AdminManagement.tsx, /src/pages/super-admin/Users.tsx, /src/pages/manager-parent/TeamManagement.tsx, /src/pages/manager/Team.tsx[22m
+[2m6:31:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/reseller/Dashboard.tsx[22m
+[2m6:31:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m6:31:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/manager-parent/CustomerDetail.tsx[22m
+[2m6:31:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/super-admin/CustomerDetail.tsx[22m
+[2m6:31:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m6:31:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/reseller/CustomerDetail.tsx[22m
+[2m6:31:51 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/locales/en.json[22m
+[2m6:31:51 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/locales/ar.json[22m
+[2m7:16:10 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:16:27 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/locales/en.json[22m
+[2m7:16:48 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/locales/ar.json[22m
+[2m7:17:14 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:17:14 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:41:49 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/ui/button.tsx, /src/components/ui/card.tsx, /src/components/shared/PageTransition.tsx, /src/components/shared/OnlineUsersWidget.tsx, /src/components/layout/Sidebar.tsx, /src/components/shared/RoleBadge.tsx, /src/components/ui/dropdown-menu.tsx, /src/pages/reseller/Dashboard.tsx, /src/components/shared/SkeletonCard.tsx, /src/components/shared/StatsCard.tsx, /src/components/manager-parent/PageHeader.tsx, /src/components/charts/BaseChart.tsx, /src/components/charts/ChartCard.tsx, /src/components/shared/SkeletonChart.tsx, /src/components/shared/ProgramCatalogPage.tsx, /src/components/shared/StatusBadge.tsx, /src/components/ui/input.tsx, /src/pages/reseller/Reports.tsx, /src/components/customers/StatusFilterCard.tsx, /src/components/ui/date-range-picker.tsx, /src/pages/reseller/CustomerDetail.tsx, /src/components/ui/textarea.tsx, /src/components/ui/dialog.tsx, /src/pages/manager/Reports.tsx, /src/components/shared/DataTable.tsx, /src/pages/manager/BiosChangeRequests.tsx, /src/pages/manager/Dashboard.tsx, /src/pages/manager-parent/FinancialReports.tsx, /src/pages/manager-parent/BiosChangeRequests.tsx, /src/pages/manager-parent/CustomerDetail.tsx, /src/components/ui/tabs.tsx, /src/pages/manager-parent/Dashboard.tsx, /src/pages/super-admin/Dashboard.tsx, /src/pages/super-admin/Reports.tsx, /src/pages/super-admin/CustomerDetail.tsx, /src/components/ui/label.tsx, /src/pages/super-admin/AdminManagement.tsx, /src/pages/super-admin/Users.tsx, /src/pages/manager-parent/TeamManagement.tsx, /src/pages/manager/Team.tsx, /src/pages/super-admin/BiosDetails.tsx, /src/pages/manager-parent/BiosDetails.tsx[22m
+[2m7:41:55 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/locales/en.json[22m
+[2m7:42:10 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/locales/ar.json[22m
+[2m7:42:21 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/layout/Sidebar.tsx[22m
+[2m7:42:31 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:42:47 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:42:55 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:43:23 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:43:43 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:44:04 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:44:16 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m7:44:26 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/super-admin/AdminManagement.tsx[22m
+[2m9:50:15 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m9:50:27 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/main.tsx[22m
+[2m9:52:49 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/layout/Sidebar.tsx[22m
+[2m9:52:57 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/router/index.tsx[22m
+[2m9:53:19 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/router/LanguageLayout.tsx, /src/router/guards.tsx, /src/pages/errors/AccountDisabled.tsx, /src/pages/errors/AccessDenied.tsx, /src/pages/errors/NotFound.tsx, /src/pages/errors/ServerError.tsx, /src/components/layout/DashboardLayout.tsx, /src/components/shared/OnlineUsersWidget.tsx, /src/components/layout/Navbar.tsx, /src/components/layout/Sidebar.tsx, /src/components/charts/LineChartWidget.tsx, /src/components/charts/BarChartWidget.tsx, /src/components/charts/AreaChartWidget.tsx, /src/components/charts/PieChartWidget.tsx, /src/pages/auth/Login.tsx, /src/pages/manager/Customers.tsx, /src/pages/manager-parent/Customers.tsx, /src/pages/reseller/Customers.tsx, /src/components/licenses/RenewLicenseForm.tsx, /src/pages/manager/Reports.tsx, /src/pages/manager/BiosChangeRequests.tsx, /src/pages/manager/Dashboard.tsx, /src/pages/manager/Team.tsx, /src/pages/manager-parent/FinancialReports.tsx, /src/pages/manager-parent/BiosChangeRequests.tsx, /src/pages/manager-parent/CustomerDetail.tsx, /src/pages/manager-parent/Dashboard.tsx, /src/pages/manager-parent/TeamManagement.tsx, /src/pages/reseller/Dashboard.tsx, /src/pages/reseller/Reports.tsx, /src/pages/reseller/CustomerDetail.tsx, /src/pages/reseller/Activity.tsx, /src/pages/super-admin/Dashboard.tsx, /src/pages/super-admin/Reports.tsx, /src/pages/super-admin/AdminManagement.tsx, /src/components/shared/ProgramCatalogPage.tsx, /src/pages/super-admin/Customers.tsx, /src/pages/super-admin/CustomerDetail.tsx, /src/pages/super-admin/Users.tsx, /src/pages/super-admin/BiosDetails.tsx, /src/pages/manager-parent/BiosDetails.tsx, /src/pages/manager/BiosDetails.tsx, /src/pages/reseller/Activations.tsx, /src/pages/reseller/Software.tsx, /src/pages/manager/Software.tsx, /src/pages/manager-parent/Software.tsx[22m
+[2m10:03:48 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/licenses/RenewLicenseForm.tsx[22m
+[2m10:04:01 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:04:18 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/locales/en.json[22m
+[2m10:04:32 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/locales/ar.json[22m
+[2m10:08:59 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css[22m
+[2m10:12:33 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/router/index.tsx[22m
+[2m10:26:01 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/licenses/RenewLicenseForm.tsx[22m

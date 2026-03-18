@@ -10,6 +10,7 @@ use App\Models\ActivityLog;
 use App\Models\BiosAccessLog;
 use App\Models\BiosBlacklist;
 use App\Models\BiosConflict;
+use App\Models\BiosUsernameLink;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
@@ -147,6 +148,15 @@ class LicenseService
             );
 
             $license->load(['customer', 'program', 'reseller']);
+
+            // Link BIOS ID to username in bios_username_links table
+            BiosUsernameLink::updateOrCreate(
+                ['bios_id' => strtolower($biosId)],
+                ['username' => $customer->username, 'tenant_id' => $reseller->tenant_id]
+            );
+
+            // Lock the username on the customer
+            $customer->update(['username_locked' => true]);
 
             if (! $isScheduled) {
                 event(new LicenseActivated($license));
@@ -777,13 +787,14 @@ class LicenseService
             throw ValidationException::withMessages(['bios_id' => 'This BIOS ID is blacklisted.']);
         }
 
-        $duplicate = License::query()
-            ->where('bios_id', $biosId)
-            ->where('program_id', $program->id)
-            ->whereEffectivelyActive()
+        // GLOBAL CROSS-TENANT CHECK: check if BIOS is active in ANY tenant
+        $biosIdLower = strtolower($biosId);
+        $globalDuplicate = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->whereIn('status', ['active', 'pending', 'suspended'])
             ->first();
 
-        if ($duplicate) {
+        if ($globalDuplicate) {
             BiosConflict::query()->create([
                 'bios_id' => $biosId,
                 'attempted_by' => $reseller->id,
@@ -795,14 +806,13 @@ class LicenseService
 
             $this->logBiosAccess($reseller, $biosId, 'conflict', [
                 'program_id' => $program->id,
-                'license_id' => $duplicate->id,
+                'license_id' => $globalDuplicate->id,
             ]);
 
-            throw ValidationException::withMessages(['bios_id' => 'An active license already exists for this BIOS ID and program.']);
+            throw ValidationException::withMessages(['bios_id' => 'BIOS ID is already working with another reseller']);
         }
 
         $usernameConflict = License::query()
-            ->where('tenant_id', $reseller->tenant_id)
             ->where('program_id', $program->id)
             ->where('external_username', $externalUsername)
             ->where('bios_id', '!=', $biosId)

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
+import { useDebounce } from '@/hooks/useDebounce'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +15,7 @@ import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { formatDate } from '@/lib/utils'
 import { activateLicense } from '@/services/activation.service'
+import { availabilityService, type BiosCheckResult } from '@/services/availability.service'
 import type { ProgramDurationPreset } from '@/types/manager-reseller.types'
 import { formatUsername } from '@/utils/biosId'
 
@@ -110,6 +112,9 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
   const [priceInput, setPriceInput] = useState('0.00')
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(() => program.duration_presets?.[0]?.id ?? null)
   const [submitError, setSubmitError] = useState('')
+  const [biosCheckResult, setBiosCheckResult] = useState<BiosCheckResult | null>(null)
+  const [biosCheckLoading, setBiosCheckLoading] = useState(false)
+  const debouncedBiosId = useDebounce(form.bios_id, 400)
   const requiredMessage = t('validation.required', { defaultValue: 'Field required' })
   const invalidEmailMessage = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
   const invalidPhoneMessage = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
@@ -255,6 +260,28 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     }))
   }, [form.is_scheduled, form.schedule_mode, form.schedule_offset_unit, form.schedule_offset_value, form.scheduled_timezone])
 
+  // Real-time BIOS availability check
+  useEffect(() => {
+    if (debouncedBiosId.length < 3) {
+      setBiosCheckResult(null)
+      return
+    }
+
+    const checkBios = async () => {
+      setBiosCheckLoading(true)
+      try {
+        const result = await availabilityService.checkBios(debouncedBiosId)
+        setBiosCheckResult(result)
+      } catch (error) {
+        console.error('BIOS availability check failed:', error)
+      } finally {
+        setBiosCheckLoading(false)
+      }
+    }
+
+    checkBios()
+  }, [debouncedBiosId])
+
   const errors = useMemo<ActivationFormErrors>(() => {
     const nextErrors: ActivationFormErrors = {}
 
@@ -276,6 +303,8 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
 
     if (form.bios_id.trim().length < 3) {
       nextErrors.bios_id = requiredMessage
+    } else if (biosCheckResult && !biosCheckResult.available) {
+      nextErrors.bios_id = biosCheckResult.message
     }
 
     if (isReseller && !selectedPreset) {
@@ -319,7 +348,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     }
 
     return nextErrors
-  }, [durationDays, form.bios_id, form.customer_email, form.customer_name, form.customer_phone, form.end_date, form.is_scheduled, form.mode, form.schedule_mode, form.schedule_offset_value, form.scheduled_date_time, invalidEmailMessage, invalidNumberMessage, invalidPhoneMessage, isReseller, maxPriceMessage, priceInput, priceMode, requiredMessage, selectedPreset, totalPrice])
+  }, [biosCheckResult, durationDays, form.bios_id, form.customer_email, form.customer_name, form.customer_phone, form.end_date, form.is_scheduled, form.mode, form.schedule_mode, form.schedule_offset_value, form.scheduled_date_time, invalidEmailMessage, invalidNumberMessage, invalidPhoneMessage, isReseller, maxPriceMessage, priceInput, priceMode, requiredMessage, selectedPreset, totalPrice])
 
   const isFormValid = useMemo(() => Object.keys(errors).length === 0, [errors])
 
@@ -519,8 +548,29 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       </div>
       <div className="space-y-2">
         <Label htmlFor="activate-bios-id">{t('activate.biosId')}</Label>
-        <Input id="activate-bios-id" value={form.bios_id} onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))} />
+        <Input id="activate-bios-id" value={form.bios_id} onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))} data-testid="bios-id" />
         <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.biosIdHint')}</p>
+        {biosCheckLoading && (
+          <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+            <Loader2 className="size-3 animate-spin" />
+            <span data-testid="bios-checking">{t('activate.biosChecking', { defaultValue: 'Checking BIOS availability...' })}</span>
+          </div>
+        )}
+        {biosCheckResult && !biosCheckLoading && (
+          <div className={`flex items-center gap-2 text-xs ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+            {biosCheckResult.available ? (
+              <>
+                <Check className="size-3" />
+                <span data-testid="bios-check-available">{t('activate.biosAvailable', { defaultValue: 'BIOS ID is available' })}</span>
+              </>
+            ) : (
+              <>
+                <X className="size-3" />
+                <span data-testid="bios-conflict-error">{t('activate.biosConflict', { defaultValue: 'BIOS ID is already working with another reseller' })}</span>
+              </>
+            )}
+          </div>
+        )}
         {errors.bios_id ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.bios_id}</p> : null}
       </div>
       <div className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">

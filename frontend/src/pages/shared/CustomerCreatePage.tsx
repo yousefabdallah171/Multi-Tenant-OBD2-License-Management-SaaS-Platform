@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -13,9 +13,11 @@ import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
+import { useDebounce } from '@/hooks/useDebounce'
 import { normalizeStrictPhoneInput } from '@/lib/phone'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { activateLicense } from '@/services/activation.service'
+import { availabilityService, type BiosCheckResult, type UsernameCheckResult } from '@/services/availability.service'
 import { programService } from '@/services/program.service'
 import { formatUsername } from '@/utils/biosId'
 
@@ -91,11 +93,65 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [priceInput, setPriceInput] = useState('0.00')
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null)
   const [submitError, setSubmitError] = useState('')
+  const [biosCheckResult, setBiosCheckResult] = useState<BiosCheckResult | null>(null)
+  const [biosCheckLoading, setBiosCheckLoading] = useState(false)
+  const [usernameCheckResult, setUsernameCheckResult] = useState<UsernameCheckResult | null>(null)
+  const [usernameCheckLoading, setUsernameCheckLoading] = useState(false)
+  const debouncedBiosId = useDebounce(biosId, 400)
+  const debouncedCustomerName = useDebounce(customerName, 400)
 
   const programsQuery = useQuery({
     queryKey: ['customer-create', 'programs'],
     queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
   })
+
+  // Real-time BIOS availability check
+  useEffect(() => {
+    if (debouncedBiosId.length < 3) {
+      setBiosCheckResult(null)
+      return
+    }
+
+    const checkBios = async () => {
+      setBiosCheckLoading(true)
+      try {
+        const result = await availabilityService.checkBios(debouncedBiosId)
+        setBiosCheckResult(result)
+        // Auto-populate username if BIOS has linked username and is available
+        if (result.available && result.linked_username && !customerName.trim()) {
+          setCustomerName(result.linked_username)
+        }
+      } catch (error) {
+        console.error('BIOS availability check failed:', error)
+      } finally {
+        setBiosCheckLoading(false)
+      }
+    }
+
+    checkBios()
+  }, [debouncedBiosId])
+
+  // Real-time username availability check
+  useEffect(() => {
+    if (debouncedCustomerName.length < 2) {
+      setUsernameCheckResult(null)
+      return
+    }
+
+    const checkUsername = async () => {
+      setUsernameCheckLoading(true)
+      try {
+        const result = await availabilityService.checkUsername(debouncedCustomerName)
+        setUsernameCheckResult(result)
+      } catch (error) {
+        console.error('Username availability check failed:', error)
+      } finally {
+        setUsernameCheckLoading(false)
+      }
+    }
+
+    checkUsername()
+  }, [debouncedCustomerName])
 
   useEffect(() => {
     if (!scheduleEnabled || scheduleMode !== 'after') {
@@ -225,9 +281,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
     if (customerName.trim().length < 2) next.customerName = t('validation.required', { defaultValue: 'Field required' })
+    if (usernameCheckResult && !usernameCheckResult.available) next.customerName = usernameCheckResult.message
     if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) next.email = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
     if (phone.trim() && !/^\+?\d{6,20}$/.test(phone.trim())) next.phone = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
     if (biosId.trim().length < 3) next.biosId = t('validation.required', { defaultValue: 'Field required' })
+    if (biosCheckResult && !biosCheckResult.available) next.biosId = biosCheckResult.message
     if (!programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
 
     if (createLicenseNow) {
@@ -245,7 +303,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }
 
     return next
-  }, [biosId, createLicenseNow, customerName, durationDays, email, isReseller, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t])
+  }, [biosCheckResult, biosId, createLicenseNow, customerName, durationDays, email, isReseller, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, usernameCheckResult])
 
   const createOnlyMutation = useMutation({
     mutationFn: () => createCustomer({
@@ -319,9 +377,45 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label={t('activate.username', { defaultValue: 'Username (API)' })} hint={t('activate.usernameHint', { defaultValue: 'API username — auto-formatted (no spaces)' })} error={errors.customerName}>
-              <Input value={customerName} placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })} onChange={(event) => setCustomerName(event.target.value)} onBlur={(event) => setCustomerName(formatUsername(event.target.value))} />
-            </Field>
+            <div>
+              <Field label={t('activate.username', { defaultValue: 'Username (API)' })} hint={t('activate.usernameHint', { defaultValue: 'API username — auto-formatted (no spaces)' })} error={errors.customerName}>
+                <Input
+                  value={customerName}
+                  placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })}
+                  onChange={(event) => setCustomerName(event.target.value)}
+                  onBlur={(event) => setCustomerName(formatUsername(event.target.value))}
+                  disabled={!!biosCheckResult?.linked_username}
+                  className={biosCheckResult?.linked_username ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed' : ''}
+                  data-testid="customer-name"
+                />
+              </Field>
+              {usernameCheckLoading && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                  <Loader2 className="size-3 animate-spin" />
+                  <span>{t('validate.checking', { defaultValue: 'Checking...' })}</span>
+                </div>
+              )}
+              {usernameCheckResult && !usernameCheckLoading && (
+                <div className={`mt-2 flex items-center gap-2 text-xs ${usernameCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                  {usernameCheckResult.available ? (
+                    <>
+                      <Check className="size-3" />
+                      <span data-testid="username-available">{t('activate.usernameAvailable', { defaultValue: 'Username is available' })}</span>
+                    </>
+                  ) : (
+                    <>
+                      <X className="size-3" />
+                      <span data-testid="username-taken-error">{t('activate.usernameTaken', { defaultValue: 'Username is already active with another customer' })}</span>
+                    </>
+                  )}
+                </div>
+              )}
+              {biosCheckResult?.linked_username && (
+                <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                  {t('activate.biosLinkedUsername', { defaultValue: 'Username auto-filled from BIOS history' })}
+                </div>
+              )}
+            </div>
             <Field label={t('activate.clientName', { defaultValue: 'Client Display Name' })} hint={t('activate.clientNameHint', { defaultValue: 'Human-readable name for display in your dashboard' })}>
               <Input value={clientName} placeholder={t('activate.clientNamePlaceholder', { defaultValue: 'Full client name (optional)' })} onChange={(event) => setClientName(event.target.value)} />
             </Field>
@@ -340,9 +434,39 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
           ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
-              <Input value={biosId} onChange={(event) => setBiosId(event.target.value)} />
-            </Field>
+            <div>
+              <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
+                <Input value={biosId} onChange={(event) => setBiosId(event.target.value)} data-testid="bios-id" />
+              </Field>
+              {biosCheckLoading && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                  <Loader2 className="size-3 animate-spin" />
+                  <span data-testid="bios-checking">{t('activate.biosChecking', { defaultValue: 'Checking BIOS availability...' })}</span>
+                </div>
+              )}
+              {biosCheckResult && !biosCheckLoading && (
+                <>
+                  <div className={`mt-2 flex items-center gap-2 text-xs ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {biosCheckResult.available ? (
+                      <>
+                        <Check className="size-3" />
+                        <span data-testid="bios-check-available">{t('activate.biosAvailable', { defaultValue: 'BIOS ID is available' })}</span>
+                      </>
+                    ) : (
+                      <>
+                        <X className="size-3" />
+                        <span data-testid="bios-conflict-error">{t('activate.biosConflict', { defaultValue: 'BIOS ID is already working with another reseller' })}</span>
+                      </>
+                    )}
+                  </div>
+                  {biosCheckResult.available && biosCheckResult.linked_username && (
+                    <div className="mt-2 text-xs text-amber-600 dark:text-amber-400" data-testid="bios-linked-hint">
+                      {t('activate.biosLinkedUsername', { defaultValue: 'Username auto-filled from BIOS history' })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
             <Field label={t('common.program')} error={errors.programId}>
               <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
                 <option value="">{t('reseller.pages.customers.activationDialog.selectProgram', { defaultValue: 'Select program' })}</option>

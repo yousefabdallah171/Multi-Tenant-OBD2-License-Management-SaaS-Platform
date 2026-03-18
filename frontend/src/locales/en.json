@@ -1601,7 +1601,15 @@
     "presetPriceSummary": "$ {{price}}",
     "pricePresetLocked": "Price is controlled by the selected preset.",
     "durationDays": "Duration in Days",
-    "expiryPreview": "Expiry Preview"
+    "expiryPreview": "Expiry Preview",
+    "biosConflict": "BIOS ID is already working with another reseller",
+    "biosAvailable": "BIOS ID is available",
+    "biosChecking": "Checking BIOS availability...",
+    "biosLinkedUsername": "Username auto-filled from BIOS history",
+    "usernameTaken": "Username is already active with another customer",
+    "usernameAvailable": "Username is available",
+    "biosLocked": "Locked after activation",
+    "biosLockedHint": "Use BIOS Change Request to update BIOS ID"
   },
   "dateRange": {
     "last7Days": "Last 7 Days",

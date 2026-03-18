@@ -1592,7 +1592,15 @@
     "presetPriceSummary": "$ {{price}}",
     "pricePresetLocked": "السعر مرتبط بالإعداد المسبق المحدد.",
     "durationDays": "المدة بالأيام",
-    "expiryPreview": "معاينة الانتهاء"
+    "expiryPreview": "معاينة الانتهاء",
+    "biosConflict": "معرف BIOS يعمل بالفعل مع موزع آخر",
+    "biosAvailable": "معرف BIOS متاح",
+    "biosChecking": "جارٍ التحقق من توفر BIOS...",
+    "biosLinkedUsername": "تم ملء اسم المستخدم تلقائياً من سجل BIOS",
+    "usernameTaken": "اسم المستخدم نشط بالفعل مع عميل آخر",
+    "usernameAvailable": "اسم المستخدم متاح",
+    "biosLocked": "مقفل بعد التفعيل",
+    "biosLockedHint": "استخدم طلب تغيير BIOS لتحديث المعرف"
   },
   "dateRange": {
     "last7Days": "آخر 7 أيام",
