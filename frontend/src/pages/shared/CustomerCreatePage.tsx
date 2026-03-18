@@ -446,16 +446,21 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               )}
               {biosCheckResult && !biosCheckLoading && (
                 <>
-                  <div className={`mt-2 flex items-center gap-2 text-xs ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                  <div className={`mt-2 flex items-center gap-2 text-xs ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : biosCheckResult.is_blacklisted ? 'text-red-600 dark:text-red-400' : 'text-rose-600 dark:text-rose-400'}`}>
                     {biosCheckResult.available ? (
                       <>
                         <Check className="size-3" />
                         <span data-testid="bios-check-available">{t('activate.biosAvailable', { defaultValue: 'BIOS ID is available' })}</span>
                       </>
+                    ) : biosCheckResult.is_blacklisted ? (
+                      <>
+                        <X className="size-3" />
+                        <span data-testid="bios-blacklist-error" className="font-semibold">{t('activate.biosBlacklisted', { defaultValue: 'This BIOS ID is blacklisted and cannot be used' })}</span>
+                      </>
                     ) : (
                       <>
                         <X className="size-3" />
-                        <span data-testid="bios-conflict-error">{t('activate.biosConflict', { defaultValue: 'BIOS ID is already working with another reseller' })}</span>
+                        <span data-testid="bios-conflict-error">{biosCheckResult.message || t('activate.biosConflict', { defaultValue: 'BIOS ID is already working with another reseller' })}</span>
                       </>
                     )}
                   </div>

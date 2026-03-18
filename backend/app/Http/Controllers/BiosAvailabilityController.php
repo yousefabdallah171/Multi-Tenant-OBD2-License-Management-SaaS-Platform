@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BiosBlacklist;
 use App\Models\BiosUsernameLink;
 use App\Models\License;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class BiosAvailabilityController extends Controller
 {
@@ -20,7 +22,21 @@ class BiosAvailabilityController extends Controller
             return response()->json([
                 'available' => false,
                 'linked_username' => null,
+                'is_blacklisted' => false,
                 'message' => 'BIOS ID must be at least 3 characters',
+            ]);
+        }
+
+        // Check if BIOS is blacklisted in the current tenant
+        $user = Auth::user();
+        $tenantId = $user?->tenant_id;
+
+        if ($tenantId && BiosBlacklist::blocksBios($biosId, $tenantId)) {
+            return response()->json([
+                'available' => false,
+                'linked_username' => null,
+                'is_blacklisted' => true,
+                'message' => 'This BIOS ID is blacklisted',
             ]);
         }
 
@@ -33,6 +49,7 @@ class BiosAvailabilityController extends Controller
             return response()->json([
                 'available' => false,
                 'linked_username' => null,
+                'is_blacklisted' => false,
                 'message' => 'BIOS ID is already working with another reseller',
             ]);
         }
@@ -43,6 +60,7 @@ class BiosAvailabilityController extends Controller
         return response()->json([
             'available' => true,
             'linked_username' => $link?->username,
+            'is_blacklisted' => false,
             'message' => 'Available',
         ]);
     }

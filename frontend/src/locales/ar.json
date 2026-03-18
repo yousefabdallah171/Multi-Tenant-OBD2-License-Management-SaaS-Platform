@@ -1596,6 +1596,7 @@
     "biosConflict": "معرف BIOS يعمل بالفعل مع موزع آخر",
     "biosAvailable": "معرف BIOS متاح",
     "biosChecking": "جارٍ التحقق من توفر BIOS...",
+    "biosBlacklisted": "معرف BIOS هذا مدرج في القائمة السوداء ولا يمكن استخدامه",
     "biosLinkedUsername": "تم ملء اسم المستخدم تلقائياً من سجل BIOS",
     "usernameTaken": "اسم المستخدم نشط بالفعل مع عميل آخر",
     "usernameAvailable": "اسم المستخدم متاح",

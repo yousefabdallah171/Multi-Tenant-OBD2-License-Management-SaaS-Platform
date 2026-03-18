@@ -1605,6 +1605,7 @@
     "biosConflict": "BIOS ID is already working with another reseller",
     "biosAvailable": "BIOS ID is available",
     "biosChecking": "Checking BIOS availability...",
+    "biosBlacklisted": "This BIOS ID is blacklisted and cannot be used",
     "biosLinkedUsername": "Username auto-filled from BIOS history",
     "usernameTaken": "Username is already active with another customer",
     "usernameAvailable": "Username is available",

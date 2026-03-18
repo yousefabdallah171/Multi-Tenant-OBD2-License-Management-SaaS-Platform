@@ -3,6 +3,7 @@ import api from '@/lib/axios';
 export interface BiosCheckResult {
   available: boolean;
   linked_username: string | null;
+  is_blacklisted: boolean;
   message: string;
 }
 
