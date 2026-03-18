@@ -59,6 +59,14 @@ class IpAnalyticsController extends BaseResellerController
                 static fn (array $row): bool => ($row['program_id'] ?? null) !== null
                     && (int) ($row['reseller_id'] ?? 0) === $resellerId
             ));
+
+            // Safety net: Ensure no cross-tenant data slipped through the filters
+            foreach ($matched as $row) {
+                if ((int) ($row['reseller_id'] ?? 0) !== $resellerId) {
+                    throw new \RuntimeException('Cross-tenant data detected in IP analytics. Request denied.');
+                }
+            }
+
             $matched = array_reverse($matched);
 
             try {

@@ -95,13 +95,15 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::put('/password', [AuthController::class, 'updatePassword']);
     });
 
-    Route::get('/exports/{exportTask}', [ExportTaskController::class, 'show']);
-    Route::get('/exports/{exportTask}/download', [ExportTaskController::class, 'download']);
+    Route::middleware('role:super_admin,manager_parent,manager,reseller')->group(function (): void {
+        Route::get('/exports/{exportTask}', [ExportTaskController::class, 'show']);
+        Route::get('/exports/{exportTask}/download', [ExportTaskController::class, 'download']);
+    });
 
-    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats'])->middleware('role:super_admin,manager_parent,manager,reseller');
 
     Route::prefix('external')->group(function (): void {
-        Route::get('/status', [ApiProxyController::class, 'status']);
+        Route::get('/status', [ApiProxyController::class, 'status'])->middleware('role:super_admin,manager_parent,manager,reseller');
         Route::get('/check/{bios}', [ApiProxyController::class, 'check'])->middleware(['role:super_admin,manager_parent,manager,reseller', 'bios.blacklist']);
         Route::get('/users', [ApiProxyController::class, 'users'])->middleware('role:super_admin,manager_parent');
     });

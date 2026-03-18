@@ -88,6 +88,7 @@ class ResellerLogController extends BaseResellerController
             ->keyBy('id');
 
         $programs = Program::query()
+            ->where('tenant_id', $reseller->tenant_id)
             ->whereIn('id', $programIds)
             ->get(['id', 'name'])
             ->keyBy('id');

@@ -11,7 +11,7 @@ class SoftwareController extends BaseResellerController
 {
     public function index(Request $request): JsonResponse
     {
-        $resellerId = auth()->id();
+        $resellerId = $this->currentReseller($request)->id;
 
         $programs = Program::query()
             ->with('activeDurationPresets')

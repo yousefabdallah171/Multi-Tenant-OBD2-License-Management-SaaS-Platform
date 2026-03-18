@@ -1,0 +1,208 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e5]:
+      - generic [ref=e7]:
+        - generic [ref=e9]:
+          - img [ref=e11]
+          - generic [ref=e18]:
+            - heading "Reseller" [level=1] [ref=e19]
+            - generic [ref=e20]: "Timezone: UTC+02:00"
+        - generic [ref=e21]:
+          - button "Toggle theme" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+            - generic [ref=e25]: Dark mode
+          - button "Switch language" [ref=e26] [cursor=pointer]:
+            - img [ref=e27]
+            - generic [ref=e30]: AR
+          - button "Open user menu" [ref=e31] [cursor=pointer]:
+            - generic [ref=e32]:
+              - generic [ref=e33]: Ahmed Reseller
+              - generic [ref=e34]: reseller1@obd2sw.com
+            - generic [ref=e36]: Reseller
+    - generic [ref=e37]:
+      - complementary [ref=e39]:
+        - navigation [ref=e40]:
+          - link "Dashboard" [ref=e41] [cursor=pointer]:
+            - /url: /en/reseller/dashboard
+            - img [ref=e42]
+            - generic [ref=e47]: Dashboard
+          - link "Customers" [ref=e48] [cursor=pointer]:
+            - /url: /en/reseller/customers
+            - img [ref=e49]
+            - generic [ref=e54]: Customers
+          - link "Software" [ref=e55] [cursor=pointer]:
+            - /url: /en/reseller/software
+            - img [ref=e56]
+            - generic [ref=e60]: Software
+          - link "IP Analytics" [ref=e61] [cursor=pointer]:
+            - /url: /en/reseller/ip-analytics
+            - img [ref=e62]
+            - generic [ref=e64]: IP Analytics
+          - link "Payment Status" [ref=e65] [cursor=pointer]:
+            - /url: /en/reseller/payment-status
+            - img [ref=e66]
+            - generic [ref=e68]: Payment Status
+          - link "Reports" [ref=e69] [cursor=pointer]:
+            - /url: /en/reseller/reports
+            - img [ref=e70]
+            - generic [ref=e72]: Reports
+          - link "Reseller Logs" [ref=e73] [cursor=pointer]:
+            - /url: /en/reseller/reseller-logs
+            - img [ref=e74]
+            - generic [ref=e77]: Reseller Logs
+          - link "Profile" [ref=e78] [cursor=pointer]:
+            - /url: /en/reseller/profile
+            - img [ref=e79]
+            - generic [ref=e82]: Profile
+      - generic [ref=e83]:
+        - main [ref=e84]:
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - paragraph [ref=e89]: Reseller
+                - heading "Dashboard" [level=2] [ref=e90]
+                - paragraph [ref=e91]: Track your customer base, active customers, current revenue, and the latest activation work from your personal reseller scope.
+              - generic [ref=e92]:
+                - button "Customers" [ref=e93] [cursor=pointer]
+                - button "Reports" [ref=e94] [cursor=pointer]
+            - generic [ref=e95]:
+              - button "Customers 16" [ref=e96] [cursor=pointer]:
+                - generic [ref=e98]:
+                  - generic [ref=e99]:
+                    - paragraph [ref=e100]: Customers
+                    - paragraph [ref=e101]: "16"
+                  - img [ref=e103]
+              - button "Current Active Customers 8" [ref=e106] [cursor=pointer]:
+                - generic [ref=e108]:
+                  - generic [ref=e109]:
+                    - paragraph [ref=e110]: Current Active Customers
+                    - paragraph [ref=e111]: "8"
+                  - img [ref=e113]
+              - generic [ref=e118]:
+                - generic [ref=e119]:
+                  - paragraph [ref=e120]: Revenue
+                  - paragraph [ref=e121]: $2,601.68
+                - img [ref=e123]
+              - button "Monthly Activations 16" [ref=e126] [cursor=pointer]:
+                - generic [ref=e128]:
+                  - generic [ref=e129]:
+                    - paragraph [ref=e130]: Monthly Activations
+                    - paragraph [ref=e131]: "16"
+                  - img [ref=e133]
+            - generic [ref=e136]:
+              - generic [ref=e137]:
+                - heading "Activation Trend" [level=2] [ref=e140]
+                - application [ref=e145]:
+                  - generic [ref=e152]:
+                    - generic [ref=e153]:
+                      - generic [ref=e155]: Jun 2025
+                      - generic [ref=e157]: Sep 2025
+                      - generic [ref=e159]: Dec 2025
+                      - generic [ref=e161]: Mar 2026
+                    - generic [ref=e162]:
+                      - generic [ref=e164]: "0"
+                      - generic [ref=e166]: "4"
+                      - generic [ref=e168]: "8"
+                      - generic [ref=e170]: "12"
+                      - generic [ref=e172]: "16"
+              - generic [ref=e173]:
+                - heading "Revenue Trend" [level=2] [ref=e176]
+                - application [ref=e181]:
+                  - generic [ref=e188]:
+                    - generic [ref=e189]:
+                      - generic [ref=e191]: Jun 2025
+                      - generic [ref=e193]: Sep 2025
+                      - generic [ref=e195]: Dec 2025
+                      - generic [ref=e197]: Mar 2026
+                    - generic [ref=e198]:
+                      - generic [ref=e200]: "0"
+                      - generic [ref=e202]: "700"
+                      - generic [ref=e204]: 1,400
+                      - generic [ref=e206]: 2,100
+                      - generic [ref=e208]: 2,800
+            - generic [ref=e209]:
+              - generic [ref=e210]:
+                - heading "Recent Activity" [level=2] [ref=e212]
+                - generic [ref=e213]:
+                  - generic [ref=e215]:
+                    - generic [ref=e216]:
+                      - img [ref=e218]
+                      - paragraph [ref=e221]: Resume
+                      - paragraph [ref=e222]: Resumed license 41 for BIOS GLOBAL-BLOCK-S21-20260315.
+                    - generic [ref=e223]: Mar 18, 2026, 7:35 AM
+                  - generic [ref=e225]:
+                    - generic [ref=e226]:
+                      - img [ref=e228]
+                      - paragraph [ref=e231]: Renewal
+                      - paragraph [ref=e232]: Renewed license 43 for BIOS MASTER-BLOCK-1773607300-R.
+                    - generic [ref=e233]: Mar 18, 2026, 7:35 AM
+                  - generic [ref=e235]:
+                    - generic [ref=e236]:
+                      - img [ref=e238]
+                      - paragraph [ref=e241]: BIOS Change Requested
+                      - paragraph [ref=e242]: Requested BIOS change for license 43.
+                    - generic [ref=e243]: Mar 18, 2026, 7:33 AM
+                  - generic [ref=e245]:
+                    - generic [ref=e246]:
+                      - img [ref=e248]
+                      - paragraph [ref=e251]: BIOS Change Requested
+                      - paragraph [ref=e252]: Requested BIOS change for license 43.
+                    - generic [ref=e253]: Mar 18, 2026, 7:33 AM
+                  - generic [ref=e255]:
+                    - generic [ref=e256]:
+                      - img [ref=e258]
+                      - paragraph [ref=e261]: BIOS Changed
+                      - paragraph [ref=e262]: Changed BIOS ID on license 65 from sssdccd to ssssssssssss.
+                    - generic [ref=e263]: Mar 18, 2026, 7:32 AM
+                  - generic [ref=e265]:
+                    - generic [ref=e266]:
+                      - img [ref=e268]
+                      - paragraph [ref=e271]: BIOS Change Requested
+                      - paragraph [ref=e272]: Requested BIOS change for license 65.
+                    - generic [ref=e273]: Mar 18, 2026, 7:32 AM
+                  - generic [ref=e275]:
+                    - generic [ref=e276]:
+                      - img [ref=e278]
+                      - paragraph [ref=e281]: BIOS Changed
+                      - paragraph [ref=e282]: Changed BIOS ID on license 65 from TTTTTTTTTTTTT to sssdccd.
+                    - generic [ref=e283]: Mar 18, 2026, 7:30 AM
+                  - generic [ref=e285]:
+                    - generic [ref=e286]:
+                      - img [ref=e288]
+                      - paragraph [ref=e291]: BIOS Change Requested
+                      - paragraph [ref=e292]: Requested BIOS change for license 65.
+                    - generic [ref=e293]: Mar 18, 2026, 7:30 AM
+                  - generic [ref=e295]:
+                    - generic [ref=e296]:
+                      - img [ref=e298]
+                      - paragraph [ref=e301]: BIOS Change Requested
+                      - paragraph [ref=e302]: Requested BIOS change for license 43.
+                    - generic [ref=e303]: Mar 18, 2026, 7:29 AM
+                  - generic [ref=e305]:
+                    - generic [ref=e306]:
+                      - img [ref=e308]
+                      - paragraph [ref=e311]: BIOS Change Requested
+                      - paragraph [ref=e312]: Requested BIOS change for license 41.
+                    - generic [ref=e313]: Mar 18, 2026, 7:05 AM
+              - generic [ref=e314]:
+                - heading "Quick Actions" [level=2] [ref=e316]
+                - generic [ref=e317]:
+                  - button "Activate New Customer" [ref=e318] [cursor=pointer]:
+                    - text: Activate New Customer
+                    - img [ref=e319]
+                  - button "Reports" [ref=e321] [cursor=pointer]:
+                    - text: Reports
+                    - img [ref=e322]
+        - contentinfo [ref=e324]: 2026 OBD2SW License Platform
+    - button "1 online" [ref=e326] [cursor=pointer]:
+      - img [ref=e327]
+      - text: 1 online
+    - generic:
+      - region "Notifications alt+T"
+  - generic [ref=e329]: "700"
+```

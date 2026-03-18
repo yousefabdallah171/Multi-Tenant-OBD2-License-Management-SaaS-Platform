@@ -21,7 +21,10 @@ export function ActivateLicensePage({ defaultBackPath }: ActivateLicensePageProp
   const location = useLocation()
 
   const programId = Number(id)
-  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? defaultBackPath(lang)
+
+  // Validate returnTo to prevent navigation to arbitrary paths
+  const stateReturnTo = (location.state as { returnTo?: string } | null)?.returnTo
+  const returnTo = (stateReturnTo && stateReturnTo.startsWith(`/${lang}/`)) ? stateReturnTo : defaultBackPath(lang)
 
   const programQuery = useQuery({
     queryKey: ['activation-program', programId],

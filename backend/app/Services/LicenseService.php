@@ -935,6 +935,22 @@ class LicenseService
     private function resolveReseller(User $actor, ?User $relatedReseller = null): User
     {
         if ($relatedReseller) {
+            $actorRole = $actor->role?->value ?? (string) $actor->role;
+
+            // For non-super-admin actors, verify the related reseller belongs to the same tenant
+            if ($actorRole !== UserRole::SUPER_ADMIN->value) {
+                if ($relatedReseller->tenant_id !== $actor->tenant_id) {
+                    throw ValidationException::withMessages([
+                        'seller_id' => ['Reseller does not belong to your organization.'],
+                    ]);
+                }
+                if ($relatedReseller->role !== UserRole::RESELLER->value) {
+                    throw ValidationException::withMessages([
+                        'seller_id' => ['The specified user is not a reseller.'],
+                    ]);
+                }
+            }
+
             return $relatedReseller;
         }
 

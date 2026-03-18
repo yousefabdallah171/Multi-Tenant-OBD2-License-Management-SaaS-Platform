@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify'
 import { Download, Globe, LogOut, Menu, MoonStar, SunMedium } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -58,7 +59,15 @@ export function Navbar() {
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             {logo ? (
               logo.startsWith('<svg') ? (
-                <div dangerouslySetInnerHTML={{ __html: logo }} className="h-7 w-8 shrink-0" />
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(logo, {
+                      USE_PROFILES: { svg: true, svgFilters: true },
+                      FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover'],
+                    }),
+                  }}
+                  className="h-7 w-8 shrink-0"
+                />
               ) : (
                 <img src={logo} alt="Logo" className="h-7 w-auto shrink-0 object-contain" />
               )
