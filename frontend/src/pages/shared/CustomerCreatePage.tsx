@@ -99,6 +99,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [usernameCheckLoading, setUsernameCheckLoading] = useState(false)
   const debouncedBiosId = useDebounce(biosId, 400)
   const debouncedCustomerName = useDebounce(customerName, 400)
+  const biosLinkedUsername = biosCheckResult?.available ? (biosCheckResult.linked_username ?? null) : null
 
   const programsQuery = useQuery({
     queryKey: ['customer-create', 'programs'],
@@ -117,8 +118,8 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       try {
         const result = await availabilityService.checkBios(debouncedBiosId)
         setBiosCheckResult(result)
-        // Auto-populate username if BIOS has linked username and is available
-        if (result.available && result.linked_username && !customerName.trim()) {
+        // Always auto-fill username from BIOS link (overrides whatever was typed)
+        if (result.available && result.linked_username) {
           setCustomerName(result.linked_username)
         }
       } catch (error) {
@@ -384,8 +385,8 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                   placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })}
                   onChange={(event) => setCustomerName(event.target.value)}
                   onBlur={(event) => setCustomerName(formatUsername(event.target.value))}
-                  disabled={!!biosCheckResult?.linked_username}
-                  className={biosCheckResult?.linked_username ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed' : ''}
+                  disabled={!!biosLinkedUsername}
+                  className={biosLinkedUsername ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed' : ''}
                   data-testid="customer-name"
                 />
               </Field>
@@ -410,7 +411,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                   )}
                 </div>
               )}
-              {biosCheckResult?.linked_username && (
+              {biosLinkedUsername && (
                 <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                   {t('activate.biosLinkedUsername', { defaultValue: 'Username auto-filled from BIOS history' })}
                 </div>
@@ -436,7 +437,18 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
-                <Input value={biosId} onChange={(event) => setBiosId(event.target.value)} data-testid="bios-id" />
+                <Input
+                  value={biosId}
+                  onChange={(event) => {
+                    setBiosId(event.target.value)
+                    // Clear auto-filled username when BIOS ID changes
+                    if (biosLinkedUsername) {
+                      setCustomerName('')
+                      setBiosCheckResult(null)
+                    }
+                  }}
+                  data-testid="bios-id"
+                />
               </Field>
               {biosCheckLoading && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
@@ -464,7 +476,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                       </>
                     )}
                   </div>
-                  {biosCheckResult.available && biosCheckResult.linked_username && (
+                  {biosLinkedUsername && (
                     <div className="mt-2 text-xs text-amber-600 dark:text-amber-400" data-testid="bios-linked-hint">
                       {t('activate.biosLinkedUsername', { defaultValue: 'Username auto-filled from BIOS history' })}
                     </div>
