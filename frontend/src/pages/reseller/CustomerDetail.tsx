@@ -268,6 +268,11 @@ export function CustomerDetailPage() {
                   return
                 }
 
+                if (biosCheckResult !== null && !biosCheckResult.available) {
+                  toast.error(biosCheckResult.message || t('common.error'))
+                  return
+                }
+
                 submitRequestMutation.mutate()
               }}
             >

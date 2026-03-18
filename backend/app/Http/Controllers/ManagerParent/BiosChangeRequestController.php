@@ -65,6 +65,20 @@ class BiosChangeRequestController extends BaseManagerParentController
             ], 422);
         }
 
+        // Global cross-tenant check: new BIOS must not be active/suspended under any OTHER license
+        $newBiosLower = strtolower($biosChangeRequest->new_bios_id);
+        $globalConflict = \App\Models\License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+            ->where('id', '!=', $biosChangeRequest->license_id)
+            ->whereIn('status', ['active', 'suspended'])
+            ->first();
+
+        if ($globalConflict) {
+            return response()->json([
+                'message' => 'This BIOS ID is currently active with another reseller. Cannot approve — it would create a duplicate.',
+            ], 422);
+        }
+
         $biosChangeRequest->forceFill([
             'status' => 'approved',
             'reviewer_id' => $request->user()?->id,

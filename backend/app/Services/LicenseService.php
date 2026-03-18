@@ -773,9 +773,36 @@ class LicenseService
             ]);
         }
 
+        // Global cross-tenant check: new BIOS must not be active/suspended under any OTHER license
+        $newBiosLower = strtolower($trimmedBiosId);
+        $globalConflict = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+            ->where('id', '!=', $license->id)
+            ->whereIn('status', ['active', 'suspended'])
+            ->first();
+
+        if ($globalConflict) {
+            throw ValidationException::withMessages([
+                'new_bios_id' => 'This BIOS ID is currently active with another reseller and cannot be assigned.',
+            ]);
+        }
+
         // For non-active licenses or when no API key, update locally without external API
         if ($apiKey === null || $license->status !== 'active') {
-            return DB::transaction(function () use ($license, $trimmedBiosId, $reseller): array {
+            return DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller): array {
+                // Race guard inside transaction
+                $raceConflict = License::query()
+                    ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+                    ->where('id', '!=', $license->id)
+                    ->whereIn('status', ['active', 'suspended'])
+                    ->lockForUpdate()
+                    ->first();
+                if ($raceConflict) {
+                    throw ValidationException::withMessages([
+                        'new_bios_id' => 'This BIOS ID was just activated by another reseller. Cannot change.',
+                    ]);
+                }
+
                 $oldBiosId = (string) $license->bios_id;
 
                 $license->forceFill([
@@ -845,7 +872,20 @@ class LicenseService
             }
         }
 
-        DB::transaction(function () use ($license, $trimmedBiosId, $reseller): void {
+        DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller): void {
+            // Race guard inside transaction
+            $raceConflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+                ->where('id', '!=', $license->id)
+                ->whereIn('status', ['active', 'suspended'])
+                ->lockForUpdate()
+                ->first();
+            if ($raceConflict) {
+                throw ValidationException::withMessages([
+                    'new_bios_id' => 'This BIOS ID was just activated by another reseller. Cannot change.',
+                ]);
+            }
+
             $oldBiosId = (string) $license->bios_id;
 
             $license->forceFill([

@@ -76,6 +76,33 @@ class BiosChangeRequestController extends BaseResellerController
             ], 422);
         }
 
+        // Global cross-tenant check: new BIOS must not be active or suspended under ANY other license
+        $newBiosLower = strtolower($newBiosId);
+        $globalConflict = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+            ->where('id', '!=', $license->id)
+            ->whereIn('status', ['active', 'suspended'])
+            ->first();
+
+        if ($globalConflict) {
+            return response()->json([
+                'message' => 'This BIOS ID is currently active with another reseller and cannot be requested.',
+            ], 422);
+        }
+
+        // Also block if another pending BIOS change request already targets this new BIOS ID
+        $newBiosTargeted = BiosChangeRequest::query()
+            ->whereRaw('LOWER(new_bios_id) = ?', [$newBiosLower])
+            ->where('license_id', '!=', $license->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($newBiosTargeted) {
+            return response()->json([
+                'message' => 'Another pending request is already targeting this BIOS ID.',
+            ], 422);
+        }
+
         $biosChangeRequest = BiosChangeRequest::query()->create([
             'tenant_id' => $this->currentTenantId($request),
             'license_id' => $license->id,
