@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Loader2, Check, X } from 'lucide-react'
+import { ArrowLeft, Loader2, Check, Lock, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -98,9 +98,12 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [biosCheckLoading, setBiosCheckLoading] = useState(false)
   const [usernameCheckResult, setUsernameCheckResult] = useState<UsernameCheckResult | null>(null)
   const [usernameCheckLoading, setUsernameCheckLoading] = useState(false)
+  const [usernameAutoFilledFrom, setUsernameAutoFilledFrom] = useState<string | null>(null)
   const debouncedBiosId = useDebounce(biosId, 400)
   const debouncedCustomerName = useDebounce(customerName, 400)
   const biosLinkedUsername = biosCheckResult?.available ? (biosCheckResult.linked_username ?? null) : null
+  // Username is locked if the current BIOS has a link OR if username was auto-filled from a previous BIOS link
+  const usernameIsLocked = !!biosLinkedUsername || (usernameAutoFilledFrom !== null && usernameAutoFilledFrom !== biosId.trim())
 
   const programsQuery = useQuery({
     queryKey: ['customer-create', 'programs'],
@@ -119,9 +122,13 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       try {
         const result = await availabilityService.checkBios(debouncedBiosId)
         setBiosCheckResult(result)
-        // Always auto-fill username from BIOS link (overrides whatever was typed)
+        // Always auto-fill username from BIOS link and lock it
         if (result.available && result.linked_username) {
           setCustomerName(result.linked_username)
+          setUsernameAutoFilledFrom(debouncedBiosId)
+        } else if (!result.linked_username) {
+          // BIOS has no linked username — clear the auto-fill lock only if username wasn't manually typed
+          setUsernameAutoFilledFrom((prev) => (prev !== null ? prev : null))
         }
       } catch (error) {
         console.error('BIOS availability check failed:', error)
@@ -386,14 +393,20 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 <Input
                   value={customerName}
                   placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })}
-                  onChange={(event) => setCustomerName(event.target.value)}
-                  onBlur={(event) => setCustomerName(formatUsername(event.target.value))}
-                  disabled={!!biosLinkedUsername}
-                  className={biosLinkedUsername ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed' : ''}
+                  onChange={(event) => { if (!usernameIsLocked) setCustomerName(event.target.value) }}
+                  onBlur={(event) => { if (!usernameIsLocked) setCustomerName(formatUsername(event.target.value)) }}
+                  disabled={usernameIsLocked}
+                  className={usernameIsLocked ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed' : ''}
                   data-testid="customer-name"
                 />
               </Field>
-              {usernameCheckLoading && (
+              {usernameIsLocked && (
+                <div className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                  <Lock className="size-3" />
+                  <span>{t('activate.biosLockedHint', { defaultValue: 'Username is permanently linked to this BIOS ID and cannot be changed' })}</span>
+                </div>
+              )}
+              {usernameCheckLoading && !usernameIsLocked && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                   <Loader2 className="size-3 animate-spin" />
                   <span>{t('validate.checking', { defaultValue: 'Checking...' })}</span>

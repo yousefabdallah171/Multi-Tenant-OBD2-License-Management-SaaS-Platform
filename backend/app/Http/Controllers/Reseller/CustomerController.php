@@ -568,14 +568,37 @@ class CustomerController extends BaseResellerController
             ]);
         }
 
-        // Enforce permanent BIOS-username link
+        // Enforce permanent BIOS-username link (both directions)
         if ($username !== '') {
             $biosIdLower = strtolower($normalizedBiosId);
             $usernameLower = strtolower($username);
-            $existingLink = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
-            if ($existingLink && strtolower((string) $existingLink->username) !== $usernameLower) {
+
+            // BIOS → username: this BIOS must not be linked to a different username
+            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            if ($linkByBios && strtolower((string) $linkByBios->username) !== $usernameLower) {
                 throw ValidationException::withMessages([
                     'bios_id' => 'This BIOS ID is permanently linked to a different username and cannot be assigned to a new customer.',
+                ]);
+            }
+
+            // Username → BIOS: this username must not be linked to a different BIOS
+            $linkByUsername = BiosUsernameLink::where('username', $usernameLower)
+                ->where('bios_id', '!=', $biosIdLower)
+                ->first();
+            if ($linkByUsername) {
+                throw ValidationException::withMessages([
+                    'customer_name' => 'This username is permanently linked to a different BIOS ID (' . $linkByUsername->bios_id . '). You cannot change the BIOS ID for an existing username.',
+                ]);
+            }
+
+            // Also check historical licenses: if this username was previously used with a different BIOS
+            $historicalConflict = License::query()
+                ->whereRaw('LOWER(external_username) = ?', [$usernameLower])
+                ->whereRaw('LOWER(bios_id) != ?', [$biosIdLower])
+                ->exists();
+            if ($historicalConflict && ! $linkByBios) {
+                throw ValidationException::withMessages([
+                    'customer_name' => 'This username was previously activated with a different BIOS ID. Each username is permanently tied to one BIOS ID.',
                 ]);
             }
         }
