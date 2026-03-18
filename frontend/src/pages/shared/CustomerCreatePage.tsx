@@ -98,12 +98,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [biosCheckLoading, setBiosCheckLoading] = useState(false)
   const [usernameCheckResult, setUsernameCheckResult] = useState<UsernameCheckResult | null>(null)
   const [usernameCheckLoading, setUsernameCheckLoading] = useState(false)
-  const [usernameAutoFilledFrom, setUsernameAutoFilledFrom] = useState<string | null>(null)
   const debouncedBiosId = useDebounce(biosId, 400)
   const debouncedCustomerName = useDebounce(customerName, 400)
   const biosLinkedUsername = biosCheckResult?.available ? (biosCheckResult.linked_username ?? null) : null
-  // Username is locked if the current BIOS has a link OR if username was auto-filled from a previous BIOS link
-  const usernameIsLocked = !!biosLinkedUsername || (usernameAutoFilledFrom !== null && usernameAutoFilledFrom !== biosId.trim())
+  // Username is locked only when the current BIOS check returns a linked username
+  const usernameIsLocked = !!biosLinkedUsername
 
   const programsQuery = useQuery({
     queryKey: ['customer-create', 'programs'],
@@ -122,13 +121,9 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       try {
         const result = await availabilityService.checkBios(debouncedBiosId)
         setBiosCheckResult(result)
-        // Always auto-fill username from BIOS link and lock it
+        // Auto-fill username from BIOS link
         if (result.available && result.linked_username) {
           setCustomerName(result.linked_username)
-          setUsernameAutoFilledFrom(debouncedBiosId)
-        } else if (!result.linked_username) {
-          // BIOS has no linked username — clear the auto-fill lock only if username wasn't manually typed
-          setUsernameAutoFilledFrom((prev) => (prev !== null ? prev : null))
         }
       } catch (error) {
         console.error('BIOS availability check failed:', error)
