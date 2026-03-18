@@ -489,7 +489,7 @@ class CustomerController extends BaseResellerController
             return null;
         }
 
-        return str_ends_with($email, '@obd2sw.local') ? null : $email;
+        return str_starts_with($email, 'no-email+') && str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 
     private function resolveCustomerEmail(User $customer, ?string $email, int $tenantId): string
@@ -551,19 +551,6 @@ class CustomerController extends BaseResellerController
             if ($raceConflict) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'bios_id' => 'This BIOS ID was just activated by another reseller.',
-                ]);
-            }
-
-            $pendingRace = License::query()
-                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
-                ->where('reseller_id', '!=', $seller->id)
-                ->where('status', 'pending')
-                ->lockForUpdate()
-                ->first();
-
-            if ($pendingRace) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'bios_id' => 'A pending license for this BIOS ID already exists with another reseller.',
                 ]);
             }
 

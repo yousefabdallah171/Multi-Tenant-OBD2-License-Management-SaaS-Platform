@@ -191,6 +191,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/bios-conflicts', [ManagerParentBiosConflictController::class, 'index']);
         Route::put('/bios-conflicts/{id}/resolve', [ManagerParentBiosConflictController::class, 'resolve']);
         Route::get('/bios-change-requests', [ManagerParentBiosChangeRequestController::class, 'index']);
+        Route::post('/bios-change-requests', [ManagerParentBiosChangeRequestController::class, 'store']);
         Route::put('/bios-change-requests/{biosChangeRequest}/approve', [ManagerParentBiosChangeRequestController::class, 'approve']);
         Route::put('/bios-change-requests/{biosChangeRequest}/reject', [ManagerParentBiosChangeRequestController::class, 'reject']);
 
@@ -258,6 +259,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/bios/{biosId}/ips', [ManagerBiosDetailsController::class, 'ips']);
         Route::get('/bios/{biosId}/activity', [ManagerBiosDetailsController::class, 'activity']);
         Route::get('/bios-change-requests', [ManagerBiosChangeRequestController::class, 'index']);
+        Route::post('/bios-change-requests', [ManagerBiosChangeRequestController::class, 'store']);
         Route::put('/bios-change-requests/{biosChangeRequest}/approve', [ManagerBiosChangeRequestController::class, 'approve']);
         Route::put('/bios-change-requests/{biosChangeRequest}/reject', [ManagerBiosChangeRequestController::class, 'reject']);
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Manager;
 use App\Models\BiosBlacklist;
 use App\Models\BiosChangeRequest;
 use App\Models\BiosUsernameLink;
+use App\Models\License;
 use App\Models\User;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
@@ -46,6 +47,87 @@ class BiosChangeRequestController extends BaseManagerController
             'data' => collect($requests->items())->map(fn (BiosChangeRequest $biosChangeRequest): array => $this->serialize($biosChangeRequest))->values(),
             'meta' => $this->paginationMeta($requests),
         ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'license_id' => ['required', 'integer'],
+            'new_bios_id' => ['required', 'string', 'min:5', 'max:255'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $license = $this->resolveTeamLicense($request, License::query()->findOrFail((int) $validated['license_id']));
+        $newBiosId = trim((string) $validated['new_bios_id']);
+        $reason = trim((string) ($validated['reason'] ?? ''));
+
+        $existingPendingRequest = BiosChangeRequest::query()
+            ->where('license_id', $license->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($existingPendingRequest) {
+            return response()->json(['message' => 'A pending BIOS change request already exists for this license.'], 422);
+        }
+
+        if (mb_strtolower($newBiosId) === mb_strtolower(trim((string) $license->bios_id))) {
+            return response()->json(['message' => 'This BIOS ID is the same as the current BIOS ID.'], 422);
+        }
+
+        $tenantId = $this->currentTenantId($request);
+        if (BiosBlacklist::blocksBios($newBiosId, $tenantId)) {
+            return response()->json(['message' => 'This BIOS ID is blacklisted and cannot be used.'], 422);
+        }
+
+        $newBiosLower = strtolower($newBiosId);
+        $globalConflict = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+            ->where('id', '!=', $license->id)
+            ->whereIn('status', ['active', 'suspended'])
+            ->first();
+
+        if ($globalConflict) {
+            return response()->json(['message' => 'This BIOS ID is currently active with another reseller and cannot be requested.'], 422);
+        }
+
+        $newBiosTargeted = BiosChangeRequest::query()
+            ->whereRaw('LOWER(new_bios_id) = ?', [$newBiosLower])
+            ->where('license_id', '!=', $license->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($newBiosTargeted) {
+            return response()->json(['message' => 'Another pending request is already targeting this BIOS ID.'], 422);
+        }
+
+        $biosChangeRequest = BiosChangeRequest::query()->create([
+            'tenant_id' => $tenantId,
+            'license_id' => $license->id,
+            'reseller_id' => $license->reseller_id,
+            'old_bios_id' => (string) $license->bios_id,
+            'new_bios_id' => $newBiosId,
+            'reason' => $reason !== '' ? $reason : '',
+            'status' => 'pending',
+        ]);
+
+        $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reviewer:id,name']);
+
+        $this->logActivity($request, 'bios.change_requested', sprintf('Requested BIOS change for license %d.', $license->id), [
+            'request_id' => $biosChangeRequest->id,
+            'license_id' => $license->id,
+            'customer_id' => $license->customer_id,
+            'program_id' => $license->program_id,
+            'reseller_id' => $license->reseller_id,
+            'bios_id' => $license->bios_id,
+            'old_bios_id' => $license->bios_id,
+            'new_bios_id' => $biosChangeRequest->new_bios_id,
+            'reason' => $biosChangeRequest->reason !== '' ? $biosChangeRequest->reason : null,
+        ]);
+
+        return response()->json([
+            'data' => $this->serialize($biosChangeRequest),
+            'message' => 'BIOS change request submitted successfully.',
+        ], 201);
     }
 
     public function approve(Request $request, BiosChangeRequest $biosChangeRequest): JsonResponse
