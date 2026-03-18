@@ -4,14 +4,14 @@ namespace App\Http\Controllers\ManagerParent;
 
 use App\Models\BiosBlacklist;
 use App\Models\License;
-use App\Services\LicenseService;
+use App\Services\ExternalApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class BiosBlacklistController extends BaseManagerParentController
 {
-    public function __construct(private readonly LicenseService $licenseService)
+    public function __construct(private readonly ExternalApiService $externalApiService)
     {
     }
 
@@ -143,25 +143,49 @@ class BiosBlacklistController extends BaseManagerParentController
      */
     private function deactivateMatchingLicenses(string $biosId): array
     {
-        return License::query()
+        $licenses = License::query()
             ->where('tenant_id', auth()->user()?->tenant_id)
-            ->where('bios_id', $biosId)
-            ->whereEffectiveStatus('active')
-            ->get()
-            ->map(function (License $license): array {
-                $updated = $this->licenseService->deactivate($license);
+            ->whereRaw('LOWER(bios_id) = ?', [strtolower($biosId)])
+            ->whereIn('status', ['active', 'pending', 'suspended'])
+            ->with('program:id,external_api_key_encrypted,external_api_base_url')
+            ->get();
 
-                return [
-                    'license_id' => $updated->id,
-                    'tenant_id' => $updated->tenant_id,
-                    'customer_id' => $updated->customer_id,
-                    'reseller_id' => $updated->reseller_id,
-                    'external_username' => $updated->external_username,
-                    'external_delete_result' => $updated->external_deletion_response,
-                    'status' => $updated->status,
-                ];
-            })
-            ->values()
-            ->all();
+        return $licenses->map(function (License $license): array {
+            $apiResponse = 'Blacklisted — no external deactivation.';
+
+            try {
+                $program = $license->program;
+                if ($program) {
+                    $apiKey = $program->getDecryptedApiKey();
+                    if ($apiKey !== null) {
+                        $username = $license->external_username ?: $license->bios_id;
+                        $response = $this->externalApiService->deactivateUser(
+                            $apiKey,
+                            $username,
+                            $program->external_api_base_url
+                        );
+                        $apiResponse = (string) ($response['data']['response'] ?? $response['data']['message'] ?? $apiResponse);
+                    }
+                }
+            } catch (\Throwable $e) {
+                report($e);
+                $apiResponse = $e->getMessage();
+            }
+
+            $license->forceFill([
+                'status' => 'cancelled',
+                'external_deletion_response' => $apiResponse,
+            ])->save();
+
+            return [
+                'license_id' => $license->id,
+                'tenant_id' => $license->tenant_id,
+                'customer_id' => $license->customer_id,
+                'reseller_id' => $license->reseller_id,
+                'external_username' => $license->external_username,
+                'external_delete_result' => $apiResponse,
+                'status' => $license->status,
+            ];
+        })->values()->all();
     }
 }
