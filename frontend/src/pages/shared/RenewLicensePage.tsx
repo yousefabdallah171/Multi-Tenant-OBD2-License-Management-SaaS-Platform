@@ -44,14 +44,14 @@ export function RenewLicensePage({
   const licenseId = Number(id)
 
   // Validate returnTo to prevent navigation to arbitrary paths
-  const isValidPath = (path: string | null | undefined): boolean => {
+  const isValidPath = (path: string | null | undefined): path is string => {
     if (!path) return false
     return path.startsWith(`/${lang}/`)
   }
 
   const stateReturnTo = (location.state as { returnTo?: string } | null)?.returnTo
   const queryReturnTo = searchParams.get('returnTo')
-  const returnTo = isValidPath(stateReturnTo) ? stateReturnTo : (isValidPath(queryReturnTo) ? queryReturnTo : defaultBackPath(lang))
+  const returnTo: string = isValidPath(stateReturnTo) ? stateReturnTo : (isValidPath(queryReturnTo) ? queryReturnTo : defaultBackPath(lang))
 
   const licenseQuery = useQuery({
     queryKey: [...invalidateQueryKey, 'license-renew', licenseId],
