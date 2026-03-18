@@ -74,10 +74,13 @@ class BiosChangeRequestController extends BaseManagerParentController
 
         // Transfer BIOS-username link to new BIOS ID
         BiosUsernameLink::where('bios_id', strtolower($biosChangeRequest->old_bios_id))->delete();
-        BiosUsernameLink::updateOrCreate(
-            ['bios_id' => strtolower($biosChangeRequest->new_bios_id)],
-            ['username' => $biosChangeRequest->license->customer->username, 'tenant_id' => $biosChangeRequest->license->tenant_id]
-        );
+        $customerUsername = $biosChangeRequest->license->customer->username;
+        if ($customerUsername) {
+            BiosUsernameLink::updateOrCreate(
+                ['bios_id' => strtolower($biosChangeRequest->new_bios_id)],
+                ['username' => $customerUsername, 'tenant_id' => $biosChangeRequest->license->tenant_id]
+            );
+        }
 
         $result = $this->licenseService->changeBiosId($biosChangeRequest->license, $biosChangeRequest->new_bios_id);
 
