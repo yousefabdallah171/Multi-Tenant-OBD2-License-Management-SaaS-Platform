@@ -260,7 +260,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     }))
   }, [form.is_scheduled, form.schedule_mode, form.schedule_offset_unit, form.schedule_offset_value, form.scheduled_timezone])
 
-  // Real-time BIOS availability check
+  // Real-time BIOS availability check + auto-fill username from linked BIOS
   useEffect(() => {
     if (debouncedBiosId.length < 3) {
       setBiosCheckResult(null)
@@ -272,6 +272,13 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       try {
         const result = await availabilityService.checkBios(debouncedBiosId)
         setBiosCheckResult(result)
+        // Auto-fill username if BIOS has a linked username and customer_name is empty
+        if (result.linked_username) {
+          setForm((current) => ({
+            ...current,
+            customer_name: current.customer_name.trim() === '' ? formatUsername(result.linked_username ?? '') : current.customer_name,
+          }))
+        }
       } catch (error) {
         console.error('BIOS availability check failed:', error)
       } finally {

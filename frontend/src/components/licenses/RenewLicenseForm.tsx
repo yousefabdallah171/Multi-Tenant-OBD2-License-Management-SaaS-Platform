@@ -173,7 +173,7 @@ export function RenewLicenseForm({
     setDurationUnit('days')
     const nextScheduleTimezone = initialScheduledTimezone ?? displayTimezone
     setEndDate(resolveInitialEndDate(displayTimezone, anchorDate, initialExpiresAt, initialScheduledAt))
-    setScheduleEnabled(requireScheduled || (!presetOnly && Boolean(initialScheduledAt)) || (allowScheduleControls && Boolean(initialScheduledAt)))
+    setScheduleEnabled(requireScheduled || (!presetOnly && Boolean(initialScheduledAt)))
     setScheduleMode('on')
     setScheduleAfterValue('1')
     setScheduleAfterUnit('hours')

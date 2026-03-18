@@ -46,6 +46,10 @@ frontend/artifacts/
 output-backend-serve.log
 output-frontend-vite.log
 
+# Playwright test output
+test-results/
+playwright-report/
+
 # IDE
 .idea/
 .vscode/

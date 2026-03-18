@@ -52,7 +52,11 @@ export function CustomerDetailPage() {
   })
 
   const customer = query.data?.data
-  const requestableLicense = customer?.licenses?.[0] ?? null
+  // Pick the most relevant license: prefer active, then expired, then any
+  const requestableLicense = customer?.licenses?.find((l) => l.status === 'active')
+    ?? customer?.licenses?.find((l) => l.status === 'expired')
+    ?? customer?.licenses?.[0]
+    ?? null
 
   useEffect(() => {
     if (searchParams.get('request-bios') !== '1' || !requestableLicense) {
