@@ -391,7 +391,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 <Input
                   value={customerName}
                   placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })}
-                  onChange={(event) => { if (!usernameIsLocked) setCustomerName(event.target.value) }}
+                  onChange={(event) => { if (!usernameIsLocked) { setCustomerName(event.target.value); setSubmitError('') } }}
                   onBlur={(event) => { if (!usernameIsLocked) setCustomerName(formatUsername(event.target.value)) }}
                   disabled={usernameIsLocked}
                   className={usernameIsLocked ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed' : ''}
@@ -453,7 +453,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
                 <Input
                   value={biosId}
-                  onChange={(event) => setBiosId(event.target.value)}
+                  onChange={(event) => { setBiosId(event.target.value); setSubmitError('') }}
                   data-testid="bios-id"
                 />
               </Field>
