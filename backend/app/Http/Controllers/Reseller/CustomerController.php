@@ -387,14 +387,25 @@ class CustomerController extends BaseResellerController
     {
         $license = $this->resolveDisplayLicense($user, $filters);
 
-        // Check if this customer's BIOS is currently active under a DIFFERENT reseller
+        // Check if this customer's BIOS is currently active/paused under a DIFFERENT reseller
+        // Paused-pending = reseller still owns the BIOS temporarily; block others from taking it
         $biosActiveElsewhere = false;
         if ($license && $license->bios_id && $currentResellerId !== null) {
             $biosIdLower = strtolower((string) $license->bios_id);
             $biosActiveElsewhere = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
                 ->where('reseller_id', '!=', $currentResellerId)
-                ->whereIn('status', ['active', 'suspended'])
+                ->where(function ($q): void {
+                    $q->whereIn('status', ['active', 'suspended'])
+                      ->orWhere(function ($q2): void {
+                          $q2->where('status', 'pending')
+                             ->where(function ($q3): void {
+                                 $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                             })
+                             ->whereNotNull('paused_at')
+                             ->where('pause_remaining_minutes', '>', 0);
+                      });
+                })
                 ->exists();
         }
 
@@ -598,11 +609,22 @@ class CustomerController extends BaseResellerController
             ]);
         }
 
-        // GLOBAL cross-tenant check: BIOS must not be active or suspended in ANY tenant
+        // GLOBAL cross-tenant check: BIOS must not be active, suspended, or paused in ANY tenant
+        // Paused-pending = another reseller still owns the BIOS (temporarily paused)
         $biosIdLowerGlobal = strtolower($normalizedBiosId);
         $globalActive = License::query()
             ->whereRaw('LOWER(bios_id) = ?', [$biosIdLowerGlobal])
-            ->whereIn('status', ['active', 'suspended'])
+            ->where(function ($q): void {
+                $q->whereIn('status', ['active', 'suspended'])
+                  ->orWhere(function ($q2): void {
+                      $q2->where('status', 'pending')
+                         ->where(function ($q3): void {
+                             $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                         })
+                         ->whereNotNull('paused_at')
+                         ->where('pause_remaining_minutes', '>', 0);
+                  });
+            })
             ->first();
         if ($globalActive) {
             throw ValidationException::withMessages([

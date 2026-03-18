@@ -199,11 +199,21 @@ class LicenseService
         $renewBiosLower = strtolower((string) $license->bios_id);
 
         if (! $isScheduled) {
-            // Pre-check: BIOS must not be active under a different license
+            // Pre-check: BIOS must not be active/paused under a different license
             $renewConflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$renewBiosLower])
                 ->where('id', '!=', $license->id)
-                ->whereIn('status', ['active', 'suspended'])
+                ->where(function ($q): void {
+                    $q->whereIn('status', ['active', 'suspended'])
+                      ->orWhere(function ($q2): void {
+                          $q2->where('status', 'pending')
+                             ->where(function ($q3): void {
+                                 $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                             })
+                             ->whereNotNull('paused_at')
+                             ->where('pause_remaining_minutes', '>', 0);
+                      });
+                })
                 ->first();
 
             if ($renewConflict) {
@@ -244,7 +254,17 @@ class LicenseService
                 $renewRaceConflict = License::query()
                     ->whereRaw('LOWER(bios_id) = ?', [$renewBiosLower])
                     ->where('id', '!=', $license->id)
-                    ->whereIn('status', ['active', 'suspended'])
+                    ->where(function ($q): void {
+                        $q->whereIn('status', ['active', 'suspended'])
+                          ->orWhere(function ($q2): void {
+                              $q2->where('status', 'pending')
+                                 ->where(function ($q3): void {
+                                     $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                                 })
+                                 ->whereNotNull('paused_at')
+                                 ->where('pause_remaining_minutes', '>', 0);
+                          });
+                    })
                     ->lockForUpdate()
                     ->first();
                 if ($renewRaceConflict) {
@@ -469,12 +489,24 @@ class LicenseService
             ]);
         }
 
-        // Race-condition guard: check if this BIOS is already active under a DIFFERENT license
+        // Race-condition guard: check if this BIOS is already active/paused under a DIFFERENT license
+        // Paused-pending = reseller still owns the BIOS (just paused locally), so block others too
         $biosIdLower = strtolower((string) $license->bios_id);
         $conflictingLicense = License::query()
             ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
             ->where('id', '!=', $license->id)
-            ->whereIn('status', ['active', 'suspended'])
+            ->where(function ($q): void {
+                $q->whereIn('status', ['active', 'suspended'])
+                  ->orWhere(function ($q2): void {
+                      // Paused-pending: status=pending, not scheduled, has paused_at and remaining minutes
+                      $q2->where('status', 'pending')
+                         ->where(function ($q3): void {
+                             $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                         })
+                         ->whereNotNull('paused_at')
+                         ->where('pause_remaining_minutes', '>', 0);
+                  });
+            })
             ->first();
 
         if ($conflictingLicense) {
@@ -516,7 +548,17 @@ class LicenseService
             $conflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
                 ->where('id', '!=', $license->id)
-                ->whereIn('status', ['active', 'suspended'])
+                ->where(function ($q): void {
+                    $q->whereIn('status', ['active', 'suspended'])
+                      ->orWhere(function ($q2): void {
+                          $q2->where('status', 'pending')
+                             ->where(function ($q3): void {
+                                 $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                             })
+                             ->whereNotNull('paused_at')
+                             ->where('pause_remaining_minutes', '>', 0);
+                      });
+                })
                 ->lockForUpdate()
                 ->first();
 
@@ -939,12 +981,23 @@ class LicenseService
             throw ValidationException::withMessages(['bios_id' => 'This BIOS ID is blacklisted.']);
         }
 
-        // GLOBAL CROSS-TENANT CHECK: check if BIOS is active in ANY tenant
-        // Pending licenses do NOT block — any reseller can activate a pending BIOS (first to activate wins)
+        // GLOBAL CROSS-TENANT CHECK: check if BIOS is active/paused in ANY tenant
+        // Plain pending licenses do NOT block (first to activate wins).
+        // Paused-pending = reseller still owns the BIOS (temporarily paused), so block others.
         $biosIdLower = strtolower($biosId);
         $globalDuplicate = License::query()
             ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
-            ->whereIn('status', ['active', 'suspended'])
+            ->where(function ($q): void {
+                $q->whereIn('status', ['active', 'suspended'])
+                  ->orWhere(function ($q2): void {
+                      $q2->where('status', 'pending')
+                         ->where(function ($q3): void {
+                             $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                         })
+                         ->whereNotNull('paused_at')
+                         ->where('pause_remaining_minutes', '>', 0);
+                  });
+            })
             ->first();
 
         if ($globalDuplicate) {
