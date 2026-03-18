@@ -442,14 +442,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
                 <Input
                   value={biosId}
-                  onChange={(event) => {
-                    setBiosId(event.target.value)
-                    // Clear auto-filled username when BIOS ID changes
-                    if (biosLinkedUsername) {
-                      setCustomerName('')
-                      setBiosCheckResult(null)
-                    }
-                  }}
+                  onChange={(event) => setBiosId(event.target.value)}
                   data-testid="bios-id"
                 />
               </Field>

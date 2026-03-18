@@ -94,7 +94,7 @@ export function CustomerDetailPage() {
         eyebrow={t('roles.reseller')}
         title={customer?.name ?? t('reseller.pages.customers.title')}
         description={resolveCustomerDetailUsername(customer) ?? customer?.phone ?? t('reseller.pages.customers.description')}
-        actions={requestableLicense ? (
+        actions={requestableLicense && !requestableLicense.is_blacklisted ? (
           <Button type="button" onClick={() => setRequestDialogOpen(true)}>
             {t('biosChangeRequests.requestAction')}
           </Button>
