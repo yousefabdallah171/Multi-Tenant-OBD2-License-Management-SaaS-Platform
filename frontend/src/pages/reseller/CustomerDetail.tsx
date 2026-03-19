@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, Lock, XCircle } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -31,6 +31,7 @@ export function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
   const [requestDialogOpen, setRequestDialogOpen] = useState(false)
+  const biosParamConsumedRef = useRef(false)
   const [newBiosId, setNewBiosId] = useState('')
   const [requestReason, setRequestReason] = useState('')
   const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string } | null>(null)
@@ -66,10 +67,10 @@ export function CustomerDetailPage() {
     ?? null
 
   useEffect(() => {
-    if (searchParams.get('request-bios') !== '1' || !requestableLicense) {
+    if (biosParamConsumedRef.current || searchParams.get('request-bios') !== '1' || !requestableLicense) {
       return
     }
-
+    biosParamConsumedRef.current = true
     setRequestDialogOpen(true)
     const next = new URLSearchParams(searchParams)
     next.delete('request-bios')

@@ -133,6 +133,37 @@ class BiosChangeRequestController extends BaseManagerParentController
         ], 201);
     }
 
+    public function directChange(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'license_id' => ['required', 'integer'],
+            'new_bios_id' => ['required', 'string', 'min:5', 'max:255'],
+        ]);
+
+        $tenantId = $this->currentTenantId($request);
+
+        $license = License::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail((int) $validated['license_id']);
+
+        $license->load(['customer', 'reseller', 'program']);
+
+        $result = $this->licenseService->changeBiosId($license, trim((string) $validated['new_bios_id']));
+
+        $this->logActivity($request, 'bios.direct_changed', sprintf('Directly changed BIOS ID for license %d.', $license->id), [
+            'license_id' => $license->id,
+            'old_bios_id' => $license->getOriginal('bios_id') ?? $license->bios_id,
+            'new_bios_id' => $validated['new_bios_id'],
+        ]);
+
+        return response()->json([
+            'success' => $result['success'] ?? true,
+            'message' => $result['success'] ?? true
+                ? 'BIOS ID changed successfully.'
+                : ($result['message'] ?? 'BIOS ID updated locally but external sync may be pending.'),
+        ]);
+    }
+
     public function approve(Request $request, BiosChangeRequest $biosChangeRequest): JsonResponse
     {
         $biosChangeRequest = $this->resolveRequest($request, $biosChangeRequest);

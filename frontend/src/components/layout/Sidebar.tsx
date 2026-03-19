@@ -136,7 +136,7 @@ export function Sidebar() {
     queryKey: ['manager-parent', 'bios-change-requests', 'pending-count'],
     queryFn: () => managerParentService.getPendingBiosChangeRequestCount(),
     enabled: user?.role === 'manager_parent',
-    ...liveQueryOptions(30_000),
+    ...liveQueryOptions(5_000),
   })
   const pendingBcrCount = pendingBcrQuery.data?.count ?? 0
 

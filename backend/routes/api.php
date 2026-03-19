@@ -192,6 +192,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::put('/bios-conflicts/{id}/resolve', [ManagerParentBiosConflictController::class, 'resolve']);
         Route::get('/bios-change-requests', [ManagerParentBiosChangeRequestController::class, 'index']);
         Route::post('/bios-change-requests', [ManagerParentBiosChangeRequestController::class, 'store']);
+        Route::post('/bios-change-requests/direct', [ManagerParentBiosChangeRequestController::class, 'directChange']);
         Route::put('/bios-change-requests/{biosChangeRequest}/approve', [ManagerParentBiosChangeRequestController::class, 'approve']);
         Route::put('/bios-change-requests/{biosChangeRequest}/reject', [ManagerParentBiosChangeRequestController::class, 'reject']);
 

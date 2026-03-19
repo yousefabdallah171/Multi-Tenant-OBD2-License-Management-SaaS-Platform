@@ -35,7 +35,7 @@ export function Navbar() {
     queryKey: ['manager-parent', 'bios-change-requests', 'pending-count'],
     queryFn: () => managerParentService.getPendingBiosChangeRequestCount(),
     enabled: user?.role === 'manager_parent',
-    ...liveQueryOptions(30_000),
+    ...liveQueryOptions(5_000),
   })
   const pendingBcrCount = pendingBcrQuery.data?.count ?? 0
 
@@ -43,7 +43,7 @@ export function Navbar() {
     queryKey: ['manager-parent', 'bios-change-requests', 'recent-panel'],
     queryFn: () => managerParentService.getBiosChangeRequests({ status: 'pending', per_page: 5 }),
     enabled: user?.role === 'manager_parent',
-    ...liveQueryOptions(30_000),
+    ...liveQueryOptions(5_000),
   })
   const recentRequests = recentBcrQuery.data?.data ?? []
 

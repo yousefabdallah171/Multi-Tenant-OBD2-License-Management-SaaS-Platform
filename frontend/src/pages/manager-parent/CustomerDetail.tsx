@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
@@ -34,9 +33,8 @@ export function CustomerDetailPage() {
   const queryClient = useQueryClient()
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false)
+  const [changeDialogOpen, setChangeDialogOpen] = useState(false)
   const [newBiosId, setNewBiosId] = useState('')
-  const [requestReason, setRequestReason] = useState('')
   const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string } | null>(null)
   const debouncedNewBiosId = useDebounce(newBiosId.trim(), 400)
 
@@ -73,19 +71,18 @@ export function CustomerDetailPage() {
     ?? customer?.licenses?.[0]
     ?? null
 
-  const submitRequestMutation = useMutation({
-    mutationFn: () => managerParentService.submitBiosChangeRequest({
-      license_id: (requestableLicense as { id: number } | null)?.id ?? 0,
-      new_bios_id: newBiosId.trim(),
-      reason: requestReason.trim() || undefined,
-    }),
+  const directChangeMutation = useMutation({
+    mutationFn: () => managerParentService.directChangeBiosId(
+      (requestableLicense as { id: number } | null)?.id ?? 0,
+      newBiosId.trim(),
+    ),
     onSuccess: (response) => {
-      toast.success(response.message ?? t('biosChangeRequests.submitted'))
-      setRequestDialogOpen(false)
+      toast.success(response.message ?? 'BIOS ID changed successfully.')
+      setChangeDialogOpen(false)
       setNewBiosId('')
-      setRequestReason('')
       setBiosCheckResult(null)
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'customer-detail', customerId] })
+      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'customer-bios-change-history', customerId] })
     },
     onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
   })
@@ -101,9 +98,9 @@ export function CustomerDetailPage() {
       <PageHeader
         title={customer?.name ?? t('managerParent.pages.customers.customerDetails')}
         description={resolveCustomerDetailUsername(customer) ?? t('managerParent.pages.customers.customerDetailsDescription')}
-        actions={requestableLicense && !(requestableLicense as { is_blacklisted?: boolean }).is_blacklisted ? (
-          <Button type="button" onClick={() => setRequestDialogOpen(true)}>
-            {t('biosChangeRequests.requestAction')}
+        actions={requestableLicense ? (
+          <Button type="button" onClick={() => setChangeDialogOpen(true)}>
+            {lang === 'ar' ? 'تغيير BIOS ID' : 'Change BIOS ID'}
           </Button>
         ) : null}
       />
@@ -270,19 +267,19 @@ export function CustomerDetailPage() {
         </>
       ) : null}
 
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+      <Dialog open={changeDialogOpen} onOpenChange={(open) => { setChangeDialogOpen(open); if (!open) { setNewBiosId(''); setBiosCheckResult(null) } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('biosChangeRequests.requestAction')}</DialogTitle>
+            <DialogTitle>{lang === 'ar' ? 'تغيير BIOS ID مباشرة' : 'Change BIOS ID Directly'}</DialogTitle>
             <DialogDescription>
-              {(requestableLicense as { bios_id?: string } | null)?.bios_id ?? t('biosChangeRequests.description')}
+              {lang === 'ar' ? 'سيتم تطبيق التغيير فوراً بدون موافقة.' : 'This change is applied immediately without approval.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosChangeRequests.currentBios')}</p>
               <div className="flex items-center gap-2">
-                <p className="font-medium">{(requestableLicense as { bios_id?: string } | null)?.bios_id ?? '-'}</p>
+                <p className="font-medium font-mono">{(requestableLicense as { bios_id?: string } | null)?.bios_id ?? '-'}</p>
                 {(requestableLicense as { is_blacklisted?: boolean } | null)?.is_blacklisted ? <BlockBadge /> : null}
               </div>
             </div>
@@ -298,21 +295,16 @@ export function CustomerDetailPage() {
                 </p>
               )}
             </div>
-            <Textarea
-              value={requestReason}
-              onChange={(event) => setRequestReason(event.target.value)}
-              placeholder={t('biosChangeRequests.reasonPlaceholder')}
-            />
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setRequestDialogOpen(false)}>
+            <Button type="button" variant="ghost" onClick={() => setChangeDialogOpen(false)}>
               {t('common.cancel')}
             </Button>
             <Button
               type="button"
-              disabled={submitRequestMutation.isPending}
+              disabled={directChangeMutation.isPending}
               onClick={() => {
-                const license = requestableLicense as { id: number; bios_id?: string; is_blacklisted?: boolean } | null
+                const license = requestableLicense as { id: number; bios_id?: string } | null
                 if (!license) { toast.error(t('common.error')); return }
                 if (newBiosId.trim().length < 5) { toast.error(t('biosChangeRequests.newBiosValidation')); return }
                 if ((license.bios_id ?? '').trim().toLowerCase() === newBiosId.trim().toLowerCase()) {
@@ -322,10 +314,10 @@ export function CustomerDetailPage() {
                 if (biosCheckResult !== null && !biosCheckResult.available) {
                   toast.error(biosCheckResult.message || t('common.error')); return
                 }
-                submitRequestMutation.mutate()
+                directChangeMutation.mutate()
               }}
             >
-              {t('common.save')}
+              {lang === 'ar' ? 'تطبيق التغيير' : 'Apply Change'}
             </Button>
           </DialogFooter>
         </DialogContent>

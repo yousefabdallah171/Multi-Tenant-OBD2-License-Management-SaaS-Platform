@@ -229,6 +229,10 @@ export const managerParentService = {
     const { data } = await api.post<{ data: unknown; message: string }>('/bios-change-requests', payload)
     return data
   },
+  async directChangeBiosId(licenseId: number, newBiosId: string) {
+    const { data } = await api.post<{ success: boolean; message: string }>('/bios-change-requests/direct', { license_id: licenseId, new_bios_id: newBiosId })
+    return data
+  },
   async getBiosChangeRequests(params?: { page?: number; per_page?: number; status?: '' | 'pending' | 'approved' | 'rejected'; count_only?: boolean }) {
     const { data } = await api.get<PaginatedResponse<ManagerParentBiosChangeRequest>>('/bios-change-requests', { params })
     return data

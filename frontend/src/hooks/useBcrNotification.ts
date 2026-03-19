@@ -6,7 +6,7 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 
-const POLL_INTERVAL = 30_000 // 30 seconds
+const POLL_INTERVAL = 5_000 // 5 seconds — near real-time without WebSocket
 
 /**
  * Polls pending BIOS change request count for manager_parent.
