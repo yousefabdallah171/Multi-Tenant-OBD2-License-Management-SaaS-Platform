@@ -102,23 +102,18 @@ export function Navbar() {
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {user?.role === 'manager_parent' ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="relative h-11 w-11 px-0"
-              asChild
+            <Link
+              to={routePaths.managerParent.biosChangeRequests(lang)}
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-md text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
               aria-label={lang === 'ar' ? 'طلبات تغيير BIOS المعلقة' : 'Pending BIOS Change Requests'}
             >
-              <Link to={routePaths.managerParent.biosChangeRequests(lang)}>
-                <Bell className="h-4 w-4" />
-                {pendingBcrCount > 0 ? (
-                  <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
-                    {pendingBcrCount > 9 ? '9+' : pendingBcrCount}
-                  </span>
-                ) : null}
-              </Link>
-            </Button>
+              <Bell className="h-4 w-4" />
+              {pendingBcrCount > 0 ? (
+                <span className="absolute right-1 top-1 flex min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-bold leading-none text-white" style={{ height: '1.1rem' }}>
+                  {pendingBcrCount > 99 ? '99+' : pendingBcrCount}
+                </span>
+              ) : null}
+            </Link>
           ) : null}
           <Button
             type="button"

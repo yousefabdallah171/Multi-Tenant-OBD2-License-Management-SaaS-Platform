@@ -10,61 +10,69 @@ const POLL_INTERVAL = 30_000 // 30 seconds
 
 /**
  * Polls pending BIOS change request count for manager_parent.
- * - On first load (or coming back online): fires a toast if count > 0.
+ * - On first successful load: fires a toast if count > 0.
  * - While online: fires a toast whenever the count increases (new request arrived).
  *
- * The query is shared with Navbar and Sidebar via the same query key so no
- * extra network requests are made — React Query deduplicates them.
+ * Shares the same React Query key with Navbar and Sidebar — zero extra requests.
  */
 export function useBcrNotification(enabled: boolean) {
   const { lang } = useLanguage()
   const navigate = useNavigate()
 
+  // null = not yet loaded; number = last known count
   const prevCountRef = useRef<number | null>(null)
-  const initializedRef = useRef(false)
 
   const { data } = useQuery({
     queryKey: ['manager-parent', 'bios-change-requests', 'pending-count'],
     queryFn: () => managerParentService.getPendingBiosChangeRequestCount(),
     enabled,
     refetchInterval: POLL_INTERVAL,
-    refetchIntervalInBackground: false, // only poll when tab is visible
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   })
-
-  const count = data?.count ?? 0
 
   useEffect(() => {
     if (!enabled || data === undefined) return
 
-    const isFirstLoad = !initializedRef.current
-    initializedRef.current = true
-
+    const count = data.count ?? 0
     const prev = prevCountRef.current
+    const isFirstLoad = prev === null
+
     prevCountRef.current = count
 
-    const shouldNotify =
-      // First load / came back online: show if there are pending requests
-      (isFirstLoad && count > 0) ||
-      // While online: show when count increased (new request arrived)
-      (prev !== null && count > prev)
+    // First load: notify if there are pending requests
+    if (isFirstLoad) {
+      if (count === 0) return
+      toast(
+        lang === 'ar'
+          ? `لديك ${count} طلب${count > 1 ? 'ات' : ''} تغيير BIOS معلق${count > 1 ? 'ة' : ''}`
+          : `You have ${count} pending BIOS change request${count > 1 ? 's' : ''}`,
+        {
+          action: {
+            label: lang === 'ar' ? 'عرض' : 'View',
+            onClick: () => navigate(routePaths.managerParent.biosChangeRequests(lang)),
+          },
+          duration: 10_000,
+        },
+      )
+      return
+    }
 
-    if (!shouldNotify) return
+    // Subsequent polls: notify only when count goes UP
+    if (count <= prev) return
 
-    const newCount = isFirstLoad ? count : count - (prev ?? 0)
-    const message =
+    const newCount = count - prev
+    toast(
       lang === 'ar'
-        ? `${isFirstLoad ? 'لديك' : 'وصل'} ${count} طلب${count > 1 ? 'ات' : ''} تغيير BIOS معلق${count > 1 ? 'ة' : ''}`
-        : isFirstLoad
-          ? `You have ${count} pending BIOS change request${count > 1 ? 's' : ''}`
-          : `${newCount} new BIOS change request${newCount > 1 ? 's' : ''} received`
-
-    toast(message, {
-      action: {
-        label: lang === 'ar' ? 'عرض' : 'View',
-        onClick: () => navigate(routePaths.managerParent.biosChangeRequests(lang)),
+        ? `وصل ${newCount} طلب${newCount > 1 ? 'ات' : ''} تغيير BIOS جديد${newCount > 1 ? 'ة' : ''}`
+        : `${newCount} new BIOS change request${newCount > 1 ? 's' : ''} received`,
+      {
+        action: {
+          label: lang === 'ar' ? 'عرض' : 'View',
+          onClick: () => navigate(routePaths.managerParent.biosChangeRequests(lang)),
+        },
+        duration: 10_000,
       },
-      duration: 10_000,
-    })
-  }, [count, data, enabled, lang, navigate])
+    )
+  }, [data, enabled, lang, navigate])
 }
