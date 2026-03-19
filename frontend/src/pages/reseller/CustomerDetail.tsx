@@ -254,8 +254,10 @@ export function CustomerDetailPage() {
               type="button"
               disabled={
                 submitRequestMutation.isPending ||
+                newBiosId.trim().length < 5 ||
                 Boolean(biosCheckResult?.is_blacklisted) ||
-                (biosCheckResult !== null && !biosCheckResult.available)
+                (biosCheckResult !== null && !biosCheckResult.available) ||
+                (newBiosId.trim().length >= 5 && biosCheckResult === null)
               }
               onClick={() => {
                 if (!requestableLicense) {

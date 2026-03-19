@@ -136,7 +136,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     checkBios()
   }, [debouncedBiosId])
 
-  // Real-time username availability check
+  // Real-time username availability check — re-runs when either username or biosId changes
   useEffect(() => {
     if (debouncedCustomerName.length < 2) {
       setUsernameCheckResult(null)
@@ -156,7 +156,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }
 
     checkUsername()
-  }, [debouncedCustomerName])
+  }, [debouncedCustomerName, debouncedBiosId])
 
   useEffect(() => {
     if (!scheduleEnabled || scheduleMode !== 'after') {
@@ -290,6 +290,15 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     // When username is auto-filled from BIOS link, skip the availability error —
     // the backend allows the same customer to be re-activated with their linked BIOS
     if (usernameCheckResult && !usernameCheckResult.available && !usernameIsLocked) next.customerName = usernameCheckResult.message
+    // Block if username is permanently linked to a DIFFERENT bios_id
+    if (
+      usernameCheckResult?.linked_bios &&
+      biosId.trim() &&
+      usernameCheckResult.linked_bios.toLowerCase() !== biosId.trim().toLowerCase() &&
+      !usernameIsLocked
+    ) {
+      next.customerName = `This username is linked to BIOS ${usernameCheckResult.linked_bios} and cannot be used with a different BIOS ID`
+    }
     if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) next.email = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
     if (phone.trim() && !/^\+?\d{6,20}$/.test(phone.trim())) next.phone = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
     if (requiresPendingLicenseFields && biosId.trim().length < 3) next.biosId = t('validation.required', { defaultValue: 'Field required' })
