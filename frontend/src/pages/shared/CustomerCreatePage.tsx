@@ -290,14 +290,12 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     // When username is auto-filled from BIOS link, skip the availability error —
     // the backend allows the same customer to be re-activated with their linked BIOS
     if (usernameCheckResult && !usernameCheckResult.available && !usernameIsLocked) next.customerName = usernameCheckResult.message
-    // Block if username is permanently linked to a DIFFERENT bios_id
+    // Block if username is permanently linked to a DIFFERENT bios_id (even if biosId field is empty)
     if (
       usernameCheckResult?.linked_bios &&
-      biosId.trim() &&
-      usernameCheckResult.linked_bios.toLowerCase() !== biosId.trim().toLowerCase() &&
-      !usernameIsLocked
+      usernameCheckResult.linked_bios.toLowerCase() !== biosId.trim().toLowerCase()
     ) {
-      next.customerName = `This username is linked to BIOS ${usernameCheckResult.linked_bios} and cannot be used with a different BIOS ID`
+      next.customerName = `This username is linked to BIOS ${usernameCheckResult.linked_bios} — enter that BIOS ID or choose a different username`
     }
     if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) next.email = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
     if (phone.trim() && !/^\+?\d{6,20}$/.test(phone.trim())) next.phone = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
