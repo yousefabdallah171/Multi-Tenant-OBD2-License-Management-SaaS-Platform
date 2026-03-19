@@ -2,7 +2,7 @@ import DOMPurify from 'dompurify'
 import { Bell, Download, Globe, LogOut, Menu, MoonStar, SunMedium } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { RoleBadge } from '@/components/shared/RoleBadge'
@@ -17,6 +17,7 @@ import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import { useTheme } from '@/hooks/useTheme'
 import { useSidebarStore } from '@/stores/sidebarStore'
+import { formatDate } from '@/lib/utils'
 
 export function Navbar() {
   const { t } = useTranslation()
@@ -27,6 +28,8 @@ export function Navbar() {
   const { logo, primaryColor } = useBranding()
   const { timezone: activeTimezone } = useResolvedTimezone(user?.timezone)
   const toggleSidebar = useSidebarStore((state) => state.toggle)
+  const navigate = useNavigate()
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
 
   const pendingBcrQuery = useQuery({
     queryKey: ['manager-parent', 'bios-change-requests', 'pending-count'],
@@ -35,6 +38,14 @@ export function Navbar() {
     ...liveQueryOptions(30_000),
   })
   const pendingBcrCount = pendingBcrQuery.data?.count ?? 0
+
+  const recentBcrQuery = useQuery({
+    queryKey: ['manager-parent', 'bios-change-requests', 'recent-panel'],
+    queryFn: () => managerParentService.getBiosChangeRequests({ status: 'pending', per_page: 5 }),
+    enabled: user?.role === 'manager_parent',
+    ...liveQueryOptions(30_000),
+  })
+  const recentRequests = recentBcrQuery.data?.data ?? []
 
   const title = user
     ? user.role === 'super_admin'
@@ -102,18 +113,80 @@ export function Navbar() {
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           {user?.role === 'manager_parent' ? (
-            <Link
-              to={routePaths.managerParent.biosChangeRequests(lang)}
-              className="relative inline-flex h-11 w-11 items-center justify-center rounded-md text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
-              aria-label={lang === 'ar' ? 'طلبات تغيير BIOS المعلقة' : 'Pending BIOS Change Requests'}
-            >
-              <Bell className="h-4 w-4" />
-              {pendingBcrCount > 0 ? (
-                <span className="absolute right-1 top-1 flex min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-bold leading-none text-white" style={{ height: '1.1rem' }}>
-                  {pendingBcrCount > 99 ? '99+' : pendingBcrCount}
-                </span>
-              ) : null}
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="relative inline-flex h-11 w-11 items-center justify-center rounded-md text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
+                  aria-label={lang === 'ar' ? 'طلبات تغيير BIOS المعلقة' : 'Pending BIOS Change Requests'}
+                >
+                  <Bell className="h-4 w-4" />
+                  {pendingBcrCount > 0 ? (
+                    <span className="absolute right-1 top-1 flex min-w-[1.1rem] items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-bold leading-none text-white" style={{ height: '1.1rem' }}>
+                      {pendingBcrCount > 99 ? '99+' : pendingBcrCount}
+                    </span>
+                  ) : null}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-1rem)] p-0 sm:w-96">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+                  <div>
+                    <p className="font-semibold text-slate-950 dark:text-white">
+                      {lang === 'ar' ? 'طلبات تغيير BIOS' : 'BIOS Change Requests'}
+                    </p>
+                    {pendingBcrCount > 0 ? (
+                      <p className="text-xs text-rose-600 dark:text-rose-400">
+                        {lang === 'ar' ? `${pendingBcrCount} طلب معلق` : `${pendingBcrCount} pending`}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {lang === 'ar' ? 'لا توجد طلبات معلقة' : 'No pending requests'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {recentRequests.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                    {lang === 'ar' ? 'لا توجد طلبات معلقة' : 'No pending requests'}
+                  </div>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {recentRequests.map((req) => (
+                      <DropdownMenuItem
+                        key={req.id}
+                        className="flex-col items-start gap-1 px-4 py-3 cursor-pointer"
+                        onClick={() => navigate(routePaths.managerParent.biosChangeRequests(lang))}
+                      >
+                        <div className="flex w-full items-center justify-between gap-2">
+                          <p className="font-medium text-slate-950 dark:text-white text-sm truncate">
+                            {req.customer_name ?? '-'}
+                          </p>
+                          <span className="shrink-0 text-[10px] text-slate-400 dark:text-slate-500">
+                            {req.created_at ? formatDate(req.created_at, locale) : ''}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <span className="font-mono">{req.old_bios_id}</span>
+                          {' → '}
+                          <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{req.new_bios_id}</span>
+                        </p>
+                        {req.reseller_name ? (
+                          <p className="text-xs text-slate-400 dark:text-slate-500">{req.reseller_name}</p>
+                        ) : null}
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+                <div className="border-t border-slate-200 px-4 py-2 dark:border-slate-800">
+                  <Link
+                    to={routePaths.managerParent.biosChangeRequests(lang)}
+                    className="block text-center text-xs font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+                  >
+                    {lang === 'ar' ? 'عرض جميع الطلبات' : 'View all requests'}
+                  </Link>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
           <Button
             type="button"
