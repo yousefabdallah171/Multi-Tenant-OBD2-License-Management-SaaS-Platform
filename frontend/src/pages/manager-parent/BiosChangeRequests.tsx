@@ -205,10 +205,6 @@ export function BiosChangeRequestsPage() {
               disabled={rejectMutation.isPending}
               onClick={() => {
                 if (!rejectTarget) return
-                if (reviewerNotes.trim().length < 3) {
-                  toast.error(t('biosChangeRequests.rejectValidation'))
-                  return
-                }
                 rejectMutation.mutate({ id: rejectTarget.id, notes: reviewerNotes.trim() })
               }}
             >

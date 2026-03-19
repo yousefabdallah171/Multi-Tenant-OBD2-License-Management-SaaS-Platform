@@ -241,7 +241,7 @@ class BiosChangeRequestController extends BaseManagerController
     public function reject(Request $request, BiosChangeRequest $biosChangeRequest): JsonResponse
     {
         $validated = $request->validate([
-            'reviewer_notes' => ['required', 'string', 'min:3', 'max:1000'],
+            'reviewer_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $biosChangeRequest = $this->resolveRequest($request, $biosChangeRequest);
