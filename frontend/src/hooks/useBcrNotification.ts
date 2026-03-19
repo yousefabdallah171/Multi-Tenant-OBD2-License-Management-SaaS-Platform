@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -18,6 +18,7 @@ const POLL_INTERVAL = 5_000 // 5 seconds — near real-time without WebSocket
 export function useBcrNotification(enabled: boolean) {
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // null = not yet loaded; number = last known count
   const prevCountRef = useRef<number | null>(null)
@@ -61,6 +62,9 @@ export function useBcrNotification(enabled: boolean) {
     // Subsequent polls: notify only when count goes UP
     if (count <= prev) return
 
+    // Invalidate the BCR list and panel so the table refreshes immediately
+    void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'bios-change-requests'], exact: false })
+
     const newCount = count - prev
     toast(
       lang === 'ar'
@@ -74,5 +78,5 @@ export function useBcrNotification(enabled: boolean) {
         duration: 10_000,
       },
     )
-  }, [data, enabled, lang, navigate])
+  }, [data, enabled, lang, navigate, queryClient])
 }

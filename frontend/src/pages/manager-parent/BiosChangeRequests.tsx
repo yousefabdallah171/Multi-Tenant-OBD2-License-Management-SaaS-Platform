@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { liveQueryOptions } from '@/lib/live-query'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
@@ -32,6 +33,7 @@ export function BiosChangeRequestsPage() {
   const query = useQuery({
     queryKey: ['manager-parent', 'bios-change-requests', page, perPage, status],
     queryFn: () => managerParentService.getBiosChangeRequests({ page, per_page: perPage, status }),
+    ...liveQueryOptions(5_000),
   })
 
   const approveMutation = useMutation({

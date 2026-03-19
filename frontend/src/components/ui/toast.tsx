@@ -7,7 +7,7 @@ export function AppToaster() {
 
   return (
     <div aria-live="polite">
-      <Toaster richColors closeButton position={isRtl ? 'bottom-left' : 'bottom-right'} />
+      <Toaster richColors closeButton position={isRtl ? 'top-left' : 'top-right'} />
     </div>
   )
 }
