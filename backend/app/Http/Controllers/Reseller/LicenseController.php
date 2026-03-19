@@ -167,6 +167,17 @@ class LicenseController extends BaseResellerController
         ]);
     }
 
+    public function cancelPending(Request $request, License $license): JsonResponse
+    {
+        $resolved   = $this->resolveLicense($request, $license);
+        $cancelled  = $this->licenseService->cancelPending($resolved);
+
+        return response()->json([
+            'message' => 'Pending license cancelled successfully.',
+            'data'    => $this->serializeLicense($cancelled),
+        ]);
+    }
+
     public function pause(Request $request, License $license): JsonResponse
     {
         $validated = $request->validate([

@@ -246,6 +246,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/licenses', [ManagerLicenseController::class, 'index']);
         Route::get('/licenses/expiring', [ManagerLicenseController::class, 'expiring']);
         Route::get('/licenses/{license}', [ManagerLicenseController::class, 'show']);
+        Route::post('/licenses/{license}/cancel-pending', [ManagerLicenseController::class, 'cancelPending']);
 
         Route::get('/software', [ManagerSoftwareController::class, 'index']);
         Route::post('/software', [ManagerSoftwareController::class, 'store']);
@@ -306,6 +307,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::delete('/licenses/{license}', [ResellerLicenseController::class, 'destroy']);
         Route::post('/licenses/{license}/pause', [ResellerLicenseController::class, 'pause']);
         Route::post('/licenses/{license}/resume', [ResellerLicenseController::class, 'resume']);
+        Route::post('/licenses/{license}/cancel-pending', [ResellerLicenseController::class, 'cancelPending']);
         Route::get('/software', [ResellerSoftwareController::class, 'index']);
         Route::get('/bios-change-requests', [ResellerBiosChangeRequestController::class, 'index']);
         Route::post('/bios-change-requests', [ResellerBiosChangeRequestController::class, 'store']);
@@ -330,6 +332,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/licenses/{license}/pause', [LicenseController::class, 'pause']);
         Route::post('/licenses/{license}/resume', [LicenseController::class, 'resume']);
         Route::post('/licenses/{license}/retry-scheduled', [LicenseController::class, 'retryScheduled']);
+        Route::post('/licenses/{license}/cancel-pending', [LicenseController::class, 'cancelPending']);
         Route::post('/licenses/bulk-renew', [LicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-deactivate', [LicenseController::class, 'bulkDeactivate']);
         Route::post('/licenses/bulk-delete', [LicenseController::class, 'bulkDelete']);

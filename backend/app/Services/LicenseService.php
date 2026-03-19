@@ -373,6 +373,55 @@ class LicenseService
         return $deactivatedLicense;
     }
 
+    /**
+     * Cancel a plain-pending license (never activated externally).
+     * No external API call — just sets status to cancelled locally.
+     */
+    public function cancelPending(License $license): License
+    {
+        $actor   = $this->currentActor();
+        $reseller = $this->resolveReseller($actor, $license->reseller);
+
+        if ($license->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'license' => 'Only pending licenses can be cancelled this way. Use deactivate for active licenses.',
+            ]);
+        }
+
+        if ($license->is_scheduled) {
+            throw ValidationException::withMessages([
+                'license' => 'Scheduled pending licenses cannot be cancelled here. Edit or deactivate the scheduled activation instead.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($license, $reseller): License {
+            $license->forceFill([
+                'status'              => 'cancelled',
+                'paused_at'           => null,
+                'pause_remaining_minutes' => null,
+                'pause_reason'        => null,
+            ])->save();
+
+            $this->logActivity(
+                $reseller,
+                'license.cancelled_pending',
+                sprintf('Cancelled pending license %d for BIOS %s.', $license->id, $license->bios_id),
+                [
+                    'license_id'        => $license->id,
+                    'customer_id'       => $license->customer_id,
+                    'program_id'        => $license->program_id,
+                    'bios_id'           => $license->bios_id,
+                    'external_username' => $license->external_username,
+                ],
+            );
+
+            $license->load(['customer', 'program', 'reseller']);
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+
+            return $license;
+        });
+    }
+
     public function pause(License $license, array $data = []): License
     {
         $actor = $this->currentActor();
@@ -1116,7 +1165,8 @@ class LicenseService
             $actorRole = $actor->role?->value ?? (string) $actor->role;
 
             // For non-super-admin actors, verify the related reseller belongs to the same tenant
-            if ($actorRole !== UserRole::SUPER_ADMIN->value) {
+            // Skip role check if the actor IS the related reseller (manager/manager_parent operating on their own licenses)
+            if ($actorRole !== UserRole::SUPER_ADMIN->value && $relatedReseller->id !== $actor->id) {
                 if ($relatedReseller->tenant_id !== $actor->tenant_id) {
                     throw ValidationException::withMessages([
                         'seller_id' => ['Reseller does not belong to your organization.'],

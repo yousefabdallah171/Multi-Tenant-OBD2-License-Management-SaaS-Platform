@@ -171,6 +171,18 @@ class LicenseController extends Controller
         ]);
     }
 
+    public function cancelPending(Request $request, License $license): JsonResponse
+    {
+        $resolved  = $this->resolveAccessibleLicense($request, $license);
+        $cancelled = $this->licenseService->cancelPending($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($cancelled);
+
+        return response()->json([
+            'message' => 'Pending license cancelled successfully.',
+            'data'    => $this->serializeLicense($cancelled),
+        ]);
+    }
+
     public function retryScheduled(Request $request, License $license): JsonResponse
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);

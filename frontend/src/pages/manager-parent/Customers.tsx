@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -262,6 +262,15 @@ export function CustomersPage() {
     onError: () => toast.error(t('common.error')),
   })
 
+  const cancelPendingMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.cancelPending(licenseId),
+    onSuccess: () => {
+      toast.success(lang === 'ar' ? 'تم إلغاء الترخيص المعلق بنجاح.' : 'Pending license cancelled successfully.')
+      invalidate(queryClient)
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+
   const deleteMutation = useMutation({
     mutationFn: (customerId: number) => customerService.remove(customerId),
     onSuccess: (response) => {
@@ -470,6 +479,15 @@ export function CustomersPage() {
                 {t('common.retryNow', { defaultValue: 'Retry Now' })}
               </DropdownMenuItem>
             ) : null}
+            {typeof row.license_id === 'number' && isPlainPending ? (
+              <DropdownMenuItem
+                disabled={cancelPendingMutation.isPending}
+                onClick={() => cancelPendingMutation.mutate(row.license_id!)}
+              >
+                <X className="me-2 h-4 w-4" />
+                {lang === 'ar' ? 'إلغاء المعلق' : 'Cancel Pending'}
+              </DropdownMenuItem>
+            ) : null}
             {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted ? (
               <>
                 <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
@@ -482,7 +500,7 @@ export function CustomersPage() {
                 </DropdownMenuItem>
               </>
             ) : null}
-            {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBiosActiveElsewhere ? (
+            {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBlacklisted && !isBiosActiveElsewhere ? (
               <DropdownMenuItem onClick={() => setResumeTarget(row)}>
                 <Play className="me-2 h-4 w-4" />
                 {isPausedPending ? t('common.continue', { defaultValue: 'Continue' }) : t('common.reactivate')}
@@ -499,7 +517,7 @@ export function CustomersPage() {
         )
       },
     },
-  ], [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectableIds, selectedLicenseIds, someVisibleSelected, t, retryScheduledMutation.isPending])
+  ], [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectableIds, selectedLicenseIds, someVisibleSelected, t, retryScheduledMutation.isPending, cancelPendingMutation.isPending])
 
   // Reset all filters when navigating to clean URL (e.g. sidebar click)
   useEffect(() => {

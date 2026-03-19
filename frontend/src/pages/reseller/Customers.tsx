@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -489,6 +489,18 @@ export function CustomersPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
+  const cancelPendingMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.cancelPending(licenseId),
+    onSuccess: () => {
+      toast.success(lang === 'ar' ? 'تم إلغاء الترخيص المعلق بنجاح.' : 'Pending license cancelled successfully.')
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
   const retryScheduledMutation = useMutation({
     mutationFn: (licenseId: number) => licenseService.retryScheduled(licenseId),
     onSuccess: () => {
@@ -771,6 +783,18 @@ export function CustomersPage() {
                     {isPausedPending ? text.actions.continue : text.actions.reactivate}
                   </DropdownMenuItem>
                 )}
+                {typeof row.license_id === 'number' && isPlainPending && (
+                  <DropdownMenuItem
+                    disabled={cancelPendingMutation.isPending}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      cancelPendingMutation.mutate(row.license_id!)
+                    }}
+                  >
+                    <X className="me-2 h-4 w-4" />
+                    {lang === 'ar' ? 'إلغاء المعلق' : 'Cancel Pending'}
+                  </DropdownMenuItem>
+                )}
                 {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted && (
                   <>
                     <DropdownMenuItem
@@ -810,7 +834,7 @@ export function CustomersPage() {
         },
       },
     ],
-    [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectedLicenseIds, selectableIds, someVisibleSelected, text, retryScheduledMutation.isPending, t],
+    [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectedLicenseIds, selectableIds, someVisibleSelected, text, retryScheduledMutation.isPending, cancelPendingMutation.isPending, t],
   )
 
   // Reset all filters when navigating to clean URL (e.g. sidebar click)

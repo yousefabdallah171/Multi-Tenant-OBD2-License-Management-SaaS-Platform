@@ -32,6 +32,8 @@ export function CustomerDetailPage() {
   const customerId = Number(id)
   const [requestDialogOpen, setRequestDialogOpen] = useState(false)
   const biosParamConsumedRef = useRef(false)
+  // Capture the param value at mount time so the effect doesn't re-fire when searchParams changes
+  const initialBiosParamRef = useRef(searchParams.get('request-bios') === '1')
   const [newBiosId, setNewBiosId] = useState('')
   const [requestReason, setRequestReason] = useState('')
   const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string } | null>(null)
@@ -67,15 +69,17 @@ export function CustomerDetailPage() {
     ?? null
 
   useEffect(() => {
-    if (biosParamConsumedRef.current || searchParams.get('request-bios') !== '1' || !requestableLicense) {
+    if (biosParamConsumedRef.current || !initialBiosParamRef.current || !requestableLicense) {
       return
     }
     biosParamConsumedRef.current = true
     setRequestDialogOpen(true)
-    const next = new URLSearchParams(searchParams)
-    next.delete('request-bios')
-    setSearchParams(next, { replace: true })
-  }, [requestableLicense, searchParams, setSearchParams])
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('request-bios')
+      return next
+    }, { replace: true })
+  }, [requestableLicense, setSearchParams])
 
   const submitRequestMutation = useMutation({
     mutationFn: () => resellerService.submitBiosChangeRequest({
