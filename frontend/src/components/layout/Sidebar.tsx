@@ -1,13 +1,15 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, Download, FileText, History, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ClipboardList, Download, FileText, History, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranding } from '@/hooks/useBranding'
 import { useLanguage } from '@/hooks/useLanguage'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { queryClient } from '@/lib/queryClient'
+import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import { managerParentService } from '@/services/manager-parent.service'
@@ -42,6 +44,7 @@ const managerParentItems: NavItem[] = [
   { key: 'softwareManagement', icon: Package, href: routePaths.managerParent.softwareManagement, translationKey: 'managerParent.nav.softwareManagement' },
   { key: 'reports', icon: BarChart3, href: routePaths.managerParent.reports, translationKey: 'managerParent.nav.financialReports' },
   { key: 'programLogs', icon: FileText, href: routePaths.managerParent.programLogs, translationKey: 'managerParent.nav.programLogs' },
+  { key: 'biosChangeRequestsTopLevel', icon: ClipboardList, href: routePaths.managerParent.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
   { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
   { key: 'resellerPayments', icon: BarChart3, href: routePaths.managerParent.resellerPayments, translationKey: 'managerParent.nav.resellerPayments' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, translationKey: 'managerParent.nav.ipAnalytics' },
@@ -129,6 +132,14 @@ export function Sidebar() {
 
     return /iphone|ipad|ipod/i.test(navigator.userAgent)
   }, [])
+  const pendingBcrQuery = useQuery({
+    queryKey: ['manager-parent', 'bios-change-requests', 'pending-count'],
+    queryFn: () => managerParentService.getPendingBiosChangeRequestCount(),
+    enabled: user?.role === 'manager_parent',
+    ...liveQueryOptions(30_000),
+  })
+  const pendingBcrCount = pendingBcrQuery.data?.count ?? 0
+
   const shouldExpandLogs = user?.role === 'manager_parent' && logsChildPaths.some((path) => location.pathname.startsWith(path))
   const [logsOpen, setLogsOpen] = useState(shouldExpandLogs)
   const shouldExpandSettings =
@@ -572,6 +583,8 @@ export function Sidebar() {
 
         const Icon = item.icon
         const label = t(item.translationKey)
+        const isBcrItem = item.key === 'biosChangeRequestsTopLevel'
+        const bcrBadge = isBcrItem && pendingBcrCount > 0
 
         return (
           <NavLink
@@ -592,8 +605,20 @@ export function Sidebar() {
             }}
             onMouseEnter={() => prefetchNavData(item.key)}
           >
-            <Icon className="h-4 w-4 shrink-0" />
+            <div className="relative shrink-0">
+              <Icon className="h-4 w-4" />
+              {bcrBadge ? (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                  {pendingBcrCount > 9 ? '9+' : pendingBcrCount}
+                </span>
+              ) : null}
+            </div>
             <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
+            {bcrBadge && !collapsed ? (
+              <span className="ms-auto rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white lg:inline">
+                {pendingBcrCount > 99 ? '99+' : pendingBcrCount}
+              </span>
+            ) : null}
           </NavLink>
         )
       })}

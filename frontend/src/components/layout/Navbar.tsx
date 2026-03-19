@@ -1,6 +1,8 @@
 import DOMPurify from 'dompurify'
-import { Download, Globe, LogOut, Menu, MoonStar, SunMedium } from 'lucide-react'
+import { Bell, Download, Globe, LogOut, Menu, MoonStar, SunMedium } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { RoleBadge } from '@/components/shared/RoleBadge'
@@ -9,7 +11,10 @@ import { useBranding } from '@/hooks/useBranding'
 import { useLanguage } from '@/hooks/useLanguage'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
+import { liveQueryOptions } from '@/lib/live-query'
 import { formatTimezoneLabel } from '@/lib/timezones'
+import { routePaths } from '@/router/routes'
+import { managerParentService } from '@/services/manager-parent.service'
 import { useTheme } from '@/hooks/useTheme'
 import { useSidebarStore } from '@/stores/sidebarStore'
 
@@ -22,6 +27,15 @@ export function Navbar() {
   const { logo, primaryColor } = useBranding()
   const { timezone: activeTimezone } = useResolvedTimezone(user?.timezone)
   const toggleSidebar = useSidebarStore((state) => state.toggle)
+
+  const pendingBcrQuery = useQuery({
+    queryKey: ['manager-parent', 'bios-change-requests', 'pending-count'],
+    queryFn: () => managerParentService.getPendingBiosChangeRequestCount(),
+    enabled: user?.role === 'manager_parent',
+    ...liveQueryOptions(30_000),
+  })
+  const pendingBcrCount = pendingBcrQuery.data?.count ?? 0
+
   const title = user
     ? user.role === 'super_admin'
       ? t('superAdmin.layout.title')
@@ -87,6 +101,25 @@ export function Navbar() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          {user?.role === 'manager_parent' ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="relative h-11 w-11 px-0"
+              asChild
+              aria-label={lang === 'ar' ? 'طلبات تغيير BIOS المعلقة' : 'Pending BIOS Change Requests'}
+            >
+              <Link to={routePaths.managerParent.biosChangeRequests(lang)}>
+                <Bell className="h-4 w-4" />
+                {pendingBcrCount > 0 ? (
+                  <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                    {pendingBcrCount > 9 ? '9+' : pendingBcrCount}
+                  </span>
+                ) : null}
+              </Link>
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"

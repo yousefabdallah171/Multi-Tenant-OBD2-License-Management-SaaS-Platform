@@ -973,11 +973,13 @@ class LicenseService
             ]);
         }
 
+        // Username must not be in use on this program with a different BIOS under any owned license
+        // (active, suspended, scheduled, or paused — not just effectively-active)
         $usernameConflict = License::query()
             ->where('program_id', $program->id)
-            ->where('external_username', $externalUsername)
-            ->where('bios_id', '!=', $biosId)
-            ->whereEffectivelyActive()
+            ->whereRaw('LOWER(external_username) = ?', [strtolower($externalUsername)])
+            ->whereRaw('LOWER(bios_id) != ?', [strtolower($biosId)])
+            ->tap(fn ($q) => $this->scopeBiosOwned($q))
             ->exists();
 
         if ($usernameConflict) {
