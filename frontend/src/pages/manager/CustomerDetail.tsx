@@ -5,7 +5,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { availabilityService } from '@/services/availability.service'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BlockBadge } from '@/components/shared/BlockBadge'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -32,6 +32,7 @@ export function CustomerDetailPage() {
   const queryClient = useQueryClient()
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [requestDialogOpen, setRequestDialogOpen] = useState(false)
   const [newBiosId, setNewBiosId] = useState('')
   const [requestReason, setRequestReason] = useState('')
@@ -72,6 +73,17 @@ export function CustomerDetailPage() {
     ?? customer?.licenses?.find((l) => l.status === 'expired')
     ?? customer?.licenses?.[0]
     ?? null
+
+  useEffect(() => {
+    if (searchParams.get('request-bios') !== '1' || !requestableLicense) {
+      return
+    }
+
+    setRequestDialogOpen(true)
+    const next = new URLSearchParams(searchParams)
+    next.delete('request-bios')
+    setSearchParams(next, { replace: true })
+  }, [requestableLicense, searchParams, setSearchParams])
 
   const submitRequestMutation = useMutation({
     mutationFn: () => managerService.submitBiosChangeRequest({

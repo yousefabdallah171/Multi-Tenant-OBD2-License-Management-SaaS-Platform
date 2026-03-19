@@ -476,6 +476,14 @@ export function CustomersPage() {
                 {isPausedPending ? t('common.continue', { defaultValue: 'Continue' }) : t('common.reactivate')}
               </DropdownMenuItem>
             ) : null}
+            {typeof row.license_id === 'number' && !isBlacklisted && !isBiosActiveElsewhere ? (
+              <DropdownMenuItem asChild>
+                <Link to={`${routePaths.manager.customerDetail(lang, row.id)}?request-bios=1`}>
+                  <Cpu className="me-2 h-4 w-4" />
+                  {t('biosChangeRequests.requestAction', { defaultValue: 'Request BIOS ID Change' })}
+                </Link>
+              </DropdownMenuItem>
+            ) : null}
             {canDeleteRow ? (
               <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
                 <Trash2 className="me-2 h-4 w-4" />
