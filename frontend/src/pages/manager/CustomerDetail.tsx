@@ -38,7 +38,7 @@ export function CustomerDetailPage() {
   const initialBiosParamRef = useRef(searchParams.get('request-bios') === '1')
   const [newBiosId, setNewBiosId] = useState('')
   const [requestReason, setRequestReason] = useState('')
-  const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string } | null>(null)
+  const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string; linked_username?: string | null } | null>(null)
   const debouncedNewBiosId = useDebounce(newBiosId.trim(), 400)
 
   useEffect(() => {
@@ -289,11 +289,20 @@ export function CustomerDetailPage() {
                 onChange={(event) => { setNewBiosId(event.target.value); setBiosCheckResult(null) }}
                 placeholder={t('biosChangeRequests.newBiosPlaceholder')}
               />
-              {biosCheckResult && (
-                <p className={`text-xs ${biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'text-rose-600' : 'text-emerald-600'}`}>
-                  {biosCheckResult.is_blacklisted || !biosCheckResult.available ? '✗ ' : '✓ '}{biosCheckResult.message}
-                </p>
-              )}
+              {biosCheckResult && (() => {
+                const customerUsername = (resolveCustomerDetailUsername(customer) ?? '').trim().toLowerCase()
+                const linkedUsername = (biosCheckResult.linked_username ?? '').trim().toLowerCase()
+                const usernameMismatch = linkedUsername !== '' && customerUsername !== '' && linkedUsername !== customerUsername
+                const isError = biosCheckResult.is_blacklisted || !biosCheckResult.available || usernameMismatch
+                const message = usernameMismatch
+                  ? `This BIOS ID is linked to username "${biosCheckResult.linked_username}" — not this customer`
+                  : biosCheckResult.message
+                return (
+                  <p className={`text-xs ${isError ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {isError ? '✗ ' : '✓ '}{message}
+                  </p>
+                )
+              })()}
             </div>
             <Textarea
               value={requestReason}
@@ -307,13 +316,19 @@ export function CustomerDetailPage() {
             </Button>
             <Button
               type="button"
-              disabled={
-                submitRequestMutation.isPending ||
-                newBiosId.trim().length < 5 ||
-                Boolean(biosCheckResult?.is_blacklisted) ||
-                (biosCheckResult !== null && !biosCheckResult.available) ||
-                (newBiosId.trim().length >= 5 && biosCheckResult === null)
-              }
+              disabled={(() => {
+                if (submitRequestMutation.isPending) return true
+                if (newBiosId.trim().length < 5) return true
+                if (newBiosId.trim().length >= 5 && biosCheckResult === null) return true
+                if (biosCheckResult?.is_blacklisted) return true
+                if (biosCheckResult !== null && !biosCheckResult.available) return true
+                if (biosCheckResult?.linked_username) {
+                  const customerUsername = (resolveCustomerDetailUsername(customer) ?? '').trim().toLowerCase()
+                  const linkedUsername = biosCheckResult.linked_username.trim().toLowerCase()
+                  if (linkedUsername !== '' && customerUsername !== '' && linkedUsername !== customerUsername) return true
+                }
+                return false
+              })()}
               onClick={() => {
                 if (!requestableLicense) { toast.error(t('common.error')); return }
                 if (newBiosId.trim().length < 5) { toast.error(t('biosChangeRequests.newBiosValidation')); return }

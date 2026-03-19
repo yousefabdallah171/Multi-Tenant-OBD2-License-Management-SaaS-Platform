@@ -836,6 +836,31 @@ class LicenseService
             ]);
         }
 
+        // NEW BIOS → USERNAME LINK CHECK: new BIOS must not be permanently linked to a different username
+        $licenseUsername = strtolower((string) ($license->external_username ?: $license->customer?->username ?? ''));
+        $newBiosLink = BiosUsernameLink::where('bios_id', $newBiosLower)->first();
+        if ($newBiosLink && $licenseUsername !== '' && strtolower((string) $newBiosLink->username) !== $licenseUsername) {
+            throw ValidationException::withMessages([
+                'new_bios_id' => sprintf(
+                    'This BIOS ID is permanently linked to a different username (%s). It cannot be assigned to this customer.',
+                    $newBiosLink->username
+                ),
+            ]);
+        }
+
+        // CURRENT USERNAME → BIOS LINK CHECK: if the license username is permanently linked to a different BIOS, block
+        if ($licenseUsername !== '') {
+            $usernameLink = BiosUsernameLink::whereRaw('LOWER(username) = ?', [$licenseUsername])->first();
+            if ($usernameLink && strtolower((string) $usernameLink->bios_id) !== strtolower((string) $license->bios_id)) {
+                throw ValidationException::withMessages([
+                    'new_bios_id' => sprintf(
+                        'This customer\'s username is permanently linked to BIOS ID %s and cannot be moved to a different BIOS.',
+                        $usernameLink->bios_id
+                    ),
+                ]);
+            }
+        }
+
         // For non-active licenses or when no API key, update locally without external API
         if ($apiKey === null || $license->status !== 'active') {
             return DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller): array {
@@ -1014,11 +1039,29 @@ class LicenseService
             throw ValidationException::withMessages(['bios_id' => 'BIOS ID is already working with another reseller']);
         }
 
-        // BIOS-USERNAME LINK CHECK: if this BIOS already has a permanent username link, enforce it
-        $existingLink = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
-        if ($existingLink && strtolower((string) $existingLink->username) !== strtolower($externalUsername)) {
+        // BIOS → USERNAME LINK CHECK: if this BIOS is permanently linked to a different username, block
+        $existingBiosLink = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+        if ($existingBiosLink && strtolower((string) $existingBiosLink->username) !== strtolower($externalUsername)) {
             throw ValidationException::withMessages([
                 'customer_name' => 'This BIOS ID is permanently linked to a different username. Please use the linked username.',
+            ]);
+        }
+
+        // USERNAME → BIOS LINK CHECK: if this username is permanently linked to a different BIOS, block
+        $usernameLower = strtolower($externalUsername);
+        $existingUsernameLink = BiosUsernameLink::whereRaw('LOWER(username) = ?', [$usernameLower])->first();
+        if ($existingUsernameLink && strtolower((string) $existingUsernameLink->bios_id) !== $biosIdLower) {
+            $this->logBiosAccess($reseller, $biosId, 'conflict', [
+                'program_id' => $program->id,
+                'conflict_type' => 'username_bios_mismatch',
+                'external_username' => $externalUsername,
+            ]);
+
+            throw ValidationException::withMessages([
+                'customer_name' => sprintf(
+                    'This username is permanently linked to BIOS ID %s. You must use that BIOS ID.',
+                    $existingUsernameLink->bios_id
+                ),
             ]);
         }
 
@@ -1026,8 +1069,8 @@ class LicenseService
         // (active, suspended, scheduled, or paused — not just effectively-active)
         $usernameConflict = License::query()
             ->where('program_id', $program->id)
-            ->whereRaw('LOWER(external_username) = ?', [strtolower($externalUsername)])
-            ->whereRaw('LOWER(bios_id) != ?', [strtolower($biosId)])
+            ->whereRaw('LOWER(external_username) = ?', [$usernameLower])
+            ->whereRaw('LOWER(bios_id) != ?', [$biosIdLower])
             ->tap(fn ($q) => $this->scopeBiosOwned($q))
             ->exists();
 
