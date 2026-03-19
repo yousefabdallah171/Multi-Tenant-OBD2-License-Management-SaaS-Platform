@@ -143,7 +143,7 @@ export function SoftwareManagementPage() {
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => navigate(routePaths.managerParent.activateLicense(lang, row.id), { state: { returnTo: routePaths.managerParent.softwareManagement(lang) } })}
+            onClick={() => navigate(`${routePaths.managerParent.customerCreate(lang)}?program_id=${row.id}`)}
           >
             {t('common.activate')}
           </Button>

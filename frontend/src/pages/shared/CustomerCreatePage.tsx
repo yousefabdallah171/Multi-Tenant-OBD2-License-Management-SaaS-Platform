@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Loader2, Check, Lock, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -69,6 +69,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const { user } = useAuth()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const isReseller = user?.role === 'reseller'
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -79,7 +80,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [phone, setPhone] = useState('')
   const [createLicenseNow, setCreateLicenseNow] = useState(true)
   const [biosId, setBiosId] = useState('')
-  const [programId, setProgramId] = useState<number | ''>('')
+  const [programId, setProgramId] = useState<number | ''>(() => {
+    const param = searchParams.get('program_id')
+    const parsed = param ? Number(param) : NaN
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : ''
+  })
   const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
@@ -295,7 +300,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       usernameCheckResult?.linked_bios &&
       usernameCheckResult.linked_bios.toLowerCase() !== biosId.trim().toLowerCase()
     ) {
-      next.customerName = `This username is linked to BIOS ${usernameCheckResult.linked_bios} — enter that BIOS ID or choose a different username`
+      next.customerName = t('activate.usernameLinkedOtherBios', { defaultValue: 'This username is already linked to a different BIOS ID — enter the correct BIOS ID or choose a different username' })
     }
     if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) next.email = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
     if (phone.trim() && !/^\+?\d{6,20}$/.test(phone.trim())) next.phone = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
