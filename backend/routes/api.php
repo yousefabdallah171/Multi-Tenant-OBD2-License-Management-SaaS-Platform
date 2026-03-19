@@ -402,6 +402,10 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/bios-conflicts', [SuperAdminBiosConflictController::class, 'index']);
         Route::put('/bios-conflicts/{id}/resolve', [SuperAdminBiosConflictController::class, 'resolve']);
 
+        Route::get('/bios-change-requests', [\App\Http\Controllers\SuperAdmin\BiosChangeRequestController::class, 'index']);
+        Route::put('/bios-change-requests/{biosChangeRequest}/approve', [\App\Http\Controllers\SuperAdmin\BiosChangeRequestController::class, 'approve']);
+        Route::put('/bios-change-requests/{biosChangeRequest}/reject', [\App\Http\Controllers\SuperAdmin\BiosChangeRequestController::class, 'reject']);
+
         Route::get('/bios-history', [BiosHistoryController::class, 'index']);
         Route::get('/bios-history/{biosId}', [BiosHistoryController::class, 'show']);
         Route::get('/bios/search', [SuperAdminBiosDetailsController::class, 'search']);

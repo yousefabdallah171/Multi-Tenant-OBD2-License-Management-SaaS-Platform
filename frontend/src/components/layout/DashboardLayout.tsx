@@ -21,7 +21,12 @@ export function DashboardLayout() {
   const setCollapsed = useSidebarStore((state) => state.setCollapsed)
   const syncStateRef = useRef({ inFlight: false, lastRunAt: 0 })
 
-  useBcrNotification(user?.role === 'manager_parent')
+  useBcrNotification(
+    user?.role === 'manager_parent' ? 'manager_parent'
+    : user?.role === 'manager' ? 'manager'
+    : user?.role === 'super_admin' ? 'super_admin'
+    : false
+  )
 
   useEffect(() => {
     const syncSidebar = () => {

@@ -14,7 +14,7 @@ import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions } from '@/lib/live-query'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
-import { managerService } from '@/services/manager.service'
+import { superAdminBcrService } from '@/services/super-admin-bcr.service'
 import type { BiosChangeRequest } from '@/types/manager-reseller.types'
 
 type StatusFilter = '' | 'pending' | 'approved' | 'rejected'
@@ -31,34 +31,32 @@ export function BiosChangeRequestsPage() {
   const [reviewerNotes, setReviewerNotes] = useState('')
 
   const query = useQuery({
-    queryKey: ['manager', 'bios-change-requests', page, perPage, status],
-    queryFn: () => managerService.getBiosChangeRequests({ page, per_page: perPage, status }),
+    queryKey: ['super-admin', 'bios-change-requests', page, perPage, status],
+    queryFn: () => superAdminBcrService.getBiosChangeRequests({ page, per_page: perPage, status }),
     ...liveQueryOptions(5_000),
   })
 
   const approveMutation = useMutation({
-    mutationFn: (id: number) => managerService.approveBiosChangeRequest(id),
+    mutationFn: (id: number) => superAdminBcrService.approveBiosChangeRequest(id),
     onSuccess: (response) => {
       toast.success(response.message ?? t('biosChangeRequests.approved'))
-      void queryClient.invalidateQueries({ queryKey: ['manager', 'bios-change-requests'] })
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'bios-change-requests'] })
     },
     onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
   })
 
   const rejectMutation = useMutation({
-    mutationFn: ({ id, notes }: { id: number; notes: string }) => managerService.rejectBiosChangeRequest(id, notes),
+    mutationFn: ({ id, notes }: { id: number; notes: string }) => superAdminBcrService.rejectBiosChangeRequest(id, notes),
     onSuccess: (response) => {
       toast.success(response.message ?? t('biosChangeRequests.rejected'))
       setRejectTarget(null)
       setReviewerNotes('')
-      void queryClient.invalidateQueries({ queryKey: ['manager', 'bios-change-requests'] })
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'bios-change-requests'] })
     },
     onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
   })
 
-  useEffect(() => {
-    setPage(1)
-  }, [status])
+  useEffect(() => { setPage(1) }, [status])
 
   const columns = useMemo<Array<DataTableColumn<BiosChangeRequest>>>(() => [
     {
@@ -67,7 +65,7 @@ export function BiosChangeRequestsPage() {
       sortable: true,
       sortValue: (row) => row.customer_name ?? '',
       render: (row) => row.customer_id ? (
-        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.customer_id)}>
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.customerDetail(lang, row.customer_id)}>
           {row.customer_name ?? '-'}
         </Link>
       ) : (row.customer_name ?? '-'),
@@ -77,22 +75,14 @@ export function BiosChangeRequestsPage() {
       label: t('biosChangeRequests.oldBios'),
       sortable: true,
       sortValue: (row) => row.old_bios_id,
-      render: (row) => row.customer_id ? (
-        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.customer_id)}>
-          {row.old_bios_id}
-        </Link>
-      ) : row.old_bios_id,
+      render: (row) => <span className="font-mono">{row.old_bios_id}</span>,
     },
     {
       key: 'new_bios_id',
       label: t('biosChangeRequests.newBios'),
       sortable: true,
       sortValue: (row) => row.new_bios_id,
-      render: (row) => row.customer_id ? (
-        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.customer_id)}>
-          {row.new_bios_id}
-        </Link>
-      ) : row.new_bios_id,
+      render: (row) => <span className="font-mono">{row.new_bios_id}</span>,
     },
     {
       key: 'reason',
@@ -145,7 +135,7 @@ export function BiosChangeRequestsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={t('manager.layout.eyebrow')}
+        eyebrow="OBD2SW"
         title={t('biosChangeRequests.title')}
         description={t('biosChangeRequests.description')}
       />
@@ -182,10 +172,7 @@ export function BiosChangeRequestsPage() {
       />
 
       <Dialog open={Boolean(rejectTarget)} onOpenChange={(open) => {
-        if (!open) {
-          setRejectTarget(null)
-          setReviewerNotes('')
-        }
+        if (!open) { setRejectTarget(null); setReviewerNotes('') }
       }}>
         <DialogContent>
           <DialogHeader>
@@ -207,10 +194,7 @@ export function BiosChangeRequestsPage() {
               disabled={rejectMutation.isPending}
               onClick={() => {
                 if (!rejectTarget) return
-                if (reviewerNotes.trim().length < 3) {
-                  toast.error(t('biosChangeRequests.rejectValidation'))
-                  return
-                }
+                if (reviewerNotes.trim().length < 3) { toast.error(t('biosChangeRequests.rejectValidation')); return }
                 rejectMutation.mutate({ id: rejectTarget.id, notes: reviewerNotes.trim() })
               }}
             >
@@ -229,12 +213,10 @@ function StatusPill({ status, t }: { status: BiosChangeRequest['status']; t: (ke
     approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
     rejected: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
   }
-
   const labels: Record<BiosChangeRequest['status'], string> = {
     pending: t('biosChangeRequests.status.pending'),
     approved: t('biosChangeRequests.status.approved'),
     rejected: t('biosChangeRequests.status.rejected'),
   }
-
   return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}>{labels[status]}</span>
 }

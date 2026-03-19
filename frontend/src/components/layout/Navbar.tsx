@@ -15,6 +15,8 @@ import { liveQueryOptions } from '@/lib/live-query'
 import { formatTimezoneLabel } from '@/lib/timezones'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
+import { managerService } from '@/services/manager.service'
+import { superAdminBcrService } from '@/services/super-admin-bcr.service'
 import { useTheme } from '@/hooks/useTheme'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { formatDate } from '@/lib/utils'
@@ -31,18 +33,36 @@ export function Navbar() {
   const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
 
+  const isBcrRole = user?.role === 'manager_parent' || user?.role === 'manager' || user?.role === 'super_admin'
+  const bcrCountKey =
+    user?.role === 'manager_parent' ? ['manager-parent', 'bios-change-requests', 'pending-count']
+    : user?.role === 'manager' ? ['manager', 'bios-change-requests', 'pending-count']
+    : ['super-admin', 'bios-change-requests', 'pending-count']
+  const bcrCountFn =
+    user?.role === 'manager_parent' ? () => managerParentService.getPendingBiosChangeRequestCount()
+    : user?.role === 'manager' ? () => managerService.getPendingBiosChangeRequestCount()
+    : () => superAdminBcrService.getPendingBiosChangeRequestCount()
+  const bcrRecentFn =
+    user?.role === 'manager_parent' ? () => managerParentService.getBiosChangeRequests({ status: 'pending', per_page: 5 })
+    : user?.role === 'manager' ? () => managerService.getBiosChangeRequests({ status: 'pending', per_page: 5 })
+    : () => superAdminBcrService.getBiosChangeRequests({ status: 'pending', per_page: 5 })
+  const bcrPath =
+    user?.role === 'manager_parent' ? routePaths.managerParent.biosChangeRequests(lang)
+    : user?.role === 'manager' ? routePaths.manager.biosChangeRequests(lang)
+    : routePaths.superAdmin.biosChangeRequests(lang)
+
   const pendingBcrQuery = useQuery({
-    queryKey: ['manager-parent', 'bios-change-requests', 'pending-count'],
-    queryFn: () => managerParentService.getPendingBiosChangeRequestCount(),
-    enabled: user?.role === 'manager_parent',
+    queryKey: bcrCountKey,
+    queryFn: bcrCountFn,
+    enabled: isBcrRole,
     ...liveQueryOptions(5_000),
   })
   const pendingBcrCount = pendingBcrQuery.data?.count ?? 0
 
   const recentBcrQuery = useQuery({
-    queryKey: ['manager-parent', 'bios-change-requests', 'recent-panel'],
-    queryFn: () => managerParentService.getBiosChangeRequests({ status: 'pending', per_page: 5 }),
-    enabled: user?.role === 'manager_parent',
+    queryKey: [...bcrCountKey.slice(0, 2), 'recent-panel'],
+    queryFn: bcrRecentFn,
+    enabled: isBcrRole,
     ...liveQueryOptions(5_000),
   })
   const recentRequests = recentBcrQuery.data?.data ?? []
@@ -112,7 +132,7 @@ export function Navbar() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          {user?.role === 'manager_parent' ? (
+          {isBcrRole ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -155,7 +175,7 @@ export function Navbar() {
                       <DropdownMenuItem
                         key={req.id}
                         className="flex-col items-start gap-1 px-4 py-3 cursor-pointer"
-                        onClick={() => navigate(routePaths.managerParent.biosChangeRequests(lang))}
+                        onClick={() => navigate(bcrPath)}
                       >
                         <div className="flex w-full items-center justify-between gap-2">
                           <p className="font-medium text-slate-950 dark:text-white text-sm truncate">
@@ -179,7 +199,7 @@ export function Navbar() {
                 )}
                 <div className="border-t border-slate-200 px-4 py-2 dark:border-slate-800">
                   <Link
-                    to={routePaths.managerParent.biosChangeRequests(lang)}
+                    to={bcrPath}
                     className="block text-center text-xs font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                   >
                     {lang === 'ar' ? 'عرض جميع الطلبات' : 'View all requests'}

@@ -73,6 +73,7 @@ const TeamManagementPage = lazyNamed(() => import('@/pages/manager-parent/TeamMa
 const TeamMemberDetailPage = lazyNamed(() => import('@/pages/manager-parent/TeamMemberDetail'), 'TeamMemberDetailPage')
 
 const ApiStatusPage = lazyNamed(() => import('@/pages/super-admin/ApiStatus'), 'ApiStatusPage')
+const SuperAdminBiosChangeRequestsPage = lazyNamed(() => import('@/pages/super-admin/BiosChangeRequests'), 'BiosChangeRequestsPage')
 const BiosBlacklistPage = lazyNamed(() => import('@/pages/super-admin/BiosBlacklist'), 'BiosBlacklistPage')
 const SuperAdminBiosConflictsPage = lazyNamed(() => import('@/pages/super-admin/BiosConflicts'), 'BiosConflictsPage')
 const SuperAdminBiosDetailsPage = lazyNamed(() => import('@/pages/super-admin/BiosDetails'), 'BiosDetailsPage')
@@ -148,6 +149,7 @@ export function AppRouter() {
                   <Route path="bios-details" element={<SuperAdminBiosDetailsPage />} />
                   <Route path="bios-details/:biosId" element={<SuperAdminBiosDetailsPage />} />
                   <Route path="bios-conflicts" element={<SuperAdminBiosConflictsPage />} />
+                  <Route path="bios-change-requests" element={<SuperAdminBiosChangeRequestsPage />} />
                   <Route path="username-management" element={<Navigate to="../admin-management" replace />} />
                   <Route path="security-locks" element={<SecurityLocksPage />} />
                   <Route path="financial-reports" element={<Navigate to="../reports" replace />} />

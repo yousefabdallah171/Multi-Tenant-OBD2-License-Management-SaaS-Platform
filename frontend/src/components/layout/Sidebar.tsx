@@ -13,6 +13,7 @@ import { liveQueryOptions } from '@/lib/live-query'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import { managerParentService } from '@/services/manager-parent.service'
+import { superAdminBcrService } from '@/services/super-admin-bcr.service'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { cn } from '@/lib/utils'
 
@@ -124,6 +125,7 @@ export function Sidebar() {
     routePaths.superAdmin.biosHistory(lang),
     routePaths.superAdmin.biosDetails(lang),
     routePaths.superAdmin.biosConflicts(lang),
+    routePaths.superAdmin.biosChangeRequests(lang),
   ]), [lang])
   const isIos = useMemo(() => {
     if (typeof navigator === 'undefined') {
@@ -132,10 +134,20 @@ export function Sidebar() {
 
     return /iphone|ipad|ipod/i.test(navigator.userAgent)
   }, [])
+  const isBcrRole = user?.role === 'manager_parent' || user?.role === 'manager' || user?.role === 'super_admin'
+  const bcrCountQueryKey =
+    user?.role === 'manager_parent' ? ['manager-parent', 'bios-change-requests', 'pending-count']
+    : user?.role === 'manager' ? ['manager', 'bios-change-requests', 'pending-count']
+    : ['super-admin', 'bios-change-requests', 'pending-count']
+  const bcrCountQueryFn =
+    user?.role === 'manager_parent' ? () => managerParentService.getPendingBiosChangeRequestCount()
+    : user?.role === 'manager' ? () => managerService.getPendingBiosChangeRequestCount()
+    : () => superAdminBcrService.getPendingBiosChangeRequestCount()
+
   const pendingBcrQuery = useQuery({
-    queryKey: ['manager-parent', 'bios-change-requests', 'pending-count'],
-    queryFn: () => managerParentService.getPendingBiosChangeRequestCount(),
-    enabled: user?.role === 'manager_parent',
+    queryKey: bcrCountQueryKey,
+    queryFn: bcrCountQueryFn,
+    enabled: isBcrRole,
     ...liveQueryOptions(5_000),
   })
   const pendingBcrCount = pendingBcrQuery.data?.count ?? 0
@@ -233,6 +245,7 @@ export function Sidebar() {
     { key: 'biosHistory', icon: History, href: routePaths.superAdmin.biosHistory, translationKey: 'superAdmin.nav.biosHistory' },
     { key: 'biosDetails', icon: History, href: routePaths.superAdmin.biosDetails, translationKey: 'superAdmin.nav.biosDetails' },
     { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.superAdmin.biosConflicts, translationKey: 'superAdmin.nav.biosConflicts' },
+    { key: 'biosChangeRequests', icon: ClipboardList, href: routePaths.superAdmin.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
   ]
   const managerParentSettingsChildren: NavItem[] = [
     { key: 'settings', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
@@ -583,7 +596,10 @@ export function Sidebar() {
 
         const Icon = item.icon
         const label = t(item.translationKey)
+        // Show BCR badge on: manager-parent top-level item, manager biosGroup, super-admin biosBlacklistGroup
         const isBcrItem = item.key === 'biosChangeRequestsTopLevel'
+          || (user?.role === 'manager' && item.key === 'biosGroup')
+          || (user?.role === 'super_admin' && item.key === 'biosBlacklistGroup')
         const bcrBadge = isBcrItem && pendingBcrCount > 0
 
         return (

@@ -111,6 +111,7 @@ export const routePaths = {
     biosDetails: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-details`,
     biosDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, biosId: string | number = ':biosId') => `/${lang}/super-admin/bios-details/${encodeURIComponent(String(biosId))}`,
     biosConflicts: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-conflicts`,
+    biosChangeRequests: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-change-requests`,
     usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/admin-management`,
     securityLocks: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/security-locks`,
     financialReports: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/reports`,
