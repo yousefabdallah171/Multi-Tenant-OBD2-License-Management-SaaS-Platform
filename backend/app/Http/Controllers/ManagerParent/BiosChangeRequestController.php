@@ -22,7 +22,6 @@ class BiosChangeRequestController extends BaseManagerParentController
         $validated = $request->validate([
             'status' => ['nullable', 'in:pending,approved,rejected,approved_pending_sync'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
-            'count_only' => ['nullable', 'boolean'],
         ]);
 
         $query = $this->query($request);
@@ -35,7 +34,7 @@ class BiosChangeRequestController extends BaseManagerParentController
             }
         }
 
-        if ((bool) ($validated['count_only'] ?? false)) {
+        if ($request->boolean('count_only')) {
             return response()->json([
                 'count' => $query->count(),
             ]);

@@ -58,9 +58,10 @@ export function CustomerDetailPage() {
   })
 
   const customer = query.data?.data
-  // Pick the most relevant license: prefer active, then expired, then any
+  // Pick the most relevant license: prefer active, then expired, then cancelled, then any
   const requestableLicense = customer?.licenses?.find((l) => l.status === 'active')
     ?? customer?.licenses?.find((l) => l.status === 'expired')
+    ?? customer?.licenses?.find((l) => l.status === 'cancelled')
     ?? customer?.licenses?.[0]
     ?? null
 

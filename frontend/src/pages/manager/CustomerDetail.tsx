@@ -71,6 +71,7 @@ export function CustomerDetailPage() {
 
   const requestableLicense = customer?.licenses?.find((l) => l.status === 'active')
     ?? customer?.licenses?.find((l) => l.status === 'expired')
+    ?? customer?.licenses?.find((l) => l.status === 'cancelled')
     ?? customer?.licenses?.[0]
     ?? null
 
