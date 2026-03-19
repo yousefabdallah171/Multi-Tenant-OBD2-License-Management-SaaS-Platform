@@ -287,8 +287,9 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       return t('activate.endingDatePending', { defaultValue: 'Ending date will be calculated after you choose the duration.' })
     }
 
-    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(expiryPreview, locale, mode === 'end_date' ? endTimezone : scheduleEnabled ? scheduleTimezone : endTimezone)}`
-  }, [createLicenseNow, endTimezone, expiryPreview, locale, mode, scheduleEnabled, scheduleTimezone, t])
+    const displayTz = isReseller || mode !== 'end_date' ? scheduleTimezone : endTimezone
+    return `${t('activate.endingDate', { defaultValue: 'Ending date' })}: ${formatDate(expiryPreview, locale, displayTz)}`
+  }, [createLicenseNow, endTimezone, expiryPreview, isReseller, locale, mode, scheduleTimezone, t])
 
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
@@ -694,7 +695,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 </p>
                 <div className="grid gap-3 md:grid-cols-3">
                   <Summary label={t('activate.durationDays', { defaultValue: 'Duration in Days' })} value={durationDays > 0 ? durationDays.toFixed(3) : '0'} />
-                  <Summary label={t('activate.expiryPreview', { defaultValue: 'Expiry Preview' })} value={expiryPreview ? formatDate(expiryPreview, locale, mode === 'end_date' ? endTimezone : scheduleEnabled ? scheduleTimezone : endTimezone) : '-'} />
+                  <Summary label={t('activate.expiryPreview', { defaultValue: 'Expiry Preview' })} value={expiryPreview ? formatDate(expiryPreview, locale, isReseller || mode !== 'end_date' ? scheduleTimezone : endTimezone) : '-'} />
                   <Summary label={t('activate.price', { defaultValue: 'Price' })} value={formatCurrency(totalPrice, 'USD', locale)} />
                 </div>
               </div>
