@@ -307,16 +307,16 @@ export function CustomerDetailPage() {
             </Button>
             <Button
               type="button"
-              disabled={submitRequestMutation.isPending}
+              disabled={
+                submitRequestMutation.isPending ||
+                Boolean(biosCheckResult?.is_blacklisted) ||
+                (biosCheckResult !== null && !biosCheckResult.available)
+              }
               onClick={() => {
                 if (!requestableLicense) { toast.error(t('common.error')); return }
                 if (newBiosId.trim().length < 5) { toast.error(t('biosChangeRequests.newBiosValidation')); return }
                 if ((requestableLicense.bios_id ?? '').trim().toLowerCase() === newBiosId.trim().toLowerCase()) {
                   toast.error(t('biosChangeRequests.sameBiosValidation')); return
-                }
-                if (biosCheckResult?.is_blacklisted) { toast.error(t('customers.biosBlacklisted')); return }
-                if (biosCheckResult !== null && !biosCheckResult.available) {
-                  toast.error(biosCheckResult.message || t('common.error')); return
                 }
                 submitRequestMutation.mutate()
               }}

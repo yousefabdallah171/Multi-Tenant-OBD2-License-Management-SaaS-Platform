@@ -9,6 +9,7 @@ export interface BiosCheckResult {
 
 export interface UsernameCheckResult {
   available: boolean;
+  linked_bios: string | null;
   message: string;
 }
 

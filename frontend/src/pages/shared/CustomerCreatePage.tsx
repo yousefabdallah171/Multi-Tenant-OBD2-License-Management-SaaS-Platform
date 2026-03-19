@@ -100,8 +100,9 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [usernameCheckLoading, setUsernameCheckLoading] = useState(false)
   const debouncedBiosId = useDebounce(biosId, 400)
   const debouncedCustomerName = useDebounce(customerName, 400)
-  const biosLinkedUsername = biosCheckResult?.available ? (biosCheckResult.linked_username ?? null) : null
-  // Username is locked only when the current BIOS check returns a linked username
+  // linked_username is returned for ALL bios check results (available or not) — use it for locking
+  const biosLinkedUsername = biosCheckResult?.linked_username ?? null
+  // Username is locked when: BIOS has a linked username (regardless of availability)
   const usernameIsLocked = !!biosLinkedUsername
 
   const programsQuery = useQuery({
@@ -121,8 +122,8 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       try {
         const result = await availabilityService.checkBios(debouncedBiosId)
         setBiosCheckResult(result)
-        // Auto-fill username from BIOS link
-        if (result.available && result.linked_username) {
+        // Auto-fill and lock username from BIOS link (even if BIOS is unavailable/blacklisted)
+        if (result.linked_username) {
           setCustomerName(result.linked_username)
         }
       } catch (error) {

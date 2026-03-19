@@ -31,10 +31,23 @@ class BiosAvailabilityController extends Controller
         $user = Auth::user();
         $tenantId = $user?->tenant_id;
 
+        // Always resolve the linked username for this BIOS (needed for locking even when unavailable)
+        $linkedUsernameForBios = null;
+        $biosLink = BiosUsernameLink::where('bios_id', $biosId)->first();
+        if ($biosLink) {
+            $linkedUsernameForBios = $biosLink->username;
+        } else {
+            $historicalLicense = License::whereRaw('LOWER(bios_id) = ?', [$biosId])
+                ->whereNotNull('external_username')
+                ->latest('updated_at')
+                ->first();
+            $linkedUsernameForBios = $historicalLicense?->external_username;
+        }
+
         if ($tenantId && BiosBlacklist::blocksBios($biosId, $tenantId)) {
             return response()->json([
                 'available' => false,
-                'linked_username' => null,
+                'linked_username' => $linkedUsernameForBios,
                 'is_blacklisted' => true,
                 'message' => 'This BIOS ID is blacklisted',
             ]);
@@ -49,7 +62,7 @@ class BiosAvailabilityController extends Controller
         if ($existingActive) {
             return response()->json([
                 'available' => false,
-                'linked_username' => null,
+                'linked_username' => $linkedUsernameForBios,
                 'is_blacklisted' => false,
                 'message' => 'BIOS ID is already active with another reseller',
             ]);
@@ -63,29 +76,15 @@ class BiosAvailabilityController extends Controller
         if ($pendingChangeRequest) {
             return response()->json([
                 'available' => false,
-                'linked_username' => null,
+                'linked_username' => $linkedUsernameForBios,
                 'is_blacklisted' => false,
                 'message' => 'Another pending BIOS change request is already targeting this BIOS ID',
             ]);
         }
 
-        // Check BIOS-username permanent link — return linked username for auto-fill
-        $link = BiosUsernameLink::where('bios_id', $biosId)->first();
-
-        // Also check if any historical license tied this BIOS to a different username
-        if (! $link) {
-            $historicalLicense = License::whereRaw('LOWER(bios_id) = ?', [$biosId])
-                ->whereNotNull('external_username')
-                ->latest('updated_at')
-                ->first();
-            if ($historicalLicense) {
-                $link = (object) ['username' => $historicalLicense->external_username];
-            }
-        }
-
         return response()->json([
             'available' => true,
-            'linked_username' => $link?->username,
+            'linked_username' => $linkedUsernameForBios,
             'is_blacklisted' => false,
             'message' => 'Available',
         ]);
@@ -101,13 +100,27 @@ class BiosAvailabilityController extends Controller
         if (strlen($username) < 2) {
             return response()->json([
                 'available' => false,
+                'linked_bios' => null,
                 'message' => 'Username must be at least 2 characters',
             ]);
         }
 
+        // Check if username is permanently linked to a BIOS ID via BiosUsernameLink
+        $biosLink = BiosUsernameLink::whereRaw('LOWER(username) = ?', [$username])->first();
+        $linkedBios = $biosLink?->bios_id;
+
+        // If not in the permanent link table, check historical licenses for a BIOS association
+        if (! $linkedBios) {
+            $historicalLicense = License::join('users', 'licenses.customer_id', '=', 'users.id')
+                ->whereRaw('LOWER(users.username) = ?', [$username])
+                ->whereNotNull('licenses.bios_id')
+                ->latest('licenses.updated_at')
+                ->select('licenses.bios_id')
+                ->first();
+            $linkedBios = $historicalLicense?->bios_id;
+        }
+
         // Check if username is active/suspended in ANY customer's license across ALL tenants
-        // Pending licenses do NOT block — the same username may have a pending license
-        // waiting to be activated (another reseller is allowed to activate it)
         $activeLicense = License::join('users', 'licenses.customer_id', '=', 'users.id')
             ->whereRaw('LOWER(users.username) = ?', [$username])
             ->whereIn('licenses.status', ['active', 'suspended'])
@@ -115,6 +128,7 @@ class BiosAvailabilityController extends Controller
 
         return response()->json([
             'available' => !$activeLicense,
+            'linked_bios' => $linkedBios,
             'message' => $activeLicense
                 ? 'Username is already active with another customer'
                 : 'Available',
