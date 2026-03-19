@@ -9,6 +9,7 @@ import { OnlineUsersWidget } from '@/components/shared/OnlineUsersWidget'
 import { SkipToContent } from '@/components/shared/SkipToContent'
 import { AppToaster } from '@/components/ui/toast'
 import { useAuth } from '@/hooks/useAuth'
+import { useBcrNotification } from '@/hooks/useBcrNotification'
 import { useLanguage } from '@/hooks/useLanguage'
 import { getDashboardPath } from '@/router/routes'
 import { useSidebarStore } from '@/stores/sidebarStore'
@@ -19,6 +20,8 @@ export function DashboardLayout() {
   const { lang } = useLanguage()
   const setCollapsed = useSidebarStore((state) => state.setCollapsed)
   const syncStateRef = useRef({ inFlight: false, lastRunAt: 0 })
+
+  useBcrNotification(user?.role === 'manager_parent')
 
   useEffect(() => {
     const syncSidebar = () => {

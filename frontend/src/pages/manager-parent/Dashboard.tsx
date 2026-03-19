@@ -1,7 +1,5 @@
-import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Banknote, LayoutDashboard, ShieldCheck, Users, UserSquare2 } from 'lucide-react'
-import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
@@ -40,30 +38,6 @@ export function DashboardPage() {
     queryKey: ['manager-parent', 'dashboard'],
     queryFn: () => managerParentService.getDashboard(),
   })
-
-  const pendingBcrQuery = useQuery({
-    queryKey: ['manager-parent', 'bios-change-requests', 'pending-count'],
-    queryFn: () => managerParentService.getPendingBiosChangeRequestCount(),
-  })
-  const notifiedRef = useRef(false)
-  useEffect(() => {
-    const count = pendingBcrQuery.data?.count
-    if (count && count > 0 && !notifiedRef.current) {
-      notifiedRef.current = true
-      toast(
-        lang === 'ar'
-          ? `لديك ${count} طلب${count > 1 ? 'ات' : ''} تغيير BIOS معلق${count > 1 ? 'ة' : ''}`
-          : `You have ${count} pending BIOS change request${count > 1 ? 's' : ''}`,
-        {
-          action: {
-            label: lang === 'ar' ? 'عرض' : 'View',
-            onClick: () => navigate(routePaths.managerParent.biosChangeRequests(lang)),
-          },
-          duration: 8000,
-        },
-      )
-    }
-  }, [pendingBcrQuery.data?.count, lang, navigate])
 
   const stats = statsQuery.data?.stats
   const topPerformers = (statsQuery.data?.teamPerformance ?? []).slice(0, 4)
