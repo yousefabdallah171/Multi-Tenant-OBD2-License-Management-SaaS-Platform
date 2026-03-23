@@ -32,7 +32,6 @@ type DurationUnit = 'minutes' | 'hours' | 'days'
 type ScheduleMode = 'after' | 'on'
 
 const MIN_DURATION_DAYS = 1 / 1440
-const SCHEDULE_DEFAULT_TIMEZONE = 'UTC'
 
 function getDefaultEndDate(timeZone: string, days = 1) {
   const next = new Date()
