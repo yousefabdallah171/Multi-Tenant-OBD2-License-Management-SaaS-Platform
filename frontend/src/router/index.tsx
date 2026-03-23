@@ -32,6 +32,7 @@ const ManagerBiosChangeRequestsPage = lazyNamed(() => import('@/pages/manager/Bi
 const ManagerCustomersPage = lazyNamed(() => import('@/pages/manager/Customers'), 'CustomersPage')
 const ManagerCreateCustomerPage = lazyNamed(() => import('@/pages/manager/CreateCustomer'), 'CreateCustomerPageForManager')
 const ManagerCustomerDetailPage = lazyNamed(() => import('@/pages/manager/CustomerDetail'), 'CustomerDetailPage')
+const ManagerBiosChangeRequestPage = lazyNamed(() => import('@/pages/manager/BiosChangeRequest'), 'BiosChangeRequestPageForManager')
 const ManagerResellerPaymentDetailPage = lazyNamed(() => import('@/pages/manager/ResellerPaymentDetail'), 'ResellerPaymentDetailPage')
 const ManagerResellerPaymentsPage = lazyNamed(() => import('@/pages/manager/ResellerPayments'), 'ResellerPaymentsPage')
 const ManagerRenewLicensePage = lazyNamed(() => import('@/pages/manager/RenewLicense'), 'RenewLicensePageForManager')
@@ -96,6 +97,7 @@ const SecurityLocksPage = lazyNamed(() => import('@/pages/super-admin/SecurityLo
 const ResellerCustomersPage = lazyNamed(() => import('@/pages/reseller/Customers'), 'CustomersPage')
 const ResellerCreateCustomerPage = lazyNamed(() => import('@/pages/reseller/CreateCustomer'), 'CreateCustomerPageForReseller')
 const ResellerCustomerDetailPage = lazyNamed(() => import('@/pages/reseller/CustomerDetail'), 'CustomerDetailPage')
+const ResellerBiosChangeRequestPage = lazyNamed(() => import('@/pages/reseller/BiosChangeRequest'), 'BiosChangeRequestPageForReseller')
 const ResellerIpAnalyticsPage = lazyNamed(() => import('@/pages/reseller/IpAnalytics'), 'IpAnalyticsPage')
 const ResellerRenewLicensePage = lazyNamed(() => import('@/pages/reseller/RenewLicense'), 'RenewLicensePageForReseller')
 const ResellerDashboardPage = lazyNamed(() => import('@/pages/reseller/Dashboard'), 'DashboardPage')
@@ -210,6 +212,7 @@ export function AppRouter() {
                   <Route path="customers/licenses/:id/renew" element={<ManagerRenewLicensePage />} />
                   <Route path="licenses/:id/renew" element={<ManagerRenewLicensePage />} />
                   <Route path="customers/:id" element={<ManagerCustomerDetailPage />} />
+                  <Route path="customers/:id/request-bios-change" element={<ManagerBiosChangeRequestPage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="software" element={<ManagerSoftwarePage />} />
                   <Route path="software/:id/activate" element={<ActivateLicensePageForManager />} />
@@ -236,6 +239,7 @@ export function AppRouter() {
                   <Route path="customers/licenses/:id/renew" element={<ResellerRenewLicensePage />} />
                   <Route path="licenses/:id/renew" element={<ResellerRenewLicensePage />} />
                   <Route path="customers/:id" element={<ResellerCustomerDetailPage />} />
+                  <Route path="customers/:id/request-bios-change" element={<ResellerBiosChangeRequestPage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
                   <Route path="activations" element={<ResellerActivationsPage />} />
                   <Route path="ip-analytics" element={<ResellerIpAnalyticsPage />} />

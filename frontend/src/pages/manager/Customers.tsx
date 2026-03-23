@@ -496,7 +496,7 @@ export function CustomersPage() {
             ) : null}
             {typeof row.license_id === 'number' && !isBlacklisted && !isBiosActiveElsewhere ? (
               <DropdownMenuItem asChild>
-                <Link to={`${routePaths.manager.customerDetail(lang, row.id)}?request-bios=1`}>
+                <Link to={routePaths.manager.customerBiosChangeRequest(lang, row.id)}>
                   <Cpu className="me-2 h-4 w-4" />
                   {t('biosChangeRequests.requestAction', { defaultValue: 'Request BIOS ID Change' })}
                 </Link>

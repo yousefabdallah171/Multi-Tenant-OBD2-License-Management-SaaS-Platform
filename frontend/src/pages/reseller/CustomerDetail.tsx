@@ -1,21 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, Lock, XCircle } from 'lucide-react'
-import { useDebounce } from '@/hooks/useDebounce'
-import { availabilityService } from '@/services/availability.service'
-import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { BlockBadge } from '@/components/shared/BlockBadge'
+import { useNavigate, useParams } from 'react-router-dom'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
-import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -25,27 +16,9 @@ export function CustomerDetailPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const queryClient = useQueryClient()
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false)
-  const biosParamConsumedRef = useRef(false)
-  // Capture the param value at mount time so the effect doesn't re-fire when searchParams changes
-  const initialBiosParamRef = useRef(searchParams.get('request-bios') === '1')
-  const [newBiosId, setNewBiosId] = useState('')
-  const [requestReason, setRequestReason] = useState('')
-  const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string; linked_username?: string | null } | null>(null)
-  const debouncedNewBiosId = useDebounce(newBiosId.trim(), 400)
-
-  useEffect(() => {
-    if (debouncedNewBiosId.length < 3) {
-      setBiosCheckResult(null)
-      return
-    }
-    availabilityService.checkBios(debouncedNewBiosId).then(setBiosCheckResult)
-  }, [debouncedNewBiosId])
 
   const query = useQuery({
     queryKey: ['reseller', 'customer-detail', customerId],
@@ -61,42 +34,11 @@ export function CustomerDetailPage() {
   })
 
   const customer = query.data?.data
-  // Pick the most relevant license: prefer active, then expired, then cancelled, then any
   const requestableLicense = customer?.licenses?.find((l) => l.status === 'active')
     ?? customer?.licenses?.find((l) => l.status === 'expired')
     ?? customer?.licenses?.find((l) => l.status === 'cancelled')
     ?? customer?.licenses?.[0]
     ?? null
-
-  useEffect(() => {
-    if (biosParamConsumedRef.current || !initialBiosParamRef.current || !requestableLicense) {
-      return
-    }
-    biosParamConsumedRef.current = true
-    setRequestDialogOpen(true)
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev)
-      next.delete('request-bios')
-      return next
-    }, { replace: true })
-  }, [requestableLicense, setSearchParams])
-
-  const submitRequestMutation = useMutation({
-    mutationFn: () => resellerService.submitBiosChangeRequest({
-      license_id: requestableLicense?.id ?? 0,
-      new_bios_id: newBiosId.trim(),
-      reason: requestReason.trim() || undefined,
-    }),
-    onSuccess: (response) => {
-      toast.success(response.message ?? t('biosChangeRequests.submitted'))
-      setRequestDialogOpen(false)
-      setNewBiosId('')
-      setRequestReason('')
-      setBiosCheckResult(null)
-      void queryClient.invalidateQueries({ queryKey: ['reseller', 'customer-detail', customerId] })
-    },
-    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
-  })
 
   return (
     <div className="space-y-6">
@@ -111,7 +53,7 @@ export function CustomerDetailPage() {
         title={customer?.name ?? t('reseller.pages.customers.title')}
         description={resolveCustomerDetailUsername(customer) ?? customer?.phone ?? t('reseller.pages.customers.description')}
         actions={requestableLicense && !requestableLicense.is_blacklisted && !customer?.bios_active_elsewhere ? (
-          <Button type="button" onClick={() => setRequestDialogOpen(true)}>
+          <Button type="button" onClick={() => navigate(routePaths.reseller.customerBiosChangeRequest(lang, customerId))}>
             {t('biosChangeRequests.requestAction')}
           </Button>
         ) : null}
@@ -212,89 +154,6 @@ export function CustomerDetailPage() {
         </>
       ) : null}
 
-      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('biosChangeRequests.requestAction')}</DialogTitle>
-            <DialogDescription>
-              {requestableLicense?.bios_id ?? t('biosChangeRequests.description')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosChangeRequests.currentBios')}</p>
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{requestableLicense?.bios_id ?? '-'}</p>
-                {requestableLicense?.is_blacklisted ? <BlockBadge /> : null}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Input
-                value={newBiosId}
-                onChange={(event) => { setNewBiosId(event.target.value); setBiosCheckResult(null) }}
-                placeholder={t('biosChangeRequests.newBiosPlaceholder')}
-              />
-              {biosCheckResult && (() => {
-                const customerUsername = (resolveCustomerDetailUsername(customer) ?? '').trim().toLowerCase()
-                const linkedUsername = (biosCheckResult.linked_username ?? '').trim().toLowerCase()
-                const usernameMismatch = linkedUsername !== '' && customerUsername !== '' && linkedUsername !== customerUsername
-                const isError = biosCheckResult.is_blacklisted || !biosCheckResult.available || usernameMismatch
-                const message = usernameMismatch
-                  ? `This BIOS ID is linked to username "${biosCheckResult.linked_username}" — not this customer`
-                  : biosCheckResult.message
-                return (
-                  <p className={`text-xs ${isError ? 'text-rose-600' : 'text-emerald-600'}`}>
-                    {isError ? '✗ ' : '✓ '}{message}
-                  </p>
-                )
-              })()}
-            </div>
-            <Textarea
-              value={requestReason}
-              onChange={(event) => setRequestReason(event.target.value)}
-              placeholder={t('biosChangeRequests.reasonPlaceholder')}
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setRequestDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="button"
-              disabled={(() => {
-                if (submitRequestMutation.isPending) return true
-                if (newBiosId.trim().length < 5) return true
-                if (newBiosId.trim().length >= 5 && biosCheckResult === null) return true
-                if (biosCheckResult?.is_blacklisted) return true
-                if (biosCheckResult !== null && !biosCheckResult.available) return true
-                if (biosCheckResult?.linked_username) {
-                  const customerUsername = (resolveCustomerDetailUsername(customer) ?? '').trim().toLowerCase()
-                  const linkedUsername = biosCheckResult.linked_username.trim().toLowerCase()
-                  if (linkedUsername !== '' && customerUsername !== '' && linkedUsername !== customerUsername) return true
-                }
-                return false
-              })()}
-              onClick={() => {
-                if (!requestableLicense) {
-                  toast.error(t('common.error'))
-                  return
-                }
-                if (newBiosId.trim().length < 5) {
-                  toast.error(t('biosChangeRequests.newBiosValidation'))
-                  return
-                }
-                if ((requestableLicense.bios_id ?? '').trim().toLowerCase() === newBiosId.trim().toLowerCase()) {
-                  toast.error(t('biosChangeRequests.sameBiosValidation'))
-                  return
-                }
-                submitRequestMutation.mutate()
-              }}
-            >
-              {t('common.save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
