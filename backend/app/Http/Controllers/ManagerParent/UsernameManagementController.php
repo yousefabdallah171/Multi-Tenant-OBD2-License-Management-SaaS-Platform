@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Enums\UserRole;
+use App\Models\BiosUsernameLink;
+use App\Models\License;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class UsernameManagementController extends BaseManagerParentController
 {
@@ -53,6 +56,7 @@ class UsernameManagementController extends BaseManagerParentController
     {
         $user = $this->resolveTenantUser($request, $user);
         $validated = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
+        $this->assertUsernameCanBeManaged($user);
         $user->update(['username_locked' => false]);
 
         $this->logActivity($request, 'username.unlock', sprintf('Unlocked username for %s.', $user->email), [
@@ -66,6 +70,7 @@ class UsernameManagementController extends BaseManagerParentController
     public function changeUsername(Request $request, User $user): JsonResponse
     {
         $user = $this->resolveTenantUser($request, $user);
+        $this->assertUsernameCanBeManaged($user);
 
         $validated = $request->validate([
             'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$user->id],
@@ -126,5 +131,23 @@ class UsernameManagementController extends BaseManagerParentController
             'username_locked' => $user->username_locked,
             'created_at' => $user->created_at?->toIso8601String(),
         ];
+    }
+
+    private function assertUsernameCanBeManaged(User $user): void
+    {
+        $usernameLower = strtolower((string) $user->username);
+
+        $hasPermanentLink = ($usernameLower !== '' && BiosUsernameLink::whereRaw('LOWER(username) = ?', [$usernameLower])->exists())
+            || License::query()
+                ->where('customer_id', $user->id)
+                ->whereNotNull('bios_id')
+                ->get(['bios_id'])
+                ->contains(fn (License $license): bool => BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])->exists());
+
+        if ($hasPermanentLink) {
+            throw ValidationException::withMessages([
+                'username' => 'This user has a permanent BIOS-username link. Unlock and username change are blocked.',
+            ]);
+        }
     }
 }

@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Manager;
 
+use App\Models\BiosUsernameLink;
+use App\Models\License;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class UsernameManagementController extends BaseManagerController
 {
@@ -49,6 +52,7 @@ class UsernameManagementController extends BaseManagerController
     {
         $target = $this->resolveTeamUser($request, $user);
         $validated = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
+        $this->assertUsernameCanBeManaged($target);
 
         $target->update(['username_locked' => false]);
 
@@ -63,6 +67,7 @@ class UsernameManagementController extends BaseManagerController
     public function changeUsername(Request $request, User $user): JsonResponse
     {
         $target = $this->resolveTeamUser($request, $user);
+        $this->assertUsernameCanBeManaged($target);
         $validated = $request->validate([
             'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$target->id],
             'reason' => ['nullable', 'string', 'max:500'],
@@ -121,5 +126,23 @@ class UsernameManagementController extends BaseManagerController
             'username_locked' => $user->username_locked,
             'created_at' => $user->created_at?->toIso8601String(),
         ];
+    }
+
+    private function assertUsernameCanBeManaged(User $user): void
+    {
+        $usernameLower = strtolower((string) $user->username);
+
+        $hasPermanentLink = ($usernameLower !== '' && BiosUsernameLink::whereRaw('LOWER(username) = ?', [$usernameLower])->exists())
+            || License::query()
+                ->where('customer_id', $user->id)
+                ->whereNotNull('bios_id')
+                ->get(['bios_id'])
+                ->contains(fn (License $license): bool => BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])->exists());
+
+        if ($hasPermanentLink) {
+            throw ValidationException::withMessages([
+                'username' => 'This user has a permanent BIOS-username link. Unlock and username change are blocked.',
+            ]);
+        }
     }
 }

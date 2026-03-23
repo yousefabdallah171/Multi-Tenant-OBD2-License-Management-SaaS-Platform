@@ -24,6 +24,7 @@ function resolveApiBaseUrl() {
 }
 
 export const api = axios.create({
+  withCredentials: true,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -55,17 +56,12 @@ function resolveCurrentLanguage(): SupportedLanguage {
 }
 
 async function fetchCurrentUserSnapshot(): Promise<User | null> {
-  const token = useAuthStore.getState().token
-  if (!token) {
-    return null
-  }
-
   const { data } = await axios.get<{ user: User | null }>('/auth/me', {
     baseURL: resolveApiBaseUrl(),
+    withCredentials: true,
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
       'Accept-Language': resolveCurrentLanguage(),
     },
   })
@@ -75,16 +71,7 @@ async function fetchCurrentUserSnapshot(): Promise<User | null> {
 
 api.interceptors.request.use((config) => {
   config.baseURL ??= resolveApiBaseUrl()
-
-  const token = useAuthStore.getState().token
-  const lang = resolveCurrentLanguage()
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-
-  config.headers['Accept-Language'] = lang
-
+  config.headers['Accept-Language'] = resolveCurrentLanguage()
   return config
 })
 
@@ -118,7 +105,7 @@ api.interceptors.response.use(
     if (status === 403 && typeof window !== 'undefined' && !window.location.pathname.includes('/access-denied')) {
       const isMeRequest = /\/auth\/me(?:\?.*)?$/.test(requestUrl)
 
-      if (!isMeRequest && useAuthStore.getState().token) {
+      if (!isMeRequest && useAuthStore.getState().user) {
         try {
           const previousUser = useAuthStore.getState().user
           const currentUser = await fetchCurrentUserSnapshot()

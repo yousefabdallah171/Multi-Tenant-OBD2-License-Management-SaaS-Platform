@@ -135,19 +135,40 @@ class AuthController extends Controller
         $token = $user->createToken('auth-token')->plainTextToken;
         $this->loginSecurity->clearAttempts($email, $ip);
 
+        $cookieName = config('sanctum.cookie_name', 'auth_token');
+        $expirationMinutes = config('sanctum.expiration') ?? 60 * 24 * 14;
+        $isSecure = request()->isSecure() || app()->environment('production');
+
+        $cookie = cookie(
+            name: $cookieName,
+            value: $token,
+            minutes: $expirationMinutes,
+            path: '/',
+            domain: null,
+            secure: $isSecure,
+            httpOnly: true,
+            raw: false,
+            sameSite: 'Strict',
+        );
+
         return response()
             ->json([
-                'token' => $token,
+                'token' => $token, // kept for backward compat / mobile clients
                 'user' => $user,
             ])
-            ->withHeaders($this->rateHeaders($email, $this->loginSecurity));
+            ->withHeaders($this->rateHeaders($email, $this->loginSecurity))
+            ->withCookie($cookie);
     }
 
     public function logout(Request $request): JsonResponse
     {
         $request->user()?->currentAccessToken()?->delete();
 
-        return response()->json(['message' => 'Logged out successfully.']);
+        $cookieName = config('sanctum.cookie_name', 'auth_token');
+
+        return response()
+            ->json(['message' => 'Logged out successfully.'])
+            ->withCookie(cookie()->forget($cookieName));
     }
 
     public function me(Request $request): JsonResponse

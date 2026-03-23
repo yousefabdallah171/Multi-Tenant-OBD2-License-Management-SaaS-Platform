@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ApiLogger;
 use App\Http\Middleware\ApiSecurityHeaders;
+use App\Http\Middleware\AuthCookieToBearer;
 use App\Http\Middleware\BiosBlacklistCheck;
 use App\Http\Middleware\IpTracker;
 use App\Http\Middleware\RoleMiddleware;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(ApiSecurityHeaders::class);
+        $middleware->prepend(AuthCookieToBearer::class);
         $middleware->redirectGuestsTo(static function (Request $request): ?string {
             return $request->is('api/*') ? null : '/';
         });

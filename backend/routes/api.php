@@ -112,8 +112,8 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
     Route::post('/bios-blacklist', [BiosBlacklistController::class, 'store'])->middleware('role:super_admin,manager_parent,manager');
     Route::delete('/bios-blacklist/{biosBlacklist}', [BiosBlacklistController::class, 'destroy'])->middleware('role:super_admin,manager_parent');
     Route::get('/bios-conflicts', [BiosConflictController::class, 'index'])->middleware('role:super_admin,manager_parent,manager');
-    Route::get('/check-bios', [BiosAvailabilityController::class, 'checkBios'])->middleware('role:super_admin,manager_parent,manager,reseller');
-    Route::get('/check-username', [BiosAvailabilityController::class, 'checkUsername'])->middleware('role:super_admin,manager_parent,manager,reseller');
+    Route::get('/check-bios', [BiosAvailabilityController::class, 'checkBios'])->middleware(['role:super_admin,manager_parent,manager,reseller', 'throttle:60,1']);
+    Route::get('/check-username', [BiosAvailabilityController::class, 'checkUsername'])->middleware(['role:super_admin,manager_parent,manager,reseller', 'throttle:60,1']);
     Route::get('/balances/me', [BalanceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::post('/balances/{user}/adjust', [BalanceController::class, 'adjust'])->middleware('role:super_admin,manager_parent');
     Route::post('/licenses/activate', [LicenseController::class, 'activateLicense'])->middleware('role:super_admin,reseller,manager,manager_parent');

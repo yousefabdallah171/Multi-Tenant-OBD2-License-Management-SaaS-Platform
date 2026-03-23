@@ -35,7 +35,7 @@ export function CustomerDetailPage() {
   const customerId = Number(id)
   const [changeDialogOpen, setChangeDialogOpen] = useState(false)
   const [newBiosId, setNewBiosId] = useState('')
-  const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string } | null>(null)
+  const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string; linked_username: string | null } | null>(null)
   const debouncedNewBiosId = useDebounce(newBiosId.trim(), 400)
 
   useEffect(() => {
@@ -64,6 +64,7 @@ export function CustomerDetailPage() {
 
   const customer = query.data?.data
   const licenseHistoryGroups = groupCustomerLicenseHistoryByReseller(licenseHistoryQuery.data?.data ?? [])
+  const customerUsername = resolveCustomerDetailUsername(customer)?.trim().toLowerCase() ?? ''
 
   const requestableLicense = customer?.licenses?.find((l: { status: string }) => l.status === 'active')
     ?? customer?.licenses?.find((l: { status: string }) => l.status === 'expired')
@@ -290,9 +291,18 @@ export function CustomerDetailPage() {
                 placeholder={t('biosChangeRequests.newBiosPlaceholder')}
               />
               {biosCheckResult && (
-                <p className={`text-xs ${biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'text-rose-600' : 'text-emerald-600'}`}>
-                  {biosCheckResult.is_blacklisted || !biosCheckResult.available ? '✗ ' : '✓ '}{biosCheckResult.message}
-                </p>
+                <div className="space-y-1">
+                  <p className={`text-xs ${biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {biosCheckResult.is_blacklisted || !biosCheckResult.available ? '✗ ' : '✓ '}{biosCheckResult.message}
+                  </p>
+                  {biosCheckResult.linked_username && biosCheckResult.linked_username.trim().toLowerCase() !== customerUsername ? (
+                    <p className="text-xs text-rose-600">
+                      {lang === 'ar'
+                        ? `هذا الـ BIOS مرتبط باسم المستخدم ${biosCheckResult.linked_username} وليس بهذا العميل.`
+                        : `This BIOS ID is linked to username "${biosCheckResult.linked_username}" and not this customer.`}
+                    </p>
+                  ) : null}
+                </div>
               )}
             </div>
           </div>
@@ -311,6 +321,17 @@ export function CustomerDetailPage() {
                   toast.error(t('biosChangeRequests.sameBiosValidation')); return
                 }
                 if (biosCheckResult?.is_blacklisted) { toast.error(t('customers.biosBlacklisted')); return }
+                if (
+                  biosCheckResult?.linked_username
+                  && biosCheckResult.linked_username.trim().toLowerCase() !== customerUsername
+                ) {
+                  toast.error(
+                    lang === 'ar'
+                      ? `هذا الـ BIOS مرتبط باسم المستخدم ${biosCheckResult.linked_username} وليس بهذا العميل.`
+                      : `This BIOS ID is linked to username "${biosCheckResult.linked_username}" and not this customer.`,
+                  )
+                  return
+                }
                 if (biosCheckResult !== null && !biosCheckResult.available) {
                   toast.error(biosCheckResult.message || t('common.error')); return
                 }

@@ -7,17 +7,16 @@ import type { SupportedLanguage } from '@/hooks/useLanguage'
 import type { UserRole } from '@/types/user.types'
 
 export function useAuth() {
-  const token = useAuthStore((state) => state.token)
   const user = useAuthStore((state) => state.user)
   const setSession = useAuthStore((state) => state.setSession)
   const setUser = useAuthStore((state) => state.setUser)
   const clearSession = useAuthStore((state) => state.clearSession)
 
-  const isAuthenticated = Boolean(token && user)
+  const isAuthenticated = Boolean(user)
 
   const login = useCallback(async (email: string, password: string, remember = true) => {
     const result = await authService.login({ email, password })
-    setSession(result.token, result.user, remember)
+    setSession(result.user, remember)
     return result
   }, [setSession])
 
@@ -45,7 +44,6 @@ export function useAuth() {
   }, [setUser])
 
   return {
-    token,
     user,
     isAuthenticated,
     login,
