@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveBrowserTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -87,15 +87,15 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
-  const browserTimezone = useMemo(() => resolveBrowserTimezone(), [])
-  const [endDate, setEndDate] = useState(() => getDefaultEndDate(browserTimezone))
-  const [endTimezone, setEndTimezone] = useState(() => browserTimezone)
+  const profileTimezone = useMemo(() => resolveDisplayTimezone(), [])
+  const [endDate, setEndDate] = useState(() => getDefaultEndDate(profileTimezone))
+  const [endTimezone, setEndTimezone] = useState(() => profileTimezone)
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('on')
   const [scheduleAfterValue, setScheduleAfterValue] = useState('1')
   const [scheduleAfterUnit, setScheduleAfterUnit] = useState<DurationUnit>('hours')
-  const [scheduleAt, setScheduleAt] = useState(() => getDefaultScheduleDate(browserTimezone))
-  const [scheduleTimezone, setScheduleTimezone] = useState(() => browserTimezone)
+  const [scheduleAt, setScheduleAt] = useState(() => getDefaultScheduleDate(profileTimezone))
+  const [scheduleTimezone, setScheduleTimezone] = useState(() => profileTimezone)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null)
