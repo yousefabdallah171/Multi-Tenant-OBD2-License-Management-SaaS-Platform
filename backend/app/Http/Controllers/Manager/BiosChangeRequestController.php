@@ -187,16 +187,8 @@ class BiosChangeRequestController extends BaseManagerController
                     'status' => 'approved_pending_sync',
                     'reviewer_notes' => $result['message'] ?? 'External sync pending.',
                 ])->save();
-            } else {
-                // Transfer BIOS-username link only after successful changeBiosId
-                BiosUsernameLink::where('bios_id', $oldBiosLower)->delete();
-                if ($customerUsername) {
-                    BiosUsernameLink::updateOrCreate(
-                        ['bios_id' => $newBiosLower],
-                        ['username' => $customerUsername, 'tenant_id' => $biosChangeRequest->license->tenant_id]
-                    );
-                }
             }
+            // BiosUsernameLink is now updated atomically inside changeBiosId() transaction
         } catch (\Throwable $e) {
             \Log::error('BIOS change exception:', [
                 'request_id' => $biosChangeRequest->id,

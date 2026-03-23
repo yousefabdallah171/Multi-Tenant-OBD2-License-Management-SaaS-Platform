@@ -863,7 +863,7 @@ class LicenseService
 
         // For non-active licenses or when no API key, update locally without external API
         if ($apiKey === null || $license->status !== 'active') {
-            return DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller): array {
+            return DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller, $licenseUsername): array {
                 // Race guard inside transaction
                 $raceConflict = License::query()
                     ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
@@ -878,10 +878,20 @@ class LicenseService
                 }
 
                 $oldBiosId = (string) $license->bios_id;
+                $oldBiosLower = strtolower($oldBiosId);
 
                 $license->forceFill([
                     'bios_id' => $trimmedBiosId,
                 ])->save();
+
+                // Update BiosUsernameLink atomically inside the same transaction
+                if ($licenseUsername !== '') {
+                    BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$oldBiosLower])->delete();
+                    BiosUsernameLink::updateOrCreate(
+                        ['bios_id' => $newBiosLower],
+                        ['username' => $licenseUsername, 'tenant_id' => $license->tenant_id]
+                    );
+                }
 
                 $this->logActivity(
                     $reseller,
@@ -946,7 +956,7 @@ class LicenseService
             }
         }
 
-        DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller): void {
+        DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller, $licenseUsername): void {
             // Race guard inside transaction
             $raceConflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
@@ -961,10 +971,20 @@ class LicenseService
             }
 
             $oldBiosId = (string) $license->bios_id;
+            $oldBiosLower = strtolower($oldBiosId);
 
             $license->forceFill([
                 'bios_id' => $trimmedBiosId,
             ])->save();
+
+            // Update BiosUsernameLink atomically inside the same transaction
+            if ($licenseUsername !== '') {
+                BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$oldBiosLower])->delete();
+                BiosUsernameLink::updateOrCreate(
+                    ['bios_id' => $newBiosLower],
+                    ['username' => $licenseUsername, 'tenant_id' => $license->tenant_id]
+                );
+            }
 
             $this->logActivity(
                 $reseller,

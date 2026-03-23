@@ -709,6 +709,17 @@ class CustomerController extends BaseSuperAdminController
                         'customer_name' => 'This username is permanently linked to a different BIOS ID (' . $linkByUsername->bios_id . ').',
                     ]);
                 }
+
+                // Also check historical licenses — covers cases where BiosUsernameLink entry was cleaned up
+                $historicalConflict = \App\Models\License::query()
+                    ->whereRaw('LOWER(external_username) = ?', [$usernameLower])
+                    ->whereRaw('LOWER(bios_id) != ?', [$biosIdLower])
+                    ->exists();
+                if ($historicalConflict && ! $linkByBios) {
+                    throw ValidationException::withMessages([
+                        'customer_name' => 'This username was previously activated with a different BIOS ID. Each username is permanently tied to one BIOS ID.',
+                    ]);
+                }
             }
         } else {
             // No derived username — still check BIOS→username link
