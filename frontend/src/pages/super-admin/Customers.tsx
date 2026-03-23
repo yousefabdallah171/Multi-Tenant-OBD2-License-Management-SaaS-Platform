@@ -24,7 +24,7 @@ import { tenantService } from '@/services/tenant.service'
 import { userService } from '@/services/user.service'
 import type { SuperAdminCustomerSummary } from '@/types/super-admin.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
 export function CustomersPage() {
   const { t } = useTranslation()
@@ -87,7 +87,7 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
-  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, suspendedCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
       {
         queryKey: ['super-admin', 'customers', 'count', 'all', customerFilterParams],
@@ -97,6 +97,11 @@ export function CustomersPage() {
       {
         queryKey: ['super-admin', 'customers', 'count', 'active', customerFilterParams],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }),
+        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
+      },
+      {
+        queryKey: ['super-admin', 'customers', 'count', 'suspended', customerFilterParams],
+        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'suspended' }),
         ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
@@ -358,7 +363,7 @@ export function CustomersPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-7">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -379,6 +384,17 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="emerald"
+        />
+        <StatusFilterCard
+          label={t('common.suspended')}
+          description={getStatusMeaning('suspended', t)}
+          count={suspendedCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'suspended'}
+          onClick={() => {
+            setStatus('suspended')
+            setPage(1)
+          }}
+          color="amber"
         />
         <StatusFilterCard
           label={t('common.scheduled', { defaultValue: 'Scheduled' })}

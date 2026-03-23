@@ -26,7 +26,7 @@ class TenantScope
             app()->instance('tenant.scope.id', $tenantId);
 
             $throttleKey = 'licenses:expire:tenant:'.$tenantId;
-            if (Cache::add($throttleKey, 1, now()->addSecond())) {
+            if ($this->shouldRunThrottle($throttleKey, now()->addSecond())) {
                 try {
                     $this->licenseExpiryService->expireDue($tenantId, true, 50);
                 } catch (\Throwable $exception) {
@@ -35,7 +35,7 @@ class TenantScope
             }
         }
 
-        if ($user && $user->role === UserRole::SUPER_ADMIN && Cache::add('licenses:expire:global', 1, now()->addSecond())) {
+        if ($user && $user->role === UserRole::SUPER_ADMIN && $this->shouldRunThrottle('licenses:expire:global', now()->addSecond())) {
             try {
                 $this->licenseExpiryService->expireDue(null, true, 100);
             } catch (\Throwable $exception) {
@@ -44,5 +44,16 @@ class TenantScope
         }
 
         return $next($request);
+    }
+
+    private function shouldRunThrottle(string $key, \DateTimeInterface $ttl): bool
+    {
+        try {
+            return Cache::add($key, 1, $ttl);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
     }
 }

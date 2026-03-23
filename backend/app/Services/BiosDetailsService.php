@@ -370,10 +370,10 @@ class BiosDetailsService
         }
 
         $licenseIds = License::query()
-            ->select('bios_id')
-            ->distinct()
+            ->selectRaw('bios_id, MAX(id) as latest_id')
             ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
-            ->orderByDesc('id')
+            ->groupBy('bios_id')
+            ->orderByDesc('latest_id')
             ->limit(20);
 
         if ($tenantId !== null) {
@@ -381,26 +381,26 @@ class BiosDetailsService
         }
 
         $blacklistIds = $this->biosBlacklistQuery(null, $tenantId)
-            ->select('bios_id')
-            ->distinct()
+            ->selectRaw('bios_id, MAX(id) as latest_id')
             ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
-            ->orderByDesc('id')
+            ->groupBy('bios_id')
+            ->orderByDesc('latest_id')
             ->limit(20)
             ->pluck('bios_id');
 
         $accessLogIds = $this->biosAccessLogsQuery(null, $tenantId)
-            ->select('bios_id')
-            ->distinct()
+            ->selectRaw('bios_id, MAX(id) as latest_id')
             ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
-            ->orderByDesc('id')
+            ->groupBy('bios_id')
+            ->orderByDesc('latest_id')
             ->limit(20)
             ->pluck('bios_id');
 
         $conflictIds = $this->biosConflictsQuery(null, $tenantId)
-            ->select('bios_id')
-            ->distinct()
+            ->selectRaw('bios_id, MAX(id) as latest_id')
             ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
-            ->orderByDesc('id')
+            ->groupBy('bios_id')
+            ->orderByDesc('latest_id')
             ->limit(20)
             ->pluck('bios_id');
 

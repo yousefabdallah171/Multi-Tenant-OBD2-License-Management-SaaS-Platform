@@ -55,55 +55,12 @@ class CustomerController extends BaseResellerController
             });
         }
 
-        if (! empty($validated['status'])) {
-            if ($validated['status'] === 'pending') {
-                $query->where(function ($statusQuery) use ($resellerId): void {
-                    $statusQuery
-                        ->whereDoesntHave('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('reseller_id', $resellerId))
-                        ->orWhereHas('customerLicenses', function ($licenseQuery) use ($resellerId): void {
-                            $licenseQuery->where('reseller_id', $resellerId);
-
-                            if (! $this->supportsScheduledLicenses()) {
-                                $licenseQuery->where('status', 'pending');
-                                return;
-                            }
-
-                            $licenseQuery->where('status', 'pending')->where(function ($pendingQuery): void {
-                                $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
-                            });
-                        });
-                });
-            } else {
-                $query->whereHas('customerLicenses', function ($licenseQuery) use ($resellerId, $validated): void {
-                    $licenseQuery->where('reseller_id', $resellerId);
-
-                    if (! $this->supportsScheduledLicenses()) {
-                        if ($validated['status'] === 'scheduled') {
-                            $licenseQuery->whereRaw('1 = 0');
-                            return;
-                        }
-
-                        $licenseQuery->where('status', $validated['status']);
-                        return;
-                    }
-
-                    if ($validated['status'] === 'scheduled') {
-                        $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
-                        return;
-                    }
-
-                    $licenseQuery->whereEffectiveStatus($validated['status']);
-                });
-            }
-        }
-
-        if (! empty($validated['program_id'])) {
-            $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                ->where('reseller_id', $resellerId)
-                ->where('program_id', $validated['program_id']));
-        }
-
-        $customers = $query->paginate((int) ($validated['per_page'] ?? 25));
+        $allCustomers = $query->get();
+        $customers = $this->paginateCollection(
+            $allCustomers->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated)),
+            (int) $request->integer('page', 1),
+            (int) ($validated['per_page'] ?? 25),
+        );
 
         return response()->json([
             'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user, $validated, $resellerId))->values(),
@@ -455,9 +412,32 @@ class CustomerController extends BaseResellerController
             fn (License $license) => ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0
         );
 
-        $filtered = $licenses->filter(fn (License $license): bool => $this->licenseMatchesDisplayFilters($license, $filters));
+        $filtered = $licenses->filter(fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters));
 
-        return $filtered->first() ?? $licenses->first();
+        if ($filtered->isNotEmpty()) {
+            return $filtered->first();
+        }
+
+        return $this->hasScopedLicenseFilters($filters) ? null : $licenses->first();
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function customerMatchesDisplayFilters(User $user, array $filters): bool
+    {
+        $status = isset($filters['status']) && is_string($filters['status']) ? $filters['status'] : '';
+        $license = $this->resolveDisplayLicense($user, $filters);
+
+        if (! $license) {
+            return in_array($status, ['', 'all', 'pending'], true) && ! $this->hasScopedLicenseFilters($filters);
+        }
+
+        if ($status === '' || $status === 'all') {
+            return true;
+        }
+
+        return $this->displayLicenseMatchesStatus($license, $status);
     }
 
     private function canDeleteLicense(License $license): bool
@@ -470,6 +450,15 @@ class CustomerController extends BaseResellerController
      */
     private function licenseMatchesDisplayFilters(License $license, array $filters): bool
     {
+        return $this->licenseMatchesScopeFilters($license, $filters)
+            && $this->displayLicenseMatchesStatus($license, isset($filters['status']) && is_string($filters['status']) ? $filters['status'] : '');
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function licenseMatchesScopeFilters(License $license, array $filters): bool
+    {
         $programId = isset($filters['program_id']) ? (int) $filters['program_id'] : null;
         if ($programId) {
             if ((int) $license->program_id !== $programId) {
@@ -477,7 +466,11 @@ class CustomerController extends BaseResellerController
             }
         }
 
-        $status = isset($filters['status']) && is_string($filters['status']) ? $filters['status'] : '';
+        return true;
+    }
+
+    private function displayLicenseMatchesStatus(License $license, string $status): bool
+    {
         if ($status === '' || $status === 'all') {
             return true;
         }
@@ -497,6 +490,14 @@ class CustomerController extends BaseResellerController
         }
 
         return $license->effectiveStatus() === $status;
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function hasScopedLicenseFilters(array $filters): bool
+    {
+        return ! empty($filters['program_id']);
     }
 
     private function visibleEmail(?string $email): ?string

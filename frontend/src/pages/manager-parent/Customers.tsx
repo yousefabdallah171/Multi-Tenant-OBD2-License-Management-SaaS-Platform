@@ -34,7 +34,7 @@ import type { CustomerSummary } from '@/types/manager-parent.types'
 import type { DurationUnit, RenewLicenseData } from '@/types/manager-reseller.types'
 import { formatUsername } from '@/utils/biosId'
 
-const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
+const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -170,10 +170,11 @@ export function CustomersPage() {
     [userOptionsQuery.data?.data],
   )
 
-  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, suspendedCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
       { queryKey: ['manager-parent', 'customers', 'count', 'all', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager-parent', 'customers', 'count', 'active', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager-parent', 'customers', 'count', 'suspended', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'suspended' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager-parent', 'customers', 'count', 'scheduled', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'scheduled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager-parent', 'customers', 'count', 'expired', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager-parent', 'customers', 'count', 'cancelled', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
@@ -570,7 +571,7 @@ export function CustomersPage() {
     <div className="space-y-6">
       <PageHeader title={t('managerParent.pages.customers.title')} description={t('managerParent.pages.customers.description')} actions={<Button type="button" onClick={() => navigate(routePaths.managerParent.customerCreate(lang))}><Plus className="me-2 h-4 w-4" />{t('managerParent.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}</Button>} />
 
-      <div className="grid gap-3 md:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-7">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -591,6 +592,17 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="emerald"
+        />
+        <StatusFilterCard
+          label={t('common.suspended')}
+          description={getStatusMeaning('suspended', t)}
+          count={suspendedCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'suspended'}
+          onClick={() => {
+            setStatus('suspended')
+            setPage(1)
+          }}
+          color="amber"
         />
         <StatusFilterCard
           label={t('common.scheduled', { defaultValue: 'Scheduled' })}
