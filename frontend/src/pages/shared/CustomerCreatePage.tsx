@@ -87,7 +87,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
-  const profileTimezone = useMemo(() => resolveDisplayTimezone(), [])
+  const profileTimezone = useMemo(() => resolveDisplayTimezone({ userTimezone: user?.timezone }), [user?.timezone])
   const [endDate, setEndDate] = useState(() => getDefaultEndDate(profileTimezone))
   const [endTimezone, setEndTimezone] = useState(() => profileTimezone)
   const [scheduleEnabled, setScheduleEnabled] = useState(false)
@@ -106,6 +106,15 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [usernameCheckLoading, setUsernameCheckLoading] = useState(false)
   const debouncedBiosId = useDebounce(biosId, 400)
   const debouncedCustomerName = useDebounce(customerName, 400)
+  // Sync schedule/end timezones when profile timezone resolves (e.g. after auth loads on refresh)
+  useEffect(() => {
+    setScheduleTimezone((prev) => (prev === profileTimezone ? prev : profileTimezone))
+    setEndTimezone((prev) => (prev === profileTimezone ? prev : profileTimezone))
+    setScheduleAt(getDefaultScheduleDate(profileTimezone))
+    setEndDate(getDefaultEndDate(profileTimezone))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileTimezone])
+
   // linked_username is returned for ALL bios check results (available or not) — use it for locking
   const biosLinkedUsername = biosCheckResult?.linked_username ?? null
   // Username is locked when: BIOS has a linked username (regardless of availability)
