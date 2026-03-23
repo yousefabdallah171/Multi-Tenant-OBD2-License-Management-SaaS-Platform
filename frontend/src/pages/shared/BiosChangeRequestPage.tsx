@@ -114,7 +114,7 @@ export function BiosChangeRequestPage({ eyebrow, backPath, getCustomer, submitRe
         description={customer?.name ?? ''}
       />
 
-      <Card className="max-w-xl">
+      <Card className="mx-auto max-w-xl">
         <CardHeader>
           <CardTitle>{t('biosChangeRequests.requestAction')}</CardTitle>
         </CardHeader>
