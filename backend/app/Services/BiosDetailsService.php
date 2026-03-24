@@ -30,8 +30,8 @@ class BiosDetailsService
             $latestActivity = ActivityLog::query()
                 ->where(function ($query) use ($biosId): void {
                     $query
-                        ->where('description', 'like', '%'.$biosId.'%')
-                        ->orWhere('metadata->bios_id', $biosId);
+                        ->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.bios_id'))) = ?", [strtolower($biosId)])
+                        ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.old_bios_id'))) = ?", [strtolower($biosId)]);
                 })
                 ->when($tenantId !== null, fn (Builder $query) => $query->where('tenant_id', $tenantId))
                 ->latest()
