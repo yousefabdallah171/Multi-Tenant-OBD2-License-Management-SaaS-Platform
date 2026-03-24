@@ -111,7 +111,7 @@ class BiosChangeRequestController extends BaseManagerController
 
         $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reviewer:id,name']);
 
-        $this->logActivity($request, 'bios.change_requested', sprintf('Requested BIOS change for license %d.', $license->id), [
+        $this->logActivity($request, 'bios.change_requested', sprintf('Requested BIOS change for BIOS %s.', $license->bios_id), [
             'request_id' => $biosChangeRequest->id,
             'license_id' => $license->id,
             'customer_id' => $license->customer_id,

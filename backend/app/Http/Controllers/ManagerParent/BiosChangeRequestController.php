@@ -115,7 +115,7 @@ class BiosChangeRequestController extends BaseManagerParentController
 
         $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reviewer:id,name']);
 
-        $this->logActivity($request, 'bios.change_requested', sprintf('Requested BIOS change for license %d.', $license->id), [
+        $this->logActivity($request, 'bios.change_requested', sprintf('Requested BIOS change for BIOS %s.', $license->bios_id), [
             'request_id' => $biosChangeRequest->id,
             'license_id' => $license->id,
             'customer_id' => $license->customer_id,
@@ -150,7 +150,7 @@ class BiosChangeRequestController extends BaseManagerParentController
 
         $result = $this->licenseService->changeBiosId($license, trim((string) $validated['new_bios_id']));
 
-        $this->logActivity($request, 'bios.direct_changed', sprintf('Directly changed BIOS ID for license %d.', $license->id), [
+        $this->logActivity($request, 'bios.direct_changed', sprintf('Directly changed BIOS ID from %s to %s.', $license->getOriginal('bios_id') ?? $license->bios_id, $validated['new_bios_id']), [
             'license_id' => $license->id,
             'old_bios_id' => $license->getOriginal('bios_id') ?? $license->bios_id,
             'new_bios_id' => $validated['new_bios_id'],

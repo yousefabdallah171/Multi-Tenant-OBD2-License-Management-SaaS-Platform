@@ -293,7 +293,7 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.renewed',
-                sprintf('Renewed license %d for BIOS %s.', $license->id, $license->bios_id),
+                sprintf('Renewed license for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -352,7 +352,7 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.deactivated',
-                sprintf('Deactivated license %d for BIOS %s.', $license->id, $license->bios_id),
+                sprintf('Deactivated license for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -405,7 +405,7 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.cancelled_pending',
-                sprintf('Cancelled pending license %d for BIOS %s.', $license->id, $license->bios_id),
+                sprintf('Cancelled pending license for BIOS %s.', $license->bios_id),
                 [
                     'license_id'        => $license->id,
                     'customer_id'       => $license->customer_id,
@@ -476,7 +476,7 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.paused',
-                sprintf('Paused license %d for BIOS %s.', $license->id, $license->bios_id),
+                sprintf('Paused license for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -597,7 +597,7 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.resumed',
-                sprintf('Resumed license %d for BIOS %s.', $license->id, $license->bios_id),
+                sprintf('Resumed license for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -708,7 +708,7 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.scheduled_activation_executed',
-                sprintf('Scheduled activation executed for license %d.', $license->id),
+                sprintf('Scheduled activation executed for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -896,7 +896,7 @@ class LicenseService
                 $this->logActivity(
                     $reseller,
                     'license.bios_changed',
-                    sprintf('Changed BIOS ID on license %d from %s to %s.', $license->id, $oldBiosId, $trimmedBiosId),
+                    sprintf('Changed BIOS ID from %s to %s.', $oldBiosId, $trimmedBiosId),
                     [
                         'license_id' => $license->id,
                         'customer_id' => $license->customer_id,
@@ -989,7 +989,7 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.bios_changed',
-                sprintf('Changed BIOS ID on license %d from %s to %s.', $license->id, $oldBiosId, $trimmedBiosId),
+                sprintf('Changed BIOS ID from %s to %s.', $oldBiosId, $trimmedBiosId),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -1388,7 +1388,7 @@ class LicenseService
                 $this->logActivity(
                     $reseller,
                     'license.scheduled_activation_failed',
-                    sprintf('Scheduled activation failed for license %d.', $license->id),
+                    sprintf('Scheduled activation failed for BIOS %s.', $license->bios_id),
                     [
                         'license_id' => $license->id,
                         'customer_id' => $license->customer_id,

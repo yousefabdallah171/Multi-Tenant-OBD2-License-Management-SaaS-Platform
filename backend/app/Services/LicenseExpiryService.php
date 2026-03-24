@@ -68,7 +68,7 @@ class LicenseExpiryService
                 'tenant_id' => $license->tenant_id,
                 'user_id' => null,
                 'action' => 'license.auto_expired',
-                'description' => sprintf('License #%d expired automatically.', $license->id),
+                'description' => sprintf('License for BIOS %s expired automatically.', $license->bios_id),
                 'metadata' => [
                     'license_id' => $license->id,
                     'bios_id' => $license->bios_id,
