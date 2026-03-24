@@ -399,6 +399,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/bios-blacklist/import', [SuperAdminBiosBlacklistController::class, 'import']);
         Route::get('/bios-blacklist/export', [SuperAdminBiosBlacklistController::class, 'export']);
         Route::post('/bios-blacklist/{biosBlacklist}/remove', [SuperAdminBiosBlacklistController::class, 'remove']);
+        Route::delete('/bios-blacklist/{biosBlacklist}/purge', [SuperAdminBiosBlacklistController::class, 'destroy']);
         Route::get('/bios-conflicts', [SuperAdminBiosConflictController::class, 'index']);
         Route::put('/bios-conflicts/{id}/resolve', [SuperAdminBiosConflictController::class, 'resolve']);
 

@@ -74,6 +74,14 @@ export function BiosBlacklistPage() {
     },
   })
 
+  const purgeMutation = useMutation({
+    mutationFn: (id: number) => biosService.purgeFromBlacklist(id),
+    onSuccess: () => {
+      toast.success(t('superAdmin.pages.biosBlacklist.purgeSuccess', { defaultValue: 'Entry permanently deleted.' }))
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'bios-blacklist'] })
+    },
+  })
+
   const importMutation = useMutation({
     mutationFn: (file: File) => biosService.importBlacklist(file),
     onSuccess: (data) => {
@@ -108,12 +116,24 @@ export function BiosBlacklistPage() {
               <DropdownMenuItem disabled={row.status === 'removed'} onSelect={() => removeMutation.mutate(row.id)}>
                 {t('superAdmin.pages.biosBlacklist.remove')}
               </DropdownMenuItem>
+              {row.status === 'removed' && (
+                <DropdownMenuItem
+                  className="text-red-600 dark:text-red-400"
+                  onSelect={() => {
+                    if (window.confirm(t('superAdmin.pages.biosBlacklist.purgeConfirm', { defaultValue: 'Permanently delete this entry? This cannot be undone.' }))) {
+                      purgeMutation.mutate(row.id)
+                    }
+                  }}
+                >
+                  {t('superAdmin.pages.biosBlacklist.purge', { defaultValue: 'Delete Permanently' })}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         ),
       },
     ],
-    [lang, locale, navigate, removeMutation, t],
+    [lang, locale, navigate, purgeMutation, removeMutation, t],
   )
   const trendData = (statsQuery.data?.data ?? []).map((item) => ({
     ...item,

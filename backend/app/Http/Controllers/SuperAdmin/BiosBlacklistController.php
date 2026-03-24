@@ -142,6 +142,20 @@ class BiosBlacklistController extends BaseSuperAdminController
         return response()->json(['message' => 'Blacklist entry updated successfully.']);
     }
 
+    public function destroy(Request $request, BiosBlacklist $biosBlacklist): JsonResponse
+    {
+        abort_unless($biosBlacklist->status === 'removed', 422, 'Only removed entries can be permanently deleted.');
+
+        $biosId = $biosBlacklist->bios_id;
+        $biosBlacklist->delete();
+
+        $this->logActivity($request, 'bios.blacklist.purge', sprintf('Permanently deleted blacklist entry for BIOS %s.', $biosId), [
+            'bios_id' => $biosId,
+        ]);
+
+        return response()->json(['message' => 'Blacklist entry permanently deleted.']);
+    }
+
     public function import(Request $request): JsonResponse
     {
         $validated = $request->validate([

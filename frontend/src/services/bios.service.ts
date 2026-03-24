@@ -51,6 +51,10 @@ export const biosService = {
     const { data } = await api.post<{ message: string }>(`/super-admin/bios-blacklist/${id}/remove`)
     return data
   },
+  async purgeFromBlacklist(id: number) {
+    const { data } = await api.delete<{ message: string }>(`/super-admin/bios-blacklist/${id}/purge`)
+    return data
+  },
   async exportBlacklist() {
     await downloadFile('/super-admin/bios-blacklist/export', 'bios-blacklist.csv')
   },
