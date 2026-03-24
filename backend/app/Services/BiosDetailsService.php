@@ -427,12 +427,20 @@ class BiosDetailsService
             $licenseIds->where('tenant_id', $tenantId);
         }
 
-        $blacklistIds = $this->biosBlacklistQuery(null, $tenantId)
+        $blacklistQuery = $this->biosBlacklistQuery(null, $tenantId)
             ->whereNotNull('bios_id')
             ->where('bios_id', '!=', '')
+            ->where('status', 'active')
             ->orderByDesc('id')
-            ->limit($limit * 5)
-            ->pluck('bios_id');
+            ->limit($limit * 5);
+
+        // For tenant-scoped views, only include blacklist entries that belong to that tenant
+        // (exclude global entries that have no relation to this tenant's data)
+        if ($tenantId !== null) {
+            $blacklistQuery->where('tenant_id', $tenantId);
+        }
+
+        $blacklistIds = $blacklistQuery->pluck('bios_id');
 
         $accessLogIds = $this->biosAccessLogsQuery(null, $tenantId)
             ->whereNotNull('bios_id')
