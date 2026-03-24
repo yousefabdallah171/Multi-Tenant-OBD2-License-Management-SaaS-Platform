@@ -367,6 +367,14 @@ class TenantResetController extends BaseSuperAdminController
                 'query' => fn () => DB::table('financial_reports')->where('tenant_id', $tenantId),
                 'order' => 'id',
             ],
+            'bios_blacklist' => [
+                'query' => fn () => DB::table('bios_blacklist')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
+            'bios_username_links' => [
+                'query' => fn () => DB::table('bios_username_links')->where('tenant_id', $tenantId),
+                'order' => 'id',
+            ],
         ];
 
         try {
@@ -537,6 +545,8 @@ class TenantResetController extends BaseSuperAdminController
         }
 
         DB::table('licenses')->where('tenant_id', $tenantId)->delete();
+        DB::table('bios_blacklist')->where('tenant_id', $tenantId)->delete();
+        DB::table('bios_username_links')->where('tenant_id', $tenantId)->delete();
 
         if (! empty($customerIds)) {
             DB::table('users')->whereIn('id', $customerIds)->delete();
@@ -563,6 +573,8 @@ class TenantResetController extends BaseSuperAdminController
         $this->restoreRows('reseller_commissions', $payload['reseller_commissions'] ?? []);
         $this->restoreRows('reseller_payments', $payload['reseller_payments'] ?? []);
         $this->restoreRows('financial_reports', $payload['financial_reports'] ?? []);
+        $this->restoreRows('bios_blacklist', $payload['bios_blacklist'] ?? []);
+        $this->restoreRows('bios_username_links', $payload['bios_username_links'] ?? []);
     }
 
     /**
