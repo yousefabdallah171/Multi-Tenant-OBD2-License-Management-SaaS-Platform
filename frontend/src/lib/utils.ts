@@ -376,58 +376,84 @@ export function formatDuration(durationDays: number) {
   return `${days} day${days === 1 ? '' : 's'}`
 }
 
-export function formatLicenseDurationDays(durationDays: number | null | undefined, t: TFunction) {
+export function resolveLicenseDurationDays(
+  durationDays: number | null | undefined,
+  startAt?: string | Date | null,
+  expiryAt?: string | Date | null,
+) {
+  const start = startAt ? new Date(startAt).getTime() : NaN
+  const expiry = expiryAt ? new Date(expiryAt).getTime() : NaN
+
+  if (Number.isFinite(start) && Number.isFinite(expiry) && expiry > start) {
+    return (expiry - start) / 86400000
+  }
+
   if (durationDays == null || !Number.isFinite(durationDays) || durationDays <= 0) {
+    return null
+  }
+
+  return durationDays
+}
+
+export function formatLicenseDurationDays(
+  durationDays: number | null | undefined,
+  t: TFunction,
+  startAt?: string | Date | null,
+  expiryAt?: string | Date | null,
+) {
+  const resolvedDurationDays = resolveLicenseDurationDays(durationDays, startAt, expiryAt)
+
+  if (resolvedDurationDays == null) {
     return '-'
   }
 
   const nearlyEquals = (value: number, target: number, epsilon = 0.01) => Math.abs(value - target) <= epsilon
 
-  if (nearlyEquals(durationDays, 1 / 12)) {
+  if (nearlyEquals(resolvedDurationDays, 1 / 12)) {
     return t('common.durationLabels.twoHours', { defaultValue: '2 Hours' })
   }
 
-  if (nearlyEquals(durationDays, 1)) {
+  if (nearlyEquals(resolvedDurationDays, 1)) {
     return t('common.durationLabels.day', { defaultValue: 'Day' })
   }
 
-  if (nearlyEquals(durationDays, 7)) {
+  if (nearlyEquals(resolvedDurationDays, 7)) {
     return t('common.durationLabels.week', { defaultValue: 'Week' })
   }
 
-  if (nearlyEquals(durationDays, 30)) {
+  if (nearlyEquals(resolvedDurationDays, 30)) {
     return t('common.durationLabels.month', { defaultValue: 'Month' })
   }
 
-  if (nearlyEquals(durationDays, 365)) {
+  if (nearlyEquals(resolvedDurationDays, 365)) {
     return t('common.durationLabels.year', { defaultValue: 'Year' })
   }
 
-  if (durationDays < 1) {
-    const hours = Math.round(durationDays * 24 * 10) / 10
+  if (resolvedDurationDays < 1) {
+    const hours = Math.round(resolvedDurationDays * 24 * 10) / 10
     return t('common.durationLabels.hoursValue', {
       defaultValue: '{{count}} Hours',
       count: hours,
     })
   }
 
-  if (durationDays >= 30 && nearlyEquals(durationDays % 30, 0)) {
-    const months = Math.round(durationDays / 30)
+  if (resolvedDurationDays >= 30 && nearlyEquals(resolvedDurationDays % 30, 0)) {
+    const months = Math.round(resolvedDurationDays / 30)
     return t('common.durationLabels.monthsValue', {
       defaultValue: '{{count}} Months',
       count: months,
     })
   }
 
-  if (durationDays >= 7 && nearlyEquals(durationDays % 7, 0)) {
-    const weeks = Math.round(durationDays / 7)
+  if (resolvedDurationDays >= 7 && nearlyEquals(resolvedDurationDays % 7, 0)) {
+    const weeks = Math.round(resolvedDurationDays / 7)
     return t('common.durationLabels.weeksValue', {
       defaultValue: '{{count}} Weeks',
       count: weeks,
     })
   }
 
-  const days = Math.round(durationDays * 1000) / 1000
+  const days = Math.round(resolvedDurationDays * 1000) / 1000
   return t('common.durationLabels.daysValue', {
     defaultValue: '{{count}} Days',
     count: days,

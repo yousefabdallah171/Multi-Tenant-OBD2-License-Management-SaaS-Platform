@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
-import { canDeleteCustomerRow, canReactivateLicense, canRetryScheduledLicense, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canDeleteCustomerRow, canReactivateLicense, canRetryScheduledLicense, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, resolveLicenseDurationDays, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -240,8 +240,8 @@ export function CustomersPage() {
           key: 'duration',
           label: t('common.duration'),
           sortable: true,
-          sortValue: (row) => row.duration_days ?? 0,
-          render: (row) => formatLicenseDurationDays(row.duration_days, t),
+          sortValue: (row) => resolveLicenseDurationDays(row.duration_days, row.start_at, row.expiry) ?? 0,
+          render: (row) => formatLicenseDurationDays(row.duration_days, t, row.start_at, row.expiry),
         },
         { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => row.start_at ?? '', render: (row) => (row.start_at ? formatDate(row.start_at, locale) : '-') },
