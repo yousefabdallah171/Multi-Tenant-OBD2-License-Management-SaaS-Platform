@@ -198,7 +198,9 @@ class LicenseController extends BaseResellerController
     {
         $resolved = $this->resolveLicense($request, $license);
 
-        if ($resolved->paused_by_role !== null && $resolved->paused_by_role !== 'reseller') {
+        if (\Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role')
+            && $resolved->paused_by_role !== null
+            && $resolved->paused_by_role !== 'reseller') {
             return response()->json([
                 'message' => 'This license was paused by a higher role and cannot be resumed by you.',
             ], 403);

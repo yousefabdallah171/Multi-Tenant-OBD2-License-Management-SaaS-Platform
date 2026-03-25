@@ -15,7 +15,6 @@ use App\Models\License;
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
 use App\Models\User;
-use App\Support\RevenueAnalytics;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -474,20 +473,23 @@ class LicenseService
             $remainingMinutes = max(1, $this->currentMinute()->diffInMinutes($license->expires_at, false));
             $pauseReason = Str::limit(trim((string) ($data['pause_reason'] ?? '')), 500, '...');
 
-            $license->forceFill([
+            $pauseData = [
                 'status' => 'pending',
                 'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Paused locally.'),
                 'paused_at' => $this->currentMinute(),
                 'pause_remaining_minutes' => $remainingMinutes,
                 'pause_reason' => $pauseReason !== '' ? $pauseReason : null,
-                'paused_by_role' => $actor->role?->value ?? (string) $actor->role,
                 'scheduled_at' => null,
                 'scheduled_timezone' => null,
                 'scheduled_last_attempt_at' => null,
                 'scheduled_failed_at' => null,
                 'scheduled_failure_message' => null,
                 'is_scheduled' => false,
-            ])->save();
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role')) {
+                $pauseData['paused_by_role'] = $actor->role?->value ?? (string) $actor->role;
+            }
+            $license->forceFill($pauseData)->save();
 
             $this->logActivity(
                 $reseller,
@@ -595,21 +597,24 @@ class LicenseService
                 ? max(1, (int) ($license->pause_remaining_minutes ?? 0))
                 : null;
 
-            $license->forceFill([
+            $resumeData = [
                 'status' => 'active',
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'expires_at' => $remainingMinutes !== null ? $this->currentMinute()->addMinutes($remainingMinutes) : $license->expires_at,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
                 'pause_reason' => null,
-                'paused_by_role' => null,
                 'scheduled_at' => null,
                 'scheduled_timezone' => null,
                 'scheduled_last_attempt_at' => null,
                 'scheduled_failed_at' => null,
                 'scheduled_failure_message' => null,
                 'is_scheduled' => false,
-            ])->save();
+            ];
+            if (\Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role')) {
+                $resumeData['paused_by_role'] = null;
+            }
+            $license->forceFill($resumeData)->save();
 
             $this->logActivity(
                 $reseller,
