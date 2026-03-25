@@ -37,7 +37,7 @@ class CustomerController extends BaseSuperAdminController
             ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->select($this->licenseListColumns())
-                ->with(['program:id,name', 'reseller:id,name'])])
+                ->with(['program:id,name', 'reseller:id,name,role'])])
             ->latest();
 
         if (! empty($validated['tenant_id'])) {
@@ -267,7 +267,7 @@ class CustomerController extends BaseSuperAdminController
 
         $customer->load(['tenant', 'customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->select($this->licenseListColumns())
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         return response()->json(['data' => $this->serializeCustomer($customer)], 201);
     }
@@ -294,7 +294,7 @@ class CustomerController extends BaseSuperAdminController
 
         $user->load(['tenant', 'customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->select($this->licenseListColumns())
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         return response()->json(['data' => $this->serializeCustomer($user)]);
     }

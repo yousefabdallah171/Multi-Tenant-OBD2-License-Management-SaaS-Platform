@@ -43,7 +43,7 @@ class CustomerController extends BaseManagerParentController
             ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->select($this->licenseListColumns())
-                ->with(['program:id,name', 'reseller:id,name'])])
+                ->with(['program:id,name', 'reseller:id,name,role'])])
             ->latest();
 
         $creatorIds = collect([
@@ -317,7 +317,7 @@ class CustomerController extends BaseManagerParentController
         }
 
         $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         return response()->json(['data' => $this->serializeCustomer($customer)], 201);
     }
@@ -344,7 +344,7 @@ class CustomerController extends BaseManagerParentController
         ])->save();
 
         $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         $this->logActivity($request, 'customer.updated', sprintf('Updated customer %d.', $customer->id), [
             'customer_id' => $customer->id,

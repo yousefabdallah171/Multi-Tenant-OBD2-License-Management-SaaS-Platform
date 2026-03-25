@@ -43,7 +43,7 @@ class CustomerController extends BaseManagerController
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
                 ->select($this->licenseListColumns())
-                ->with(['program:id,name', 'reseller:id,name'])])
+                ->with(['program:id,name', 'reseller:id,name,role'])])
             ->latest();
 
         if (! empty($validated['manager_id'])) {
@@ -318,7 +318,7 @@ class CustomerController extends BaseManagerController
 
         $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->whereIn('reseller_id', $this->teamSellerIds($request))
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         return response()->json(['data' => $this->serializeCustomer($customer)], 201);
     }
@@ -345,7 +345,7 @@ class CustomerController extends BaseManagerController
 
         $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->whereIn('reseller_id', $this->teamSellerIds($request))
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         $this->logActivity($request, 'customer.updated', sprintf('Updated customer %d.', $customer->id), [
             'customer_id' => $customer->id,
