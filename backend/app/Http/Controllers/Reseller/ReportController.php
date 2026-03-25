@@ -79,7 +79,7 @@ class ReportController extends BaseResellerController
 
         return response()->json([
             'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
-                $periodExpression = $this->periodExpression($validated['period']);
+                $periodExpression = $this->periodExpression($validated['period'], 'licenses.activated_at');
 
                 return $this->baseQuery($request, $validated)
                     ->whereNotNull('licenses.activated_at')
@@ -190,12 +190,12 @@ class ReportController extends BaseResellerController
         return RevenueAnalytics::baseQuery($validated, $this->currentTenantId($request), null, $this->currentReseller($request)->id);
     }
 
-    private function periodExpression(string $period): string
+    private function periodExpression(string $period, string $column = 'activity_logs.created_at'): string
     {
         return match ($period) {
-            'daily' => "DATE_FORMAT(activity_logs.created_at, '%Y-%m-%d')",
-            'weekly' => "DATE_FORMAT(DATE_SUB(activity_logs.created_at, INTERVAL WEEKDAY(activity_logs.created_at) DAY), '%Y-%m-%d')",
-            default => "DATE_FORMAT(activity_logs.created_at, '%Y-%m')",
+            'daily' => "DATE_FORMAT({$column}, '%Y-%m-%d')",
+            'weekly' => "DATE_FORMAT(DATE_SUB({$column}, INTERVAL WEEKDAY({$column}) DAY), '%Y-%m-%d')",
+            default => "DATE_FORMAT({$column}, '%Y-%m')",
         };
     }
 
