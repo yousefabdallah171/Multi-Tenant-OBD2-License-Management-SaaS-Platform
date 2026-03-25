@@ -1332,8 +1332,7 @@ class LicenseService
     {
         $candidate = Str::of($customerName)
             ->ascii()
-            ->lower()
-            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->replaceMatches('/[^A-Za-z0-9]+/', '_')
             ->trim('_')
             ->limit(50, '')
             ->value();
@@ -1344,8 +1343,7 @@ class LicenseService
 
         return Str::of($biosId)
             ->ascii()
-            ->lower()
-            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->replaceMatches('/[^A-Za-z0-9]+/', '_')
             ->trim('_')
             ->limit(50, '')
             ->value() ?: 'user_'.Str::lower(Str::random(8));

@@ -113,6 +113,7 @@ export interface SuperAdminCustomerDetails extends SuperAdminCustomerSummary {
     reseller: string | null
     reseller_id?: number | null
     reseller_email?: string | null
+    reseller_role?: string | null
     status: string
     duration_days?: number
     price: number
@@ -134,6 +135,7 @@ export interface SuperAdminCustomerDetails extends SuperAdminCustomerSummary {
     reseller_id: number | null
     reseller_name: string | null
     reseller_email: string | null
+    reseller_role?: string | null
     activations_count: number
     last_activation_at: string | null
   }>
@@ -288,6 +290,7 @@ export interface FinancialReportPayload {
   reseller_balances: Array<{
     id: number | string
     reseller: string | null
+    role?: string | null
     tenant: string | null
     total_revenue: number
     total_activations: number

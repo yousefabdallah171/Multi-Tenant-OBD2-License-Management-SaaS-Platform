@@ -29,7 +29,7 @@ class BiosChangeRequestController extends Controller
             ->with([
                 'license.customer:id,name',
                 'license.program:id,name',
-                'reseller:id,name,email',
+                'reseller:id,name,email,role',
                 'reviewer:id,name',
             ])
             ->latest();
@@ -115,7 +115,7 @@ class BiosChangeRequestController extends Controller
         }
 
         $biosChangeRequest->license->refresh();
-        $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email', 'reviewer:id,name']);
+        $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email,role', 'reviewer:id,name']);
 
         return response()->json([
             'data'    => $this->serialize($biosChangeRequest),
@@ -142,7 +142,7 @@ class BiosChangeRequestController extends Controller
             'reviewed_at'    => now(),
         ])->save();
 
-        $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email', 'reviewer:id,name']);
+        $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email,role', 'reviewer:id,name']);
 
         return response()->json([
             'data'    => $this->serialize($biosChangeRequest),
@@ -165,6 +165,7 @@ class BiosChangeRequestController extends Controller
             'reseller_id'    => $r->reseller_id,
             'reseller_name'  => $r->reseller?->name,
             'reseller_email' => $r->reseller?->email,
+            'reseller_role'  => $r->reseller?->role?->value ?? ($r->reseller ? (string) $r->reseller->role : null),
             'reviewer_id'    => $r->reviewer_id,
             'reviewer_name'  => $r->reviewer?->name,
             'reviewer_notes' => $r->reviewer_notes,

@@ -252,6 +252,7 @@ export interface CustomerSummary {
   external_username?: string | null
   reseller: string | null
   reseller_role?: string | null
+  reseller_id?: number | null
   duration_days?: number | null
   program: string | null
   status: string | null
@@ -288,6 +289,7 @@ export interface CustomerDetails extends CustomerSummary {
     reseller: string | null
     reseller_id?: number | null
     reseller_email?: string | null
+    reseller_role?: string | null
     status: string
     duration_days?: number
     price: number
@@ -309,6 +311,7 @@ export interface CustomerDetails extends CustomerSummary {
     reseller_id: number | null
     reseller_name: string | null
     reseller_email: string | null
+    reseller_role?: string | null
     activations_count: number
     last_activation_at: string | null
   }>
@@ -339,6 +342,7 @@ export interface CustomerLicenseHistoryEntry {
   reseller_id: number | null
   reseller_name: string | null
   reseller_email?: string | null
+  reseller_role?: string | null
   bios_id: string
   external_username?: string | null
   activated_at: string | null
@@ -365,6 +369,7 @@ export interface ManagerParentBiosChangeRequest {
   reseller_id: number | null
   reseller_name: string | null
   reseller_email: string | null
+  reseller_role?: string | null
   reviewer_id?: number | null
   reviewer_name?: string | null
   reviewer_notes?: string | null
@@ -401,6 +406,7 @@ export interface BiosHistoryEntry {
   external_username?: string | null
   reseller: string | null
   reseller_id: number | null
+  reseller_role?: string | null
   action: string
   status: string
   description: string
@@ -469,6 +475,7 @@ export interface FinancialReportData {
   reseller_balances: Array<{
     id: number
     reseller: string
+    role?: string | null
     total_revenue: number
     total_activations: number
     avg_price: number

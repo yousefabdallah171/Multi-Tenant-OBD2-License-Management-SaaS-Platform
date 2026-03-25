@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,6 +17,7 @@ import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import { teamService } from '@/services/team.service'
 import type { BiosHistoryEntry } from '@/types/manager-parent.types'
+import type { UserRole } from '@/types/user.types'
 
 export function BiosHistoryPage() {
   const { t } = useTranslation()
@@ -79,7 +81,19 @@ export function BiosHistoryPage() {
         sortValue: (row) => row.customer ?? '',
         render: (row) => (row.customer_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>{row.customer ?? '-'}</Link> : (row.customer ?? '-')),
       },
-      { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
+      {
+        key: 'reseller',
+        label: t('common.reseller'),
+        sortable: true,
+        sortValue: (row) => row.reseller ?? '',
+        render: (row) => (
+          <RoleIdentity
+            name={row.reseller}
+            role={resolveUserRole(row.reseller_role)}
+            href={row.reseller_id ? routePaths.managerParent.teamMemberDetail(lang, row.reseller_id) : undefined}
+          />
+        ),
+      },
       { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => formatActivityActionLabel(row.action, t) },
       { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} /> },
       { key: 'date', label: t('common.date'), sortable: true, sortValue: (row) => row.occurred_at ?? '', render: (row) => (row.occurred_at ? formatDate(row.occurred_at, locale) : '-') },
@@ -186,4 +200,12 @@ export function BiosHistoryPage() {
       />
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }

@@ -7,6 +7,7 @@ import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { ExportButtons } from '@/components/shared/ExportButtons'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
@@ -16,6 +17,16 @@ import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { reportService } from '@/services/report.service'
 import type { FinancialReportPayload } from '@/types/super-admin.types'
+import type { UserRole } from '@/types/user.types'
+
+type TopResellerRow = {
+  reseller_id?: number | null
+  reseller: string
+  reseller_role?: string | null
+  tenant: string
+  activations: number
+  revenue: number
+}
 
 export function ReportsPage() {
   const { t } = useTranslation()
@@ -64,7 +75,20 @@ export function ReportsPage() {
   }))
 
   const balanceColumns: Array<DataTableColumn<FinancialReportPayload['reseller_balances'][number]>> = [
-    { key: 'reseller', label: t('roles.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
+    {
+      key: 'reseller',
+      label: t('roles.reseller'),
+      sortable: true,
+      sortValue: (row) => row.reseller ?? '',
+      render: (row) => (
+        <RoleIdentity
+          name={row.reseller}
+          role={resolveUserRole(row.role)}
+          href={row.id ? routePaths.superAdmin.userDetail(lang, row.id) : undefined}
+          secondary={row.tenant ?? '-'}
+        />
+      ),
+    },
     { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant ?? '', render: (row) => row.tenant ?? '-' },
     { key: 'revenue', label: t('common.revenue'), sortable: true, sortValue: (row) => row.total_revenue, render: (row) => formatCurrency(row.total_revenue, 'USD', locale) },
     { key: 'activations', label: t('common.activations'), sortable: true, sortValue: (row) => row.total_activations, render: (row) => row.total_activations },
@@ -72,8 +96,20 @@ export function ReportsPage() {
     { key: 'balance', label: t('superAdmin.pages.financialReports.balance'), sortable: true, sortValue: (row) => row.balance, render: (row) => formatCurrency(row.balance, 'USD', locale) },
   ]
 
-  const resellerColumns: Array<DataTableColumn<{ reseller: string; tenant: string; activations: number; revenue: number }>> = [
-    { key: 'reseller', label: t('superAdmin.pages.reports.topResellers'), sortable: true, sortValue: (row) => row.reseller, render: (row) => row.reseller },
+  const resellerColumns: Array<DataTableColumn<TopResellerRow>> = [
+    {
+      key: 'reseller',
+      label: t('superAdmin.pages.reports.topResellers'),
+      sortable: true,
+      sortValue: (row) => row.reseller,
+      render: (row) => (
+        <RoleIdentity
+          name={row.reseller}
+          role={resolveUserRole(row.reseller_role)}
+          href={row.reseller_id ? routePaths.superAdmin.userDetail(lang, row.reseller_id) : undefined}
+        />
+      ),
+    },
     { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant, render: (row) => row.tenant },
     { key: 'activations', label: t('common.activations'), sortable: true, sortValue: (row) => row.activations, render: (row) => row.activations },
     { key: 'revenue', label: t('common.revenue'), sortable: true, sortValue: (row) => row.revenue, render: (row) => formatCurrency(row.revenue, 'USD', locale) },
@@ -166,9 +202,17 @@ export function ReportsPage() {
       </div>
 
       <DataTable columns={balanceColumns} data={financialData?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={financialQuery.isLoading} />
-      <DataTable columns={resellerColumns} data={topResellersQuery.data?.data ?? []} rowKey={(row) => `${row.tenant}-${row.reseller}`} isLoading={topResellersQuery.isLoading} />
+      <DataTable columns={resellerColumns} data={(topResellersQuery.data?.data ?? []) as TopResellerRow[]} rowKey={(row) => `${row.tenant}-${row.reseller}-${row.reseller_id ?? 'unknown'}`} isLoading={topResellersQuery.isLoading} />
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function resolvePresetRange(days: number): DateRangeValue {

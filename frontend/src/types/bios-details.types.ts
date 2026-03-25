@@ -3,7 +3,7 @@ export interface BiosOverview {
   original_bios_id: string
   username: string
   customer: { id: number; name: string; email: string | null; phone: string | null } | null
-  reseller: { id: number; name: string; email: string | null; phone: string | null } | null
+  reseller: { id: number; name: string; email: string | null; phone: string | null; role?: string | null } | null
   status: string | null
   first_activation: string | null
   last_activity: string | null
@@ -22,7 +22,7 @@ export interface BiosOverview {
     external_username: string | null
     program: { id: number; name: string } | null
     customer: { id: number; name: string; email: string | null; phone: string | null } | null
-    reseller: { id: number; name: string; email: string | null; phone: string | null } | null
+    reseller: { id: number; name: string; email: string | null; phone: string | null; role?: string | null } | null
   } | null
   blacklist: BiosBlacklist | null
 }
@@ -43,6 +43,7 @@ export interface BiosReseller {
   id: number | null
   name: string | null
   email: string | null
+  role?: string | null
   activation_count: number
   total_revenue: number
   last_activity_at?: string | null

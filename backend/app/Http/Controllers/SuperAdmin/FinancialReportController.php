@@ -187,7 +187,7 @@ class FinancialReportController extends BaseSuperAdminController
     {
         $sellers = User::query()
             ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
-            ->get(['id', 'name', 'tenant_id']);
+            ->get(['id', 'name', 'tenant_id', 'role']);
 
         return $sellers->map(function (User $seller) use ($validated): array {
             $totals = RevenueAnalytics::baseQuery($validated, $seller->tenant_id, null, $seller->id)
@@ -201,6 +201,7 @@ class FinancialReportController extends BaseSuperAdminController
             return [
                 'id' => $seller->id,
                 'reseller' => $seller->name,
+                'role' => $seller->role?->value ?? (string) $seller->role,
                 'tenant' => (string) ($tenantName ?? 'Unknown'),
                 'total_revenue' => round((float) ($totals?->total_revenue ?? 0), 2),
                 'total_activations' => $totalActivations,

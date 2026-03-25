@@ -171,6 +171,7 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
     reseller: string | null
     reseller_id?: number | null
     reseller_email?: string | null
+    reseller_role?: string | null
     status: string
     duration_days?: number
     price: number
@@ -192,6 +193,7 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
     reseller_id: number | null
     reseller_name: string | null
     reseller_email: string | null
+    reseller_role?: string | null
     activations_count: number
     last_activation_at: string | null
   }>
@@ -384,6 +386,7 @@ export interface LicenseHistoryEntry {
   reseller_id: number | null
   reseller_name: string | null
   reseller_email?: string | null
+  reseller_role?: string | null
   bios_id: string
   external_username?: string | null
   activated_at: string | null
@@ -410,6 +413,7 @@ export interface BiosChangeRequest {
   reseller_id?: number | null
   reseller_name?: string | null
   reseller_email?: string | null
+  reseller_role?: string | null
   reviewer_id?: number | null
   reviewer_name?: string | null
   reviewer_notes?: string | null

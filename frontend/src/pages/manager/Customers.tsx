@@ -11,6 +11,7 @@ import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -29,6 +30,7 @@ import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
 import { programService } from '@/services/program.service'
 import type { DurationUnit, ManagerCustomerSummary, RenewLicenseData } from '@/types/manager-reseller.types'
+import type { UserRole } from '@/types/user.types'
 import { formatUsername } from '@/utils/biosId'
 
 const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
@@ -372,17 +374,11 @@ export function CustomersPage() {
       ) : '-',
     },
     { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => (
-      <div className="flex flex-col gap-0.5">
-        <span>{row.reseller ?? '-'}</span>
-        {row.reseller_role && row.reseller_role !== 'reseller' && (
-          <span className="inline-flex w-fit items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
-            {row.reseller_role === 'manager_parent' ? t('roles.manager_parent')
-              : row.reseller_role === 'manager' ? t('roles.manager')
-              : row.reseller_role === 'super_admin' ? t('roles.super_admin')
-              : row.reseller_role}
-          </span>
-        )}
-      </div>
+      <RoleIdentity
+        name={row.reseller}
+        role={resolveUserRole(row.reseller_role)}
+        href={row.reseller_id ? routePaths.manager.teamMemberDetail(lang, row.reseller_id) : undefined}
+      />
     ) },
     {
       key: 'duration',
@@ -937,6 +933,14 @@ export function CustomersPage() {
 
 function resolveCustomerApiUsername(row: ManagerCustomerSummary) {
   return row.external_username || row.username || '-'
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | DurationUnit) {

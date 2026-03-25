@@ -261,6 +261,7 @@ class ReportController extends BaseManagerController
                 return [
                     'id' => $seller->id,
                     'reseller' => $seller->name,
+                    'role' => $seller->role?->value ?? (string) $seller->role,
                     'total_revenue' => $totalRevenue,
                     'total_activations' => $totalActivations,
                     'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,

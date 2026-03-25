@@ -84,7 +84,7 @@ class CustomerController extends BaseManagerParentController
         abort_unless(($customer->role?->value ?? (string) $customer->role) === UserRole::CUSTOMER->value, 404);
 
         $licenses = License::query()
-            ->with(['program:id,name', 'reseller:id,name,email'])
+            ->with(['program:id,name', 'reseller:id,name,email,role'])
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('customer_id', $customer->id)
             ->orderByDesc('activated_at')
@@ -134,7 +134,7 @@ class CustomerController extends BaseManagerParentController
         $user->load([
             'customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->select($this->licenseDetailColumns())
-                ->with(['program:id,name', 'reseller:id,name,email']),
+                ->with(['program:id,name', 'reseller:id,name,email,role']),
             'createdBy:id,name,email',
         ]);
 
@@ -147,6 +147,7 @@ class CustomerController extends BaseManagerParentController
                     'reseller_id' => $latest?->reseller_id,
                     'reseller_name' => $latest?->reseller?->name,
                     'reseller_email' => $latest?->reseller?->email,
+                    'reseller_role' => $latest?->reseller?->role?->value ?? ($latest?->reseller ? (string) $latest->reseller->role : null),
                     'activations_count' => $licenses->count(),
                     'last_activation_at' => $latest?->activated_at?->toIso8601String(),
                 ];
@@ -212,6 +213,7 @@ class CustomerController extends BaseManagerParentController
                     'reseller' => $license->reseller?->name,
                     'reseller_id' => $license->reseller_id,
                     'reseller_email' => $license->reseller?->email,
+                    'reseller_role' => $license->reseller?->role?->value ?? ($license->reseller ? (string) $license->reseller->role : null),
                     'status' => $license->effectiveStatus(),
                     'duration_days' => (float) $license->duration_days,
                     'price' => (float) $license->price,
@@ -247,7 +249,7 @@ class CustomerController extends BaseManagerParentController
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id'],
         ]);
 
-        $username = Str::of((string) $validated['name'])->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+        $username = Str::of((string) $validated['name'])->ascii()->replaceMatches('/[^A-Za-z0-9_]+/', '_')->trim('_')->value();
         $username = $username !== '' ? $username : 'customer_'.Str::lower(Str::random(6));
         $email = isset($validated['email']) && is_string($validated['email']) && trim($validated['email']) !== ''
             ? strtolower(trim($validated['email']))
@@ -264,7 +266,7 @@ class CustomerController extends BaseManagerParentController
 
         $customer = User::query()
             ->where(function ($query) use ($email, $username): void {
-                $query->where('email', $email)->orWhere('username', $username);
+                $query->where('email', $email)->orWhereRaw('LOWER(username) = ?', [Str::lower($username)]);
             })
             ->first();
 
@@ -695,6 +697,7 @@ class CustomerController extends BaseManagerParentController
             'reseller_id' => $license->reseller_id,
             'reseller_name' => $license->reseller?->name,
             'reseller_email' => $license->reseller?->email,
+            'reseller_role' => $license->reseller?->role?->value ?? ($license->reseller ? (string) $license->reseller->role : null),
             'bios_id' => $license->bios_id,
             'external_username' => $license->external_username,
             'activated_at' => $license->activated_at?->toIso8601String(),

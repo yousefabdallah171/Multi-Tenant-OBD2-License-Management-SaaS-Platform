@@ -281,18 +281,26 @@ function ResellerWithRole({ name, role, t }: { name: string; role?: string | nul
 }
 
 function resolveRoleBadge(role?: string | null, t?: (k: string) => string) {
-  if (!role || role === 'reseller') return null
-  if (role === 'manager_parent') return { label: t?.('roles.manager_parent') ?? 'Manager Parent', className: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300' }
-  if (role === 'manager') return { label: t?.('roles.manager') ?? 'Manager', className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300' }
-  if (role === 'super_admin') return { label: t?.('roles.super_admin') ?? 'Super Admin', className: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' }
-  return null
+  if (!role) return null
+  const map: Record<string, string> = {
+    reseller: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+    manager_parent: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+    manager: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
+    super_admin: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
+  }
+  const cls = map[role]
+  if (!cls) return null
+  return { label: t?.(`roles.${role}`) ?? role, className: cls }
 }
 
 function ResellerCard({ reseller, locale, lang, t }: { reseller: BiosReseller; locale: string; lang: 'ar' | 'en'; t: (key: string) => string }) {
   return (
     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {reseller.id ? <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.teamMemberDetail(lang, reseller.id)}>{reseller.name ?? '-'}</Link> : <p className="font-medium">{reseller.name ?? '-'}</p>}
+        <div className="flex flex-wrap items-center gap-2">
+          {reseller.id ? <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.teamMemberDetail(lang, reseller.id)}>{reseller.name ?? '-'}</Link> : <p className="font-medium">{reseller.name ?? '-'}</p>}
+          {(() => { const b = resolveRoleBadge(reseller.role, t); return b ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${b.className}`}>{b.label}</span> : null })()}
+        </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p>
       </div>
       <div className="mt-3 grid gap-3 md:grid-cols-4">

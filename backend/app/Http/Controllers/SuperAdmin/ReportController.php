@@ -108,15 +108,17 @@ class ReportController extends BaseSuperAdminController
             return $this->baseRevenueQuery($validated)
                 ->leftJoin('users as resellers', 'resellers.id', '=', 'activity_logs.user_id')
                 ->leftJoin('tenants', 'tenants.id', '=', 'activity_logs.tenant_id')
-                ->selectRaw("COALESCE(resellers.name, 'Unknown') as reseller, COALESCE(tenants.name, 'Unknown') as tenant")
+                ->selectRaw("activity_logs.user_id as reseller_id, COALESCE(resellers.name, 'Unknown') as reseller, COALESCE(resellers.role, '') as reseller_role, COALESCE(tenants.name, 'Unknown') as tenant")
                 ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
                 ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
-                ->groupBy('activity_logs.user_id', 'resellers.name', 'tenants.name')
+                ->groupBy('activity_logs.user_id', 'resellers.name', 'resellers.role', 'tenants.name')
                 ->orderByDesc('revenue')
                 ->limit(20)
                 ->get()
                 ->map(fn ($row): array => [
+                    'reseller_id' => $row->reseller_id !== null ? (int) $row->reseller_id : null,
                     'reseller' => (string) $row->reseller,
+                    'reseller_role' => $row->reseller_role !== '' ? (string) $row->reseller_role : null,
                     'tenant' => (string) $row->tenant,
                     'activations' => (int) $row->activations,
                     'revenue' => round((float) $row->revenue, 2),

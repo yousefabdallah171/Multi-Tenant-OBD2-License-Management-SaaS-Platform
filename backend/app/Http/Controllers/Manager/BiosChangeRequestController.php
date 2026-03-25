@@ -202,7 +202,7 @@ class BiosChangeRequestController extends BaseManagerController
 
         // Reload license to get the updated BIOS ID
         $biosChangeRequest->license->refresh();
-        $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email', 'reviewer:id,name']);
+        $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email,role', 'reviewer:id,name']);
 
         \Log::info('BIOS after change:', [
             'license_id' => $biosChangeRequest->license_id,
@@ -251,7 +251,7 @@ class BiosChangeRequestController extends BaseManagerController
             'reviewed_at' => now(),
         ])->save();
 
-        $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email', 'reviewer:id,name']);
+        $biosChangeRequest->load(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email,role', 'reviewer:id,name']);
 
         $this->logActivity($request, 'bios.change_rejected', sprintf('Rejected BIOS change request %d.', $biosChangeRequest->id), [
             'request_id' => $biosChangeRequest->id,
@@ -280,7 +280,7 @@ class BiosChangeRequestController extends BaseManagerController
             ->with([
                 'license.customer:id,name',
                 'license.program:id,name',
-                'reseller:id,name,email',
+                'reseller:id,name,email,role',
                 'reviewer:id,name',
             ])
             ->whereIn('reseller_id', $resellerIds)
@@ -291,7 +291,7 @@ class BiosChangeRequestController extends BaseManagerController
     {
         $visible = $this->query($request)->whereKey($biosChangeRequest->id)->firstOrFail();
 
-        $visible->loadMissing(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email', 'reviewer:id,name']);
+        $visible->loadMissing(['license.customer:id,name', 'license.program:id,name', 'reseller:id,name,email,role', 'reviewer:id,name']);
 
         return $visible;
     }
@@ -311,6 +311,7 @@ class BiosChangeRequestController extends BaseManagerController
             'reseller_id' => $biosChangeRequest->reseller_id,
             'reseller_name' => $biosChangeRequest->reseller?->name,
             'reseller_email' => $biosChangeRequest->reseller?->email,
+            'reseller_role' => $biosChangeRequest->reseller?->role?->value ?? ($biosChangeRequest->reseller ? (string) $biosChangeRequest->reseller->role : null),
             'reviewer_id' => $biosChangeRequest->reviewer_id,
             'reviewer_name' => $biosChangeRequest->reviewer?->name,
             'reviewer_notes' => $biosChangeRequest->reviewer_notes,

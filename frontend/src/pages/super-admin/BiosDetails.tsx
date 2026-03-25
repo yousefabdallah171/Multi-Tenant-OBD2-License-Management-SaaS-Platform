@@ -230,7 +230,21 @@ export function BiosDetailsPage() {
             </Card>
           </TabsContent>
           <TabsContent value="resellers">
-            <Card><CardContent className="space-y-2 p-4">{(resellersQuery.data ?? []).map((reseller) => <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{reseller.name ?? '-'}</p><p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('common.activations')}: {reseller.activation_count}</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('common.revenue')}: ${Number(reseller.total_revenue).toFixed(2)}</p></div>)}</CardContent></Card>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                {(resellersQuery.data ?? []).map((reseller) => (
+                  <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{reseller.name ?? '-'}</p>
+                      {reseller.role && ROLE_BADGE_MAP[reseller.role] ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_BADGE_MAP[reseller.role]}`}>{t(`roles.${reseller.role}`)}</span> : null}
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.activations')}: {reseller.activation_count}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.revenue')}: ${Number(reseller.total_revenue).toFixed(2)}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="ips">
             <Card>
@@ -267,18 +281,19 @@ export function BiosDetailsPage() {
   )
 }
 
+const ROLE_BADGE_MAP: Record<string, string> = {
+  reseller: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+  manager_parent: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+  manager: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
+  super_admin: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
+}
+
 function ResellerWithRole({ name, role, t }: { name: string; role?: string | null; t: (k: string) => string }) {
-  if (!role || role === 'reseller') return <span>{name}</span>
-  const badges: Record<string, { label: string; className: string }> = {
-    manager_parent: { label: t('roles.manager_parent'), className: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300' },
-    manager: { label: t('roles.manager'), className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300' },
-    super_admin: { label: t('roles.super_admin'), className: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' },
-  }
-  const badge = badges[role]
+  const cls = role ? ROLE_BADGE_MAP[role] : null
   return (
     <span className="flex flex-wrap items-center gap-1">
       <span>{name}</span>
-      {badge ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span> : null}
+      {cls ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{t(`roles.${role}`)}</span> : null}
     </span>
   )
 }

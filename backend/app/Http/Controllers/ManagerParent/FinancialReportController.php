@@ -176,6 +176,7 @@ class FinancialReportController extends BaseManagerParentController
             return [
                 'id' => $reseller->id,
                 'reseller' => $reseller->name,
+                'role' => $reseller->role?->value ?? (string) $reseller->role,
                 'total_revenue' => $totalRevenue,
                 'total_activations' => $totalActivations,
                 'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,

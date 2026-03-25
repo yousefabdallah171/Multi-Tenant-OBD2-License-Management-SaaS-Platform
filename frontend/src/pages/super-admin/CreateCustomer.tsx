@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RoleOptionPicker } from '@/components/shared/RoleOptionPicker'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
@@ -21,6 +22,7 @@ import { superAdminCustomerService } from '@/services/super-admin-customer.servi
 import { tenantService } from '@/services/tenant.service'
 import { userService } from '@/services/user.service'
 import { formatUsername } from '@/utils/biosId'
+import type { UserRole } from '@/types/user.types'
 
 type DurationUnit = 'minutes' | 'hours' | 'days'
 type ScheduleMode = 'after' | 'on'
@@ -346,19 +348,14 @@ export function CreateCustomerPage() {
               </select>
             </Field>
             <Field label={t('common.reseller')} error={errors.sellerId}>
-              <select
+              <RoleOptionPicker
                 value={sellerId}
-                onChange={(event) => setSellerId(event.target.value ? Number(event.target.value) : '')}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                onChange={(value) => setSellerId(value)}
+                options={sellerOptions.map((seller) => ({ id: seller.id, name: seller.name, role: resolveUserRole(seller.role) }))}
+                placeholder={sellerPlaceholder}
+                emptyLabel={sellerPlaceholder}
                 disabled={!tenantId || sellersQuery.isLoading}
-              >
-                <option value="">{sellerPlaceholder}</option>
-                {sellerOptions.map((seller) => (
-                  <option key={seller.id} value={seller.id}>
-                    {`${seller.name} (${t(`roles.${seller.role}`)})`}
-                  </option>
-                ))}
-              </select>
+              />
             </Field>
             <Field label={t('activate.customerEmail', { defaultValue: 'Customer Email' })} error={errors.email}>
               <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
@@ -545,6 +542,14 @@ export function CreateCustomerPage() {
       </Card>
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function Field({ label, children, hint, error }: { label: string; children: React.ReactNode; hint?: string; error?: string }) {

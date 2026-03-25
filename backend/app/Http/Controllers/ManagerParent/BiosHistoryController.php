@@ -58,7 +58,7 @@ class BiosHistoryController extends BaseManagerParentController
     {
         $events = collect();
 
-        foreach (License::query()->with(['customer:id,name', 'reseller:id,name'])->get() as $license) {
+        foreach (License::query()->with(['customer:id,name', 'reseller:id,name,role'])->get() as $license) {
             $events->push([
                 'id' => 'license-'.$license->id,
                 'bios_id' => $license->bios_id,
@@ -67,6 +67,7 @@ class BiosHistoryController extends BaseManagerParentController
                 'external_username' => $license->external_username ?: $license->customer?->username,
                 'reseller' => $license->reseller?->name,
                 'reseller_id' => $license->reseller_id,
+                'reseller_role' => $license->reseller?->role?->value ?? ($license->reseller ? (string) $license->reseller->role : null),
                 'action' => 'activation',
                 'status' => $license->status,
                 'description' => sprintf('License activation for %s.', $license->customer?->name ?? 'Unknown customer'),
@@ -90,7 +91,7 @@ class BiosHistoryController extends BaseManagerParentController
             ]);
         }
 
-        foreach (BiosConflict::query()->with('attemptedBy:id,name')->get() as $conflict) {
+        foreach (BiosConflict::query()->with('attemptedBy:id,name,role')->get() as $conflict) {
             $events->push([
                 'id' => 'conflict-'.$conflict->id,
                 'bios_id' => $conflict->bios_id,
@@ -99,6 +100,7 @@ class BiosHistoryController extends BaseManagerParentController
                 'external_username' => null,
                 'reseller' => $conflict->attemptedBy?->name,
                 'reseller_id' => $conflict->attempted_by,
+                'reseller_role' => $conflict->attemptedBy?->role?->value ?? ($conflict->attemptedBy ? (string) $conflict->attemptedBy->role : null),
                 'action' => 'conflict',
                 'status' => $conflict->resolved ? 'active' : 'suspended',
                 'description' => sprintf('Conflict type: %s.', $conflict->conflict_type),
@@ -106,7 +108,7 @@ class BiosHistoryController extends BaseManagerParentController
             ]);
         }
 
-        foreach (BiosBlacklist::query()->with('addedBy:id,name')->get() as $entry) {
+        foreach (BiosBlacklist::query()->with('addedBy:id,name,role')->get() as $entry) {
             $events->push([
                 'id' => 'blacklist-'.$entry->id,
                 'bios_id' => $entry->bios_id,
@@ -115,6 +117,7 @@ class BiosHistoryController extends BaseManagerParentController
                 'external_username' => null,
                 'reseller' => $entry->addedBy?->name,
                 'reseller_id' => $entry->added_by,
+                'reseller_role' => $entry->addedBy?->role?->value ?? ($entry->addedBy ? (string) $entry->addedBy->role : null),
                 'action' => 'blacklist',
                 'status' => $entry->status,
                 'description' => $entry->reason,

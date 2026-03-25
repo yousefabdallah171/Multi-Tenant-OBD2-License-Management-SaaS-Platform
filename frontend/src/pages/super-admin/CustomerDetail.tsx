@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -13,6 +14,7 @@ import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { superAdminCustomerService } from '@/services/super-admin-customer.service'
+import type { UserRole } from '@/types/user.types'
 import { IpLocationCell } from '@/utils/countryFlag'
 
 export function CustomerDetailPage() {
@@ -63,7 +65,16 @@ export function CustomerDetailPage() {
               <Info label={t('common.phone')} value={customer.phone ?? '-'} />
               <Info label={t('common.status')} value={customer.status ? <LicenseStatusBadges status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(customer.is_blacklisted)} /> : '-'} />
               <Info label={t('common.createdAt')} value={customer.created_at ? formatDate(customer.created_at, locale) : '-'} />
-              <Info label={t('common.reseller')} value={customer.resellers_summary?.[0]?.reseller_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.userDetail(lang, customer.resellers_summary[0].reseller_id)}>{customer.resellers_summary[0].reseller_name}</Link> : (customer.resellers_summary?.[0]?.reseller_name ?? '-')} />
+              <Info
+                label={t('common.reseller')}
+                value={
+                  <RoleIdentity
+                    name={customer.resellers_summary?.[0]?.reseller_name}
+                    role={resolveUserRole(customer.resellers_summary?.[0]?.reseller_role)}
+                    href={customer.resellers_summary?.[0]?.reseller_id ? routePaths.superAdmin.userDetail(lang, customer.resellers_summary[0].reseller_id) : undefined}
+                  />
+                }
+              />
             </CardContent>
           </Card>
 
@@ -85,7 +96,16 @@ export function CustomerDetailPage() {
                         <Info label={t('common.program')} value={license.program ?? '-'} />
                         <Info label={t('managerParent.pages.customers.biosId')} value={<Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link>} />
                         <Info label={t('common.username')} value={resolveLicenseUsername(customer, license.external_username) ?? '-'} />
-                        <Info label={t('common.reseller')} value={license.reseller_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.userDetail(lang, license.reseller_id)}>{license.reseller ?? '-'}</Link> : (license.reseller ?? '-')} />
+                        <Info
+                          label={t('common.reseller')}
+                          value={
+                            <RoleIdentity
+                              name={license.reseller}
+                              role={resolveUserRole(license.reseller_role)}
+                              href={license.reseller_id ? routePaths.superAdmin.userDetail(lang, license.reseller_id) : undefined}
+                            />
+                          }
+                        />
                         <Info label={t('common.status')} value={<LicenseStatusBadges status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(license.is_blacklisted)} />} />
                       </div>
                     </div>
@@ -170,6 +190,14 @@ function resolveLicenseUsername(customer: { name?: string | null; client_name?: 
   }
 
   return storedUsername || candidate || null
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function Info({

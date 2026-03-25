@@ -9,6 +9,7 @@ import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -23,6 +24,7 @@ import { superAdminCustomerService } from '@/services/super-admin-customer.servi
 import { tenantService } from '@/services/tenant.service'
 import { userService } from '@/services/user.service'
 import type { SuperAdminCustomerSummary } from '@/types/super-admin.types'
+import type { UserRole } from '@/types/user.types'
 
 const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
@@ -236,17 +238,11 @@ export function CustomersPage() {
         render: (row) => row.bios_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, row.bios_id)}>{row.bios_id}</Link> : '-',
         },
         { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => (
-          <div className="flex flex-col gap-0.5">
-            <span>{row.reseller ?? '-'}</span>
-            {row.reseller_role && row.reseller_role !== 'reseller' && (
-              <span className="inline-flex w-fit items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
-                {row.reseller_role === 'manager_parent' ? t('roles.manager_parent')
-                  : row.reseller_role === 'manager' ? t('roles.manager')
-                  : row.reseller_role === 'super_admin' ? t('roles.super_admin')
-                  : row.reseller_role}
-              </span>
-            )}
-          </div>
+          <RoleIdentity
+            name={row.reseller}
+            role={resolveUserRole(row.reseller_role)}
+            href={row.reseller_id ? routePaths.superAdmin.userDetail(lang, row.reseller_id) : undefined}
+          />
         ) },
         {
           key: 'duration',
@@ -512,6 +508,14 @@ export function CustomersPage() {
       <ConfirmDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)} title={t('common.delete')} description={deleteTarget?.name ?? ''} confirmLabel={t('common.delete')} isDestructive onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} />
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function invalidate(queryClient: ReturnType<typeof useQueryClient>) {

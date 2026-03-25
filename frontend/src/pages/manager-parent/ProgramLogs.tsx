@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
+import { RoleOptionPicker } from '@/components/shared/RoleOptionPicker'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -332,21 +333,16 @@ export function ProgramLogsPage() {
               </option>
             ))}
           </select>
-          <select
+          <RoleOptionPicker
             value={sellerId}
-            onChange={(event) => {
-              setSellerId(event.target.value ? Number(event.target.value) : '')
+            onChange={(value) => {
+              setSellerId(value)
               setPage(1)
             }}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-          >
-            <option value="">{t('programLogs.allUsers')}</option>
-            {userOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name} ({getRoleLabel(option.role, t)})
-              </option>
-            ))}
-          </select>
+            options={userOptions.map((option) => ({ id: option.id, name: option.name, role: normalizeRole(option.role) }))}
+            placeholder={t('programLogs.allUsers')}
+            emptyLabel={t('programLogs.allUsers')}
+          />
           <select
             value={action}
             onChange={(event) => {
@@ -517,11 +513,6 @@ function normalizeRole(role: string | null | undefined): UserRole | null {
   return role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer' || role === 'super_admin'
     ? role
     : null
-}
-
-function getRoleLabel(role: string | null | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
-  const normalized = normalizeRole(role)
-  return normalized ? t(`roles.${normalized}`) : (role ?? '-')
 }
 
 function getActionLabel(action: string, t: (key: string, options?: Record<string, unknown>) => string) {

@@ -121,7 +121,7 @@ class CustomerController extends BaseResellerController
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id'],
         ]);
 
-        $username = Str::of((string) $validated['name'])->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+        $username = Str::of((string) $validated['name'])->ascii()->replaceMatches('/[^A-Za-z0-9_]+/', '_')->trim('_')->value();
         $username = $username !== '' ? $username : 'customer_'.Str::lower(Str::random(6));
         $email = isset($validated['email']) && is_string($validated['email']) && trim($validated['email']) !== ''
             ? strtolower(trim($validated['email']))
@@ -139,7 +139,7 @@ class CustomerController extends BaseResellerController
 
         $customer = User::query()
             ->where(function ($query) use ($email, $username): void {
-                $query->where('email', $email)->orWhere('username', $username);
+                $query->where('email', $email)->orWhereRaw('LOWER(username) = ?', [Str::lower($username)]);
             })
             ->first();
 

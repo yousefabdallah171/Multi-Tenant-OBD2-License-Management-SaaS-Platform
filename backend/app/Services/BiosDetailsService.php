@@ -25,7 +25,7 @@ class BiosDetailsService
     public function getBiosOverview(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
-            ->with(['customer:id,name,username,email,phone', 'reseller:id,name,email,phone', 'program:id,name'])
+            ->with(['customer:id,name,username,email,phone', 'reseller:id,name,email,phone,role', 'program:id,name'])
             ->where('bios_id', $biosId);
 
         $this->applyTenantScope($query, $tenantId);
@@ -84,6 +84,7 @@ class BiosDetailsService
                     'name' => $reseller->name,
                     'email' => $this->visibleEmail($reseller->email),
                     'phone' => $reseller->phone,
+                    'role' => $reseller->role?->value ?? (string) $reseller->role,
                 ] : null,
                 'status' => ($blacklist['is_blacklisted'] ?? false) ? 'blacklisted' : ($activityMetadata['status'] ?? $lastAccessLog?->metadata['status'] ?? $lastAccessLog?->action ?? $latestActivity?->action),
                 'first_activation' => null,
@@ -156,6 +157,7 @@ class BiosDetailsService
                 'name' => $overviewLicense->reseller->name,
                 'email' => $this->visibleEmail($overviewLicense->reseller->email),
                 'phone' => $overviewLicense->reseller->phone,
+                'role' => $overviewLicense->reseller->role?->value ?? (string) $overviewLicense->reseller->role,
             ] : null,
             'status' => $overviewLicense?->effectiveStatus() ?? $last?->effectiveStatus(),
             'first_activation' => $first?->activated_at?->toIso8601String(),
@@ -252,7 +254,7 @@ class BiosDetailsService
     public function getResellerBreakdown(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
-            ->with(['reseller:id,name,email', 'program:id,name'])
+            ->with(['reseller:id,name,email,role', 'program:id,name'])
             ->where('bios_id', $biosId);
 
         $this->applyTenantScope($query, $tenantId);
@@ -266,6 +268,7 @@ class BiosDetailsService
                     'id' => $first?->reseller_id,
                     'name' => $first?->reseller?->name,
                     'email' => $this->visibleEmail($first?->reseller?->email),
+                    'role' => $first?->reseller?->role?->value ?? (string) $first?->reseller?->role ?? null,
                     'activation_count' => $licenses->count(),
                     'total_revenue' => (float) $licenses->sum('price'),
                     'last_activity_at' => $licenses->sortByDesc('activated_at')->first()?->activated_at?->toIso8601String(),
