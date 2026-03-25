@@ -184,13 +184,13 @@ class CustomerController extends BaseSuperAdminController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'name' => ['required', 'string', 'min:2', 'max:10'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'tenant_id' => ['required', 'integer', 'exists:tenants,id'],
             'seller_id' => ['nullable', 'integer', 'exists:users,id', 'required_with:bios_id,program_id'],
-            'bios_id' => ['nullable', 'string', 'min:3', 'max:255', 'required_with:program_id,seller_id'],
+            'bios_id' => ['nullable', 'string', 'min:3', 'max:10', 'required_with:program_id,seller_id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id,seller_id'],
         ]);
 
@@ -695,6 +695,19 @@ class CustomerController extends BaseSuperAdminController
             ]);
         }
 
+        // Duplicate guard: same seller already has a non-expired/cancelled license for this BIOS.
+        $existingByThisSeller = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->where('reseller_id', $seller->id)
+            ->whereNotIn('status', ['expired', 'cancelled'])
+            ->exists();
+
+        if ($existingByThisSeller) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'You already have this customer saved with this BIOS ID. Please manage them from your customer list.',
+            ]);
+        }
+
         // Enforce permanent BIOS↔username link (both directions)
         $customerName = strtolower(trim((string) request()->input('name', '')));
         $derivedUsername = (string) \Illuminate\Support\Str::of($customerName)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
@@ -772,16 +785,30 @@ class CustomerController extends BaseSuperAdminController
         $biosIdLower = strtolower($normalizedBiosId);
 
         DB::transaction(function () use ($customer, $tenantId, $normalizedBiosId, $biosIdLower, $program, $seller): void {
-            // Race condition guard: re-check with lock inside transaction
+            // Race condition guard: re-check with lock inside transaction.
+            // Pending licenses do NOT block — first to activate wins (Rule 2.3).
             $raceConflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
-                ->whereIn('status', ['active', 'suspended', 'pending'])
+                ->whereIn('status', ['active', 'suspended'])
                 ->lockForUpdate()
                 ->first();
 
             if ($raceConflict) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'bios_id' => 'This BIOS ID was just claimed by another user. Please try a different BIOS ID.',
+                    'bios_id' => 'This BIOS ID is already active or suspended. Please try a different BIOS ID.',
+                ]);
+            }
+
+            $sellerDuplicate = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->where('reseller_id', $seller->id)
+                ->whereNotIn('status', ['expired', 'cancelled'])
+                ->lockForUpdate()
+                ->exists();
+
+            if ($sellerDuplicate) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'bios_id' => 'You already have this customer saved with this BIOS ID.',
                 ]);
             }
 

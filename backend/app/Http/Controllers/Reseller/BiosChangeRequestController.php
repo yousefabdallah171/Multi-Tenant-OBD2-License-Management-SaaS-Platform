@@ -44,7 +44,7 @@ class BiosChangeRequestController extends BaseResellerController
     {
         $validated = $request->validate([
             'license_id' => ['required', 'integer'],
-            'new_bios_id' => ['required', 'string', 'min:5', 'max:255'],
+            'new_bios_id' => ['required', 'string', 'min:3', 'max:10'],
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 

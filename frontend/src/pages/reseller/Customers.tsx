@@ -1064,6 +1064,7 @@ export function CustomersPage() {
                     onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))}
                     onBlur={() => setActivationForm((current) => ({ ...current, customer_name: formatUsername(current.customer_name) }))}
                     placeholder={text.activationDialog.usernameHint}
+                    maxLength={10}
                   />
                 </FormField>
                 <FormField label={text.activationDialog.clientName} htmlFor="client-name">
@@ -1086,7 +1087,7 @@ export function CustomersPage() {
             {activationStep === 1 ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField label={text.activationDialog.biosId} htmlFor="bios-id">
-                  <Input id="bios-id" value={activationForm.bios_id} onChange={(event) => setActivationForm((current) => ({ ...current, bios_id: event.target.value }))} />
+                  <Input id="bios-id" value={activationForm.bios_id} maxLength={10} onChange={(event) => setActivationForm((current) => ({ ...current, bios_id: event.target.value }))} />
                 </FormField>
                 <FormField label={text.activationDialog.program} htmlFor="program-id">
                   <select

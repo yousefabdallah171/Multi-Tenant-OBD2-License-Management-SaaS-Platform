@@ -741,7 +741,7 @@ export function CustomersPage() {
           {activationStep === 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
               <FormField label={t('activate.username', { defaultValue: 'Username (API)' })} htmlFor="mp-customer-username">
-                <Input id="mp-customer-username" placeholder={t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })} value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} onBlur={() => setActivationForm((current) => ({ ...current, customer_name: formatUsername(current.customer_name) }))} />
+                <Input id="mp-customer-username" placeholder={t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })} maxLength={10} value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} onBlur={() => setActivationForm((current) => ({ ...current, customer_name: formatUsername(current.customer_name) }))} />
               </FormField>
               <FormField label={t('activate.clientName', { defaultValue: 'Client Display Name' })} htmlFor="mp-client-name">
                 <Input id="mp-client-name" placeholder={t('activate.clientName', { defaultValue: 'Client Display Name' })} value={activationForm.client_name} onChange={(event) => setActivationForm((current) => ({ ...current, client_name: event.target.value }))} />
@@ -757,7 +757,7 @@ export function CustomersPage() {
           ) : null}
           {activationStep === 1 ? (
             <div className="grid gap-3 md:grid-cols-2">
-              <Input placeholder={t('reseller.pages.customers.activationDialog.biosId')} value={activationForm.bios_id} onChange={(event) => setActivationForm((current) => ({ ...current, bios_id: event.target.value }))} />
+              <Input placeholder={t('reseller.pages.customers.activationDialog.biosId')} maxLength={10} value={activationForm.bios_id} onChange={(event) => setActivationForm((current) => ({ ...current, bios_id: event.target.value }))} />
               <select value={activationForm.program_id} onChange={(event) => setActivationForm((current) => ({ ...current, program_id: event.target.value ? Number(event.target.value) : '' }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
                 <option value="">{t('reseller.pages.customers.activationDialog.selectProgram')}</option>
                 {(programsQuery.data?.data ?? []).map((program) => (
