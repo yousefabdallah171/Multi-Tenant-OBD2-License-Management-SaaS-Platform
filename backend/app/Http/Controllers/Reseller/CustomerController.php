@@ -383,6 +383,7 @@ class CustomerController extends BaseResellerController
             'external_username' => $license?->external_username,
             'program' => $license?->program?->name,
             'program_id' => $license?->program_id,
+            'duration_days' => $license ? (float) $license->duration_days : null,
             'status' => $license?->effectiveStatus() ?? 'pending',
             'price' => $license ? (float) $license->price : 0,
             'activated_at' => $license?->activated_at?->toIso8601String(),

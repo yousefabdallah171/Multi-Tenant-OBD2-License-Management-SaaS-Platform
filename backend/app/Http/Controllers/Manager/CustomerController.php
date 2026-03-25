@@ -660,6 +660,7 @@ class CustomerController extends BaseManagerController
             'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
             'reseller_id' => $license?->reseller?->id,
+            'duration_days' => $license ? (float) $license->duration_days : null,
             'program' => $license?->program?->name,
             'status' => $license?->effectiveStatus() ?? 'pending',
             'activated_at' => $license?->activated_at?->toIso8601String(),

@@ -657,6 +657,7 @@ class CustomerController extends BaseManagerParentController
             'bios_id' => $license?->bios_id,
             'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
+            'duration_days' => $license ? (float) $license->duration_days : null,
             'program' => $license?->program?->name,
             'status' => $license?->effectiveStatus() ?? 'pending',
             'activated_at' => $license?->activated_at?->toIso8601String(),
