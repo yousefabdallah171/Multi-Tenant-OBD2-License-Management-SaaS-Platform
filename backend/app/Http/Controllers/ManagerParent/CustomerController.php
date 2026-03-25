@@ -586,6 +586,7 @@ class CustomerController extends BaseManagerParentController
             'program_id',
             'bios_id',
             'status',
+            'duration_days',
             'activated_at',
             'expires_at',
             'price',
