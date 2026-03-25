@@ -274,7 +274,7 @@ export function CustomersPage() {
       {
         key: 'actions',
         label: t('common.actions'),
-      render: (row) => {
+        render: (row) => {
         const displayStatus = row.status ? getLicenseDisplayStatus(row) : null
         const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
         const isPausedPending = isPausedPendingLicense(row)
