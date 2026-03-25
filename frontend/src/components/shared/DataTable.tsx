@@ -62,14 +62,27 @@ export function DataTable<T>({
   const { t } = useTranslation()
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const preferenceColumns = useMemo(
+    () =>
+      columns.map((column) => ({
+        key: column.key,
+        label: column.screenLabel ?? (typeof column.label === 'string' ? column.label : column.key),
+        alwaysVisible: column.alwaysVisible,
+        defaultHidden: column.defaultHidden,
+      })),
+    [columns],
+  )
+  const screenOptionColumns = useMemo(
+    () =>
+      columns.map((column) => ({
+        key: column.key,
+        label: column.screenLabel ?? (typeof column.label === 'string' ? column.label : column.key),
+      })),
+    [columns],
+  )
   const { visibleColumnSet, lockedColumns, toggleColumn, isLoading: preferencesLoading } = useTablePreferences({
     tableKey,
-    columns: columns.map((column) => ({
-      key: column.key,
-      label: column.screenLabel ?? (typeof column.label === 'string' ? column.label : column.key),
-      alwaysVisible: column.alwaysVisible,
-      defaultHidden: column.defaultHidden,
-    })),
+    columns: preferenceColumns,
     perPage: pagination?.perPage,
     onPerPageChange: onPageSizeChange,
     pageSizeOptions,
@@ -148,9 +161,9 @@ export function DataTable<T>({
       {tableKey ? (
         <div className="flex justify-end border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <TableScreenOptions
-            columns={columns.map((column) => ({
+            columns={screenOptionColumns.map((column) => ({
               key: column.key,
-              label: column.screenLabel ?? (typeof column.label === 'string' ? column.label : column.key),
+              label: column.label,
               locked: lockedColumns.includes(column.key),
               visible: visibleColumnSet.has(column.key),
             }))}

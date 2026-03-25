@@ -51,17 +51,26 @@ export function useTablePreferences({
     () => columns.filter((column, index) => column.alwaysVisible || index === 0 || column.key === 'actions').map((column) => column.key),
     [columns],
   )
+  const schemaKey = useMemo(() => `${tableKey ?? 'default'}|${availableColumns.join(',')}|${lockedColumns.join(',')}`, [availableColumns, lockedColumns, tableKey])
   const defaultVisibleColumns = useMemo(() => buildDefaultVisibleColumns(columns), [columns])
   const [visibleColumns, setVisibleColumns] = useState<string[]>(defaultVisibleColumns)
   const [hasHydrated, setHasHydrated] = useState(false)
   const hasHydratedPerPageRef = useRef(false)
   const lastSavedPayloadRef = useRef<string | null>(null)
 
+  useEffect(() => {
+    setVisibleColumns(defaultVisibleColumns)
+    setHasHydrated(false)
+    hasHydratedPerPageRef.current = false
+    lastSavedPayloadRef.current = null
+  }, [defaultVisibleColumns, schemaKey])
+
   const preferenceQuery = useQuery({
     queryKey: ['table-preferences', tableKey, availableColumns.join(','), lockedColumns.join(',')],
     queryFn: () => tablePreferenceService.get(tableKey!, availableColumns, lockedColumns),
     enabled: Boolean(tableKey),
     staleTime: Number.POSITIVE_INFINITY,
+    retry: 1,
   })
 
   const saveMutation = useMutation({
@@ -84,6 +93,10 @@ export function useTablePreferences({
       return
     }
 
+    if (hasHydrated && !preferenceQuery.data) {
+      return
+    }
+
     const nextVisibleColumns = sanitizeVisibleColumns(columns, preferenceQuery.data?.visible_columns?.length ? preferenceQuery.data.visible_columns : defaultVisibleColumns)
     setVisibleColumns(nextVisibleColumns)
     setHasHydrated(true)
@@ -95,7 +108,7 @@ export function useTablePreferences({
     }
 
     hasHydratedPerPageRef.current = true
-  }, [columns, defaultVisibleColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey])
+  }, [availableColumns, columns, defaultVisibleColumns, hasHydrated, lockedColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey])
 
   useEffect(() => {
     if (!tableKey || !hasHydrated) {
