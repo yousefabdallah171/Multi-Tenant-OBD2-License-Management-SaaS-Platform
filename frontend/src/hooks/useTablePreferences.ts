@@ -57,6 +57,7 @@ export function useTablePreferences({
   const [hasHydrated, setHasHydrated] = useState(false)
   const hasHydratedPerPageRef = useRef(false)
   const lastSavedPayloadRef = useRef<string | null>(null)
+  const isInitialHydrationRef = useRef(true)
 
   useEffect(() => {
     console.log('[useTablePreferences] Schema changed, resetting state', {
@@ -164,6 +165,7 @@ export function useTablePreferences({
       previousVisibleColumns: visibleColumns,
       timestamp: new Date().toISOString()
     })
+    isInitialHydrationRef.current = true
     setVisibleColumns(nextVisibleColumns)
     setHasHydrated(true)
 
@@ -180,7 +182,7 @@ export function useTablePreferences({
     }
 
     hasHydratedPerPageRef.current = true
-  }, [availableColumns, columns, defaultVisibleColumns, hasHydrated, lockedColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey, visibleColumns])
+  }, [availableColumns, columns, defaultVisibleColumns, hasHydrated, lockedColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey])
 
   useEffect(() => {
     console.log('[useTablePreferences] Save effect running', {
@@ -193,12 +195,26 @@ export function useTablePreferences({
     })
 
     if (!tableKey || !hasHydrated) {
-      console.log('[useTablePreferences] Save effect skipped: no tableKey or not hydrated')
+      console.log('[useTablePreferences] Save effect skipped: no tableKey or not hydrated', { tableKey, hasHydrated })
       return
     }
 
     if (onPerPageChange && !hasHydratedPerPageRef.current) {
       console.log('[useTablePreferences] Save effect skipped: per-page not hydrated yet')
+      return
+    }
+
+    // Skip saving during initial hydration to prevent loops
+    if (isInitialHydrationRef.current) {
+      console.log('[useTablePreferences] Save effect skipped: during initial hydration')
+      isInitialHydrationRef.current = false
+      const sanitizedVisibleColumns = sanitizeVisibleColumns(columns, visibleColumns)
+      const initialPayload = JSON.stringify({
+        visible_columns: sanitizedVisibleColumns,
+        per_page: typeof perPage === 'number' ? perPage : null,
+      })
+      lastSavedPayloadRef.current = initialPayload
+      console.log('[useTablePreferences] Initial payload cached', { initialPayload })
       return
     }
 
@@ -241,6 +257,7 @@ export function useTablePreferences({
       columnKey,
       tableKey,
       isLocked: lockedColumns.includes(columnKey),
+      isInitialHydration: isInitialHydrationRef.current,
       timestamp: new Date().toISOString()
     })
 
@@ -248,6 +265,9 @@ export function useTablePreferences({
       console.log('[useTablePreferences] Column is locked, skipping toggle:', columnKey)
       return
     }
+
+    // User is now making changes, exit initial hydration mode
+    isInitialHydrationRef.current = false
 
     setVisibleColumns((current) => {
       const isCurrentlyVisible = current.includes(columnKey)
