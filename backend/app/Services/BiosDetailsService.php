@@ -331,7 +331,7 @@ class BiosDetailsService
 
             return [
                 'ip_address' => $row['ip_address'],
-                'timestamp' => $row['timestamp'],
+                'timestamp' => $this->parseRawTimestamp($row['timestamp'] ?? null),
                 'country' => $geo['country'],
                 'country_code' => $geo['country_code'],
                 'city' => $geo['city'],
@@ -341,6 +341,18 @@ class BiosDetailsService
                 'program_name' => $row['program_name'] ?? null,
             ];
         }, $filtered);
+    }
+
+    private function parseRawTimestamp(?string $raw): ?string
+    {
+        if ($raw === null || trim($raw) === '') {
+            return null;
+        }
+        try {
+            return Carbon::parse($raw)->toIso8601String();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
