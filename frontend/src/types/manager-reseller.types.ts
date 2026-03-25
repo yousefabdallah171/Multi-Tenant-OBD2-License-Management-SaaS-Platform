@@ -134,6 +134,7 @@ export interface ManagerCustomerSummary {
   external_username?: string | null
   reseller: string | null
   reseller_id: number | null
+  duration_days?: number | null
   program: string | null
   status: string | null
   activated_at?: string | null
@@ -226,6 +227,7 @@ export interface ResellerCustomerSummary {
   external_username: string | null
   program: string | null
   program_id: number | null
+  duration_days?: number | null
   status: 'active' | 'expired' | 'suspended' | 'cancelled' | 'pending' | null
   price: number
   activated_at: string | null

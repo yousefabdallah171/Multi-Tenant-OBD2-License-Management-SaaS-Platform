@@ -80,6 +80,7 @@ export interface SuperAdminCustomerSummary {
   external_username?: string | null
   reseller: string | null
   reseller_id?: number | null
+  duration_days?: number | null
   program: string | null
   status: string | null
   activated_at?: string | null

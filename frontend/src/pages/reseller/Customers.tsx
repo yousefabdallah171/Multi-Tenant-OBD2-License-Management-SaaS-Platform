@@ -29,7 +29,7 @@ import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
-import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -583,14 +583,21 @@ export function CustomersPage() {
           </Link>
         ) : '-',
       },
-      {
-        key: 'phone',
-        label: text.table.phone,
-        sortable: true,
-        sortValue: (row) => row.phone ?? '',
-        render: (row) => row.phone ?? '-',
-      },
-      { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+        {
+          key: 'phone',
+          label: text.table.phone,
+          sortable: true,
+          sortValue: (row) => row.phone ?? '',
+          render: (row) => row.phone ?? '-',
+        },
+        {
+          key: 'duration',
+          label: t('common.duration'),
+          sortable: true,
+          sortValue: (row) => row.duration_days ?? 0,
+          render: (row) => formatLicenseDurationDays(row.duration_days, t),
+        },
+        { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale, displayTimezone) : '-') },
       {
         key: 'status',

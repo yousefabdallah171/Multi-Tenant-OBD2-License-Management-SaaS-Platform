@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
-import { canDeleteCustomerRow, canReactivateLicense, canRetryScheduledLicense, formatDate, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canDeleteCustomerRow, canReactivateLicense, canRetryScheduledLicense, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -234,9 +234,16 @@ export function CustomersPage() {
         sortable: true,
         sortValue: (row) => row.bios_id ?? '',
         render: (row) => row.bios_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, row.bios_id)}>{row.bios_id}</Link> : '-',
-      },
-      { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
-      { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+        },
+        { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
+        {
+          key: 'duration',
+          label: t('common.duration'),
+          sortable: true,
+          sortValue: (row) => row.duration_days ?? 0,
+          render: (row) => formatLicenseDurationDays(row.duration_days, t),
+        },
+        { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
       { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => row.start_at ?? '', render: (row) => (row.start_at ? formatDate(row.start_at, locale) : '-') },
       {
         key: 'status',

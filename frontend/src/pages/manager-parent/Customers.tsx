@@ -23,7 +23,7 @@ import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
-import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { customerService } from '@/services/customer.service'
 import { licenseService } from '@/services/license.service'
@@ -380,9 +380,16 @@ export function CustomersPage() {
           {row.bios_id}
         </Link>
       ) : '-',
-    },
-    { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
-    { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+      },
+      { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
+      {
+        key: 'duration',
+        label: t('common.duration'),
+        sortable: true,
+        sortValue: (row) => row.duration_days ?? 0,
+        render: (row) => formatLicenseDurationDays(row.duration_days, t),
+      },
+      { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
     { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale, displayTimezone) : '-') },
     {
       key: 'status',

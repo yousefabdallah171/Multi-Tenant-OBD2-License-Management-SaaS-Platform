@@ -251,6 +251,7 @@ export interface CustomerSummary {
   bios_id: string | null
   external_username?: string | null
   reseller: string | null
+  duration_days?: number | null
   program: string | null
   status: string | null
   activated_at?: string | null

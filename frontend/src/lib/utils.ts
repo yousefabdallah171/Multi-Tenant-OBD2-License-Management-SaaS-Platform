@@ -376,6 +376,64 @@ export function formatDuration(durationDays: number) {
   return `${days} day${days === 1 ? '' : 's'}`
 }
 
+export function formatLicenseDurationDays(durationDays: number | null | undefined, t: TFunction) {
+  if (durationDays == null || !Number.isFinite(durationDays) || durationDays <= 0) {
+    return '-'
+  }
+
+  const nearlyEquals = (value: number, target: number, epsilon = 0.01) => Math.abs(value - target) <= epsilon
+
+  if (nearlyEquals(durationDays, 1 / 12)) {
+    return t('common.durationLabels.twoHours', { defaultValue: '2 Hours' })
+  }
+
+  if (nearlyEquals(durationDays, 1)) {
+    return t('common.durationLabels.day', { defaultValue: 'Day' })
+  }
+
+  if (nearlyEquals(durationDays, 7)) {
+    return t('common.durationLabels.week', { defaultValue: 'Week' })
+  }
+
+  if (nearlyEquals(durationDays, 30)) {
+    return t('common.durationLabels.month', { defaultValue: 'Month' })
+  }
+
+  if (nearlyEquals(durationDays, 365)) {
+    return t('common.durationLabels.year', { defaultValue: 'Year' })
+  }
+
+  if (durationDays < 1) {
+    const hours = Math.round(durationDays * 24 * 10) / 10
+    return t('common.durationLabels.hoursValue', {
+      defaultValue: '{{count}} Hours',
+      count: hours,
+    })
+  }
+
+  if (durationDays >= 30 && nearlyEquals(durationDays % 30, 0)) {
+    const months = Math.round(durationDays / 30)
+    return t('common.durationLabels.monthsValue', {
+      defaultValue: '{{count}} Months',
+      count: months,
+    })
+  }
+
+  if (durationDays >= 7 && nearlyEquals(durationDays % 7, 0)) {
+    const weeks = Math.round(durationDays / 7)
+    return t('common.durationLabels.weeksValue', {
+      defaultValue: '{{count}} Weeks',
+      count: weeks,
+    })
+  }
+
+  const days = Math.round(durationDays * 1000) / 1000
+  return t('common.durationLabels.daysValue', {
+    defaultValue: '{{count}} Days',
+    count: days,
+  })
+}
+
 export function normalizePhoneInput(value: string) {
   const compact = value.replace(/\s+/g, '')
   if (compact === '') {
