@@ -53,15 +53,30 @@ export function useTablePreferences({
   )
   const schemaKey = useMemo(() => `${tableKey ?? 'default'}|${availableColumns.join(',')}|${lockedColumns.join(',')}`, [availableColumns, lockedColumns, tableKey])
   const defaultVisibleColumns = useMemo(() => buildDefaultVisibleColumns(columns), [columns])
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(defaultVisibleColumns)
+
+  // Load from localStorage for instant display
+  const getCachedColumns = () => {
+    if (!tableKey) return defaultVisibleColumns
+    try {
+      const cached = localStorage.getItem(`table-prefs-${tableKey}`)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        return sanitizeVisibleColumns(columns, parsed.visible_columns || defaultVisibleColumns)
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+    return defaultVisibleColumns
+  }
+
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(getCachedColumns())
   const [hasHydrated, setHasHydrated] = useState(false)
   const hasHydratedPerPageRef = useRef(false)
   const lastSavedPayloadRef = useRef<string | null>(null)
   const isInitialHydrationRef = useRef(true)
 
   useEffect(() => {
-    console.log('[TableScreenOptions] Schema changed - resetting', { tableKey, schemaKey })
-    setVisibleColumns(defaultVisibleColumns)
+    setVisibleColumns(getCachedColumns())
     setHasHydrated(false)
     hasHydratedPerPageRef.current = false
     lastSavedPayloadRef.current = null
@@ -145,8 +160,16 @@ export function useTablePreferences({
       return
     }
 
-    console.log('[TableScreenOptions] Saving column preferences:', sanitizedVisibleColumns)
     lastSavedPayloadRef.current = payload
+    // Cache to localStorage for instant load next time
+    try {
+      localStorage.setItem(`table-prefs-${tableKey}`, JSON.stringify({
+        visible_columns: sanitizedVisibleColumns,
+        per_page: typeof perPage === 'number' ? perPage : null,
+      }))
+    } catch {
+      // Ignore localStorage errors
+    }
     saveMutation.mutate({
       visible_columns: sanitizedVisibleColumns,
       per_page: typeof perPage === 'number' ? perPage : null,
@@ -156,18 +179,14 @@ export function useTablePreferences({
   const visibleColumnSet = useMemo(() => new Set(sanitizeVisibleColumns(columns, visibleColumns)), [columns, visibleColumns])
 
   const toggleColumn = (columnKey: string) => {
-    console.log('[TableScreenOptions] Clicked column:', columnKey)
-
     if (lockedColumns.includes(columnKey)) {
       return
     }
 
     isInitialHydrationRef.current = false
-
     setVisibleColumns((current) => {
       const isCurrentlyVisible = current.includes(columnKey)
-      const newState = isCurrentlyVisible ? current.filter((item) => item !== columnKey) : [...current, columnKey]
-      return newState
+      return isCurrentlyVisible ? current.filter((item) => item !== columnKey) : [...current, columnKey]
     })
   }
 

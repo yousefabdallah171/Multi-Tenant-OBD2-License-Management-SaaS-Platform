@@ -46,13 +46,8 @@ export function TableScreenOptions({
   }
 
   const handleToggle = () => {
-    console.log('[TableScreenOptions] Toggle clicked', { isOpen, currentTime: new Date().toISOString() })
     if (!isOpen) recalcPosition()
-    setIsOpen((prev) => {
-      const newState = !prev
-      console.log('[TableScreenOptions] Panel state changed', { wasOpen: prev, isNowOpen: newState })
-      return newState
-    })
+    setIsOpen((prev) => !prev)
   }
 
   useEffect(() => {
@@ -60,22 +55,8 @@ export function TableScreenOptions({
 
     const handlePointerDown = (e: PointerEvent) => {
       const target = e.target as Node
-      const isTrigger = triggerRef.current?.contains(target) ?? false
-      const isPanel = panelRef.current?.contains(target) ?? false
-
-      console.log('[TableScreenOptions] Pointerdown event', {
-        isTrigger,
-        isPanel,
-        targetTag: (target as HTMLElement)?.tagName,
-        targetClass: (target as HTMLElement)?.className,
-        timestamp: new Date().toISOString()
-      })
-
-      if (!isTrigger && !isPanel) {
-        console.log('[TableScreenOptions] Closing panel - click outside')
+      if (!triggerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         setIsOpen(false)
-      } else {
-        console.log('[TableScreenOptions] Keeping panel open - click inside')
       }
     }
 
@@ -126,18 +107,8 @@ export function TableScreenOptions({
                   )}
                   onClick={(e) => {
                     e.stopPropagation()
-                    console.log('[TableScreenOptions] Column toggle clicked', {
-                      columnKey: column.key,
-                      columnLabel: column.label,
-                      isLocked: column.locked,
-                      isVisible: column.visible,
-                      timestamp: new Date().toISOString()
-                    })
                     if (!column.locked) {
-                      console.log('[TableScreenOptions] Calling onToggleColumn for:', column.key)
                       onToggleColumn(column.key)
-                    } else {
-                      console.log('[TableScreenOptions] Column is locked, skipping toggle:', column.key)
                     }
                   }}
                 >
@@ -183,13 +154,6 @@ export function TableScreenOptions({
                       className="h-9 rounded-lg px-2"
                       onClick={(e) => {
                         e.stopPropagation()
-                        console.log('[TableScreenOptions] Pagination button clicked', {
-                          option,
-                          currentPageSize: pageSize,
-                          isActive: pageSize === option,
-                          timestamp: new Date().toISOString()
-                        })
-                        console.log('[TableScreenOptions] Calling onPageSizeChange with:', option)
                         onPageSizeChange(option)
                       }}
                     >
