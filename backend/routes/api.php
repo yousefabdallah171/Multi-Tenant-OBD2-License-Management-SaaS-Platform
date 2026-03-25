@@ -301,7 +301,6 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/licenses', [ResellerLicenseController::class, 'index']);
         Route::get('/licenses/{license}', [ResellerLicenseController::class, 'show']);
         Route::post('/licenses/bulk-renew', [ResellerLicenseController::class, 'bulkRenew']);
-        Route::post('/licenses/bulk-deactivate', [ResellerLicenseController::class, 'bulkDeactivate']);
         Route::post('/licenses/{license}/pause', [ResellerLicenseController::class, 'pause']);
         Route::post('/licenses/{license}/resume', [ResellerLicenseController::class, 'resume']);
         Route::post('/licenses/{license}/cancel-pending', [ResellerLicenseController::class, 'cancelPending']);
@@ -325,13 +324,11 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
     Route::middleware('role:super_admin,reseller,manager,manager_parent')->group(function (): void {
         Route::get('/licenses/{license}', [LicenseController::class, 'show']);
         Route::post('/licenses/{license}/renew', [LicenseController::class, 'renew']);
-        Route::post('/licenses/{license}/deactivate', [LicenseController::class, 'deactivate']);
         Route::post('/licenses/{license}/pause', [LicenseController::class, 'pause']);
         Route::post('/licenses/{license}/resume', [LicenseController::class, 'resume']);
         Route::post('/licenses/{license}/retry-scheduled', [LicenseController::class, 'retryScheduled']);
         Route::post('/licenses/{license}/cancel-pending', [LicenseController::class, 'cancelPending']);
         Route::post('/licenses/bulk-renew', [LicenseController::class, 'bulkRenew']);
-        Route::post('/licenses/bulk-deactivate', [LicenseController::class, 'bulkDeactivate']);
         Route::post('/licenses/bulk-delete', [LicenseController::class, 'bulkDelete']);
         Route::delete('/licenses/{license}', [LicenseController::class, 'destroy']);
     });

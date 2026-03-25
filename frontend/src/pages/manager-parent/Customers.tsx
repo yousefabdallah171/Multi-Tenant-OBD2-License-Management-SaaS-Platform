@@ -104,14 +104,12 @@ export function CustomersPage() {
   const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [editTarget, setEditTarget] = useState<CustomerSummary | null>(null)
-  const [deactivateTarget, setDeactivateTarget] = useState<CustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<CustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<CustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CustomerSummary | null>(null)
   const [pauseReason, setPauseReason] = useState('')
   const [selectedLicenseIds, setSelectedLicenseIds] = useState<number[]>([])
   const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
-  const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const customerFilterParams = useMemo(
     () => ({
@@ -170,11 +168,10 @@ export function CustomersPage() {
     [userOptionsQuery.data?.data],
   )
 
-  const [allCountQuery, activeCountQuery, suspendedCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
       { queryKey: ['manager-parent', 'customers', 'count', 'all', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager-parent', 'customers', 'count', 'active', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
-      { queryKey: ['manager-parent', 'customers', 'count', 'suspended', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'suspended' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager-parent', 'customers', 'count', 'scheduled', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'scheduled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager-parent', 'customers', 'count', 'expired', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager-parent', 'customers', 'count', 'cancelled', customerFilterParams], queryFn: () => customerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
@@ -221,16 +218,6 @@ export function CustomersPage() {
       invalidate(queryClient)
     },
     onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
-  })
-
-  const deactivateMutation = useMutation({
-    mutationFn: (licenseId: number) => licenseService.deactivate(licenseId),
-    onSuccess: () => {
-      toast.success(t('common.deactivated', { defaultValue: 'Deactivated successfully.' }))
-      setDeactivateTarget(null)
-      invalidate(queryClient)
-    },
-    onError: () => toast.error(t('common.error')),
   })
 
   const pauseMutation = useMutation({
@@ -290,17 +277,6 @@ export function CustomersPage() {
     onSuccess: () => {
       toast.success(t('reseller.pages.licenses.toasts.bulkRenewed'))
       setBulkRenewOpen(false)
-      setSelectedLicenseIds([])
-      invalidate(queryClient)
-    },
-    onError: () => toast.error(t('common.error')),
-  })
-
-  const bulkDeactivateMutation = useMutation({
-    mutationFn: () => licenseService.bulkDeactivate(selectedLicenseIds),
-    onSuccess: () => {
-      toast.success(t('reseller.pages.licenses.toasts.bulkDeactivated'))
-      setBulkDeactivateOpen(false)
       setSelectedLicenseIds([])
       invalidate(queryClient)
     },
@@ -490,16 +466,10 @@ export function CustomersPage() {
               </DropdownMenuItem>
             ) : null}
             {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted ? (
-              <>
-                <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
-                  <ShieldOff className="me-2 h-4 w-4" />
-                  {t('common.deactivate')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPauseTarget(row)}>
-                  <Pause className="me-2 h-4 w-4" />
-                  {t('common.pause')}
-                </DropdownMenuItem>
-              </>
+              <DropdownMenuItem onClick={() => setPauseTarget(row)}>
+                <Pause className="me-2 h-4 w-4" />
+                {t('common.pause')}
+              </DropdownMenuItem>
             ) : null}
             {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBlacklisted && !isBiosActiveElsewhere ? (
               <DropdownMenuItem onClick={() => setResumeTarget(row)}>
@@ -571,7 +541,7 @@ export function CustomersPage() {
     <div className="space-y-6">
       <PageHeader title={t('managerParent.pages.customers.title')} description={t('managerParent.pages.customers.description')} actions={<Button type="button" onClick={() => navigate(routePaths.managerParent.customerCreate(lang))}><Plus className="me-2 h-4 w-4" />{t('managerParent.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}</Button>} />
 
-      <div className="grid gap-3 md:grid-cols-7">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -592,17 +562,6 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="emerald"
-        />
-        <StatusFilterCard
-          label={t('common.suspended')}
-          description={getStatusMeaning('suspended', t)}
-          count={suspendedCountQuery.data?.meta.total ?? 0}
-          isActive={status === 'suspended'}
-          onClick={() => {
-            setStatus('suspended')
-            setPage(1)
-          }}
-          color="amber"
         />
         <StatusFilterCard
           label={t('common.scheduled', { defaultValue: 'Scheduled' })}
@@ -704,7 +663,6 @@ export function CustomersPage() {
                 <span className="text-sm text-slate-600 dark:text-slate-300">{selectedLicenseIds.length} {t('common.selected', { defaultValue: 'selected' })}</span>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="secondary" onClick={() => setBulkRenewOpen(true)}>{t('reseller.pages.licenses.bulkRenew')}</Button>
-                  <Button type="button" variant="secondary" onClick={() => setBulkDeactivateOpen(true)}>{t('reseller.pages.licenses.bulkDeactivate')}</Button>
                   <Button type="button" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>{t('common.deleteSelected', { defaultValue: 'Delete Selected' })}</Button>
                 </div>
               </CardContent>
@@ -907,24 +865,6 @@ export function CustomersPage() {
       />
 
       <ConfirmDialog
-        open={deactivateTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeactivateTarget(null)
-          }
-        }}
-        title={t('common.deactivate')}
-        description={deactivateTarget?.bios_id ?? undefined}
-        confirmLabel={t('common.deactivate')}
-        isDestructive
-        onConfirm={() => {
-          if (deactivateTarget?.license_id) {
-            deactivateMutation.mutate(deactivateTarget.license_id)
-          }
-        }}
-      />
-
-      <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -999,16 +939,6 @@ export function CustomersPage() {
         resetKey={selectedLicenseIds.join(',')}
         isPending={bulkRenewMutation.isPending}
         onSubmit={(payload) => bulkRenewMutation.mutate(payload)}
-      />
-
-      <ConfirmDialog
-        open={bulkDeactivateOpen}
-        onOpenChange={setBulkDeactivateOpen}
-        title={t('reseller.pages.licenses.confirm.bulkDeactivateTitle')}
-        description={t('reseller.pages.licenses.confirm.bulkDeactivateDescription', { count: selectedLicenseIds.length })}
-        confirmLabel={t('reseller.pages.licenses.confirm.deactivateSelected')}
-        isDestructive
-        onConfirm={() => bulkDeactivateMutation.mutate()}
       />
 
       <ConfirmDialog

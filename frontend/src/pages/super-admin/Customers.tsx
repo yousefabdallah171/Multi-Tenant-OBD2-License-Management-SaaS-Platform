@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
+import { MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -45,7 +45,6 @@ export function CustomersPage() {
   const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
   const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [editTarget, setEditTarget] = useState<SuperAdminCustomerSummary | null>(null)
-  const [deactivateTarget, setDeactivateTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SuperAdminCustomerSummary | null>(null)
@@ -87,7 +86,7 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
 
-  const [allCountQuery, activeCountQuery, suspendedCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
       {
         queryKey: ['super-admin', 'customers', 'count', 'all', customerFilterParams],
@@ -97,11 +96,6 @@ export function CustomersPage() {
       {
         queryKey: ['super-admin', 'customers', 'count', 'active', customerFilterParams],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }),
-        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
-      },
-      {
-        queryKey: ['super-admin', 'customers', 'count', 'suspended', customerFilterParams],
-        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'suspended' }),
         ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
@@ -158,16 +152,6 @@ export function CustomersPage() {
     onSuccess: () => {
       toast.success(t('common.customerUpdatedSuccess', { defaultValue: 'Customer updated successfully.' }))
       setEditTarget(null)
-      invalidate(queryClient)
-    },
-    onError: () => toast.error(t('common.error')),
-  })
-
-  const deactivateMutation = useMutation({
-    mutationFn: (licenseId: number) => licenseService.deactivate(licenseId),
-    onSuccess: () => {
-      toast.success(t('common.deactivated', { defaultValue: 'Deactivated successfully.' }))
-      setDeactivateTarget(null)
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -310,12 +294,6 @@ export function CustomersPage() {
                     {renewActionLabel}
                   </DropdownMenuItem>
                 ) : null}
-                {row.license_id && row.status === 'active' && !isBlacklisted ? (
-                  <DropdownMenuItem onSelect={() => setDeactivateTarget(row)}>
-                    <ShieldOff className="me-2 h-4 w-4" />
-                    {t('common.deactivate')}
-                  </DropdownMenuItem>
-                ) : null}
                 {row.license_id && row.status === 'active' && !row.paused_at && !isBlacklisted ? (
                   <DropdownMenuItem onSelect={() => setPauseTarget(row)}>
                     <Pause className="me-2 h-4 w-4" />
@@ -363,7 +341,7 @@ export function CustomersPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-7">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -384,17 +362,6 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="emerald"
-        />
-        <StatusFilterCard
-          label={t('common.suspended')}
-          description={getStatusMeaning('suspended', t)}
-          count={suspendedCountQuery.data?.meta.total ?? 0}
-          isActive={status === 'suspended'}
-          onClick={() => {
-            setStatus('suspended')
-            setPage(1)
-          }}
-          color="amber"
         />
         <StatusFilterCard
           label={t('common.scheduled', { defaultValue: 'Scheduled' })}
@@ -491,7 +458,6 @@ export function CustomersPage() {
         isPending={editMutation.isPending}
       />
 
-      <ConfirmDialog open={deactivateTarget !== null} onOpenChange={(open) => !open && setDeactivateTarget(null)} title={t('common.deactivate')} description={deactivateTarget?.name ?? ''} confirmLabel={t('common.deactivate')} onConfirm={() => deactivateTarget?.license_id && deactivateMutation.mutate(deactivateTarget.license_id)} />
       <ConfirmDialog
         open={pauseTarget !== null}
         onOpenChange={(open) => {
