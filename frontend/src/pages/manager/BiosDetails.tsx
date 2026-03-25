@@ -161,7 +161,7 @@ export function BiosDetailsPage() {
                   <div key={license.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <div className="grid gap-3 md:grid-cols-5">
                       <MiniInfo label={t('common.program')} value={license.program?.name ?? '-'} />
-                      <MiniInfo label={t('common.reseller')} value={license.reseller?.name ?? '-'} />
+                      <MiniInfo label={t('common.reseller')} value={<ResellerWithRole name={license.reseller?.name ?? '-'} role={license.reseller?.role} t={t} />} />
                       <MiniInfo label={t('common.duration')} value={formatLicenseDurationDays(license.duration_days, t, license.activated_at, license.expires_at)} />
                       <MiniInfo label={t('common.price')} value={`$${Number(license.price).toFixed(2)}`} />
                       <MiniInfo label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
@@ -268,6 +268,24 @@ function InfoGrid({ items }: { items: Array<[string, React.ReactNode]> }) {
 
 function MiniInfo({ label, value }: { label: string; value: React.ReactNode }) {
   return <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><div className="font-medium">{value}</div></div>
+}
+
+function ResellerWithRole({ name, role, t }: { name: string; role?: string | null; t: (k: string) => string }) {
+  const badge = resolveRoleBadge(role, t)
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      <span>{name}</span>
+      {badge ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span> : null}
+    </span>
+  )
+}
+
+function resolveRoleBadge(role?: string | null, t?: (k: string) => string) {
+  if (!role || role === 'reseller') return null
+  if (role === 'manager_parent') return { label: t?.('roles.manager_parent') ?? 'Manager Parent', className: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300' }
+  if (role === 'manager') return { label: t?.('roles.manager') ?? 'Manager', className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300' }
+  if (role === 'super_admin') return { label: t?.('roles.super_admin') ?? 'Super Admin', className: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' }
+  return null
 }
 
 function ResellerCard({ reseller, locale, lang, t }: { reseller: BiosReseller; locale: string; lang: 'ar' | 'en'; t: (key: string) => string }) {

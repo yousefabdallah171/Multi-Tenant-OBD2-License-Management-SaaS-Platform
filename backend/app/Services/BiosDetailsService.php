@@ -230,7 +230,7 @@ class BiosDetailsService
     public function getBiosLicenseHistory(string $biosId, ?int $tenantId = null, array $filters = []): LengthAwarePaginator
     {
         $query = License::query()
-            ->with(['program:id,name', 'reseller:id,name,email'])
+            ->with(['program:id,name', 'reseller:id,name,email,role'])
             ->where('bios_id', $biosId)
             ->orderByDesc('activated_at');
 

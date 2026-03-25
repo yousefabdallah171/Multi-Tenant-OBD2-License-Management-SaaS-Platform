@@ -31,7 +31,7 @@ export interface BiosLicense {
   id: number
   program_id: number
   program?: { id: number; name: string } | null
-  reseller?: { id: number; name: string; email: string | null } | null
+  reseller?: { id: number; name: string; email: string | null; role?: string | null } | null
   duration_days: number
   price: number
   activated_at: string | null

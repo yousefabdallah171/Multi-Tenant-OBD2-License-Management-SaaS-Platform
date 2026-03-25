@@ -210,7 +210,24 @@ export function BiosDetailsPage() {
             </Card>
           </TabsContent>
           <TabsContent value="licenses">
-            <Card><CardContent className="space-y-2 p-4">{(licensesQuery.data?.data ?? []).map((license) => <div key={license.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{license.program?.name ?? '-'}</p><div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400"><StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} /><span>{`$${Number(license.price).toFixed(2)}`}</span></div></div>)}</CardContent></Card>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                {(licensesQuery.data?.data ?? []).map((license) => (
+                  <div key={license.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium">{license.program?.name ?? '-'}</p>
+                      <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} />
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500 dark:text-slate-400">
+                      <span>{`$${Number(license.price).toFixed(2)}`}</span>
+                      {license.reseller ? (
+                        <ResellerWithRole name={license.reseller.name ?? '-'} role={license.reseller.role} t={t} />
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="resellers">
             <Card><CardContent className="space-y-2 p-4">{(resellersQuery.data ?? []).map((reseller) => <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{reseller.name ?? '-'}</p><p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('common.activations')}: {reseller.activation_count}</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('common.revenue')}: ${Number(reseller.total_revenue).toFixed(2)}</p></div>)}</CardContent></Card>
@@ -247,5 +264,21 @@ export function BiosDetailsPage() {
         </Tabs>
       ) : null}
     </div>
+  )
+}
+
+function ResellerWithRole({ name, role, t }: { name: string; role?: string | null; t: (k: string) => string }) {
+  if (!role || role === 'reseller') return <span>{name}</span>
+  const badges: Record<string, { label: string; className: string }> = {
+    manager_parent: { label: t('roles.manager_parent'), className: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300' },
+    manager: { label: t('roles.manager'), className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300' },
+    super_admin: { label: t('roles.super_admin'), className: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' },
+  }
+  const badge = badges[role]
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      <span>{name}</span>
+      {badge ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span> : null}
+    </span>
   )
 }
