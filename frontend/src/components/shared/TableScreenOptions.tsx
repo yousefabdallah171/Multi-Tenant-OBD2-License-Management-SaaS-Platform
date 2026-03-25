@@ -46,8 +46,13 @@ export function TableScreenOptions({
   }
 
   const handleToggle = () => {
+    console.log('[TableScreenOptions] Toggle clicked', { isOpen, currentTime: new Date().toISOString() })
     if (!isOpen) recalcPosition()
-    setIsOpen((prev) => !prev)
+    setIsOpen((prev) => {
+      const newState = !prev
+      console.log('[TableScreenOptions] Panel state changed', { wasOpen: prev, isNowOpen: newState })
+      return newState
+    })
   }
 
   useEffect(() => {
@@ -106,7 +111,19 @@ export function TableScreenOptions({
                     column.locked && 'cursor-not-allowed opacity-70',
                   )}
                   onClick={() => {
-                    if (!column.locked) onToggleColumn(column.key)
+                    console.log('[TableScreenOptions] Column toggle clicked', {
+                      columnKey: column.key,
+                      columnLabel: column.label,
+                      isLocked: column.locked,
+                      isVisible: column.visible,
+                      timestamp: new Date().toISOString()
+                    })
+                    if (!column.locked) {
+                      console.log('[TableScreenOptions] Calling onToggleColumn for:', column.key)
+                      onToggleColumn(column.key)
+                    } else {
+                      console.log('[TableScreenOptions] Column is locked, skipping toggle:', column.key)
+                    }
                   }}
                 >
                   <span className="flex min-w-0 items-center gap-2">
@@ -149,7 +166,16 @@ export function TableScreenOptions({
                       size="sm"
                       variant={pageSize === option ? 'default' : 'outline'}
                       className="h-9 rounded-lg px-2"
-                      onClick={() => onPageSizeChange(option)}
+                      onClick={() => {
+                        console.log('[TableScreenOptions] Pagination button clicked', {
+                          option,
+                          currentPageSize: pageSize,
+                          isActive: pageSize === option,
+                          timestamp: new Date().toISOString()
+                        })
+                        console.log('[TableScreenOptions] Calling onPageSizeChange with:', option)
+                        onPageSizeChange(option)
+                      }}
                     >
                       {option}
                     </Button>

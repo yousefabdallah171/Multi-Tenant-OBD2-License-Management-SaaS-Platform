@@ -84,7 +84,14 @@ export function DataTable<T>({
     tableKey,
     columns: preferenceColumns,
     perPage: pagination?.perPage,
-    onPerPageChange: onPageSizeChange,
+    onPerPageChange: (pageSize) => {
+      console.log('[DataTable] Per-page change from useTablePreferences', {
+        tableKey,
+        pageSize,
+        timestamp: new Date().toISOString()
+      })
+      onPageSizeChange?.(pageSize)
+    },
     pageSizeOptions,
   })
 
@@ -169,8 +176,23 @@ export function DataTable<T>({
             }))}
             pageSize={pagination?.perPage ?? null}
             pageSizeOptions={pageSizeOptions}
-            onToggleColumn={toggleColumn}
-            onPageSizeChange={onPageSizeChange}
+            onToggleColumn={(columnKey) => {
+              console.log('[DataTable] Column toggle from TableScreenOptions', {
+                tableKey,
+                columnKey,
+                timestamp: new Date().toISOString()
+              })
+              toggleColumn(columnKey)
+            }}
+            onPageSizeChange={(pageSize) => {
+              console.log('[DataTable] Page size change from TableScreenOptions', {
+                tableKey,
+                pageSize,
+                currentPerPage: pagination?.perPage,
+                timestamp: new Date().toISOString()
+              })
+              onPageSizeChange?.(pageSize)
+            }}
             isLoading={preferencesLoading}
           />
         </div>

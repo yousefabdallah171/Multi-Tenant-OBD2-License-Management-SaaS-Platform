@@ -59,63 +59,146 @@ export function useTablePreferences({
   const lastSavedPayloadRef = useRef<string | null>(null)
 
   useEffect(() => {
+    console.log('[useTablePreferences] Schema changed, resetting state', {
+      tableKey,
+      schemaKey,
+      defaultVisibleColumns,
+      timestamp: new Date().toISOString()
+    })
     setVisibleColumns(defaultVisibleColumns)
     setHasHydrated(false)
     hasHydratedPerPageRef.current = false
     lastSavedPayloadRef.current = null
-  }, [defaultVisibleColumns, schemaKey])
+  }, [defaultVisibleColumns, schemaKey, tableKey])
 
   const preferenceQuery = useQuery({
     queryKey: ['table-preferences', tableKey, availableColumns.join(','), lockedColumns.join(',')],
-    queryFn: () => tablePreferenceService.get(tableKey!, availableColumns, lockedColumns),
+    queryFn: () => {
+      console.log('[useTablePreferences] Fetching preferences', {
+        tableKey,
+        availableColumns,
+        lockedColumns,
+        timestamp: new Date().toISOString()
+      })
+      return tablePreferenceService.get(tableKey!, availableColumns, lockedColumns).then((result) => {
+        console.log('[useTablePreferences] Preferences fetched', {
+          tableKey,
+          result,
+          timestamp: new Date().toISOString()
+        })
+        return result
+      }).catch((error) => {
+        console.error('[useTablePreferences] Preferences fetch failed', {
+          tableKey,
+          error,
+          timestamp: new Date().toISOString()
+        })
+        throw error
+      })
+    },
     enabled: Boolean(tableKey),
     staleTime: Number.POSITIVE_INFINITY,
     retry: 1,
   })
 
   const saveMutation = useMutation({
-    mutationFn: (payload: { visible_columns: string[]; per_page: number | null }) => tablePreferenceService.update(tableKey!, {
-      visible_columns: payload.visible_columns,
-      available_columns: availableColumns,
-      locked_columns: lockedColumns,
-      per_page: payload.per_page,
-    }),
+    mutationFn: (payload: { visible_columns: string[]; per_page: number | null }) => {
+      console.log('[useTablePreferences] Saving preferences', {
+        tableKey,
+        payload,
+        timestamp: new Date().toISOString()
+      })
+      return tablePreferenceService.update(tableKey!, {
+        visible_columns: payload.visible_columns,
+        available_columns: availableColumns,
+        locked_columns: lockedColumns,
+        per_page: payload.per_page,
+      }).then((result) => {
+        console.log('[useTablePreferences] Save mutation succeeded', {
+          tableKey,
+          result,
+          timestamp: new Date().toISOString()
+        })
+        return result
+      }).catch((error) => {
+        console.error('[useTablePreferences] Save mutation failed', {
+          tableKey,
+          error,
+          timestamp: new Date().toISOString()
+        })
+        throw error
+      })
+    },
   })
 
   useEffect(() => {
+    console.log('[useTablePreferences] Hydration effect running', {
+      tableKey,
+      hasHydrated,
+      isLoading: preferenceQuery.isLoading,
+      hasData: !!preferenceQuery.data,
+      timestamp: new Date().toISOString()
+    })
+
     if (!tableKey) {
+      console.log('[useTablePreferences] No tableKey, using defaults')
       setVisibleColumns(defaultVisibleColumns)
       setHasHydrated(true)
       return
     }
 
     if (preferenceQuery.isLoading) {
+      console.log('[useTablePreferences] Query is loading, waiting...')
       return
     }
 
     if (hasHydrated && !preferenceQuery.data) {
+      console.log('[useTablePreferences] Already hydrated and no data, skipping')
       return
     }
 
     const nextVisibleColumns = sanitizeVisibleColumns(columns, preferenceQuery.data?.visible_columns?.length ? preferenceQuery.data.visible_columns : defaultVisibleColumns)
+    console.log('[useTablePreferences] Setting visible columns from preference', {
+      tableKey,
+      nextVisibleColumns,
+      previousVisibleColumns: visibleColumns,
+      timestamp: new Date().toISOString()
+    })
     setVisibleColumns(nextVisibleColumns)
     setHasHydrated(true)
 
     if (!hasHydratedPerPageRef.current && onPerPageChange && preferenceQuery.data?.per_page && pageSizeOptions.includes(preferenceQuery.data.per_page) && preferenceQuery.data.per_page !== perPage) {
+      console.log('[useTablePreferences] Setting per-page from preference', {
+        tableKey,
+        perPage: preferenceQuery.data.per_page,
+        currentPerPage: perPage,
+        timestamp: new Date().toISOString()
+      })
       hasHydratedPerPageRef.current = true
       onPerPageChange(preferenceQuery.data.per_page)
       return
     }
 
     hasHydratedPerPageRef.current = true
-  }, [availableColumns, columns, defaultVisibleColumns, hasHydrated, lockedColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey])
+  }, [availableColumns, columns, defaultVisibleColumns, hasHydrated, lockedColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey, visibleColumns])
 
   useEffect(() => {
+    console.log('[useTablePreferences] Save effect running', {
+      tableKey,
+      hasHydrated,
+      hasHydratedPerPage: hasHydratedPerPageRef.current,
+      visibleColumns,
+      perPage,
+      timestamp: new Date().toISOString()
+    })
+
     if (!tableKey || !hasHydrated) {
+      console.log('[useTablePreferences] Save effect skipped: no tableKey or not hydrated')
       return
     }
 
     if (onPerPageChange && !hasHydratedPerPageRef.current) {
+      console.log('[useTablePreferences] Save effect skipped: per-page not hydrated yet')
       return
     }
 
@@ -125,30 +208,58 @@ export function useTablePreferences({
       per_page: typeof perPage === 'number' ? perPage : null,
     })
 
+    console.log('[useTablePreferences] Payload generated', {
+      tableKey,
+      payload,
+      lastSavedPayload: lastSavedPayloadRef.current,
+      timestamp: new Date().toISOString()
+    })
+
     if (payload === lastSavedPayloadRef.current) {
+      console.log('[useTablePreferences] Payload unchanged, skipping save')
       return
     }
+
+    console.log('[useTablePreferences] Payload changed, triggering save mutation', {
+      tableKey,
+      sanitizedVisibleColumns,
+      perPage,
+      timestamp: new Date().toISOString()
+    })
 
     lastSavedPayloadRef.current = payload
     saveMutation.mutate({
       visible_columns: sanitizedVisibleColumns,
       per_page: typeof perPage === 'number' ? perPage : null,
     })
-  }, [columns, hasHydrated, perPage, saveMutation, tableKey, visibleColumns])
+  }, [columns, hasHydrated, perPage, saveMutation, tableKey, visibleColumns, onPerPageChange])
 
   const visibleColumnSet = useMemo(() => new Set(sanitizeVisibleColumns(columns, visibleColumns)), [columns, visibleColumns])
 
   const toggleColumn = (columnKey: string) => {
+    console.log('[useTablePreferences] toggleColumn called', {
+      columnKey,
+      tableKey,
+      isLocked: lockedColumns.includes(columnKey),
+      timestamp: new Date().toISOString()
+    })
+
     if (lockedColumns.includes(columnKey)) {
+      console.log('[useTablePreferences] Column is locked, skipping toggle:', columnKey)
       return
     }
 
     setVisibleColumns((current) => {
-      if (current.includes(columnKey)) {
-        return current.filter((item) => item !== columnKey)
-      }
-
-      return [...current, columnKey]
+      const isCurrentlyVisible = current.includes(columnKey)
+      const newState = isCurrentlyVisible ? current.filter((item) => item !== columnKey) : [...current, columnKey]
+      console.log('[useTablePreferences] Visible columns updated', {
+        columnKey,
+        wasVisible: isCurrentlyVisible,
+        previousState: current,
+        newState,
+        timestamp: new Date().toISOString()
+      })
+      return newState
     })
   }
 
