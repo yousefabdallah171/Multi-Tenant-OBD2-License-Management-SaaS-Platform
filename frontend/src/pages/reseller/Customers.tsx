@@ -891,6 +891,7 @@ export function CustomersPage() {
           ) : null}
 
           <DataTable
+            tableKey="reseller_customers"
             columns={columns}
             data={customerRows}
             rowKey={(row) => row.id}

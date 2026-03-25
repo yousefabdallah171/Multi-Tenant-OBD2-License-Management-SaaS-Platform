@@ -129,6 +129,7 @@ export function IpAnalyticsPage() {
         />
       ) : (
         <DataTable
+          tableKey="reseller_ip_analytics"
           columns={columns}
           data={rows}
           rowKey={(row) => `${row.ip_address}-${row.timestamp}-${row.username}`}

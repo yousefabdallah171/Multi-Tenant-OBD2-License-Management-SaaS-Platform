@@ -107,6 +107,7 @@ export function BiosHistoryPage() {
         <LoadingSpinner fullPage label={t('common.loading')} />
       ) : (
         <DataTable
+          tableKey="super_admin_bios_history"
           columns={columns}
           data={historyQuery.data?.data ?? []}
           rowKey={(row) => row.id}

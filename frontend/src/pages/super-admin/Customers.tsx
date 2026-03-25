@@ -445,6 +445,7 @@ export function CustomersPage() {
       </Card>
 
       <DataTable
+        tableKey="super_admin_customers"
         columns={columns}
         data={customersQuery.data?.data ?? []}
         rowKey={(row) => row.id}

@@ -147,7 +147,7 @@ export function ReportsPage() {
       <Card>
         <CardContent className="p-6">
           <h3 className="mb-4 text-lg font-semibold">{t('managerParent.pages.financialReports.resellerBalances')}</h3>
-          <DataTable columns={columns} data={report?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={reportQuery.isLoading} />
+          <DataTable tableKey="manager_reports_balances" columns={columns} data={report?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={reportQuery.isLoading} />
         </CardContent>
       </Card>
     </div>

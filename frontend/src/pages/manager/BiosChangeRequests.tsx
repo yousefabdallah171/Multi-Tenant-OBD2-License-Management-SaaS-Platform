@@ -174,6 +174,7 @@ export function BiosChangeRequestsPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_bios_change_requests"
         columns={columns}
         data={query.data?.data ?? []}
         isLoading={query.isLoading}

@@ -182,6 +182,7 @@ export function BiosHistoryPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_parent_bios_history"
         columns={columns}
         data={historyQuery.data?.data ?? []}
         rowKey={(row) => row.id}

@@ -646,6 +646,7 @@ export function CustomersPage() {
             </Card>
           ) : null}
           <DataTable
+            tableKey="manager_customers"
             columns={columns}
             data={rows}
             rowKey={(row) => row.id}

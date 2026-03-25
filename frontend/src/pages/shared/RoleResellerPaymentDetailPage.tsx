@@ -257,7 +257,7 @@ export function RoleResellerPaymentDetailPage({
           </p>
         </CardHeader>
         <CardContent>
-          <DataTable columns={commissionColumns} data={detail?.commissions ?? []} rowKey={(row) => row.id} isLoading={query.isLoading} emptyMessage={t('payments.empty.commissions')} />
+          <DataTable tableKey={`${queryKeyPrefix}_reseller_payment_detail_commissions`} columns={commissionColumns} data={detail?.commissions ?? []} rowKey={(row) => row.id} isLoading={query.isLoading} emptyMessage={t('payments.empty.commissions')} />
         </CardContent>
       </Card>
 
@@ -269,7 +269,7 @@ export function RoleResellerPaymentDetailPage({
           </p>
         </CardHeader>
         <CardContent>
-          <DataTable columns={paymentColumns} data={detail?.payments ?? []} rowKey={(row) => row.id} isLoading={query.isLoading} emptyMessage={t('payments.empty.payments')} />
+          <DataTable tableKey={`${queryKeyPrefix}_reseller_payment_detail_payments`} columns={paymentColumns} data={detail?.payments ?? []} rowKey={(row) => row.id} isLoading={query.isLoading} emptyMessage={t('payments.empty.payments')} />
         </CardContent>
       </Card>
 

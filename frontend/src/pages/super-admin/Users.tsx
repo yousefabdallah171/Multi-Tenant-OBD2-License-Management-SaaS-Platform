@@ -221,9 +221,10 @@ export function UsersPage() {
       </Card>
 
       {usersQuery.isLoading ? (
-        <DataTable columns={columns} data={[]} rowKey={(row) => row.id} isLoading />
+        <DataTable tableKey="super_admin_users" columns={columns} data={[]} rowKey={(row) => row.id} isLoading />
       ) : (
         <DataTable
+          tableKey="super_admin_users"
           columns={columns}
           data={usersQuery.data?.data ?? []}
           rowKey={(row) => row.id}

@@ -230,6 +230,7 @@ export function BiosBlacklistPage() {
       />
 
       <DataTable
+        tableKey="super_admin_bios_blacklist"
         columns={columns}
         data={blacklistQuery.data?.data ?? []}
         rowKey={(row) => row.id}

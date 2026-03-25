@@ -141,6 +141,7 @@ export function BiosBlacklistPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_parent_bios_blacklist"
         columns={columns}
         data={blacklistQuery.data?.data ?? []}
         rowKey={(row) => row.id}

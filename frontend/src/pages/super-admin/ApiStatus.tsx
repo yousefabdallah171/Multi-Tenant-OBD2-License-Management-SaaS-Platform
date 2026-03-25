@@ -90,7 +90,7 @@ export function ApiStatusPage() {
         </Card>
       </div>
 
-      <DataTable columns={columns} data={summary?.endpoints ?? []} rowKey={(row) => row.endpoint} />
+      <DataTable tableKey="super_admin_api_status_endpoints" columns={columns} data={summary?.endpoints ?? []} rowKey={(row) => row.endpoint} />
     </div>
   )
 }

@@ -71,6 +71,7 @@ use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\SuperAdmin\TenantResetController as SuperAdminTenantResetController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
+use App\Http\Controllers\TablePreferenceController;
 use App\Http\Middleware\ProcessDueScheduledLicenses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
@@ -118,6 +119,8 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
     Route::post('/balances/{user}/adjust', [BalanceController::class, 'adjust'])->middleware('role:super_admin,manager_parent');
     Route::post('/licenses/activate', [LicenseController::class, 'activateLicense'])->middleware('role:super_admin,reseller,manager,manager_parent');
     Route::get('/online-widget/settings', [OnlineUsersController::class, 'widgetSettings'])->middleware('role:super_admin,manager_parent,manager,reseller');
+    Route::get('/table-preferences', [TablePreferenceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
+    Route::put('/table-preferences/{tableKey}', [TablePreferenceController::class, 'update'])->middleware('role:super_admin,manager_parent,manager,reseller');
 
     Route::get('/programs', [ManagerParentProgramController::class, 'index'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::get('/programs/{program}/stats', [ManagerParentProgramController::class, 'stats'])->middleware('role:super_admin,manager_parent,manager,reseller');

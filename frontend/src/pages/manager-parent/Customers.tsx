@@ -655,6 +655,7 @@ export function CustomersPage() {
             </CardContent>
           </Card>
           <DataTable
+            tableKey="manager_parent_customers"
             columns={columns}
             data={customerRows}
             rowKey={(row) => row.id}

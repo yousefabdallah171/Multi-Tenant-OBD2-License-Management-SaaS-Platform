@@ -298,6 +298,7 @@ export function ResellerLogsPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_reseller_logs"
         columns={columns}
         data={logsQuery.data?.data ?? []}
         rowKey={(row) => row.id}

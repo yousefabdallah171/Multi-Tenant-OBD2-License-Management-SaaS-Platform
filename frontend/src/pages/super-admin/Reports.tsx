@@ -201,8 +201,8 @@ export function ReportsPage() {
         />
       </div>
 
-      <DataTable columns={balanceColumns} data={financialData?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={financialQuery.isLoading} />
-      <DataTable columns={resellerColumns} data={(topResellersQuery.data?.data ?? []) as TopResellerRow[]} rowKey={(row) => `${row.tenant}-${row.reseller}-${row.reseller_id ?? 'unknown'}`} isLoading={topResellersQuery.isLoading} />
+      <DataTable tableKey="super_admin_reports_balances" columns={balanceColumns} data={financialData?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={financialQuery.isLoading} />
+      <DataTable tableKey="super_admin_reports_top_resellers" columns={resellerColumns} data={(topResellersQuery.data?.data ?? []) as TopResellerRow[]} rowKey={(row) => `${row.tenant}-${row.reseller}-${row.reseller_id ?? 'unknown'}`} isLoading={topResellersQuery.isLoading} />
     </div>
   )
 }
