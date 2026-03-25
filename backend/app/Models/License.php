@@ -37,6 +37,7 @@ class License extends Model
         'paused_at',
         'pause_remaining_minutes',
         'pause_reason',
+        'paused_by_role',
         'status',
     ];
 

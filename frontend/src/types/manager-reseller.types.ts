@@ -242,6 +242,7 @@ export interface ResellerCustomerSummary {
   paused_at?: string | null
   pause_remaining_minutes?: number | null
   pause_reason?: string | null
+  paused_by_role?: string | null
   is_blacklisted?: boolean
   bios_active_elsewhere?: boolean
   username_locked?: boolean

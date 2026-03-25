@@ -335,6 +335,7 @@ class LicenseController extends Controller
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'pause_reason' => $license->pause_reason,
+            'paused_by_role' => $license->paused_by_role,
             'status' => $license->status,
         ];
     }

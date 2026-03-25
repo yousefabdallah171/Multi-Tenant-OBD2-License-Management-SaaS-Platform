@@ -620,6 +620,11 @@ export function CustomersPage() {
                 {t('customers.activeElsewhere', { defaultValue: lang === 'ar' ? 'نشط مع موزع آخر' : 'Active w/ other reseller' })}
               </span>
             ) : null}
+            {isPausedPendingLicense(row) && row.paused_by_role != null && row.paused_by_role !== 'reseller' ? (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                {t('customers.pausedByAdmin', { defaultValue: lang === 'ar' ? 'موقوف من المسؤول' : 'Paused by Admin' })}
+              </span>
+            ) : null}
           </div>
         ) : '-',
       },
@@ -701,7 +706,7 @@ export function CustomersPage() {
                     {t('common.retryNow', { defaultValue: 'Retry Now' })}
                   </DropdownMenuItem>
                 )}
-                {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBlacklisted && !isBiosActiveElsewhere && (
+                {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBlacklisted && !isBiosActiveElsewhere && !(isPausedPending && row.paused_by_role != null && row.paused_by_role !== 'reseller') && (
                   <DropdownMenuItem
                     disabled={resumeMutation.isPending}
                     onClick={(event) => {

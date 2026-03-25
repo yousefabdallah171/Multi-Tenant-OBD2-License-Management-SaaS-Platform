@@ -96,7 +96,7 @@ class CustomerController extends BaseResellerController
     {
         $columns = [];
 
-        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes', 'pause_reason'] as $column) {
+        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes', 'pause_reason', 'paused_by_role'] as $column) {
             if (Schema::hasColumn('licenses', $column)) {
                 $columns[] = $column;
             }
@@ -399,6 +399,7 @@ class CustomerController extends BaseResellerController
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'pause_reason' => $license?->pause_reason,
+            'paused_by_role' => $license?->paused_by_role ?? null,
             'is_blacklisted' => $license ? BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id) : false,
             'bios_active_elsewhere' => $biosActiveElsewhere,
             'license_count' => $user->customerLicenses->count(),
