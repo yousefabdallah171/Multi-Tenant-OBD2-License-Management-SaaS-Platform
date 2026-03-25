@@ -386,9 +386,9 @@ export function CustomersPage() {
           <span>{row.reseller ?? '-'}</span>
           {row.reseller_role && row.reseller_role !== 'reseller' && (
             <span className="inline-flex w-fit items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
-              {row.reseller_role === 'manager_parent' ? (lang === 'ar' ? 'مدير رئيسي' : 'Manager Parent')
-                : row.reseller_role === 'manager' ? (lang === 'ar' ? 'مدير' : 'Manager')
-                : row.reseller_role === 'super_admin' ? (lang === 'ar' ? 'مدير النظام' : 'Super Admin')
+              {row.reseller_role === 'manager_parent' ? t('roles.manager_parent')
+                : row.reseller_role === 'manager' ? t('roles.manager')
+                : row.reseller_role === 'super_admin' ? t('roles.super_admin')
                 : row.reseller_role}
             </span>
           )}

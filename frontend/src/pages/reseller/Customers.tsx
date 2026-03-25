@@ -622,7 +622,7 @@ export function CustomersPage() {
             ) : null}
             {isPausedPendingLicense(row) && row.paused_by_role != null && row.paused_by_role !== 'reseller' ? (
               <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                {t('customers.pausedByAdmin', { defaultValue: lang === 'ar' ? 'موقوف من المسؤول' : 'Paused by Admin' })}
+                {t('customers.pausedByAdmin')}
               </span>
             ) : null}
           </div>

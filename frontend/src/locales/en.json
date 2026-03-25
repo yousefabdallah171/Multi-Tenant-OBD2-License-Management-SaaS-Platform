@@ -39,6 +39,9 @@
     "reseller": "Reseller",
     "customer": "Customer"
   },
+  "customers": {
+    "pausedByAdmin": "Paused by Admin"
+  },
   "dashboard": {
     "roleLabel": "Role dashboard",
     "lightMode": "Light mode",

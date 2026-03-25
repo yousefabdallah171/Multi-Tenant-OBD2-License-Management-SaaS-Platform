@@ -39,6 +39,9 @@
     "reseller": "موزع",
     "customer": "عميل"
   },
+  "customers": {
+    "pausedByAdmin": "موقوف من المسؤول"
+  },
   "dashboard": {
     "roleLabel": "لوحة الدور",
     "lightMode": "الوضع الفاتح",

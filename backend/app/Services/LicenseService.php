@@ -15,6 +15,7 @@ use App\Models\License;
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
 use App\Models\User;
+use App\Support\RevenueAnalytics;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -238,7 +239,7 @@ class LicenseService
             'is_scheduled' => $isScheduled,
         ]);
 
-        $renewedLicense = DB::transaction(function () use ($license, $data, $reseller, $apiResponse, $isScheduled, $renewBiosLower): License {
+        $renewedLicense = DB::transaction(function () use ($actor, $license, $data, $reseller, $apiResponse, $isScheduled, $renewBiosLower): License {
             // Locked re-check inside transaction to close the race window
             if (! $isScheduled) {
                 $renewRaceConflict = License::query()
@@ -289,7 +290,14 @@ class LicenseService
                 'pause_reason' => null,
             ])->save();
 
-            $this->balanceService->recordRevenue($reseller, (float) $license->price);
+            $attribution = $this->resolveRevenueAttribution($actor, $license);
+
+            $this->balanceService->recordRevenue(
+                $reseller,
+                (float) $license->price,
+                false,
+                $attribution['attribution_type']
+            );
             $this->logActivity(
                 $reseller,
                 'license.renewed',
@@ -302,6 +310,13 @@ class LicenseService
                     'external_username' => $license->external_username,
                     'duration_days' => $durationDays,
                     'price' => (float) $license->price,
+                    'actor_id' => $attribution['actor_id'],
+                    'actor_role' => $attribution['actor_role'],
+                    'owner_user_id' => $attribution['owner_user_id'],
+                    'owner_role' => $attribution['owner_role'],
+                    'seller_id' => (int) $reseller->id,
+                    'seller_role' => $reseller->role?->value ?? (string) $reseller->role,
+                    'attribution_type' => $attribution['attribution_type'],
                 ],
             );
 
@@ -1496,5 +1511,48 @@ class LicenseService
         }
 
         return $preset;
+    }
+
+    /**
+     * @return array{
+     *     actor_id:int,
+     *     actor_role:string,
+     *     owner_user_id:int|null,
+     *     owner_role:string|null,
+     *     attribution_type:string
+     * }
+     */
+    private function resolveRevenueAttribution(User $actor, License $license): array
+    {
+        $license->loadMissing([
+            'customer.createdBy:id,role',
+            'reseller:id,role',
+        ]);
+
+        $owner = $license->customer?->createdBy;
+        $ownerRole = $owner?->role?->value ?? (string) $owner?->role;
+
+        if (! $owner || ! in_array($ownerRole, [
+            UserRole::SUPER_ADMIN->value,
+            UserRole::MANAGER_PARENT->value,
+            UserRole::MANAGER->value,
+            UserRole::RESELLER->value,
+        ], true)) {
+            $owner = $license->reseller;
+            $ownerRole = $owner?->role?->value ?? (string) $owner?->role;
+        }
+
+        $ownerUserId = $owner?->id ? (int) $owner->id : null;
+        $actorRole = $actor->role?->value ?? (string) $actor->role;
+
+        return [
+            'actor_id' => (int) $actor->id,
+            'actor_role' => $actorRole,
+            'owner_user_id' => $ownerUserId,
+            'owner_role' => $ownerRole !== '' ? $ownerRole : null,
+            'attribution_type' => $ownerUserId !== null && $ownerUserId === (int) $actor->id
+                ? BalanceService::TYPE_EARNED
+                : BalanceService::TYPE_GRANTED,
+        ];
     }
 }
