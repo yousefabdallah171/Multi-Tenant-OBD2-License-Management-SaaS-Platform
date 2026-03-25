@@ -69,62 +69,21 @@ export function useTablePreferences({
 
   const preferenceQuery = useQuery({
     queryKey: ['table-preferences', tableKey, availableColumns.join(','), lockedColumns.join(',')],
-    queryFn: () => {
-      console.log('[useTablePreferences] Fetching preferences', {
-        tableKey,
-        availableColumns,
-        lockedColumns,
-        timestamp: new Date().toISOString()
-      })
-      return tablePreferenceService.get(tableKey!, availableColumns, lockedColumns).then((result) => {
-        console.log('[useTablePreferences] Preferences fetched', {
-          tableKey,
-          result,
-          timestamp: new Date().toISOString()
-        })
-        return result
-      }).catch((error) => {
-        console.error('[useTablePreferences] Preferences fetch failed', {
-          tableKey,
-          error,
-          timestamp: new Date().toISOString()
-        })
-        throw error
-      })
-    },
+    queryFn: () => tablePreferenceService.get(tableKey!, availableColumns, lockedColumns),
     enabled: Boolean(tableKey),
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: 30 * 60 * 1000, // 30 minutes - reasonable cache for user preferences
+    gcTime: 60 * 60 * 1000,    // 60 minutes in garbage collector
     retry: 1,
   })
 
   const saveMutation = useMutation({
-    mutationFn: (payload: { visible_columns: string[]; per_page: number | null }) => {
-      console.log('[useTablePreferences] Saving preferences', {
-        tableKey,
-        payload,
-        timestamp: new Date().toISOString()
-      })
-      return tablePreferenceService.update(tableKey!, {
+    mutationFn: (payload: { visible_columns: string[]; per_page: number | null }) =>
+      tablePreferenceService.update(tableKey!, {
         visible_columns: payload.visible_columns,
         available_columns: availableColumns,
         locked_columns: lockedColumns,
         per_page: payload.per_page,
-      }).then((result) => {
-        console.log('[useTablePreferences] Save mutation succeeded', {
-          tableKey,
-          result,
-          timestamp: new Date().toISOString()
-        })
-        return result
-      }).catch((error) => {
-        console.error('[useTablePreferences] Save mutation failed', {
-          tableKey,
-          error,
-          timestamp: new Date().toISOString()
-        })
-        throw error
-      })
-    },
+      }),
   })
 
   useEffect(() => {

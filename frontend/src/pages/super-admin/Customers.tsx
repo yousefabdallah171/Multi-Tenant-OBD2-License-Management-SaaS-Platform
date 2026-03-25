@@ -76,16 +76,23 @@ export function CustomersPage() {
   const tenantsQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'tenants'],
     queryFn: () => tenantService.getAll({ per_page: 100 }),
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   })
 
   const sellersQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'sellers', tenantId],
     queryFn: () => userService.getAll({ per_page: 100, tenant_id: tenantId || '', role: 'reseller', status: 'active' }),
+    enabled: tenantId !== '',
+    staleTime: 10 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
   })
 
   const programsQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'programs'],
     queryFn: () => programService.getAll({ per_page: 100 }),
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   })
 
   const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
