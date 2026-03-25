@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Check, Columns3, Settings2 } from 'lucide-react'
+import { Columns3, Settings2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -85,14 +85,12 @@ export function TableScreenOptions({
             </p>
             <div className="space-y-1">
               {columns.map((column) => (
-                <Button
+                <button
                   key={column.key}
                   type="button"
-                  size="sm"
-                  variant="ghost"
                   disabled={column.locked}
                   className={cn(
-                    'h-auto w-full justify-between rounded-xl px-3 py-2 text-start',
+                    'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900/60',
                     column.locked && 'opacity-70',
                   )}
                   onClick={() => {
@@ -106,14 +104,21 @@ export function TableScreenOptions({
                     <span className="truncate">{column.label}</span>
                   </span>
                   <span className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={column.visible}
+                      readOnly
+                      disabled={column.locked}
+                      tabIndex={-1}
+                      className="pointer-events-none h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950"
+                    />
                     {column.locked ? (
                       <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                         {t('common.locked', { defaultValue: 'Locked' })}
                       </span>
                     ) : null}
-                    {column.visible ? <Check className="h-4 w-4 text-sky-600 dark:text-sky-300" /> : null}
                   </span>
-                </Button>
+                </button>
               ))}
             </div>
           </div>
