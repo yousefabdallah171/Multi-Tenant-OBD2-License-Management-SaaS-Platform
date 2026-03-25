@@ -60,8 +60,22 @@ export function TableScreenOptions({
 
     const handlePointerDown = (e: PointerEvent) => {
       const target = e.target as Node
-      if (!triggerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
+      const isTrigger = triggerRef.current?.contains(target) ?? false
+      const isPanel = panelRef.current?.contains(target) ?? false
+
+      console.log('[TableScreenOptions] Pointerdown event', {
+        isTrigger,
+        isPanel,
+        targetTag: (target as HTMLElement)?.tagName,
+        targetClass: (target as HTMLElement)?.className,
+        timestamp: new Date().toISOString()
+      })
+
+      if (!isTrigger && !isPanel) {
+        console.log('[TableScreenOptions] Closing panel - click outside')
         setIsOpen(false)
+      } else {
+        console.log('[TableScreenOptions] Keeping panel open - click inside')
       }
     }
 
@@ -110,7 +124,8 @@ export function TableScreenOptions({
                     'flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900/60',
                     column.locked && 'cursor-not-allowed opacity-70',
                   )}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation()
                     console.log('[TableScreenOptions] Column toggle clicked', {
                       columnKey: column.key,
                       columnLabel: column.label,
@@ -166,7 +181,8 @@ export function TableScreenOptions({
                       size="sm"
                       variant={pageSize === option ? 'default' : 'outline'}
                       className="h-9 rounded-lg px-2"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation()
                         console.log('[TableScreenOptions] Pagination button clicked', {
                           option,
                           currentPageSize: pageSize,
