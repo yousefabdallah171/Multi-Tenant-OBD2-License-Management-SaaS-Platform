@@ -12,9 +12,16 @@ use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class BiosDetailsService
 {
+    public function __construct(
+        private readonly ExternalApiService $externalApiService,
+        private readonly IpAnalyticsService $ipAnalyticsService,
+    ) {
+    }
     public function getBiosOverview(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
@@ -276,19 +283,150 @@ class BiosDetailsService
 
     public function getIpAnalytics(string $biosId, ?int $tenantId = null): array
     {
-        $query = BiosAccessLog::query()
-            ->where('bios_id', $biosId)
-            ->orderByDesc('created_at');
-
-        if ($tenantId !== null) {
-            $query->where('tenant_id', $tenantId);
+        // For Super Admin (tenantId=null), resolve from the BIOS's license
+        $resolvedTenantId = $tenantId;
+        if ($resolvedTenantId === null) {
+            $license = License::query()->where('bios_id', $biosId)->whereNotNull('tenant_id')->first(['tenant_id']);
+            if (! $license) {
+                return [];
+            }
+            $resolvedTenantId = (int) $license->tenant_id;
         }
 
-        return $query->limit(200)->get()->map(fn (BiosAccessLog $log): array => [
-            'ip_address' => $log->ip_address,
-            'action' => $log->action,
-            'created_at' => $log->created_at?->toIso8601String(),
-        ])->all();
+        $cacheKey = "ip-analytics:matched:{$resolvedTenantId}";
+        $matched = Cache::get($cacheKey);
+
+        if (! is_array($matched)) {
+            $response = $this->externalApiService->getGlobalLogs();
+            if (! ($response['success'] ?? false)) {
+                return [];
+            }
+            $parsed = $this->ipAnalyticsService->parseExternalLogs((string) ($response['data']['raw'] ?? ''));
+            $matched = $this->ipAnalyticsService->matchLogsToDatabaseRecords($parsed, $resolvedTenantId);
+            $matched = array_values(array_filter($matched, static fn (array $row): bool => ($row['program_id'] ?? null) !== null));
+            $matched = array_reverse($matched);
+            try {
+                Cache::put($cacheKey, $matched, now()->addMinutes(5));
+            } catch (\Throwable) {
+            }
+        }
+
+        $normalizedBiosId = strtolower($biosId);
+        $filtered = array_values(array_filter($matched, static fn (array $row): bool =>
+            isset($row['bios_id']) && strtolower((string) $row['bios_id']) === $normalizedBiosId
+        ));
+
+        if (empty($filtered)) {
+            return [];
+        }
+
+        $uniqueIps = array_values(array_unique(array_column($filtered, 'ip_address')));
+        $geoByIp = $this->fetchGeoData($uniqueIps);
+
+        return array_map(function (array $row) use ($geoByIp): array {
+            $geo = $geoByIp[$row['ip_address']] ?? [
+                'country' => 'Unknown', 'country_code' => '', 'city' => '',
+                'isp' => '', 'proxy' => false,
+            ];
+
+            return [
+                'ip_address' => $row['ip_address'],
+                'timestamp' => $row['timestamp'],
+                'country' => $geo['country'],
+                'country_code' => $geo['country_code'],
+                'city' => $geo['city'],
+                'isp' => $geo['isp'],
+                'proxy' => (bool) $geo['proxy'],
+                'username' => $row['username'],
+                'program_name' => $row['program_name'] ?? null,
+            ];
+        }, $filtered);
+    }
+
+    /**
+     * @param  string[]  $ips
+     * @return array<string, array{country: string, country_code: string, city: string, isp: string, proxy: bool}>
+     */
+    private function fetchGeoData(array $ips): array
+    {
+        if (empty($ips)) {
+            return [];
+        }
+
+        $fallback = ['country' => 'Unknown', 'country_code' => '', 'city' => '', 'isp' => '', 'proxy' => false];
+        $result = [];
+        $uncachedIps = [];
+
+        foreach ($ips as $ip) {
+            $cached = Cache::get('ip-analytics:geo:'.$ip);
+            if (is_array($cached)) {
+                $result[$ip] = [
+                    'country' => (string) ($cached['country'] ?? 'Unknown'),
+                    'country_code' => (string) ($cached['country_code'] ?? ''),
+                    'city' => (string) ($cached['city'] ?? ''),
+                    'isp' => (string) ($cached['isp'] ?? ''),
+                    'proxy' => (bool) ($cached['proxy'] ?? false),
+                ];
+                continue;
+            }
+            $uncachedIps[] = $ip;
+        }
+
+        foreach (array_chunk($uncachedIps, 100) as $chunk) {
+            try {
+                $payload = array_map(static fn (string $ip): array => ['query' => $ip], $chunk);
+                $response = Http::timeout(8)
+                    ->post('http://ip-api.com/batch?fields=status,country,countryCode,city,isp,org,proxy,hosting,query', $payload);
+
+                if (! $response->successful()) {
+                    foreach ($chunk as $ip) {
+                        $result[$ip] = $fallback;
+                        $this->cacheGeo('ip-analytics:geo:'.$ip, $fallback);
+                    }
+                    continue;
+                }
+
+                foreach ($response->json() as $item) {
+                    $ip = (string) ($item['query'] ?? '');
+                    if ($ip === '' || ($item['status'] ?? '') !== 'success') {
+                        if ($ip !== '') {
+                            $result[$ip] = $fallback;
+                            $this->cacheGeo('ip-analytics:geo:'.$ip, $fallback);
+                        }
+                        continue;
+                    }
+
+                    $geo = [
+                        'country' => (string) ($item['country'] ?? 'Unknown'),
+                        'country_code' => (string) ($item['countryCode'] ?? ''),
+                        'city' => (string) ($item['city'] ?? ''),
+                        'isp' => (string) (($item['org'] ?? '') !== '' ? ($item['org'] ?? '') : ($item['isp'] ?? '')),
+                        'proxy' => (bool) (($item['proxy'] ?? false) || ($item['hosting'] ?? false)),
+                    ];
+
+                    $result[$ip] = $geo;
+                    $this->cacheGeo('ip-analytics:geo:'.$ip, $geo);
+                }
+            } catch (\Throwable) {
+                foreach ($chunk as $ip) {
+                    $result[$ip] = $fallback;
+                    $this->cacheGeo('ip-analytics:geo:'.$ip, $fallback);
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array{country: string, country_code: string, city: string, isp: string, proxy: bool}  $payload
+     */
+    private function cacheGeo(string $key, array $payload): void
+    {
+        try {
+            Cache::put($key, $payload, now()->addHour());
+        } catch (\Throwable) {
+        }
     }
 
     public function getBiosActivity(string $biosId, ?int $tenantId = null): array

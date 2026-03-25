@@ -185,10 +185,21 @@ export function BiosDetailsPage() {
           <TabsContent value="ips">
             <Card>
               <CardContent className="space-y-2 p-4">
+                {!ipsQuery.isLoading && (ipsQuery.data ?? []).length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosDetails.noSoftwareActivity')}</p>
+                ) : null}
                 {(ipsQuery.data ?? []).map((ip, index) => (
                   <div key={`${ip.ip_address}-${index}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                    <p className="font-medium">{ip.ip_address ?? '-'}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{ip.created_at ? formatDate(ip.created_at, locale) : '-'}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium">{ip.ip_address ?? '-'}</p>
+                      {ip.proxy ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">VPN/Proxy</span> : null}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      {ip.country ? <span>{ip.city ? `${ip.city}, ` : ''}{ip.country}</span> : null}
+                      {ip.isp ? <span>{ip.isp}</span> : null}
+                      {ip.program_name ? <span>{ip.program_name}</span> : null}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{ip.timestamp ? formatDate(ip.timestamp, locale) : '-'}</p>
                   </div>
                 ))}
               </CardContent>

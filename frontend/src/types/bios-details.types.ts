@@ -51,8 +51,13 @@ export interface BiosReseller {
 
 export interface BiosIp {
   ip_address: string | null
-  action?: string
-  created_at: string | null
+  timestamp: string | null
+  country?: string | null
+  city?: string | null
+  isp?: string | null
+  proxy?: boolean
+  username?: string | null
+  program_name?: string | null
 }
 
 export interface BiosActivity {
