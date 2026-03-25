@@ -22,7 +22,26 @@ export const tablePreferenceService = {
         locked_columns: lockedColumns,
       },
       paramsSerializer: {
-        indexes: null,
+        serialize: (params) => {
+          const searchParams = new URLSearchParams()
+          const tableKeyParam = params.table_key
+          const availableColumnsParam = Array.isArray(params.available_columns) ? params.available_columns : []
+          const lockedColumnsParam = Array.isArray(params.locked_columns) ? params.locked_columns : []
+
+          if (typeof tableKeyParam === 'string') {
+            searchParams.set('table_key', tableKeyParam)
+          }
+
+          for (const column of availableColumnsParam) {
+            searchParams.append('available_columns[]', String(column))
+          }
+
+          for (const column of lockedColumnsParam) {
+            searchParams.append('locked_columns[]', String(column))
+          }
+
+          return searchParams.toString()
+        },
       },
     })
 
