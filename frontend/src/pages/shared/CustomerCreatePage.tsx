@@ -67,7 +67,6 @@ function buildRelativeSchedule(value: number, unit: DurationUnit) {
   if (unit === 'days') next.setDate(next.getDate() + value)
   return next
 }
-
 export function CustomerCreatePage({ title, description, backPath, createCustomer }: CustomerCreatePageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
@@ -109,7 +108,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     if (!Number.isFinite(value) || value <= 0) {
       return
     }
-
     setScheduleAt(formatDateTimeLocalInTimezone(buildRelativeSchedule(value, scheduleAfterUnit), scheduleTimezone))
   }, [scheduleAfterUnit, scheduleAfterValue, scheduleEnabled, scheduleMode, scheduleTimezone])
 
