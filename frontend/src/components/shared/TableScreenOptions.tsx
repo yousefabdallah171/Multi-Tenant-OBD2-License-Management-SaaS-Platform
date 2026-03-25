@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Columns3, Settings2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -28,56 +29,65 @@ export function TableScreenOptions({
 }: TableScreenOptionsProps) {
   const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({})
+  const triggerRef = useRef<HTMLSpanElement | null>(null)
+  const panelRef = useRef<HTMLDivElement | null>(null)
   const panelId = useId()
 
+  const recalcPosition = () => {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    const isRtl = document.documentElement.dir === 'rtl'
+    setPanelStyle({
+      position: 'fixed',
+      top: rect.bottom + 8,
+      ...(isRtl ? { left: rect.left } : { right: window.innerWidth - rect.right }),
+    })
+  }
+
+  const handleToggle = () => {
+    if (!isOpen) recalcPosition()
+    setIsOpen((prev) => !prev)
+  }
+
   useEffect(() => {
-    if (!isOpen) {
-      return
-    }
+    if (!isOpen) return
 
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
+    const handlePointerDown = (e: PointerEvent) => {
+      const target = e.target as Node
+      if (!triggerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         setIsOpen(false)
       }
     }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false)
-      }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false)
+    }
+
+    const handleScroll = () => {
+      if (isOpen) recalcPosition()
     }
 
     window.addEventListener('pointerdown', handlePointerDown)
     window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
 
     return () => {
       window.removeEventListener('pointerdown', handlePointerDown)
       window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('scroll', handleScroll, { capture: true })
     }
   }, [isOpen])
 
-  return (
-    <div ref={containerRef} className="relative">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-expanded={isOpen}
-          aria-controls={panelId}
-          className={cn(
-            'rounded-xl border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70',
-            isLoading && 'opacity-100',
-          )}
-          onClick={() => setIsOpen((current) => !current)}
-        >
-          <Settings2 className="me-2 h-4 w-4" />
-          {t('common.screenOptions', { defaultValue: 'Screen Options' })}
-        </Button>
-      {isOpen ? (
+  const panel = isOpen
+    ? createPortal(
         <div
+          ref={panelRef}
           id={panelId}
-          className="absolute end-0 top-full z-50 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-950"
+          role="dialog"
+          aria-label={t('common.screenOptions', { defaultValue: 'Screen Options' })}
+          style={panelStyle}
+          className="z-[9999] w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-950"
         >
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -89,14 +99,14 @@ export function TableScreenOptions({
                   key={column.key}
                   type="button"
                   disabled={column.locked}
+                  aria-pressed={column.visible}
+                  aria-label={column.label}
                   className={cn(
-                    'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900/60',
-                    column.locked && 'opacity-70',
+                    'flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900/60',
+                    column.locked && 'cursor-not-allowed opacity-70',
                   )}
                   onClick={() => {
-                    if (!column.locked) {
-                      onToggleColumn(column.key)
-                    }
+                    if (!column.locked) onToggleColumn(column.key)
                   }}
                 >
                   <span className="flex min-w-0 items-center gap-2">
@@ -110,6 +120,7 @@ export function TableScreenOptions({
                       readOnly
                       disabled={column.locked}
                       tabIndex={-1}
+                      aria-hidden="true"
                       className="pointer-events-none h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950"
                     />
                     {column.locked ? (
@@ -147,8 +158,30 @@ export function TableScreenOptions({
               </div>
             </>
           ) : null}
-        </div>
-      ) : null}
-    </div>
+        </div>,
+        document.body,
+      )
+    : null
+
+  return (
+    <span ref={triggerRef} className="relative inline-block">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? panelId : undefined}
+        aria-haspopup="dialog"
+        className={cn(
+          'rounded-xl border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70',
+          isLoading && 'opacity-100',
+        )}
+        onClick={handleToggle}
+      >
+        <Settings2 className="me-2 h-4 w-4" />
+        {t('common.screenOptions', { defaultValue: 'Screen Options' })}
+      </Button>
+      {panel}
+    </span>
   )
 }

@@ -11,11 +11,15 @@ export function formatDate(value: string | Date | null | undefined, locale = 'en
   if (!value) return '-'
   const d = new Date(value)
   if (isNaN(d.getTime())) return '-'
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone,
-  }).format(d)
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone,
+    }).format(d)
+  } catch {
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }).format(d)
+  }
 }
 
 export function formatCurrency(value: number, currency = 'USD', locale = 'en-US') {

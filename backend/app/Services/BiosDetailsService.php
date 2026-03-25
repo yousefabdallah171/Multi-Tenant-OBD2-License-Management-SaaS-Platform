@@ -268,7 +268,7 @@ class BiosDetailsService
                     'id' => $first?->reseller_id,
                     'name' => $first?->reseller?->name,
                     'email' => $this->visibleEmail($first?->reseller?->email),
-                    'role' => $first?->reseller?->role?->value ?? (string) $first?->reseller?->role ?? null,
+                    'role' => $first?->reseller?->role?->value ?? ($first?->reseller?->role !== null ? (string) $first?->reseller?->role : null),
                     'activation_count' => $licenses->count(),
                     'total_revenue' => (float) $licenses->sum('price'),
                     'last_activity_at' => $licenses->sortByDesc('activated_at')->first()?->activated_at?->toIso8601String(),
@@ -289,7 +289,7 @@ class BiosDetailsService
         // For Super Admin (tenantId=null), resolve from the BIOS's license
         $resolvedTenantId = $tenantId;
         if ($resolvedTenantId === null) {
-            $license = License::query()->where('bios_id', $biosId)->whereNotNull('tenant_id')->first(['tenant_id']);
+            $license = License::query()->where('bios_id', $biosId)->whereNotNull('tenant_id')->orderByDesc('activated_at')->first(['tenant_id', 'activated_at']);
             if (! $license) {
                 return [];
             }
@@ -323,7 +323,7 @@ class BiosDetailsService
             return [];
         }
 
-        $uniqueIps = array_values(array_unique(array_column($filtered, 'ip_address')));
+        $uniqueIps = array_values(array_filter(array_unique(array_column($filtered, 'ip_address')), static fn ($ip): bool => is_string($ip) && $ip !== ''));
         $geoByIp = $this->fetchGeoData($uniqueIps);
 
         return array_map(function (array $row) use ($geoByIp): array {

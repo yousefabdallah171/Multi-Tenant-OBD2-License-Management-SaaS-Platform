@@ -462,6 +462,9 @@ class LicenseService
 
         if ($apiKey !== null) {
             $apiResponse = $this->externalApiService->deactivateUser($apiKey, (string) $license->external_username, $program?->external_api_base_url);
+            if (! ($apiResponse['success'] ?? false)) {
+                throw new \RuntimeException('External API deactivation failed: '.($apiResponse['data']['response'] ?? 'Unknown error'));
+            }
         }
 
         $this->logBiosAccess($reseller, $license->bios_id, 'pause', [
