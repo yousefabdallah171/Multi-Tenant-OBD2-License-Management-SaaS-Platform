@@ -660,6 +660,7 @@ class CustomerController extends BaseManagerController
             'bios_id' => $license?->bios_id,
             'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
+            'reseller_role' => $license?->reseller?->role?->value ?? ($license?->reseller ? (string) $license->reseller->role : null),
             'reseller_id' => $license?->reseller?->id,
             'duration_days' => $license ? (float) $license->duration_days : null,
             'program' => $license?->program?->name,

@@ -381,7 +381,19 @@ export function CustomersPage() {
         </Link>
       ) : '-',
       },
-      { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
+      { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => (
+        <div className="flex flex-col gap-0.5">
+          <span>{row.reseller ?? '-'}</span>
+          {row.reseller_role && row.reseller_role !== 'reseller' && (
+            <span className="inline-flex w-fit items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
+              {row.reseller_role === 'manager_parent' ? (lang === 'ar' ? 'مدير رئيسي' : 'Manager Parent')
+                : row.reseller_role === 'manager' ? (lang === 'ar' ? 'مدير' : 'Manager')
+                : row.reseller_role === 'super_admin' ? (lang === 'ar' ? 'مدير النظام' : 'Super Admin')
+                : row.reseller_role}
+            </span>
+          )}
+        </div>
+      ) },
       {
         key: 'duration',
         label: t('common.duration'),

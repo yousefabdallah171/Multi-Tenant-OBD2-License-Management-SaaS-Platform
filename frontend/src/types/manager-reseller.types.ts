@@ -133,6 +133,7 @@ export interface ManagerCustomerSummary {
   bios_id: string | null
   external_username?: string | null
   reseller: string | null
+  reseller_role?: string | null
   reseller_id: number | null
   duration_days?: number | null
   program: string | null
