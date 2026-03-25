@@ -469,7 +469,10 @@ class LicenseService
             'external' => $apiResponse,
         ]);
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse, $data): License {
+        $actorRole = $actor->role?->value ?? (string) $actor->role;
+        $hasPausedByRole = \Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role');
+
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $data, $actorRole, $hasPausedByRole): License {
             $remainingMinutes = max(1, $this->currentMinute()->diffInMinutes($license->expires_at, false));
             $pauseReason = Str::limit(trim((string) ($data['pause_reason'] ?? '')), 500, '...');
 
@@ -486,8 +489,8 @@ class LicenseService
                 'scheduled_failure_message' => null,
                 'is_scheduled' => false,
             ];
-            if (\Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role')) {
-                $pauseData['paused_by_role'] = $actor->role?->value ?? (string) $actor->role;
+            if ($hasPausedByRole) {
+                $pauseData['paused_by_role'] = $actorRole;
             }
             $license->forceFill($pauseData)->save();
 
@@ -578,7 +581,9 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending, $biosIdLower): License {
+        $hasPausedByRole = \Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role');
+
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending, $biosIdLower, $hasPausedByRole): License {
             // Re-check inside transaction with a lock to prevent race condition
             $conflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
@@ -611,7 +616,7 @@ class LicenseService
                 'scheduled_failure_message' => null,
                 'is_scheduled' => false,
             ];
-            if (\Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role')) {
+            if ($hasPausedByRole) {
                 $resumeData['paused_by_role'] = null;
             }
             $license->forceFill($resumeData)->save();
