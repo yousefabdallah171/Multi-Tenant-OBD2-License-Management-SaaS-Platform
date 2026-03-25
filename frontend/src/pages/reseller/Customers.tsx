@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -29,7 +29,7 @@ import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
-import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -330,13 +330,11 @@ export function CustomersPage() {
   const [deactivateTarget, setDeactivateTarget] = useState<ResellerCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ResellerCustomerSummary | null>(null)
   const [pauseReason, setPauseReason] = useState('')
-  const [deleteTarget, setDeleteTarget] = useState<ResellerCustomerSummary | null>(null)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
   const [selectedLicenseIds, setSelectedLicenseIds] = useState<number[]>([])
   const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const customerFilterParams = useMemo(
     () => ({
       search: search || undefined,
@@ -514,19 +512,6 @@ export function CustomersPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: (customerId: number) => resellerService.deleteCustomer(customerId),
-    onSuccess: (response) => {
-      toast.success(response.message ?? t('common.deleted', { defaultValue: 'Deleted successfully.' }))
-      setDeleteTarget(null)
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
-      ])
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
-  })
-
   const bulkRenewMutation = useMutation({
     mutationFn: (payload: RenewLicenseData) => licenseService.bulkRenew(selectedLicenseIds, payload),
     onSuccess: () => {
@@ -555,27 +540,10 @@ export function CustomersPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
-  const bulkDeleteMutation = useMutation({
-    mutationFn: () => licenseService.bulkDelete(selectedLicenseIds),
-    onSuccess: (response) => {
-      if ((response.count ?? 0) <= 0) {
-        toast.error(t('common.error', { defaultValue: 'No deletable licenses selected.' }))
-      } else {
-        toast.success(t('common.bulkDeleteSuccess', { defaultValue: 'Selected licenses deleted successfully.' }))
-      }
-      setBulkDeleteOpen(false)
-      setSelectedLicenseIds([])
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
-      ])
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
-  })
 
   const customerRows = customersQuery.data?.data ?? []
   const selectableIds = customerRows
-    .filter((row) => typeof row.license_id === 'number' && canDeleteLicense(row))
+    .filter((row) => typeof row.license_id === 'number')
     .map((row) => row.license_id as number)
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
@@ -602,7 +570,7 @@ export function CustomersPage() {
             }}
           />
         ),
-      render: (row) => typeof row.license_id === 'number' && canDeleteLicense(row) ? (
+      render: (row) => typeof row.license_id === 'number' ? (
         <input
           type="checkbox"
           checked={selectedLicenseIds.includes(row.license_id)}
@@ -704,7 +672,6 @@ export function CustomersPage() {
         const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
         const isPausedPending = isPausedPendingLicense(row)
         const isPlainPending = isPlainPendingLicense(row)
-        const canDeleteRow = canDeleteCustomerRow(row)
         const isBlacklisted = Boolean(row.is_blacklisted)
         const isBiosActiveElsewhere = Boolean(row.bios_active_elsewhere)
         const renewActionLabel = displayStatus === 'active'
@@ -818,17 +785,6 @@ export function CustomersPage() {
                     </DropdownMenuItem>
                   </>
                 )}
-                {canDeleteRow ? (
-                  <DropdownMenuItem
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      setDeleteTarget(row)
-                    }}
-                  >
-                    <Trash2 className="me-2 h-4 w-4" />
-                    {t('common.delete')}
-                  </DropdownMenuItem>
-                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           )
@@ -985,7 +941,6 @@ export function CustomersPage() {
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="secondary" onClick={() => setBulkRenewOpen(true)}>{t('reseller.pages.licenses.bulkRenew')}</Button>
                   <Button type="button" variant="secondary" onClick={() => setBulkDeactivateOpen(true)}>{t('reseller.pages.licenses.bulkDeactivate')}</Button>
-                  <Button type="button" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>{t('common.deleteSelected', { defaultValue: 'Delete Selected' })}</Button>
                 </div>
               </CardContent>
             </Card>
@@ -1441,22 +1396,6 @@ export function CustomersPage() {
       </Dialog>
 
       <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null)
-        }}
-        title={t('common.delete')}
-        description={deleteTarget ? `${deleteTarget.name} (${deleteTarget.email ?? '-'})` : undefined}
-        confirmLabel={t('common.delete')}
-        isDestructive
-        onConfirm={() => {
-          if (deleteTarget) {
-            deleteMutation.mutate(deleteTarget.id)
-          }
-        }}
-      />
-
-      <ConfirmDialog
         open={deactivateTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -1526,15 +1465,6 @@ export function CustomersPage() {
         onConfirm={() => bulkDeactivateMutation.mutate()}
       />
 
-      <ConfirmDialog
-        open={bulkDeleteOpen}
-        onOpenChange={setBulkDeleteOpen}
-        title={t('common.bulkDelete', { defaultValue: 'Bulk Delete' })}
-        description={t('reseller.pages.licenses.confirm.bulkDeleteDescription', { count: selectedLicenseIds.length, defaultValue: 'Delete selected licenses?' })}
-        confirmLabel={t('common.deleteSelected', { defaultValue: 'Delete Selected' })}
-        isDestructive
-        onConfirm={() => bulkDeleteMutation.mutate()}
-      />
 
       <EditCustomerDialog
         open={editTarget !== null}

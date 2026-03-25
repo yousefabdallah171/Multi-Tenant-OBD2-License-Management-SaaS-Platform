@@ -296,15 +296,12 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::put('/customers/{user}', [ResellerCustomerController::class, 'update']);
         Route::get('/customers/{user}', [ResellerCustomerController::class, 'show']);
         Route::get('/customers/{user}/bios-change-history', [ResellerCustomerController::class, 'biosChangeHistory']);
-        Route::delete('/customers/{user}', [ResellerCustomerController::class, 'destroy']);
 
         Route::get('/licenses/expiring', [ResellerLicenseController::class, 'expiring']);
         Route::get('/licenses', [ResellerLicenseController::class, 'index']);
         Route::get('/licenses/{license}', [ResellerLicenseController::class, 'show']);
         Route::post('/licenses/bulk-renew', [ResellerLicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-deactivate', [ResellerLicenseController::class, 'bulkDeactivate']);
-        Route::post('/licenses/bulk-delete', [ResellerLicenseController::class, 'bulkDelete']);
-        Route::delete('/licenses/{license}', [ResellerLicenseController::class, 'destroy']);
         Route::post('/licenses/{license}/pause', [ResellerLicenseController::class, 'pause']);
         Route::post('/licenses/{license}/resume', [ResellerLicenseController::class, 'resume']);
         Route::post('/licenses/{license}/cancel-pending', [ResellerLicenseController::class, 'cancelPending']);
