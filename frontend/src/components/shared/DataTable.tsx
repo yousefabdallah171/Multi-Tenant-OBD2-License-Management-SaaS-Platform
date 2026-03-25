@@ -16,6 +16,7 @@ export interface DataTableColumn<T> {
   sortable?: boolean
   className?: string
   alwaysVisible?: boolean
+  defaultHidden?: boolean
   render: (row: T) => React.ReactNode
   sortValue?: (row: T) => string | number
 }
@@ -67,6 +68,7 @@ export function DataTable<T>({
       key: column.key,
       label: column.screenLabel ?? (typeof column.label === 'string' ? column.label : column.key),
       alwaysVisible: column.alwaysVisible,
+      defaultHidden: column.defaultHidden,
     })),
     perPage: pagination?.perPage,
     onPerPageChange: onPageSizeChange,
@@ -156,7 +158,7 @@ export function DataTable<T>({
             pageSizeOptions={pageSizeOptions}
             onToggleColumn={toggleColumn}
             onPageSizeChange={onPageSizeChange}
-            disabled={preferencesLoading}
+            isLoading={preferencesLoading}
           />
         </div>
       ) : null}

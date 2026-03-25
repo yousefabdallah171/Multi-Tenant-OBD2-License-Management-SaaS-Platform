@@ -18,6 +18,14 @@ class TablePreferenceService
             ->where('table_key', $tableKey)
             ->first();
 
+        if ($preference === null) {
+            return [
+                'table_key' => $tableKey,
+                'visible_columns' => [],
+                'per_page' => null,
+            ];
+        }
+
         $visibleColumns = $this->sanitizeVisibleColumns(
             is_array($preference?->visible_columns) ? $preference->visible_columns : [],
             $availableColumns,

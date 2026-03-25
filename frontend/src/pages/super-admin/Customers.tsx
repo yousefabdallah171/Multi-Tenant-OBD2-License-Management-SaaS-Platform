@@ -228,8 +228,8 @@ export function CustomersPage() {
           </Link>
         ),
       },
-      { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? '-' },
-      { key: 'phone', label: t('common.phone'), sortable: true, sortValue: (row) => row.phone ?? '', render: (row) => row.phone ?? '-' },
+      { key: 'tenant', label: t('common.tenant'), sortable: true, defaultHidden: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? '-' },
+      { key: 'phone', label: t('common.phone'), sortable: true, defaultHidden: true, sortValue: (row) => row.phone ?? '', render: (row) => row.phone ?? '-' },
       {
         key: 'bios',
         label: t('superAdmin.pages.customers.biosId'),
@@ -251,8 +251,8 @@ export function CustomersPage() {
           sortValue: (row) => resolveLicenseDurationDays(row.duration_days, row.start_at, row.expiry) ?? 0,
           render: (row) => formatLicenseDurationDays(row.duration_days, t, row.start_at, row.expiry),
         },
-        { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
-      { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => row.start_at ?? '', render: (row) => (row.start_at ? formatDate(row.start_at, locale) : '-') },
+        { key: 'program', label: t('common.program'), sortable: true, defaultHidden: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+      { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, defaultHidden: true, sortValue: (row) => row.start_at ?? '', render: (row) => (row.start_at ? formatDate(row.start_at, locale) : '-') },
       {
         key: 'status',
         label: t('common.status'),
@@ -269,8 +269,8 @@ export function CustomersPage() {
           </div>
         ) : '-',
       },
-      { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
-      { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
+      { key: 'reason', label: t('common.reason'), sortable: true, defaultHidden: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
+      { key: 'expiry', label: t('common.expiry'), sortable: true, defaultHidden: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
       {
         key: 'actions',
         label: t('common.actions'),

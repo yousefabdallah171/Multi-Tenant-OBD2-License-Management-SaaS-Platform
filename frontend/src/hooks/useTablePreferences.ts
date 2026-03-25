@@ -6,6 +6,7 @@ interface TablePreferenceColumn {
   key: string
   label: string
   alwaysVisible?: boolean
+  defaultHidden?: boolean
 }
 
 interface UseTablePreferencesOptions {
@@ -30,6 +31,14 @@ function sanitizeVisibleColumns(columns: TablePreferenceColumn[], visibleColumns
   return filtered.length > 0 ? filtered : columns.map((column) => column.key)
 }
 
+function buildDefaultVisibleColumns(columns: TablePreferenceColumn[]) {
+  const visible = columns
+    .filter((column, index) => column.alwaysVisible || index === 0 || column.key === 'actions' || !column.defaultHidden)
+    .map((column) => column.key)
+
+  return visible.length > 0 ? visible : columns.map((column) => column.key)
+}
+
 export function useTablePreferences({
   tableKey,
   columns,
@@ -42,10 +51,11 @@ export function useTablePreferences({
     () => columns.filter((column, index) => column.alwaysVisible || index === 0 || column.key === 'actions').map((column) => column.key),
     [columns],
   )
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(availableColumns)
+  const defaultVisibleColumns = useMemo(() => buildDefaultVisibleColumns(columns), [columns])
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(defaultVisibleColumns)
   const [hasHydrated, setHasHydrated] = useState(false)
-  const persistTimeoutRef = useRef<number | null>(null)
   const hasHydratedPerPageRef = useRef(false)
+  const lastSavedPayloadRef = useRef<string | null>(null)
 
   const preferenceQuery = useQuery({
     queryKey: ['table-preferences', tableKey, availableColumns.join(','), lockedColumns.join(',')],
@@ -65,49 +75,52 @@ export function useTablePreferences({
 
   useEffect(() => {
     if (!tableKey) {
-      setVisibleColumns(availableColumns)
+      setVisibleColumns(defaultVisibleColumns)
       setHasHydrated(true)
       return
     }
 
-    if (!preferenceQuery.data) {
+    if (preferenceQuery.isLoading) {
       return
     }
 
-    const nextVisibleColumns = sanitizeVisibleColumns(columns, preferenceQuery.data.visible_columns ?? [])
+    const nextVisibleColumns = sanitizeVisibleColumns(columns, preferenceQuery.data?.visible_columns?.length ? preferenceQuery.data.visible_columns : defaultVisibleColumns)
     setVisibleColumns(nextVisibleColumns)
     setHasHydrated(true)
 
-    if (!hasHydratedPerPageRef.current && onPerPageChange && preferenceQuery.data.per_page && pageSizeOptions.includes(preferenceQuery.data.per_page) && preferenceQuery.data.per_page !== perPage) {
+    if (!hasHydratedPerPageRef.current && onPerPageChange && preferenceQuery.data?.per_page && pageSizeOptions.includes(preferenceQuery.data.per_page) && preferenceQuery.data.per_page !== perPage) {
       hasHydratedPerPageRef.current = true
       onPerPageChange(preferenceQuery.data.per_page)
       return
     }
 
     hasHydratedPerPageRef.current = true
-  }, [availableColumns, columns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, tableKey])
+  }, [columns, defaultVisibleColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey])
 
   useEffect(() => {
     if (!tableKey || !hasHydrated) {
       return
     }
 
-    if (persistTimeoutRef.current !== null) {
-      window.clearTimeout(persistTimeoutRef.current)
+    if (onPerPageChange && !hasHydratedPerPageRef.current) {
+      return
     }
 
-    persistTimeoutRef.current = window.setTimeout(() => {
-      saveMutation.mutate({
-        visible_columns: sanitizeVisibleColumns(columns, visibleColumns),
-        per_page: typeof perPage === 'number' ? perPage : null,
-      })
-    }, 250)
+    const sanitizedVisibleColumns = sanitizeVisibleColumns(columns, visibleColumns)
+    const payload = JSON.stringify({
+      visible_columns: sanitizedVisibleColumns,
+      per_page: typeof perPage === 'number' ? perPage : null,
+    })
 
-    return () => {
-      if (persistTimeoutRef.current !== null) {
-        window.clearTimeout(persistTimeoutRef.current)
-      }
+    if (payload === lastSavedPayloadRef.current) {
+      return
     }
+
+    lastSavedPayloadRef.current = payload
+    saveMutation.mutate({
+      visible_columns: sanitizedVisibleColumns,
+      per_page: typeof perPage === 'number' ? perPage : null,
+    })
   }, [columns, hasHydrated, perPage, saveMutation, tableKey, visibleColumns])
 
   const visibleColumnSet = useMemo(() => new Set(sanitizeVisibleColumns(columns, visibleColumns)), [columns, visibleColumns])

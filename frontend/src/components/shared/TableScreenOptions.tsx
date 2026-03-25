@@ -15,7 +15,7 @@ interface TableScreenOptionsProps {
   pageSizeOptions?: number[]
   onToggleColumn: (columnKey: string) => void
   onPageSizeChange?: (pageSize: number) => void
-  disabled?: boolean
+  isLoading?: boolean
 }
 
 export function TableScreenOptions({
@@ -24,14 +24,22 @@ export function TableScreenOptions({
   pageSizeOptions = [10, 25, 50, 100],
   onToggleColumn,
   onPageSizeChange,
-  disabled = false,
+  isLoading = false,
 }: TableScreenOptionsProps) {
   const { t } = useTranslation()
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={disabled}>
-        <Button type="button" variant="outline" size="sm" className="rounded-xl">
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={cn(
+            'rounded-xl border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70',
+            isLoading && 'opacity-100',
+          )}
+        >
           <Settings2 className="me-2 h-4 w-4" />
           {t('common.screenOptions', { defaultValue: 'Screen Options' })}
         </Button>
