@@ -1739,7 +1739,8 @@
       "pause": "إيقاف",
       "deactivate": "إلغاء التفعيل"
     },
-    "noSoftwareActivity": "لا يوجد استخدام مسجّل للبرنامج لهذا المعرّف حتى الآن."
+    "noSoftwareActivity": "لا يوجد نشاط برنامج",
+    "noSoftwareActivityDesc": "هذا المعرّف BIOS لم يتصل بالبرنامج بعد بناءً على البيانات المتاحة."
   },
   "settings": {
     "error": "فشل حفظ الإعدادات",

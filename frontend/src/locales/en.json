@@ -1745,7 +1745,8 @@
       "pause": "Pause",
       "deactivate": "Deactivate"
     },
-    "noSoftwareActivity": "No software usage recorded for this BIOS ID yet."
+    "noSoftwareActivity": "No software activity found",
+    "noSoftwareActivityDesc": "This BIOS ID has not connected to the software yet based on available data."
   },
   "customerDetail": {
     "resellerTimeline": "Reseller Timeline",

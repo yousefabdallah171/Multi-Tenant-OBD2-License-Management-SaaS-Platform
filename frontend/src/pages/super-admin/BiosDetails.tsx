@@ -218,8 +218,8 @@ export function BiosDetailsPage() {
           <TabsContent value="ips">
             <Card>
               <CardContent className="space-y-2 p-4">
-                {!ipsQuery.isLoading && (ipsQuery.data ?? []).length === 0 ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosDetails.noSoftwareActivity')}</p>
+                {!ipsQuery.isLoading && !ipsQuery.isError && (ipsQuery.data ?? []).length === 0 ? (
+                  <EmptyState title={t('biosDetails.noSoftwareActivity')} description={t('biosDetails.noSoftwareActivityDesc')} />
                 ) : null}
                 {(ipsQuery.data ?? []).map((ip, index) => (
                   <div key={`${ip.ip_address}-${index}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
