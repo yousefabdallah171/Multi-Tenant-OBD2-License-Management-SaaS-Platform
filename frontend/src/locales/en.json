@@ -39,9 +39,6 @@
     "reseller": "Reseller",
     "customer": "Customer"
   },
-  "customers": {
-    "pausedByAdmin": "Paused by Admin"
-  },
   "dashboard": {
     "roleLabel": "Role dashboard",
     "lightMode": "Light mode",
@@ -1760,7 +1757,8 @@
   },
   "customers": {
     "filterByManagerParent": "Filter by Manager Parent",
-    "filterByManager": "Filter by Manager"
+    "filterByManager": "Filter by Manager",
+    "pausedByAdmin": "Paused by Admin"
   },
   "biosChangeRequests": {
     "title": "BIOS Change Requests",

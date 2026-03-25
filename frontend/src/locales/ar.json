@@ -39,9 +39,6 @@
     "reseller": "موزع",
     "customer": "عميل"
   },
-  "customers": {
-    "pausedByAdmin": "موقوف من المسؤول"
-  },
   "dashboard": {
     "roleLabel": "لوحة الدور",
     "lightMode": "الوضع الفاتح",
@@ -1760,7 +1757,8 @@
   },
   "customers": {
     "filterByManagerParent": "فلترة حسب المدير الرئيسي",
-    "filterByManager": "فلترة حسب المدير"
+    "filterByManager": "فلترة حسب المدير",
+    "pausedByAdmin": "موقوف من المسؤول"
   },
   "biosChangeRequests": {
     "title": "طلبات تغيير BIOS",
