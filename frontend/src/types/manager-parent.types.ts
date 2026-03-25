@@ -457,6 +457,7 @@ export interface UsernameManagedUser {
 export interface FinancialReportData {
   summary: {
     total_revenue: number
+    granted_value: number
     total_activations: number
     total_customers: number
     active_customers: number

@@ -274,6 +274,7 @@ export interface BiosConflictItem {
 export interface FinancialReportPayload {
   summary: {
     total_platform_revenue: number
+    granted_value: number
     total_customers: number
     total_activations: number
     active_licenses: number

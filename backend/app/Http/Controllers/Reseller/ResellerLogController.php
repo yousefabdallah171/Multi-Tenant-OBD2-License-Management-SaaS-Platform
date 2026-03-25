@@ -151,7 +151,13 @@ class ResellerLogController extends BaseResellerController
             'revenue' => round((float) (clone $query)
                 ->whereIn('action', ['license.activated', 'license.renewed'])
                 ->get()
-                ->sum(fn (ActivityLog $activity): float => (float) (($activity->metadata ?? [])['price'] ?? 0)), 2),
+                ->sum(function (ActivityLog $activity): float {
+                    $metadata = $activity->metadata ?? [];
+
+                    return (($metadata['attribution_type'] ?? 'earned') === 'granted')
+                        ? 0.0
+                        : (float) ($metadata['price'] ?? 0);
+                }), 2),
         ];
     }
 }

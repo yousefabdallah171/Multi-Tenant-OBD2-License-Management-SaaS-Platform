@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
+import { formatActivityActionLabel, formatDate, formatLicenseDurationDays, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { superAdminBiosDetailsService } from '@/services/bios-details.service'
 
@@ -163,7 +163,7 @@ export function BiosDetailsPage() {
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                   <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.duration')}</p>
-                  <p className="font-medium">{latestLicense ? `${latestLicense.duration_days} ${t('common.days')}` : '-'}</p>
+                  <p className="font-medium">{formatLicenseDurationDays(latestLicense?.duration_days, t, latestLicense?.activated_at, latestLicense?.expires_at)}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                   <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.price')}</p>
@@ -199,7 +199,7 @@ export function BiosDetailsPage() {
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       {t('biosDetails.saleSummaryMeta', {
-                        days: latestLicense.duration_days,
+                        duration: formatLicenseDurationDays(latestLicense.duration_days, t, latestLicense.activated_at, latestLicense.expires_at),
                         price: `$${Number(latestLicense.price).toFixed(2)}`,
                         activatedAt: latestLicense.activated_at ? formatDate(latestLicense.activated_at, locale) : '-',
                       })}

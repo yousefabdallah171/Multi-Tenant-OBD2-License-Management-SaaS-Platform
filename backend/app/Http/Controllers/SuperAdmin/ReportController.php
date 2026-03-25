@@ -6,6 +6,7 @@ use App\Models\License;
 use App\Models\User;
 use App\Services\ExportTaskService;
 use App\Support\LicenseCacheInvalidation;
+use App\Support\RevenueAnalytics;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,10 +19,11 @@ class ReportController extends BaseSuperAdminController
         $validated = $this->validatedFilters($request);
 
         $data = Cache::remember($this->cacheKey('revenue', $validated), now()->addSeconds(90), function () use ($validated): array {
-            return $this->baseLicenseQuery($validated)
-                ->leftJoin('tenants', 'tenants.id', '=', 'licenses.tenant_id')
-                ->selectRaw("COALESCE(tenants.name, 'Unknown') as tenant, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue")
-                ->groupBy('licenses.tenant_id', 'tenants.name')
+            return $this->baseRevenueQuery($validated)
+                ->leftJoin('tenants', 'tenants.id', '=', 'activity_logs.tenant_id')
+                ->selectRaw("COALESCE(tenants.name, 'Unknown') as tenant")
+                ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+                ->groupBy('activity_logs.tenant_id', 'tenants.name')
                 ->orderByDesc('revenue')
                 ->get()
                 ->map(fn ($row): array => [
@@ -103,11 +105,13 @@ class ReportController extends BaseSuperAdminController
         $validated = $this->validatedFilters($request);
 
         $data = Cache::remember($this->cacheKey('top-resellers', $validated), now()->addSeconds(90), function () use ($validated): array {
-            return $this->baseLicenseQuery($validated)
-                ->leftJoin('users as resellers', 'resellers.id', '=', 'licenses.reseller_id')
-                ->leftJoin('tenants', 'tenants.id', '=', 'licenses.tenant_id')
-                ->selectRaw("COALESCE(resellers.name, 'Unknown') as reseller, COALESCE(tenants.name, 'Unknown') as tenant, COUNT(*) as activations, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue")
-                ->groupBy('licenses.reseller_id', 'resellers.name', 'tenants.name')
+            return $this->baseRevenueQuery($validated)
+                ->leftJoin('users as resellers', 'resellers.id', '=', 'activity_logs.user_id')
+                ->leftJoin('tenants', 'tenants.id', '=', 'activity_logs.tenant_id')
+                ->selectRaw("COALESCE(resellers.name, 'Unknown') as reseller, COALESCE(tenants.name, 'Unknown') as tenant")
+                ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
+                ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+                ->groupBy('activity_logs.user_id', 'resellers.name', 'tenants.name')
                 ->orderByDesc('revenue')
                 ->limit(20)
                 ->get()
@@ -179,6 +183,11 @@ class ReportController extends BaseSuperAdminController
             ->from('licenses')
             ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
             ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']));
+    }
+
+    private function baseRevenueQuery(array $validated)
+    {
+        return RevenueAnalytics::baseQuery($validated);
     }
 
     private function cacheKey(string $type, array $validated): string

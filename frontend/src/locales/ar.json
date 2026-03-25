@@ -1732,7 +1732,7 @@
       "programsSold": "البرامج المباعة"
     },
     "saleSummarySentence": "باع {{reseller}} برنامج {{program}} إلى {{customer}}",
-    "saleSummaryMeta": "{{days}} يوم | {{price}} | {{activatedAt}}",
+    "saleSummaryMeta": "{{duration}} | {{price}} | {{activatedAt}}",
     "activityTypes": {
       "activate": "تفعيل",
       "renew": "تجديد",

@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatLicenseDurationDays } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentBiosDetailsService } from '@/services/bios-details.service'
 import type { BiosActivity, BiosReseller } from '@/types/bios-details.types'
@@ -127,7 +127,7 @@ export function BiosDetailsPage() {
                 <SectionCard title={t('biosDetails.overviewSections.currentLicense')}>
                   <InfoGrid items={[
                     [t('common.program'), latestLicense?.program?.name ?? '-'],
-                    [t('common.duration'), latestLicense ? `${latestLicense.duration_days} ${t('common.days')}` : '-'],
+                    [t('common.duration'), formatLicenseDurationDays(latestLicense?.duration_days, t, latestLicense?.activated_at, latestLicense?.expires_at)],
                     [t('common.price'), latestLicense ? `$${Number(latestLicense.price).toFixed(2)}` : '-'],
                     [t('common.start'), latestLicense?.activated_at ? formatDate(latestLicense.activated_at, locale) : '-'],
                     [t('common.expiry'), latestLicense?.expires_at ? formatDate(latestLicense.expires_at, locale) : '-'],
@@ -145,7 +145,7 @@ export function BiosDetailsPage() {
                 <SectionCard title={t('biosDetails.overviewSections.saleSummary')}>
                   <InfoGrid items={[
                     [t('biosDetails.totalActivations'), String(overviewQuery.data?.total_activations ?? 0)],
-                    [t('common.duration'), `${overviewQuery.data?.avg_duration_days ?? 0} ${t('common.days')}`],
+                    [t('common.duration'), formatLicenseDurationDays(overviewQuery.data?.avg_duration_days, t)],
                     [t('common.price'), `$${Number(overviewQuery.data?.total_revenue ?? 0).toFixed(2)}`],
                     [t('biosDetails.avgDaysBetween'), String(overviewQuery.data?.avg_days_between_purchases ?? 0)],
                   ]} />
@@ -162,7 +162,7 @@ export function BiosDetailsPage() {
                     <div className="grid gap-3 md:grid-cols-5">
                       <MiniInfo label={t('common.program')} value={license.program?.name ?? '-'} />
                       <MiniInfo label={t('common.reseller')} value={license.reseller?.name ?? '-'} />
-                      <MiniInfo label={t('common.duration')} value={`${license.duration_days} ${t('common.days')}`} />
+                      <MiniInfo label={t('common.duration')} value={formatLicenseDurationDays(license.duration_days, t, license.activated_at, license.expires_at)} />
                       <MiniInfo label={t('common.price')} value={`$${Number(license.price).toFixed(2)}`} />
                       <MiniInfo label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
                     </div>

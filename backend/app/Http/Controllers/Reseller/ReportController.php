@@ -26,7 +26,7 @@ class ReportController extends BaseResellerController
 
                 $totalRevenue = round((float) ($summary?->total_revenue ?? 0), 2);
                 $grantedValue = round((float) ($summary?->granted_value ?? 0), 2);
-                $totalActivations = (int) ($summary?->total_activations ?? 0);
+                $totalActivations = (int) $this->baseQuery($request, $validated)->count();
                 $activeCustomers = (int) $this->licenseQuery($request)
                     ->whereEffectivelyActive()
                     ->whereNotNull('customer_id')

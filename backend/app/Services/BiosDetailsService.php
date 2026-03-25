@@ -76,13 +76,13 @@ class BiosDetailsService
                     'id' => $customer->id,
                     'name' => $customer->name,
                     'username' => $customer->username,
-                    'email' => $customer->email,
+                    'email' => $this->visibleEmail($customer->email),
                     'phone' => $customer->phone,
                 ] : null,
                 'reseller' => $reseller ? [
                     'id' => $reseller->id,
                     'name' => $reseller->name,
-                    'email' => $reseller->email,
+                    'email' => $this->visibleEmail($reseller->email),
                     'phone' => $reseller->phone,
                 ] : null,
                 'status' => ($blacklist['is_blacklisted'] ?? false) ? 'blacklisted' : ($activityMetadata['status'] ?? $lastAccessLog?->metadata['status'] ?? $lastAccessLog?->action ?? $latestActivity?->action),
@@ -97,7 +97,7 @@ class BiosDetailsService
                     'id' => (int) ($activityMetadata['license_id'] ?? 0),
                     'status' => $activityMetadata['status'] ?? null,
                     'price' => (float) ($activityMetadata['price'] ?? 0),
-                    'duration_days' => (int) ($activityMetadata['duration_days'] ?? 0),
+                    'duration_days' => (float) round((float) ($activityMetadata['duration_days'] ?? 0), 4),
                     'activated_at' => $latestActivity->created_at?->toIso8601String(),
                     'expires_at' => null,
                     'external_username' => $activityMetadata['external_username'] ?? null,
@@ -108,13 +108,13 @@ class BiosDetailsService
                     'customer' => $customer ? [
                         'id' => $customer->id,
                         'name' => $customer->name,
-                        'email' => $customer->email,
+                        'email' => $this->visibleEmail($customer->email),
                         'phone' => $customer->phone,
                     ] : null,
                     'reseller' => $reseller ? [
                         'id' => $reseller->id,
                         'name' => $reseller->name,
-                        'email' => $reseller->email,
+                        'email' => $this->visibleEmail($reseller->email),
                         'phone' => $reseller->phone,
                     ] : null,
                 ] : null,
@@ -148,13 +148,13 @@ class BiosDetailsService
                 'id' => $overviewLicense->customer->id,
                 'name' => $overviewLicense->customer->name,
                 'username' => $overviewLicense->customer->username,
-                'email' => $overviewLicense->customer->email,
+                'email' => $this->visibleEmail($overviewLicense->customer->email),
                 'phone' => $overviewLicense->customer->phone,
             ] : null,
             'reseller' => $overviewLicense?->reseller ? [
                 'id' => $overviewLicense->reseller->id,
                 'name' => $overviewLicense->reseller->name,
-                'email' => $overviewLicense->reseller->email,
+                'email' => $this->visibleEmail($overviewLicense->reseller->email),
                 'phone' => $overviewLicense->reseller->phone,
             ] : null,
             'status' => $overviewLicense?->effectiveStatus() ?? $last?->effectiveStatus(),
@@ -162,14 +162,14 @@ class BiosDetailsService
             'last_activity' => $last?->activated_at?->toIso8601String(),
             'total_activations' => $licenses->count(),
             'total_licenses' => $licenses->count(),
-            'avg_duration_days' => (float) round((float) $licenses->avg('duration_days'), 2),
+            'avg_duration_days' => (float) round((float) $licenses->avg('duration_days'), 4),
             'total_revenue' => (float) round((float) $licenses->sum('price'), 2),
             'avg_days_between_purchases' => empty($intervals) ? 0 : (int) round(array_sum($intervals) / count($intervals)),
             'latest_license' => $last ? [
                 'id' => $last->id,
                 'status' => $last->status,
                 'price' => (float) $last->price,
-                'duration_days' => (int) $last->duration_days,
+                'duration_days' => (float) round((float) $last->duration_days, 4),
                 'activated_at' => $last->activated_at?->toIso8601String(),
                 'expires_at' => $last->expires_at?->toIso8601String(),
                 'external_username' => $last->external_username,
@@ -180,13 +180,13 @@ class BiosDetailsService
                 'customer' => $last->customer ? [
                     'id' => $last->customer->id,
                     'name' => $last->customer->name,
-                    'email' => $last->customer->email,
+                    'email' => $this->visibleEmail($last->customer->email),
                     'phone' => $last->customer->phone,
                 ] : null,
                 'reseller' => $last->reseller ? [
                     'id' => $last->reseller->id,
                     'name' => $last->reseller->name,
-                    'email' => $last->reseller->email,
+                    'email' => $this->visibleEmail($last->reseller->email),
                     'phone' => $last->reseller->phone,
                 ] : null,
             ] : null,
@@ -265,7 +265,7 @@ class BiosDetailsService
                 return [
                     'id' => $first?->reseller_id,
                     'name' => $first?->reseller?->name,
-                    'email' => $first?->reseller?->email,
+                    'email' => $this->visibleEmail($first?->reseller?->email),
                     'activation_count' => $licenses->count(),
                     'total_revenue' => (float) $licenses->sum('price'),
                     'last_activity_at' => $licenses->sortByDesc('activated_at')->first()?->activated_at?->toIso8601String(),
@@ -723,5 +723,14 @@ class BiosDetailsService
         $original = substr($biosId, $position + 1);
 
         return [$username, $original];
+    }
+
+    private function visibleEmail(?string $email): ?string
+    {
+        if (! $email) {
+            return null;
+        }
+
+        return str_starts_with($email, 'no-email+') && str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 }

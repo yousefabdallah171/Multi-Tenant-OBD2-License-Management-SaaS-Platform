@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, ShieldCheck, Users } from 'lucide-react'
+import { Banknote, Gift, ShieldCheck, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
@@ -69,8 +69,9 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatsCard title={t('managerParent.pages.financialReports.totalTenantRevenue')} value={formatCurrency(report?.summary.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
+        <StatsCard title={t('managerParent.pages.financialReports.grantedValue', { defaultValue: 'Granted Value' })} value={formatCurrency(report?.summary.granted_value ?? 0, 'USD', locale)} icon={Gift} color="rose" />
         <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.manager.customers(lang))}>
           <StatsCard title={t('managerParent.pages.financialReports.totalCustomers')} value={report?.summary.total_customers ?? 0} icon={Users} color="sky" />
         </button>

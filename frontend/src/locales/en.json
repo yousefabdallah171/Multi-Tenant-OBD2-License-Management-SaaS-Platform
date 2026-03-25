@@ -1738,7 +1738,7 @@
       "programsSold": "Programs Sold"
     },
     "saleSummarySentence": "{{reseller}} sold {{program}} to {{customer}}",
-    "saleSummaryMeta": "{{days}} days | {{price}} | {{activatedAt}}",
+    "saleSummaryMeta": "{{duration}} | {{price}} | {{activatedAt}}",
     "activityTypes": {
       "activate": "Activate",
       "renew": "Renew",
