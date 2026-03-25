@@ -456,11 +456,33 @@ export function formatLicenseDurationDays(
     })
   }
 
-  const days = Math.round(resolvedDurationDays * 1000) / 1000
-  return t('common.durationLabels.daysValue', {
-    defaultValue: '{{count}} Days',
-    count: days,
-  })
+  const totalMinutes = Math.max(1, Math.round(resolvedDurationDays * 24 * 60))
+  const formatUnit = (count: number, singular: string, plural: string) => `${count} ${count === 1 ? singular : plural}`
+
+  if (totalMinutes < 60) {
+    return formatUnit(totalMinutes, 'Minute', 'Minutes')
+  }
+
+  if (totalMinutes < 1440) {
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+
+    if (minutes <= 0) {
+      return formatUnit(hours, 'Hour', 'Hours')
+    }
+
+    return `${formatUnit(hours, 'Hour', 'Hours')} ${formatUnit(minutes, 'Minute', 'Minutes')}`
+  }
+
+  const days = Math.floor(totalMinutes / 1440)
+  const remainingMinutes = totalMinutes % 1440
+  const hours = Math.floor(remainingMinutes / 60)
+
+  if (hours <= 0) {
+    return formatUnit(days, 'Day', 'Days')
+  }
+
+  return `${formatUnit(days, 'Day', 'Days')} ${formatUnit(hours, 'Hour', 'Hours')}`
 }
 
 export function normalizePhoneInput(value: string) {
