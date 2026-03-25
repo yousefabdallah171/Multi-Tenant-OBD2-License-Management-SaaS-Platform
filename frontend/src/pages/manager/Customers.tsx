@@ -1,26 +1,29 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
-import { StatusBadge } from '@/components/shared/StatusBadge'
+import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
-import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
+import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
+import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
@@ -28,8 +31,7 @@ import { programService } from '@/services/program.service'
 import type { DurationUnit, ManagerCustomerSummary, RenewLicenseData } from '@/types/manager-reseller.types'
 import { formatUsername } from '@/utils/biosId'
 
-const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
-const DEFAULT_TIMEZONE = resolveDisplayTimezone()
+const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -51,63 +53,81 @@ interface ActivationFormState {
   price: string
 }
 
-const EMPTY_ACTIVATION_FORM: ActivationFormState = {
-  customer_name: '',
-  client_name: '',
-  customer_email: '',
-  customer_phone: '',
-  bios_id: '',
-  program_id: '',
-  duration_value: '30',
-  duration_unit: 'days',
-  mode: 'end_date',
-  end_date: formatDateTimeLocalInTimezone(new Date(Date.now() + 30 * 86400000), DEFAULT_TIMEZONE),
-  is_scheduled: false,
-  schedule_mode: 'relative',
-  schedule_offset_value: '1',
-  schedule_offset_unit: 'hours',
-  scheduled_date_time: '',
-  scheduled_timezone: DEFAULT_TIMEZONE,
-  price: '',
+function createEmptyActivationForm(defaultTimezone: string): ActivationFormState {
+  return {
+    customer_name: '',
+    client_name: '',
+    customer_email: '',
+    customer_phone: '',
+    bios_id: '',
+    program_id: '',
+    duration_value: '30',
+    duration_unit: 'days',
+    mode: 'end_date',
+    end_date: formatDateTimeLocalInTimezone(new Date(Date.now() + 30 * 86400000), defaultTimezone),
+    is_scheduled: false,
+    schedule_mode: 'relative',
+    schedule_offset_value: '1',
+    schedule_offset_unit: 'hours',
+    scheduled_date_time: '',
+    scheduled_timezone: defaultTimezone,
+    price: '',
+  }
 }
 
 export function CustomersPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const { lang } = useLanguage()
   const queryClient = useQueryClient()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const { timezone: displayTimezone } = useResolvedTimezone()
   const navigate = useNavigate()
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
-  const [resellerId, setResellerId] = useState<number | ''>('')
-  const [programId, setProgramId] = useState<number | ''>('')
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialStatus = searchParams.get('status')
+  const [page, setPage] = useState(Number(searchParams.get('page') || 1))
+  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 25))
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
+    STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
+  )
+  const [managerId, setManagerId] = useState<number | ''>(searchParams.get('manager_id') ? Number(searchParams.get('manager_id')) : '')
+  const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
+  const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
-  const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
+  const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
-  const [renewLicenseId, setRenewLicenseId] = useState<number | null>(null)
   const [editTarget, setEditTarget] = useState<ManagerCustomerSummary | null>(null)
   const [deactivateTarget, setDeactivateTarget] = useState<ManagerCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ManagerCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ManagerCustomerSummary | null>(null)
+  const [pauseReason, setPauseReason] = useState('')
   const [selectedLicenseIds, setSelectedLicenseIds] = useState<number[]>([])
   const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const customerFilterParams = useMemo(
+    () => ({
+      search: search || undefined,
+      manager_id: managerId || undefined,
+      reseller_id: resellerId || undefined,
+      program_id: programId || undefined,
+    }),
+    [managerId, programId, resellerId, search],
+  )
 
   const customersQuery = useQuery({
-    queryKey: ['manager', 'customers', page, perPage, search, status, resellerId, programId],
+    queryKey: ['manager', 'customers', page, perPage, search, status, managerId, resellerId, programId],
     queryFn: () =>
       managerService.getCustomers({
         page,
         per_page: perPage,
-        search,
-        reseller_id: resellerId,
-        program_id: programId,
+        ...customerFilterParams,
         status: status === 'all' ? '' : status,
       }),
+    ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
   })
 
   const resellerQuery = useQuery({
@@ -118,6 +138,26 @@ export function CustomersPage() {
   const programsQuery = useQuery({
     queryKey: ['manager', 'customers', 'programs'],
     queryFn: () => programService.getAll({ per_page: 100 }),
+  })
+
+  const managerOptions = useMemo(() => {
+    if (!user || user.role !== 'manager') {
+      return []
+    }
+
+    return [{ id: user.id, name: user.name }]
+  }, [user])
+
+  const [allCountQuery, activeCountQuery, suspendedCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+    queries: [
+      { queryKey: ['manager', 'customers', 'count', 'all', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager', 'customers', 'count', 'active', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager', 'customers', 'count', 'suspended', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'suspended' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager', 'customers', 'count', 'scheduled', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'scheduled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager', 'customers', 'count', 'expired', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager', 'customers', 'count', 'cancelled', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['manager', 'customers', 'count', 'pending', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'pending' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+    ],
   })
 
   const activateMutation = useMutation({
@@ -136,29 +176,25 @@ export function CustomersPage() {
         scheduled_timezone: activationForm.is_scheduled ? activationForm.scheduled_timezone : undefined,
       }),
     onSuccess: () => {
+      toast.success(
+        activationForm.is_scheduled
+          ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })
+          : t('common.licenseActivatedSuccess', { defaultValue: 'License activated successfully.' }),
+      )
       setActivationOpen(false)
       setActivationStep(0)
-      setActivationForm(EMPTY_ACTIVATION_FORM)
+      setActivationForm(createEmptyActivationForm(displayTimezone))
       setPriceMode('auto')
       invalidate(queryClient)
     },
     onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
   })
 
-  const renewMutation = useMutation({
-    mutationFn: (payload: RenewLicenseData) => licenseService.renew(renewLicenseId ?? 0, payload),
-    onSuccess: () => {
-      setRenewLicenseId(null)
-      invalidate(queryClient)
-    },
-    onError: () => toast.error(t('common.error')),
-  })
-
   const editMutation = useMutation({
     mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
       managerService.updateCustomer(editTarget?.id ?? 0, payload),
     onSuccess: () => {
-      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      toast.success(t('common.customerUpdatedSuccess', { defaultValue: 'Customer updated successfully.' }))
       setEditTarget(null)
       invalidate(queryClient)
     },
@@ -175,9 +211,10 @@ export function CustomersPage() {
   })
 
   const pauseMutation = useMutation({
-    mutationFn: (licenseId: number) => licenseService.pause(licenseId),
+    mutationFn: (licenseId: number) => licenseService.pause(licenseId, { pause_reason: pauseReason.trim() || undefined }),
     onSuccess: () => {
       setPauseTarget(null)
+      setPauseReason('')
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -195,6 +232,15 @@ export function CustomersPage() {
     mutationFn: (licenseId: number) => licenseService.retryScheduled(licenseId),
     onSuccess: () => {
       toast.success(t('common.retrySuccess', { defaultValue: 'Scheduled activation retried successfully.' }))
+      invalidate(queryClient)
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+
+  const cancelPendingMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.cancelPending(licenseId),
+    onSuccess: () => {
+      toast.success(lang === 'ar' ? 'تم إلغاء الترخيص المعلق بنجاح.' : 'Pending license cancelled successfully.')
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -265,9 +311,9 @@ export function CustomersPage() {
   const totalPrice = priceMode === 'auto' ? autoPrice : Number(activationForm.price || 0)
 
   const rows = customersQuery.data?.data ?? []
-  const renewTarget = rows.find((row) => row.license_id === renewLicenseId) ?? null
-  const renewProgram = (programsQuery.data?.data ?? []).find((program) => program.name === renewTarget?.program)
-  const selectableIds = rows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
+  const selectableIds = rows
+    .filter((row) => typeof row.license_id === 'number' && canDeleteLicense(row))
+    .map((row) => row.license_id as number)
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
   const activationSteps = t('reseller.pages.customers.activationDialog.steps', { returnObjects: true }) as string[]
@@ -293,7 +339,7 @@ export function CustomersPage() {
           }}
         />
       ),
-      render: (row) => typeof row.license_id === 'number' ? (
+      render: (row) => typeof row.license_id === 'number' && canDeleteLicense(row) ? (
         <input
           type="checkbox"
           checked={selectedLicenseIds.includes(row.license_id)}
@@ -318,7 +364,17 @@ export function CustomersPage() {
         </Link>
       ),
     },
-    { key: 'email', label: t('common.email'), sortable: true, sortValue: (row) => row.email ?? '', render: (row) => row.email ?? '-' },
+    {
+      key: 'username',
+      label: t('common.username'),
+      sortable: true,
+      sortValue: (row) => resolveCustomerApiUsername(row),
+      render: (row) => (
+        <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.id)}>
+          {resolveCustomerApiUsername(row)}
+        </Link>
+      ),
+    },
     {
       key: 'phone',
       label: t('common.phone'),
@@ -332,7 +388,7 @@ export function CustomersPage() {
       sortable: true,
       sortValue: (row) => row.bios_id ?? '',
       render: (row) => row.bios_id ? (
-        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.id)}>
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.biosDetail(lang, row.bios_id)}>
           {row.bios_id}
         </Link>
       ) : '-',
@@ -344,21 +400,44 @@ export function CustomersPage() {
       label: t('common.status'),
       sortable: true,
       sortValue: (row) => getLicenseDisplayStatus(row),
-      render: (row) => (row.status ? <StatusBadge status={getLicenseDisplayStatus(row)} /> : '-'),
+      render: (row) => (row.status ? (
+        <div className="relative inline-flex flex-col gap-1">
+          <LicenseStatusBadges status={getLicenseDisplayStatus(row)} isBlocked={Boolean(row.is_blacklisted)} />
+          {isPlainPendingLicense(row) ? (
+            <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
+              {t('common.new', { defaultValue: lang === 'ar' ? 'جديد' : 'New' })}
+            </span>
+          ) : null}
+          {row.bios_active_elsewhere ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300">
+              <ShieldOff className="h-2.5 w-2.5" />
+              {t('customers.biosActiveElsewhere', { defaultValue: 'Active w/ other reseller' })}
+            </span>
+          ) : null}
+        </div>
+      ) : '-'),
     },
-    { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale) : '-') },
-    { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
+    { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
+    { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale, displayTimezone) : '-') },
+    { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale, displayTimezone) : '-') },
     {
       key: 'actions',
       label: t('common.actions'),
       render: (row) => {
         const displayStatus = getLicenseDisplayStatus(row)
         const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+        const isPausedPending = isPausedPendingLicense(row)
+        const isPlainPending = isPlainPendingLicense(row)
+        const canDeleteRow = canDeleteCustomerRow(row)
+        const isBlacklisted = Boolean(row.is_blacklisted)
+        const isBiosActiveElsewhere = Boolean(row.bios_active_elsewhere)
         const renewActionLabel = displayStatus === 'active'
           ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
           : isScheduleEditable
             ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-            : t('common.renew')
+            : isPlainPending
+              ? t('common.activate', { defaultValue: 'Activate' })
+              : t('common.renew')
 
         return (
         <DropdownMenu>
@@ -373,12 +452,12 @@ export function CustomersPage() {
                 {t('common.view')}
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setEditTarget(row)}>
+            <DropdownMenuItem disabled={isBlacklisted} onClick={() => setEditTarget(row)}>
               <Pencil className="me-2 h-4 w-4" />
               {t('common.edit', { defaultValue: 'Edit' })}
             </DropdownMenuItem>
-            {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) ? (
-              <DropdownMenuItem onClick={() => setRenewLicenseId(row.license_id!)}>
+            {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) && !isBlacklisted && !isBiosActiveElsewhere ? (
+              <DropdownMenuItem onClick={() => navigate(routePaths.manager.licenseRenew(lang, row.license_id!), { state: { returnTo: `${location.pathname}${location.search}` } })}>
                 <RotateCw className="me-2 h-4 w-4" />
                 {renewActionLabel}
               </DropdownMenuItem>
@@ -389,7 +468,16 @@ export function CustomersPage() {
                 {t('common.retryNow', { defaultValue: 'Retry Now' })}
               </DropdownMenuItem>
             ) : null}
-            {typeof row.license_id === 'number' && displayStatus === 'active' ? (
+            {typeof row.license_id === 'number' && isPlainPending ? (
+              <DropdownMenuItem
+                disabled={cancelPendingMutation.isPending}
+                onClick={() => cancelPendingMutation.mutate(row.license_id!)}
+              >
+                <X className="me-2 h-4 w-4" />
+                {lang === 'ar' ? 'إلغاء المعلق' : 'Cancel Pending'}
+              </DropdownMenuItem>
+            ) : null}
+            {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted ? (
               <>
                 <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
                   <ShieldOff className="me-2 h-4 w-4" />
@@ -401,22 +489,57 @@ export function CustomersPage() {
                 </DropdownMenuItem>
               </>
             ) : null}
-            {typeof row.license_id === 'number' && canReactivateLicense(row) ? (
+            {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBlacklisted && !isBiosActiveElsewhere ? (
               <DropdownMenuItem onClick={() => resumeMutation.mutate(row.license_id!)}>
                 <Play className="me-2 h-4 w-4" />
-                {t('common.reactivate')}
+                {isPausedPending ? t('common.continue', { defaultValue: 'Continue' }) : t('common.reactivate')}
               </DropdownMenuItem>
             ) : null}
-            <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
-              <Trash2 className="me-2 h-4 w-4" />
-              {t('common.delete')}
-            </DropdownMenuItem>
+            {typeof row.license_id === 'number' && !isBlacklisted && !isBiosActiveElsewhere ? (
+              <DropdownMenuItem asChild>
+                <Link to={routePaths.manager.customerBiosChangeRequest(lang, row.id)}>
+                  <Cpu className="me-2 h-4 w-4" />
+                  {t('biosChangeRequests.requestAction', { defaultValue: 'Request BIOS ID Change' })}
+                </Link>
+              </DropdownMenuItem>
+            ) : null}
+            {canDeleteRow ? (
+              <DropdownMenuItem onClick={() => setDeleteTarget(row)}>
+                <Trash2 className="me-2 h-4 w-4" />
+                {t('common.delete')}
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
         )
       },
     },
-  ], [allVisibleSelected, lang, locale, selectableIds, selectedLicenseIds, someVisibleSelected, t, retryScheduledMutation.isPending])
+  ], [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectableIds, selectedLicenseIds, someVisibleSelected, t, retryScheduledMutation.isPending, cancelPendingMutation.isPending])
+
+  // Reset all filters when navigating to clean URL (e.g. sidebar click)
+  useEffect(() => {
+    if (searchParams.toString() === '') {
+      setPage(1)
+      setPerPage(25)
+      setSearch('')
+      setStatus('all')
+      setManagerId('')
+      setResellerId('')
+      setProgramId('')
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (page > 1) next.set('page', String(page))
+    if (perPage !== 25) next.set('per_page', String(perPage))
+    if (search) next.set('search', search)
+    if (status !== 'all') next.set('status', status)
+    if (managerId) next.set('manager_id', String(managerId))
+    if (resellerId) next.set('reseller_id', String(resellerId))
+    if (programId) next.set('program_id', String(programId))
+    setSearchParams(next, { replace: true })
+  }, [managerId, page, perPage, programId, resellerId, search, setSearchParams, status])
 
   return (
     <div className="space-y-6">
@@ -432,23 +555,102 @@ export function CustomersPage() {
         }
       />
 
-      <Tabs value={status} onValueChange={(value) => setStatus(value as (typeof STATUS_OPTIONS)[number])}>
-        <TabsList>
-          {STATUS_OPTIONS.map((option) => (
-            <TabsTrigger key={option} value={option}>{option === 'all' ? t('common.all') : option === 'scheduled' ? t('common.scheduled', { defaultValue: 'Scheduled' }) : t(`common.${option}`)}</TabsTrigger>
-          ))}
-        </TabsList>
-        <TabsContent value={status} className="space-y-4">
-          <Card>
-            <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('manager.pages.customers.searchPlaceholder')} />
-              <select value={resellerId} onChange={(event) => setResellerId(event.target.value ? Number(event.target.value) : '')} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                <option value="">{t('manager.pages.customers.allResellers')}</option>
-                {(resellerQuery.data?.data ?? []).map((reseller) => (
+      <div className="grid gap-3 md:grid-cols-7">
+        <StatusFilterCard
+          label={t('common.all')}
+          count={allCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'all'}
+          onClick={() => {
+            setStatus('all')
+            setPage(1)
+          }}
+          color="sky"
+        />
+        <StatusFilterCard
+          label={t('common.active')}
+          description={getStatusMeaning('active', t)}
+          count={activeCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'active'}
+          onClick={() => {
+            setStatus('active')
+            setPage(1)
+          }}
+          color="emerald"
+        />
+        <StatusFilterCard
+          label={t('common.suspended')}
+          description={getStatusMeaning('suspended', t)}
+          count={suspendedCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'suspended'}
+          onClick={() => {
+            setStatus('suspended')
+            setPage(1)
+          }}
+          color="amber"
+        />
+        <StatusFilterCard
+          label={t('common.scheduled', { defaultValue: 'Scheduled' })}
+          description={getStatusMeaning('scheduled', t)}
+          count={scheduledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'scheduled'}
+          onClick={() => {
+            setStatus('scheduled')
+            setPage(1)
+          }}
+          color="amber"
+        />
+        <StatusFilterCard
+          label={t('common.expired')}
+          description={getStatusMeaning('expired', t)}
+          count={expiredCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'expired'}
+          onClick={() => {
+            setStatus('expired')
+            setPage(1)
+          }}
+          color="rose"
+        />
+        <StatusFilterCard
+          label={t('common.cancelled')}
+          description={getStatusMeaning('cancelled', t)}
+          count={cancelledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'cancelled'}
+          onClick={() => {
+            setStatus('cancelled')
+            setPage(1)
+          }}
+          color="slate"
+        />
+        <StatusFilterCard
+          label={t('common.pending')}
+          description={getStatusMeaning('pending', t)}
+          count={pendingCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'pending'}
+          onClick={() => {
+            setStatus('pending')
+            setPage(1)
+          }}
+          color="amber"
+        />
+      </div>
+
+      <div className="space-y-4">
+            <Card>
+              <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px_220px_220px]">
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('manager.pages.customers.searchPlaceholder')} />
+                <select value={managerId} onChange={(event) => { setManagerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                  <option value="">{t('customers.filterByManager', { defaultValue: 'Filter by Manager' })}</option>
+                  {managerOptions.map((manager) => (
+                    <option key={manager.id} value={manager.id}>{manager.name}</option>
+                  ))}
+                </select>
+                <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                  <option value="">{t('manager.pages.customers.allResellers')}</option>
+                  {(resellerQuery.data?.data ?? []).map((reseller) => (
                   <option key={reseller.id} value={reseller.id}>{reseller.name}</option>
                 ))}
               </select>
-              <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
                 <option value="">{t('manager.pages.customers.allPrograms')}</option>
                 {(programsQuery.data?.data ?? []).map((program) => (
                   <option key={program.id} value={program.id}>{program.name}</option>
@@ -485,8 +687,7 @@ export function CustomersPage() {
               setPage(1)
             }}
           />
-        </TabsContent>
-      </Tabs>
+      </div>
 
       <Dialog open={activationOpen} onOpenChange={setActivationOpen}>
         <DialogContent className="max-w-3xl">
@@ -574,8 +775,8 @@ export function CustomersPage() {
                 {activationForm.is_scheduled ? (
                   <>
                     <div className="flex gap-2">
-                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'relative' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'relative' }))}>Relative</Button>
-                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'custom' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'custom' }))}>Custom</Button>
+                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'relative' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'relative' }))}>{t('activate.scheduleModeRelative', { defaultValue: 'After' })}</Button>
+                      <Button type="button" size="sm" variant={activationForm.schedule_mode === 'custom' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, schedule_mode: 'custom' }))}>{t('activate.scheduleModeCustom', { defaultValue: 'Custom Date' })}</Button>
                     </div>
                     {activationForm.schedule_mode === 'relative' ? (
                       <div className="grid gap-3 md:grid-cols-3">
@@ -608,8 +809,8 @@ export function CustomersPage() {
               <div className="space-y-2">
                 <Label>{t('common.price')}</Label>
                 <div className="flex gap-2">
-                  <Button type="button" size="sm" variant={priceMode === 'auto' ? 'default' : 'outline'} onClick={() => setPriceMode('auto')}>Auto</Button>
-                  <Button type="button" size="sm" variant={priceMode === 'manual' ? 'default' : 'outline'} onClick={() => setPriceMode('manual')}>Manual</Button>
+                  <Button type="button" size="sm" variant={priceMode === 'auto' ? 'default' : 'outline'} onClick={() => setPriceMode('auto')}>{t('activate.priceModeAuto', { defaultValue: 'Auto' })}</Button>
+                  <Button type="button" size="sm" variant={priceMode === 'manual' ? 'default' : 'outline'} onClick={() => setPriceMode('manual')}>{t('activate.priceModeManual', { defaultValue: 'Manual' })}</Button>
                 </div>
                 <Input type="number" min={0} step="0.01" value={priceMode === 'auto' ? totalPrice.toFixed(2) : activationForm.price} onChange={(event) => setActivationForm((current) => ({ ...current, price: event.target.value }))} readOnly={priceMode === 'auto'} />
               </div>
@@ -625,7 +826,7 @@ export function CustomersPage() {
                 <div>{activationForm.bios_id}</div>
                 <div>{selectedProgram?.name ?? '-'}</div>
                 <div>{durationDays} {t('common.days')}</div>
-                <div>{expiryPreview ? formatDate(expiryPreview, locale) : '-'}</div>
+                <div>{expiryPreview ? formatDate(expiryPreview, locale, displayTimezone) : '-'}</div>
                 <div>{formatCurrency(totalPrice, 'USD', locale)}</div>
               </CardContent>
             </Card>
@@ -666,37 +867,6 @@ export function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      <RenewLicenseDialog
-        open={renewLicenseId !== null}
-        onOpenChange={(open) => !open && setRenewLicenseId(null)}
-        title={renewTarget
-          ? getLicenseDisplayStatus(renewTarget) === 'active'
-            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
-            : getLicenseDisplayStatus(renewTarget) === 'scheduled' || getLicenseDisplayStatus(renewTarget) === 'scheduled_failed'
-              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : t('common.renew')
-          : t('common.renew')}
-        description={renewTarget ? t('reseller.pages.licenses.renewDialog.description', { program: renewTarget.program ?? t('common.program'), biosId: renewTarget.bios_id ?? '-' }) : t('reseller.pages.licenses.renewDialog.fallback')}
-        confirmLabel={renewTarget
-          ? getLicenseDisplayStatus(renewTarget) === 'active'
-            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
-            : getLicenseDisplayStatus(renewTarget) === 'scheduled' || getLicenseDisplayStatus(renewTarget) === 'scheduled_failed'
-              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : t('common.renew')
-          : t('common.renew')}
-        confirmLoadingLabel={t('common.loading')}
-        cancelLabel={t('common.cancel')}
-        anchorDate={renewTarget?.expiry}
-        initialScheduledAt={renewTarget?.scheduled_at}
-        initialScheduledTimezone={renewTarget?.scheduled_timezone}
-        initialExpiresAt={renewTarget?.expiry}
-        initialPrice={0}
-        autoPricePerDay={renewProgram?.base_price ?? 0}
-        resetKey={renewLicenseId}
-        isPending={renewMutation.isPending}
-        onSubmit={(payload) => renewMutation.mutate(payload)}
-      />
-
       <EditCustomerDialog
         open={editTarget !== null}
         onOpenChange={(open) => {
@@ -705,7 +875,7 @@ export function CustomersPage() {
           }
         }}
         title={t('common.edit', { defaultValue: 'Edit Customer' })}
-        description="Update the customer name, email, or phone."
+        description={t('manager.pages.customers.editDescription', { defaultValue: 'Update the customer name, email, or phone.' })}
         initialClientName={editTarget?.name ?? ''}
         initialEmail={editTarget?.email}
         initialPhone={editTarget?.phone}
@@ -787,6 +957,7 @@ export function CustomersPage() {
         onOpenChange={(open) => {
           if (!open) {
             setPauseTarget(null)
+            setPauseReason('')
           }
         }}
         title={t('common.pause')}
@@ -797,9 +968,24 @@ export function CustomersPage() {
             pauseMutation.mutate(pauseTarget.license_id)
           }
         }}
-      />
+      >
+        <div className="space-y-2">
+          <Label>{t('common.reason')}</Label>
+          <textarea
+            className="min-h-24 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            value={pauseReason}
+            onChange={(event) => setPauseReason(event.target.value)}
+            placeholder={t('common.reason')}
+            maxLength={500}
+          />
+        </div>
+      </ConfirmDialog>
     </div>
   )
+}
+
+function resolveCustomerApiUsername(row: ManagerCustomerSummary) {
+  return row.external_username || row.username || '-'
 }
 
 function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | DurationUnit) {
@@ -825,6 +1011,8 @@ function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
   void Promise.all([
     queryClient.invalidateQueries({ queryKey: ['manager', 'customers'] }),
     queryClient.invalidateQueries({ queryKey: ['manager', 'licenses'] }),
+    queryClient.refetchQueries({ queryKey: ['manager', 'customers'], type: 'active' }),
+    queryClient.refetchQueries({ queryKey: ['manager', 'licenses'], type: 'active' }),
   ])
 }
 
@@ -847,7 +1035,7 @@ function buildScheduledDateTime(form: ActivationFormState) {
   if (form.schedule_offset_unit === 'minutes') date.setMinutes(date.getMinutes() + amount)
   if (form.schedule_offset_unit === 'hours') date.setHours(date.getHours() + amount)
   if (form.schedule_offset_unit === 'days') date.setDate(date.getDate() + amount)
-  return date.toISOString()
+  return formatDateTimeLocalInTimezone(date, form.scheduled_timezone)
 }
 
 function validateActivationStep(
@@ -880,8 +1068,3 @@ function validateActivationStep(
   }
   return ''
 }
-
-
-
-
-

@@ -9,33 +9,42 @@ use App\Models\User;
 use App\Models\UserIpLog;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends BaseSuperAdminController
 {
     public function stats(): JsonResponse
     {
-        $countries = UserIpLog::query()
-            ->whereNotNull('country')
-            ->get()
-            ->groupBy(fn (UserIpLog $log): string => (string) $log->country)
-            ->map(fn ($group, string $country): array => [
-                'country' => $country,
-                'count' => $group->count(),
-            ])
-            ->sortByDesc('count')
-            ->take(5)
-            ->values();
-
         return response()->json([
-            'data' => [
-                'stats' => [
-                    'total_tenants' => Tenant::query()->count(),
-                    'total_revenue' => (float) License::query()->sum('price'),
-                    'active_licenses' => License::query()->where('status', 'active')->count(),
-                    'total_users' => User::query()->count(),
-                    'ip_country_map' => $countries,
-                ],
-            ],
+            'data' => Cache::remember('super-admin:dashboard:stats', now()->addSeconds(60), function (): array {
+                $countries = UserIpLog::query()
+                    ->selectRaw('country, COUNT(*) as count')
+                    ->whereNotNull('country')
+                    ->groupBy('country')
+                    ->orderByDesc('count')
+                    ->limit(5)
+                    ->get()
+                    ->map(fn ($row): array => [
+                        'country' => (string) $row->country,
+                        'count' => (int) $row->count,
+                    ])
+                    ->values()
+                    ->all();
+
+                return [
+                    'stats' => [
+                        'total_tenants' => Tenant::query()->count(),
+                        'total_revenue' => (float) License::query()->sum('price'),
+                        'active_licenses' => License::query()
+                            ->whereEffectivelyActive()
+                            ->whereNotNull('customer_id')
+                            ->distinct('customer_id')
+                            ->count('customer_id'),
+                        'total_users' => User::query()->count(),
+                        'ip_country_map' => $countries,
+                    ],
+                ];
+            }),
         ]);
     }
 
@@ -43,12 +52,16 @@ class DashboardController extends BaseSuperAdminController
     {
         $months = collect(range(11, 0))
             ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
+        $firstMonth = CarbonImmutable::now()->startOfMonth()->subMonths(11);
 
-        $totals = License::query()
-            ->whereNotNull('activated_at')
-            ->get()
-            ->groupBy(fn (License $license): string => $license->activated_at->format('Y-m'))
-            ->map(fn ($group): float => (float) $group->sum('price'));
+        $totals = Cache::remember('super-admin:dashboard:revenue-trend', now()->addSeconds(60), function () use ($firstMonth) {
+            return License::query()
+                ->whereNotNull('activated_at')
+                ->where('activated_at', '>=', $firstMonth)
+                ->selectRaw("DATE_FORMAT(activated_at, '%Y-%m') as month_key, ROUND(COALESCE(SUM(price), 0), 2) as revenue")
+                ->groupByRaw("DATE_FORMAT(activated_at, '%Y-%m')")
+                ->pluck('revenue', 'month_key');
+        });
 
         return response()->json([
             'data' => $months->map(fn (CarbonImmutable $month): array => [
@@ -61,21 +74,24 @@ class DashboardController extends BaseSuperAdminController
 
     public function tenantComparison(): JsonResponse
     {
-        $tenants = Tenant::query()
-            ->withCount([
-                'licenses as active_licenses_count' => fn ($query) => $query->where('status', 'active'),
-            ])
-            ->withSum('licenses as total_revenue', 'price')
-            ->get()
-            ->sortByDesc(fn (Tenant $tenant): float => (float) ($tenant->total_revenue ?? 0))
-            ->take(10)
-            ->values()
-            ->map(fn (Tenant $tenant): array => [
-                'id' => $tenant->id,
-                'name' => $tenant->name,
-                'revenue' => round((float) ($tenant->total_revenue ?? 0), 2),
-                'active_licenses' => (int) ($tenant->active_licenses_count ?? 0),
-            ]);
+        $tenants = Cache::remember('super-admin:dashboard:tenant-comparison', now()->addMinutes(5), function (): array {
+            return Tenant::query()
+                ->withCount([
+                    'licenses as active_licenses_count' => fn ($query) => $query->whereEffectivelyActive(),
+                ])
+                ->withSum('licenses as total_revenue', 'price')
+                ->get()
+                ->sortByDesc(fn (Tenant $tenant): float => (float) ($tenant->total_revenue ?? 0))
+                ->take(10)
+                ->values()
+                ->map(fn (Tenant $tenant): array => [
+                    'id' => $tenant->id,
+                    'name' => $tenant->name,
+                    'revenue' => round((float) ($tenant->total_revenue ?? 0), 2),
+                    'active_licenses' => (int) ($tenant->active_licenses_count ?? 0),
+                ])
+                ->all();
+        });
 
         return response()->json(['data' => $tenants]);
     }
@@ -84,12 +100,16 @@ class DashboardController extends BaseSuperAdminController
     {
         $days = collect(range(29, 0))
             ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfDay()->subDays($offset));
+        $firstDay = CarbonImmutable::now()->startOfDay()->subDays(29);
 
-        $totals = License::query()
-            ->whereNotNull('activated_at')
-            ->get()
-            ->groupBy(fn (License $license): string => $license->activated_at->format('Y-m-d'))
-            ->map(fn ($group): int => $group->count());
+        $totals = Cache::remember('super-admin:dashboard:license-timeline', now()->addSeconds(60), function () use ($firstDay) {
+            return License::query()
+                ->whereNotNull('activated_at')
+                ->where('activated_at', '>=', $firstDay)
+                ->selectRaw("DATE_FORMAT(activated_at, '%Y-%m-%d') as day_key, COUNT(*) as count")
+                ->groupByRaw("DATE_FORMAT(activated_at, '%Y-%m-%d')")
+                ->pluck('count', 'day_key');
+        });
 
         return response()->json([
             'data' => $days->map(fn (CarbonImmutable $day): array => [
@@ -102,20 +122,25 @@ class DashboardController extends BaseSuperAdminController
 
     public function recentActivity(): JsonResponse
     {
-        $activities = ActivityLog::query()
-            ->with(['user:id,name', 'tenant:id,name'])
-            ->latest()
-            ->take(20)
-            ->get()
-            ->map(fn (ActivityLog $activity): array => [
-                'id' => $activity->id,
-                'action' => $activity->action,
-                'description' => $activity->description,
-                'user' => $activity->user?->name,
-                'tenant' => $activity->tenant?->name,
-                'metadata' => $activity->metadata ?? [],
-                'created_at' => $activity->created_at?->toIso8601String(),
-            ]);
+        $activities = Cache::remember('super-admin:dashboard:recent-activity', now()->addSeconds(60), function (): array {
+            return ActivityLog::query()
+                ->select(['id', 'user_id', 'tenant_id', 'action', 'description', 'metadata', 'created_at'])
+                ->with(['user:id,name', 'tenant:id,name'])
+                ->latest()
+                ->limit(20)
+                ->get()
+                ->map(fn (ActivityLog $activity): array => [
+                    'id' => $activity->id,
+                    'action' => $activity->action,
+                    'description' => $activity->description,
+                    'user' => $activity->user?->name,
+                    'tenant' => $activity->tenant?->name,
+                    'metadata' => $activity->metadata ?? [],
+                    'created_at' => $activity->created_at?->toIso8601String(),
+                ])
+                ->values()
+                ->all();
+        });
 
         return response()->json(['data' => $activities]);
     }

@@ -2,12 +2,19 @@ export type UserRole = 'super_admin' | 'manager_parent' | 'manager' | 'reseller'
 
 export type UserStatus = 'active' | 'suspended' | 'inactive'
 
-export interface Tenant {
+export interface TenantBranding {
+  branding?: {
+    logo?: string | null
+    primary_color?: string | null
+  }
+}
+
+export interface Tenant extends TenantBranding {
   id: number
   name: string
   slug: string
   status: string
-  settings?: Record<string, unknown> | null
+  settings?: TenantBranding | null
 }
 
 export interface User {
@@ -23,4 +30,7 @@ export interface User {
   created_by: number | null
   username_locked: boolean
   tenant?: Tenant | null
+  branding?: {
+    primary_color?: string | null
+  }
 }

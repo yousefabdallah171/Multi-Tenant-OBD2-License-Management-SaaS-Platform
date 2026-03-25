@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Manager;
 
 use App\Enums\UserRole;
 use App\Models\Program;
+use App\Models\ProgramDurationPreset;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\BiosActivationService;
 use App\Support\ExternalApiSecurity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Illuminate\Validation\ValidationException;
 
@@ -26,12 +30,18 @@ class SoftwareController extends BaseManagerController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
+        $tenantId = $this->currentTenantId($request);
+        $teamResellerIds = User::where('tenant_id', $tenantId)
+            ->where('role', 'reseller')
+            ->pluck('id');
+
         $query = Program::query()
             ->withCount([
                 'licenses as active_licenses_count' => fn ($builder) => $builder->where('status', 'active'),
-                'licenses as total_licenses_count',
+                'licenses as total_licenses_count' => fn ($builder) => $builder->whereIn('reseller_id', $teamResellerIds),
             ])
-            ->withSum('licenses as total_revenue', 'price')
+            ->with('durationPresets')
+            ->withSum(['licenses as total_revenue' => fn ($builder) => $builder->whereIn('reseller_id', $teamResellerIds)], 'price')
             ->latest();
 
         if (! empty($validated['status'])) {
@@ -80,31 +90,44 @@ class SoftwareController extends BaseManagerController
                 }
             }],
             'external_logs_endpoint' => ['nullable', 'string', 'max:100'],
+            'presets' => ['nullable', 'array'],
+            'presets.*.id' => ['nullable', 'integer'],
+            'presets.*.label' => ['required', 'string', 'min:1', 'max:50'],
+            'presets.*.duration_days' => ['required', 'numeric', 'min:0.0001', 'max:36500'],
+            'presets.*.price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'presets.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'presets.*.is_active' => ['nullable', 'boolean'],
         ]);
 
-        $program = Program::query()->create([
-            'tenant_id' => $this->currentTenantId($request),
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'version' => $validated['version'] ?? '1.0',
-            'download_link' => $validated['download_link'],
-            'file_size' => $validated['file_size'] ?? null,
-            'system_requirements' => $validated['system_requirements'] ?? null,
-            'installation_guide_url' => $validated['installation_guide_url'] ?? null,
-            'trial_days' => $validated['trial_days'] ?? 7,
-            'base_price' => $validated['base_price'],
-            'icon' => $validated['icon'] ?? null,
-            'status' => $this->resolveStatus($validated),
-            'external_software_id' => $validated['external_software_id'] ?? null,
-            'external_api_base_url' => $validated['external_api_base_url'] ?? null,
-            'external_logs_endpoint' => $this->normalizeExternalLogsEndpoint($validated['external_logs_endpoint'] ?? null),
-            'has_external_api' => ! empty($validated['external_api_key']),
-        ]);
+        $program = DB::transaction(function () use ($request, $validated): Program {
+            $program = Program::query()->create([
+                'tenant_id' => $this->currentTenantId($request),
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
+                'version' => $validated['version'] ?? '1.0',
+                'download_link' => $validated['download_link'],
+                'file_size' => $validated['file_size'] ?? null,
+                'system_requirements' => $validated['system_requirements'] ?? null,
+                'installation_guide_url' => $validated['installation_guide_url'] ?? null,
+                'trial_days' => $validated['trial_days'] ?? $this->defaultTrialDays($request),
+                'base_price' => $validated['base_price'],
+                'icon' => $validated['icon'] ?? null,
+                'status' => $this->resolveStatus($validated),
+                'external_software_id' => $validated['external_software_id'] ?? null,
+                'external_api_base_url' => $validated['external_api_base_url'] ?? null,
+                'external_logs_endpoint' => $this->normalizeExternalLogsEndpoint($validated['external_logs_endpoint'] ?? null),
+                'has_external_api' => ! empty($validated['external_api_key']),
+            ]);
 
-        if (! empty($validated['external_api_key'])) {
-            $program->setExternalApiKeyAttribute($validated['external_api_key']);
-            $program->save();
-        }
+            if (! empty($validated['external_api_key'])) {
+                $program->setExternalApiKeyAttribute($validated['external_api_key']);
+                $program->save();
+            }
+
+            $this->syncDurationPresets($program, $validated['presets'] ?? null);
+
+            return $program->load('durationPresets');
+        });
 
         $this->logActivity($request, 'manager.program.create', sprintf('Created program %s.', $program->name), [
             'program_id' => $program->id,
@@ -145,6 +168,13 @@ class SoftwareController extends BaseManagerController
                 }
             }],
             'external_logs_endpoint' => ['nullable', 'string', 'max:100'],
+            'presets' => ['nullable', 'array'],
+            'presets.*.id' => ['nullable', 'integer'],
+            'presets.*.label' => ['required', 'string', 'min:1', 'max:50'],
+            'presets.*.duration_days' => ['required', 'numeric', 'min:0.0001', 'max:36500'],
+            'presets.*.price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'presets.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'presets.*.is_active' => ['nullable', 'boolean'],
         ]);
 
         if (array_key_exists('active', $validated) || array_key_exists('status', $validated)) {
@@ -171,14 +201,19 @@ class SoftwareController extends BaseManagerController
         unset($validated['external_api_key'], $validated['external_software_id'], $validated['external_api_base_url'], $validated['external_logs_endpoint']);
         unset($validated['active']);
 
-        $target->update($validated);
-        $target->save();
+        DB::transaction(function () use ($target, $validated): void {
+            $target->update($validated);
+            $target->save();
+            if (array_key_exists('presets', $validated)) {
+                $this->syncDurationPresets($target, $validated['presets']);
+            }
+        });
 
         $this->logActivity($request, 'manager.program.update', sprintf('Updated program %s.', $target->name), [
             'program_id' => $target->id,
         ]);
 
-        return response()->json(['data' => $this->serializeProgram($target->fresh())]);
+        return response()->json(['data' => $this->serializeProgram($target->fresh()->load('durationPresets'))]);
     }
 
     public function destroy(Request $request, Program $program): JsonResponse
@@ -324,7 +359,101 @@ class SoftwareController extends BaseManagerController
             'active_licenses_count' => (int) ($program->active_licenses_count ?? $program->licenses()->where('status', 'active')->count()),
             'revenue' => round((float) ($program->total_revenue ?? $program->licenses()->sum('price')), 2),
             'created_at' => $program->created_at?->toIso8601String(),
+            'duration_presets' => $this->serializeDurationPresets($program),
         ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>>|null $presets
+     */
+    private function syncDurationPresets(Program $program, ?array $presets): void
+    {
+        $normalizedPresets = $this->normalizePresetPayload($presets);
+
+        if ($normalizedPresets->isEmpty()) {
+            $normalizedPresets = collect($this->defaultDurationPresets());
+        }
+
+        $existingIds = $program->durationPresets()->pluck('id');
+        $incomingIds = $normalizedPresets->pluck('id')->filter()->map(fn ($id) => (int) $id);
+        $idsToDelete = $existingIds->diff($incomingIds);
+
+        if ($idsToDelete->isNotEmpty()) {
+            $program->durationPresets()->whereIn('id', $idsToDelete)->delete();
+        }
+
+        foreach ($normalizedPresets->values() as $index => $preset) {
+            $payload = [
+                'label' => (string) $preset['label'],
+                'duration_days' => (float) $preset['duration_days'],
+                'price' => (float) $preset['price'],
+                'sort_order' => (int) ($preset['sort_order'] ?? $index + 1),
+                'is_active' => (bool) ($preset['is_active'] ?? true),
+            ];
+
+            $presetId = isset($preset['id']) ? (int) $preset['id'] : 0;
+
+            if ($presetId > 0) {
+                $program->durationPresets()->whereKey($presetId)->update($payload);
+                continue;
+            }
+
+            $program->durationPresets()->create($payload);
+        }
+    }
+
+    /**
+     * @param array<int, array<string, mixed>>|null $presets
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function normalizePresetPayload(?array $presets): Collection
+    {
+        return collect($presets ?? [])
+            ->filter(fn ($preset) => is_array($preset) && trim((string) ($preset['label'] ?? '')) !== '')
+            ->map(fn (array $preset): array => [
+                'id' => isset($preset['id']) ? (int) $preset['id'] : null,
+                'label' => trim((string) $preset['label']),
+                'duration_days' => round((float) $preset['duration_days'], 4),
+                'price' => round((float) $preset['price'], 2),
+                'sort_order' => isset($preset['sort_order']) ? (int) $preset['sort_order'] : null,
+                'is_active' => array_key_exists('is_active', $preset) ? filter_var($preset['is_active'], FILTER_VALIDATE_BOOLEAN) : true,
+            ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function defaultDurationPresets(): array
+    {
+        return [
+            ['label' => '2 Hours', 'duration_days' => 0.0833, 'price' => 60.00, 'sort_order' => 1, 'is_active' => true],
+            ['label' => 'Day', 'duration_days' => 1, 'price' => 85.00, 'sort_order' => 2, 'is_active' => true],
+            ['label' => 'Week', 'duration_days' => 7, 'price' => 150.00, 'sort_order' => 3, 'is_active' => true],
+            ['label' => 'Month', 'duration_days' => 30, 'price' => 250.00, 'sort_order' => 4, 'is_active' => true],
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function serializeDurationPresets(Program $program): array
+    {
+        $presets = $program->relationLoaded('durationPresets')
+            ? $program->durationPresets
+            : $program->durationPresets()->get();
+
+        return $presets
+            ->map(fn (ProgramDurationPreset $preset): array => [
+                'id' => $preset->id,
+                'program_id' => $preset->program_id,
+                'label' => $preset->label,
+                'duration_days' => (float) $preset->duration_days,
+                'price' => (float) $preset->price,
+                'sort_order' => (int) $preset->sort_order,
+                'is_active' => (bool) $preset->is_active,
+            ])
+            ->values()
+            ->all();
     }
 
     private function normalizeExternalLogsEndpoint(?string $value): string
@@ -336,5 +465,13 @@ class SoftwareController extends BaseManagerController
         }
 
         return preg_match('/^[A-Za-z0-9_-]+$/', $normalized) === 1 ? $normalized : 'apilogs';
+    }
+
+    private function defaultTrialDays(Request $request): int
+    {
+        $tenant = Tenant::query()->find($this->currentTenantId($request));
+        $settings = is_array($tenant?->settings) ? $tenant->settings : [];
+
+        return max(0, (int) data_get($settings, 'defaults.trial_days', 7));
     }
 }

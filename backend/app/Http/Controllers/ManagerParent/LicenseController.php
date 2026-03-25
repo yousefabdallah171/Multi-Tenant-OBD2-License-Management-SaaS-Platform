@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Models\License;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,7 +32,7 @@ class LicenseController extends BaseManagerParentController
                     $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
                 });
             } else {
-                $query->where('status', $validated['status']);
+                $query->whereEffectiveStatus($validated['status']);
             }
         }
 
@@ -84,18 +85,23 @@ class LicenseController extends BaseManagerParentController
     {
         $baseQuery = License::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('status', 'active')
+            ->whereEffectivelyActive()
             ->where('expires_at', '>=', now());
 
         $day1 = (clone $baseQuery)->where('expires_at', '<=', now()->addDay())->count();
         $day3 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(3))->count();
         $day7 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(7))->count();
+        $expired = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->whereEffectivelyExpired()
+            ->count();
 
         return response()->json([
             'data' => [
                 'day1' => $day1,
                 'day3' => $day3,
                 'day7' => $day7,
+                'expired' => $expired,
             ],
         ]);
     }
@@ -104,9 +110,9 @@ class LicenseController extends BaseManagerParentController
     {
         $resolved = $this->resolveTenantLicense($request, $license);
 
-        if ($resolved->status === 'active') {
+        if (! $this->canDeleteLicense($resolved)) {
             return response()->json([
-                'message' => 'Cannot delete an active license. Deactivate it first.',
+                'message' => 'Only expired or cancelled licenses can be deleted.',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
@@ -115,6 +121,7 @@ class LicenseController extends BaseManagerParentController
         $customerId = $resolved->customer_id;
         $programId = $resolved->program_id;
 
+        LicenseCacheInvalidation::invalidateForLicense($resolved);
         $resolved->delete();
 
         $this->logActivity(
@@ -132,6 +139,11 @@ class LicenseController extends BaseManagerParentController
         return response()->json([
             'message' => 'License deleted successfully.',
         ]);
+    }
+
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
     }
 
     private function resolveTenantLicense(Request $request, License $license): License
@@ -169,7 +181,8 @@ class LicenseController extends BaseManagerParentController
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
-            'status' => $license->status,
+            'pause_reason' => $license->pause_reason,
+            'status' => $license->effectiveStatus(),
         ];
     }
 }

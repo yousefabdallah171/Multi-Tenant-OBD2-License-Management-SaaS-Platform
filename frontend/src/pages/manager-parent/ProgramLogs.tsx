@@ -48,7 +48,7 @@ function exportUserCsv(rows: ProgramUserLogEntry[], fileName: string) {
       row.actor?.name ?? '',
       row.actor?.role ?? '',
       row.customer_name ?? '',
-      row.external_username,
+      resolveProgramLogUsername(row),
       row.bios_id,
       row.price ?? '',
       row.created_at ?? '',
@@ -258,8 +258,11 @@ export function ProgramLogsPage() {
       key: 'username',
       label: t('common.username'),
       sortable: true,
-      sortValue: (row) => row.external_username,
-      render: (row) => row.external_username ? `@${row.external_username}` : '-',
+      sortValue: (row) => resolveProgramLogUsername(row),
+      render: (row) => {
+        const username = resolveProgramLogUsername(row)
+        return username === '-' ? '-' : `@${username}`
+      },
     },
     {
       key: 'bios_id',
@@ -267,7 +270,7 @@ export function ProgramLogsPage() {
       sortable: true,
       sortValue: (row) => row.bios_id,
       render: (row) => row.bios_id ? (
-        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`}>
+        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, row.bios_id)}>
           {row.bios_id}
         </Link>
       ) : '-',
@@ -422,7 +425,7 @@ export function ProgramLogsPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-slate-200 text-left dark:border-slate-800">
+                      <tr className="border-b border-slate-200 text-start dark:border-slate-800">
                         <th className="p-2">{t('common.username')}</th>
                         <th className="p-2">{t('common.timestamp')}</th>
                         <th className="p-2">{t('managerParent.pages.ipAnalytics.ipAddress')}</th>
@@ -559,4 +562,26 @@ function getActionLabel(action: string, t: (key: string, options?: Record<string
   }
 
   return action
+}
+
+function resolveProgramLogUsername(row: ProgramUserLogEntry) {
+  const externalUsername = (row.external_username ?? '').trim()
+  const customerUsername = (row.customer_username ?? '').trim()
+  const customerName = (row.customer_name ?? '').trim()
+
+  if (!externalUsername) {
+    return customerUsername || '-'
+  }
+
+  const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '')
+  if (
+    customerUsername &&
+    customerName &&
+    normalize(externalUsername) === normalize(customerName) &&
+    normalize(customerUsername) !== normalize(customerName)
+  ) {
+    return customerUsername
+  }
+
+  return externalUsername
 }

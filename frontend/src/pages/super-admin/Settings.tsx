@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -8,7 +9,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
-import { COMMON_TIMEZONES, resolveDisplayTimezone } from '@/lib/timezones'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
+import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
+import { BROWSER_DEFAULT_TIMEZONE_VALUE, COMMON_TIMEZONES, getBrowserDefaultTimezoneOption, normalizeTimezoneOptionValue, persistServerTimezone } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
 import { settingsService } from '@/services/settings.service'
 import type { SystemSettings } from '@/types/super-admin.types'
@@ -17,39 +20,81 @@ export function SettingsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { user, setAuthenticatedUser } = useAuth()
+  const { browserTimezone, serverTimezone } = useResolvedTimezone()
   const [showApiKey, setShowApiKey] = useState(false)
   const [draft, setDraft] = useState<SystemSettings | null>(null)
   const [profileForm, setProfileForm] = useState({
     name: user?.name ?? '',
     email: user?.email ?? '',
     phone: user?.phone ?? '',
-    timezone: resolveDisplayTimezone(user?.timezone),
+    timezone: user?.timezone ? normalizeTimezoneOptionValue(user.timezone) : BROWSER_DEFAULT_TIMEZONE_VALUE,
   })
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
     password: '',
     password_confirmation: '',
   })
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const profilePhoneError = useMemo(() => {
+    const value = profileForm.phone?.trim() ?? ''
+    if (!value) {
+      return ''
+    }
+
+    if (!isStrictPhoneCharacters(value) || !isValidStrictPhone(value)) {
+      return t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
+    }
+
+    return ''
+  }, [profileForm.phone, t])
 
   const settingsQuery = useQuery({
     queryKey: ['super-admin', 'settings'],
     queryFn: () => settingsService.get(),
   })
 
-  const form = draft ?? settingsQuery.data?.data ?? null
+  const form = useMemo(() => {
+    const current = draft ?? settingsQuery.data?.data
+    if (!current) {
+      return null
+    }
+
+    return {
+      ...current,
+      general: {
+        ...current.general,
+        server_timezone: normalizeTimezoneOptionValue(current.general.server_timezone),
+      },
+    }
+  }, [draft, settingsQuery.data])
 
   const saveMutation = useMutation({
     mutationFn: () => settingsService.update(form as SystemSettings),
     onSuccess: () => {
+      if (form) {
+        persistServerTimezone(form.general.server_timezone)
+      }
       toast.success(t('superAdmin.pages.settings.saveSuccess'))
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'settings'] })
+      void queryClient.invalidateQueries({ queryKey: ['settings', 'online-widget'] })
     },
   })
 
   const profileMutation = useMutation({
-    mutationFn: () => profileService.updateProfile(profileForm),
+    mutationFn: () => profileService.updateProfile({
+      ...profileForm,
+      timezone: profileForm.timezone === BROWSER_DEFAULT_TIMEZONE_VALUE ? null : profileForm.timezone,
+    }),
     onSuccess: (data) => {
       setAuthenticatedUser(data.user)
+      setProfileForm({
+        name: data.user.name ?? '',
+        email: data.user.email ?? '',
+        phone: data.user.phone ?? '',
+        timezone: data.user.timezone ? normalizeTimezoneOptionValue(data.user.timezone) : BROWSER_DEFAULT_TIMEZONE_VALUE,
+      })
       toast.success(t('superAdmin.pages.profile.profileSaved'))
     },
   })
@@ -59,8 +104,25 @@ export function SettingsPage() {
     onSuccess: () => {
       toast.success(t('superAdmin.pages.profile.passwordSaved'))
       setPasswordForm({ current_password: '', password: '', password_confirmation: '' })
+      setShowCurrentPassword(false)
+      setShowNewPassword(false)
+      setShowConfirmPassword(false)
     },
   })
+
+  const initialProfileForm = useMemo(
+    () => ({
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+      phone: user?.phone ?? '',
+      timezone: user?.timezone ? normalizeTimezoneOptionValue(user.timezone) : BROWSER_DEFAULT_TIMEZONE_VALUE,
+    }),
+    [browserTimezone, serverTimezone, user?.email, user?.name, user?.phone, user?.timezone],
+  )
+
+  useEffect(() => {
+    setProfileForm(initialProfileForm)
+  }, [initialProfileForm])
 
   if (!form) {
     return <div className="py-20 text-center text-sm text-slate-500">{t('common.loading')}</div>
@@ -229,7 +291,15 @@ export function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-phone">{t('common.phone')}</Label>
-                  <Input id="profile-phone" type="tel" value={profileForm.phone ?? ''} onChange={(event) => setProfileForm((current) => ({ ...current, phone: event.target.value }))} />
+                  <Input
+                    id="profile-phone"
+                    type="tel"
+                    inputMode="tel"
+                    pattern="^\+?\d{6,20}$"
+                    value={profileForm.phone ?? ''}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, phone: normalizeStrictPhoneInput(event.target.value) }))}
+                  />
+                  {profilePhoneError ? <p className="text-xs text-rose-600 dark:text-rose-400">{profilePhoneError}</p> : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-timezone">{t('common.timezone', { defaultValue: 'Timezone' })}</Label>
@@ -239,6 +309,9 @@ export function SettingsPage() {
                     onChange={(event) => setProfileForm((current) => ({ ...current, timezone: event.target.value }))}
                     className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                   >
+                    <option value={getBrowserDefaultTimezoneOption(browserTimezone, serverTimezone).value}>
+                      {getBrowserDefaultTimezoneOption(browserTimezone, serverTimezone).label}
+                    </option>
                     {COMMON_TIMEZONES.map((item) => (
                       <option key={item.value} value={item.value}>
                         {item.label}
@@ -246,7 +319,7 @@ export function SettingsPage() {
                     ))}
                   </select>
                 </div>
-                <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending}>
+                <Button type="button" onClick={() => profileMutation.mutate()} disabled={profileMutation.isPending || Boolean(profilePhoneError)}>
                   {profileMutation.isPending ? t('common.saving') : t('superAdmin.pages.settings.saveProfile')}
                 </Button>
               </CardContent>
@@ -256,30 +329,51 @@ export function SettingsPage() {
               <CardContent className="grid gap-4 p-6">
                 <div className="space-y-2">
                   <Label htmlFor="profile-current-password">{t('superAdmin.pages.profile.currentPassword')}</Label>
-                  <Input
-                    id="profile-current-password"
-                    type="password"
-                    value={passwordForm.current_password}
-                    onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="profile-current-password"
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      value={passwordForm.current_password}
+                      onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))}
+                      className="pe-12"
+                    />
+                    <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowCurrentPassword((current) => !current)}>
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">{showCurrentPassword ? t('common.hide') : t('common.show')}</span>
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-new-password">{t('superAdmin.pages.profile.newPassword')}</Label>
-                  <Input
-                    id="profile-new-password"
-                    type="password"
-                    value={passwordForm.password}
-                    onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="profile-new-password"
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={passwordForm.password}
+                      onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))}
+                      className="pe-12"
+                    />
+                    <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowNewPassword((current) => !current)}>
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">{showNewPassword ? t('common.hide') : t('common.show')}</span>
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-confirm-password">{t('superAdmin.pages.profile.confirmPassword')}</Label>
-                  <Input
-                    id="profile-confirm-password"
-                    type="password"
-                    value={passwordForm.password_confirmation}
-                    onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="profile-confirm-password"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={passwordForm.password_confirmation}
+                      onChange={(event) => setPasswordForm((current) => ({ ...current, password_confirmation: event.target.value }))}
+                      className="pe-12"
+                    />
+                    <Button type="button" variant="ghost" size="sm" className="absolute end-1 top-1/2 h-9 -translate-y-1/2 px-2" onClick={() => setShowConfirmPassword((current) => !current)}>
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="sr-only">{showConfirmPassword ? t('common.hide') : t('common.show')}</span>
+                    </Button>
+                  </div>
                 </div>
                 <Button type="button" onClick={() => passwordMutation.mutate()} disabled={passwordMutation.isPending}>
                   {passwordMutation.isPending ? t('common.saving') : t('superAdmin.pages.settings.savePassword')}

@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, Banknote, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { Banknote, ShieldCheck, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
-import { PieChartWidget } from '@/components/charts/PieChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { ExportButtons } from '@/components/shared/ExportButtons'
@@ -14,34 +14,20 @@ import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import type { FinancialReportData } from '@/types/manager-parent.types'
 
-function localizeActivationLabel(label: string, t: ReturnType<typeof useTranslation>['t']) {
-  if (label === 'Success') {
-    return t('managerParent.pages.reports.success')
-  }
-
-  if (label === 'Failure') {
-    return t('managerParent.pages.reports.failure')
-  }
-
-  return label
-}
-
 export function FinancialReportsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
+  const [range, setRange] = useState<DateRangeValue>(() => resolvePresetRange(365))
 
   const reportQuery = useQuery({
     queryKey: ['manager-parent', 'financial-reports', range.from, range.to],
     queryFn: () => managerParentService.getFinancialReports(range),
-  })
-  const activationRateQuery = useQuery({
-    queryKey: ['manager-parent', 'reports', 'activation-rate', range.from, range.to],
-    queryFn: () => managerParentService.getActivationRate(range),
   })
   const retentionQuery = useQuery({
     queryKey: ['manager-parent', 'reports', 'retention', range.from, range.to],
@@ -53,16 +39,10 @@ export function FinancialReportsPage() {
     ...item,
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
   }))
-  const activationRateSeries = (activationRateQuery.data?.data ?? []).map((item) => ({
-    ...item,
-    label: localizeActivationLabel(item.label, t),
-  }))
   const retentionSeries = (retentionQuery.data?.data ?? []).map((item) => ({
     ...item,
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
   }))
-  const successRate = activationRateQuery.data?.data.find((item) => item.label === 'Success')?.percentage ?? 0
-
   const columns = useMemo<Array<DataTableColumn<FinancialReportData['reseller_balances'][number]>>>(
     () => [
       { key: 'reseller', label: t('managerParent.pages.financialReports.columns.reseller'), sortable: true, sortValue: (row) => row.reseller, render: (row) => row.reseller },
@@ -88,11 +68,14 @@ export function FinancialReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <StatsCard title={t('managerParent.pages.financialReports.totalTenantRevenue')} value={formatCurrency(report?.summary.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
-        <StatsCard title={t('managerParent.pages.financialReports.totalActivations')} value={report?.summary.total_activations ?? 0} icon={Activity} color="sky" />
-        <StatsCard title={t('managerParent.pages.financialReports.activeLicenses')} value={report?.summary.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        <StatsCard title={t('managerParent.pages.reports.successRate')} value={`${successRate.toFixed(1)}%`} icon={CheckCircle2} color="rose" />
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
+          <StatsCard title={t('managerParent.pages.financialReports.totalCustomers')} value={report?.summary.total_customers ?? 0} icon={Users} color="sky" />
+        </button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(`${routePaths.managerParent.customers(lang)}?status=active`)}>
+          <StatsCard title={t('managerParent.pages.financialReports.activeCustomers')} value={report?.summary.active_customers ?? report?.summary.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+        </button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -137,23 +120,13 @@ export function FinancialReportsPage() {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <PieChartWidget
-          title={t('managerParent.pages.reports.activationQuality')}
-          data={activationRateSeries}
-          nameKey="label"
-          valueKey="count"
-          isLoading={activationRateQuery.isLoading}
-          totalLabel={t('managerParent.pages.reports.attempts')}
-        />
-        <LineChartWidget
-          title={t('managerParent.pages.reports.customerRetention')}
-          data={retentionSeries}
-          isLoading={retentionQuery.isLoading}
-          xKey="month"
-          series={[{ key: 'customers', label: t('managerParent.pages.reports.customersLabel') }]}
-        />
-      </div>
+      <LineChartWidget
+        title={t('managerParent.pages.reports.customerRetention')}
+        data={retentionSeries}
+        isLoading={retentionQuery.isLoading}
+        xKey="month"
+        series={[{ key: 'customers', label: t('managerParent.pages.reports.customersLabel') }]}
+      />
 
       <Card>
         <CardContent className="p-6">
@@ -163,4 +136,23 @@ export function FinancialReportsPage() {
       </Card>
     </div>
   )
+}
+
+function resolvePresetRange(days: number): DateRangeValue {
+  const today = new Date()
+  const from = new Date(today)
+  from.setDate(today.getDate() - (days - 1))
+
+  return {
+    from: formatDateInput(from),
+    to: formatDateInput(today),
+  }
+}
+
+function formatDateInput(value: Date) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }

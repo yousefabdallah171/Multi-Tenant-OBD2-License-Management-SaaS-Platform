@@ -1,0 +1,36 @@
+- generic [ref=e2]:
+  - link "Skip to content" [ref=e3] [cursor=pointer]:
+    - /url: "#auth-main-content"
+  - main [ref=e4]:
+    - button "Toggle theme" [ref=e5] [cursor=pointer]:
+      - img [ref=e6]
+      - generic [ref=e8]: Dark mode
+    - button "AR" [ref=e9] [cursor=pointer]
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - paragraph [ref=e13]: License Platform
+          - generic [ref=e14]:
+            - heading "Sign in" [level=2] [ref=e15]
+            - paragraph [ref=e16]: OBD2SW License Management Platform
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - text: Email Address
+            - textbox "Email Address" [disabled] [ref=e20]:
+              - /placeholder: your@email.com
+              - text: manager@obd2sw.com
+          - generic [ref=e21]:
+            - text: Password
+            - generic [ref=e22]:
+              - textbox "Password" [disabled] [ref=e23]:
+                - /placeholder: "********"
+                - text: password
+              - button "Show" [disabled] [ref=e24]:
+                - img [ref=e25]
+          - generic [ref=e28]:
+            - checkbox "Keep me signed in" [checked] [disabled] [ref=e29]
+            - generic [ref=e30]: Keep me signed in
+          - button "Signing in..." [disabled]:
+            - img
+            - text: Signing in...
+      - paragraph [ref=e32]: © 2026 OBD2SW. All rights reserved.

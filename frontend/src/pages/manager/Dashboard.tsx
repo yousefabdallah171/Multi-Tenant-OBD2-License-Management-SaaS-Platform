@@ -1,17 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ArrowRight, Banknote, KeyRound, ShieldCheck, UserRound, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Banknote, ShieldCheck, UserRound, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 
@@ -45,8 +46,8 @@ export function DashboardPage() {
             <Button type="button" variant="secondary" onClick={() => navigate(routePaths.manager.team(lang))}>
               {t('manager.pages.dashboard.actions.team')}
             </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.manager.usernameManagement(lang))}>
-              {t('manager.pages.dashboard.actions.usernameManagement')}
+            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.manager.customers(lang))}>
+              {t('manager.pages.dashboard.quickActions.customerOverview')}
             </Button>
             <Button type="button" onClick={() => navigate(routePaths.manager.reports(lang))}>
               {t('manager.pages.dashboard.actions.reports')}
@@ -56,10 +57,29 @@ export function DashboardPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatsCard title={t('manager.pages.dashboard.teamResellers')} value={stats?.team_resellers ?? 0} icon={Users} color="sky" />
-        <StatsCard title={t('manager.pages.dashboard.teamCustomers')} value={stats?.team_customers ?? 0} icon={UserRound} color="emerald" />
-        <StatsCard title={t('manager.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        <StatsCard title={t('manager.pages.dashboard.teamRevenue')} value={formatCurrency(stats?.team_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+        {statsQuery.isLoading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : (
+          <>
+            <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.team(lang))}>
+              <StatsCard title={t('manager.pages.dashboard.teamResellers')} value={stats?.team_resellers ?? 0} icon={Users} color="sky" />
+            </button>
+            <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.customers(lang))}>
+              <StatsCard title={t('manager.pages.dashboard.teamCustomers')} value={stats?.team_customers ?? 0} icon={UserRound} color="emerald" />
+            </button>
+            <button type="button" className="text-start" onClick={() => navigate(`${routePaths.manager.customers(lang)}?status=active`)}>
+              <StatsCard title={t('manager.pages.dashboard.activeCustomers')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+            </button>
+            <button type="button" className="text-start" onClick={() => navigate(routePaths.manager.reports(lang))}>
+              <StatsCard title={t('manager.pages.dashboard.teamRevenue')} value={formatCurrency(stats?.team_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+            </button>
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -96,7 +116,7 @@ export function DashboardPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1">
                     <p className="font-medium text-slate-950 dark:text-white">{entry.user?.name ?? t('manager.pages.dashboard.teamMember')}</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{entry.action}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{formatActivityActionLabel(entry.action, t)}</p>
                     {entry.description ? <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description}</p> : null}
                   </div>
                   <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
@@ -119,14 +139,18 @@ export function DashboardPage() {
               {t('manager.pages.dashboard.quickActions.customerOverview')}
               <ActionIcon className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.manager.usernameManagement(lang))}>
-              {t('manager.pages.dashboard.quickActions.unlockUsernames')}
-              <KeyRound className="h-4 w-4" />
+            <Button type="button" variant="secondary" className="w-full justify-between" onClick={() => navigate(routePaths.manager.reports(lang))}>
+              {t('manager.pages.dashboard.actions.reports')}
+              <ActionIcon className="h-4 w-4" />
             </Button>
-            <div className="rounded-3xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-950/40 dark:text-slate-300">
+            <button
+              type="button"
+              className="rounded-3xl bg-slate-50 p-4 text-start text-sm text-slate-600 dark:bg-slate-950/40 dark:text-slate-300"
+              onClick={() => navigate(routePaths.manager.resellerLogs(lang))}
+            >
               {t('manager.pages.dashboard.monthlyActivations')}
               <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{stats?.monthly_activations ?? 0}</p>
-            </div>
+            </button>
           </CardContent>
         </Card>
       </div>

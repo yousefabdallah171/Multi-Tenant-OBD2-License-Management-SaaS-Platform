@@ -10,13 +10,16 @@ use App\Models\ActivityLog;
 use App\Models\BiosAccessLog;
 use App\Models\BiosBlacklist;
 use App\Models\BiosConflict;
+use App\Models\BiosUsernameLink;
 use App\Models\License;
 use App\Models\Program;
+use App\Models\ProgramDurationPreset;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -31,8 +34,9 @@ class LicenseService
     public function activate(array $data): License
     {
         $actor = $this->currentActor();
-        $reseller = $this->resolveReseller($actor);
-        $program = Program::query()->findOrFail($data['program_id']);
+        $relatedSeller = ! empty($data['seller_id']) ? User::query()->find((int) $data['seller_id']) : null;
+        $reseller = $this->resolveReseller($actor, $relatedSeller);
+        $program = $this->resolveAccessibleProgram($actor, (int) $data['program_id'], $reseller);
         $biosId = trim((string) $data['bios_id']);
         $customerName = trim((string) ($data['customer_name'] ?? ''));
         $apiKey = $program->getDecryptedApiKey();
@@ -45,10 +49,16 @@ class LicenseService
             throw ValidationException::withMessages(['customer_name' => 'The customer name field is required.']);
         }
 
+        if (preg_match('/[\/:?#]/', $biosId) === 1) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'The BIOS ID contains unsupported reserved characters.',
+            ]);
+        }
+
         $externalUsername = $this->normalizeExternalUsername($customerName, $biosId);
         $isScheduled = (bool) ($data['is_scheduled'] ?? false);
         $scheduledTimezone = $this->normalizeTimezone((string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC')));
-        $scheduledAt = $isScheduled ? Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc() : null;
+        $scheduledAt = $isScheduled ? $this->normalizeToMinute(Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc()) : null;
 
         if ($program->status !== 'active') {
             throw ValidationException::withMessages(['program_id' => 'The selected program is not active.']);
@@ -84,23 +94,42 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($data, $externalUsername, $reseller, $program, $biosId, $apiResponse, $isScheduled, $scheduledTimezone, $scheduledAt): License {
+        return DB::transaction(function () use ($actor, $data, $externalUsername, $reseller, $program, $biosId, $apiResponse, $isScheduled, $scheduledTimezone, $scheduledAt): License {
+            // Re-check inside transaction with lock to prevent race on new activations
+            if (! $isScheduled) {
+                $biosIdLowerActivate = strtolower($biosId);
+                $raceConflict = License::query()
+                    ->whereRaw('LOWER(bios_id) = ?', [$biosIdLowerActivate])
+                    ->whereIn('status', ['active', 'suspended'])
+                    ->lockForUpdate()
+                    ->first();
+                if ($raceConflict) {
+                    throw ValidationException::withMessages([
+                        'bios_id' => 'This BIOS ID was just activated by another reseller. Cannot activate.',
+                    ]);
+                }
+            }
+
             $customer = $this->upsertCustomer($reseller, $data, $externalUsername);
-            $durationDays = (float) $data['duration_days'];
+            $preset = $this->resolveActivationPreset($actor, $program, $data);
+            $durationDays = $preset ? (float) $preset->duration_days : (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
-            $activationAnchor = $scheduledAt ?? now();
+            $price = $preset ? (float) $preset->price : (float) $data['price'];
+            $activationAnchor = $scheduledAt ?? $this->currentMinute();
+            $activatedAt = $isScheduled ? null : $this->currentMinute();
 
             $license = License::query()->create([
                 'tenant_id' => $reseller->tenant_id,
                 'customer_id' => $customer->id,
                 'reseller_id' => $reseller->id,
+                'created_by_reseller_id' => $reseller->id,
                 'program_id' => $program->id,
                 'bios_id' => $biosId,
                 'external_username' => $externalUsername,
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'duration_days' => $durationDays,
-                'price' => (float) $data['price'],
-                'activated_at' => $isScheduled ? null : now(),
+                'price' => $price,
+                'activated_at' => $activatedAt,
                 'expires_at' => $activationAnchor->copy()->addMinutes($durationMinutes),
                 'scheduled_at' => $scheduledAt,
                 'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
@@ -111,6 +140,7 @@ class LicenseService
                 'activated_at_scheduled' => null,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
+                'pause_reason' => null,
                 'status' => $isScheduled ? 'pending' : 'active',
             ]);
 
@@ -128,11 +158,21 @@ class LicenseService
                     'bios_id' => $biosId,
                     'external_username' => $externalUsername,
                     'price' => (float) $license->price,
+                    'preset_id' => $preset?->id,
                     'is_scheduled' => $isScheduled,
                 ],
             );
 
             $license->load(['customer', 'program', 'reseller']);
+
+            // Link BIOS ID to username in bios_username_links table
+            BiosUsernameLink::updateOrCreate(
+                ['bios_id' => strtolower($biosId)],
+                ['username' => $customer->username, 'tenant_id' => $reseller->tenant_id]
+            );
+
+            // Lock the username on the customer
+            $customer->update(['username_locked' => true]);
 
             if (! $isScheduled) {
                 event(new LicenseActivated($license));
@@ -147,15 +187,78 @@ class LicenseService
     {
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
-        $this->logBiosAccess($reseller, $license->bios_id, 'renew', ['license_id' => $license->id]);
+        $license->loadMissing(['program', 'customer', 'reseller']);
 
-        $renewedLicense = DB::transaction(function () use ($license, $data, $reseller): License {
-            $anchor = $license->expires_at && $license->expires_at->isFuture() ? $license->expires_at->copy() : now();
+        $isScheduled = (bool) ($data['is_scheduled'] ?? false);
+        $apiResponse = [
+            'success' => true,
+            'data' => ['response' => $isScheduled ? 'Scheduled renewal pending.' : 'Renewed locally.'],
+            'status_code' => $isScheduled ? 202 : 200,
+        ];
+
+        $renewBiosLower = strtolower((string) $license->bios_id);
+
+        if (! $isScheduled) {
+            // Pre-check: BIOS must not be owned by a different license
+            $renewConflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$renewBiosLower])
+                ->where('id', '!=', $license->id)
+                ->tap(fn ($q) => $this->scopeBiosOwned($q))
+                ->first();
+
+            if ($renewConflict) {
+                throw ValidationException::withMessages([
+                    'license' => 'This BIOS ID is currently active with another reseller and cannot be renewed.',
+                ]);
+            }
+
+            $program = $license->program;
+            $apiKey = $program?->getDecryptedApiKey();
+
+            if ($program && $apiKey !== null) {
+                $externalUsername = (string) ($license->external_username ?: $license->customer?->username ?: $license->bios_id);
+                $apiResponse = $this->externalApiService->activateUser(
+                    $apiKey,
+                    $externalUsername,
+                    (string) $license->bios_id,
+                    $program->external_api_base_url
+                );
+
+                if (! $apiResponse['success']) {
+                    throw ValidationException::withMessages([
+                        'license' => $this->extractExternalMessage($apiResponse, 'The renewal request was rejected by the external service.'),
+                    ]);
+                }
+            }
+        }
+
+        $this->logBiosAccess($reseller, $license->bios_id, 'renew', [
+            'license_id' => $license->id,
+            'external' => $apiResponse,
+            'is_scheduled' => $isScheduled,
+        ]);
+
+        $renewedLicense = DB::transaction(function () use ($license, $data, $reseller, $apiResponse, $isScheduled, $renewBiosLower): License {
+            // Locked re-check inside transaction to close the race window
+            if (! $isScheduled) {
+                $renewRaceConflict = License::query()
+                    ->whereRaw('LOWER(bios_id) = ?', [$renewBiosLower])
+                    ->where('id', '!=', $license->id)
+                    ->tap(fn ($q) => $this->scopeBiosOwned($q))
+                    ->lockForUpdate()
+                    ->first();
+                if ($renewRaceConflict) {
+                    throw ValidationException::withMessages([
+                        'license' => 'This BIOS ID was just activated by another reseller. Cannot renew.',
+                    ]);
+                }
+            }
+
+            $anchor = $license->expires_at && $license->expires_at->isFuture() ? $this->normalizeToMinute($license->expires_at->copy()) : $this->currentMinute();
             $durationDays = (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
-            $isScheduled = (bool) ($data['is_scheduled'] ?? false);
             $scheduledTimezone = $this->normalizeTimezone((string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC')));
-            $scheduledAt = $isScheduled ? Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc() : null;
+            $scheduledAt = $isScheduled ? $this->normalizeToMinute(Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc()) : null;
             $expiresAt = ($scheduledAt?->copy() ?? $anchor->copy())->addMinutes($durationMinutes);
             $activatedAt = $license->activated_at;
 
@@ -164,7 +267,7 @@ class LicenseService
                     $activatedAt = null;
                 }
             } elseif (! $license->expires_at || ! $license->expires_at->isFuture() || $license->status !== 'active') {
-                $activatedAt = now();
+                $activatedAt = $this->currentMinute();
             }
 
             $license->forceFill([
@@ -172,6 +275,7 @@ class LicenseService
                 'price' => (float) $data['price'],
                 'activated_at' => $activatedAt,
                 'expires_at' => $expiresAt,
+                'external_activation_response' => (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
                 'status' => $isScheduled ? 'pending' : 'active',
                 'scheduled_at' => $scheduledAt,
                 'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
@@ -182,13 +286,14 @@ class LicenseService
                 'activated_at_scheduled' => $isScheduled ? null : $license->activated_at_scheduled,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
+                'pause_reason' => null,
             ])->save();
 
             $this->balanceService->recordRevenue($reseller, (float) $license->price);
             $this->logActivity(
                 $reseller,
                 'license.renewed',
-                sprintf('Renewed license %d for BIOS %s.', $license->id, $license->bios_id),
+                sprintf('Renewed license for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -241,12 +346,13 @@ class LicenseService
                 'scheduled_failure_message' => null,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
+                'pause_reason' => null,
             ])->save();
 
             $this->logActivity(
                 $reseller,
                 'license.deactivated',
-                sprintf('Deactivated license %d for BIOS %s.', $license->id, $license->bios_id),
+                sprintf('Deactivated license for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -267,7 +373,56 @@ class LicenseService
         return $deactivatedLicense;
     }
 
-    public function pause(License $license): License
+    /**
+     * Cancel a plain-pending license (never activated externally).
+     * No external API call — just sets status to cancelled locally.
+     */
+    public function cancelPending(License $license): License
+    {
+        $actor   = $this->currentActor();
+        $reseller = $this->resolveReseller($actor, $license->reseller);
+
+        if ($license->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'license' => 'Only pending licenses can be cancelled this way. Use deactivate for active licenses.',
+            ]);
+        }
+
+        if ($license->is_scheduled) {
+            throw ValidationException::withMessages([
+                'license' => 'Scheduled pending licenses cannot be cancelled here. Edit or deactivate the scheduled activation instead.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($license, $reseller): License {
+            $license->forceFill([
+                'status'              => 'cancelled',
+                'paused_at'           => null,
+                'pause_remaining_minutes' => null,
+                'pause_reason'        => null,
+            ])->save();
+
+            $this->logActivity(
+                $reseller,
+                'license.cancelled_pending',
+                sprintf('Cancelled pending license for BIOS %s.', $license->bios_id),
+                [
+                    'license_id'        => $license->id,
+                    'customer_id'       => $license->customer_id,
+                    'program_id'        => $license->program_id,
+                    'bios_id'           => $license->bios_id,
+                    'external_username' => $license->external_username,
+                ],
+            );
+
+            $license->load(['customer', 'program', 'reseller']);
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+
+            return $license;
+        });
+    }
+
+    public function pause(License $license, array $data = []): License
     {
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
@@ -300,14 +455,16 @@ class LicenseService
             'external' => $apiResponse,
         ]);
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse): License {
-            $remainingMinutes = max(1, now()->diffInMinutes($license->expires_at, false));
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $data): License {
+            $remainingMinutes = max(1, $this->currentMinute()->diffInMinutes($license->expires_at, false));
+            $pauseReason = Str::limit(trim((string) ($data['pause_reason'] ?? '')), 500, '...');
 
             $license->forceFill([
                 'status' => 'pending',
                 'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Paused locally.'),
-                'paused_at' => now(),
+                'paused_at' => $this->currentMinute(),
                 'pause_remaining_minutes' => $remainingMinutes,
+                'pause_reason' => $pauseReason !== '' ? $pauseReason : null,
                 'scheduled_at' => null,
                 'scheduled_timezone' => null,
                 'scheduled_last_attempt_at' => null,
@@ -319,13 +476,14 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.paused',
-                sprintf('Paused license %d for BIOS %s.', $license->id, $license->bios_id),
+                sprintf('Paused license for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
                     'program_id' => $license->program_id,
                     'bios_id' => $license->bios_id,
                     'external_username' => $license->external_username,
+                    'pause_reason' => $pauseReason !== '' ? $pauseReason : null,
                 ],
             );
 
@@ -351,6 +509,26 @@ class LicenseService
         if ($license->status === 'pending' && $license->is_scheduled) {
             throw ValidationException::withMessages([
                 'license' => 'This license is scheduled. Edit the schedule or renew it instead of reactivating it.',
+            ]);
+        }
+
+        if (BiosBlacklist::blocksBios((string) $license->bios_id, (int) $reseller->tenant_id)) {
+            throw ValidationException::withMessages([
+                'license' => 'This BIOS ID is blacklisted and cannot be reactivated.',
+            ]);
+        }
+
+        // Guard: block if BIOS is owned by a different license (active, suspended, scheduled, or paused)
+        $biosIdLower = strtolower((string) $license->bios_id);
+        $conflictingLicense = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->where('id', '!=', $license->id)
+            ->tap(fn ($q) => $this->scopeBiosOwned($q))
+            ->first();
+
+        if ($conflictingLicense) {
+            throw ValidationException::withMessages([
+                'license' => 'This BIOS ID is currently active with another reseller and cannot be reactivated.',
             ]);
         }
 
@@ -382,7 +560,21 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending): License {
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending, $biosIdLower): License {
+            // Re-check inside transaction with a lock to prevent race condition
+            $conflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->where('id', '!=', $license->id)
+                ->tap(fn ($q) => $this->scopeBiosOwned($q))
+                ->lockForUpdate()
+                ->first();
+
+            if ($conflict) {
+                throw ValidationException::withMessages([
+                    'license' => 'This BIOS ID was just activated by another reseller. Cannot reactivate.',
+                ]);
+            }
+
             $remainingMinutes = $isPausedPending
                 ? max(1, (int) ($license->pause_remaining_minutes ?? 0))
                 : null;
@@ -390,9 +582,10 @@ class LicenseService
             $license->forceFill([
                 'status' => 'active',
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
-                'expires_at' => $remainingMinutes !== null ? now()->addMinutes($remainingMinutes) : $license->expires_at,
+                'expires_at' => $remainingMinutes !== null ? $this->currentMinute()->addMinutes($remainingMinutes) : $license->expires_at,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
+                'pause_reason' => null,
                 'scheduled_at' => null,
                 'scheduled_timezone' => null,
                 'scheduled_last_attempt_at' => null,
@@ -404,7 +597,7 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.resumed',
-                sprintf('Resumed license %d for BIOS %s.', $license->id, $license->bios_id),
+                sprintf('Resumed license for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -427,7 +620,7 @@ class LicenseService
     public function executeScheduledActivation(License $license): array
     {
         $license->loadMissing(['program', 'reseller']);
-        $attemptedAt = now();
+        $attemptedAt = $this->currentMinute();
         $reseller = $license->reseller;
 
         if (! $license->is_scheduled || $license->status !== 'pending' || $license->scheduled_at === null) {
@@ -449,6 +642,23 @@ class LicenseService
             return $this->markScheduledActivationFailure($license, 'This program is not configured for external activation.', $attemptedAt, $reseller);
         }
 
+        // Pre-check: BIOS must not be owned by another license before calling external API
+        $scheduledBiosLower = strtolower((string) $license->bios_id);
+        $scheduledConflict = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$scheduledBiosLower])
+            ->where('id', '!=', $license->id)
+            ->tap(fn ($q) => $this->scopeBiosOwned($q))
+            ->first();
+
+        if ($scheduledConflict) {
+            return $this->markScheduledActivationFailure(
+                $license,
+                'This BIOS ID is currently active with another reseller. Scheduled activation blocked.',
+                $attemptedAt,
+                $reseller,
+            );
+        }
+
         $apiResponse = $this->externalApiService->activateUser(
             $apiKey,
             (string) ($license->external_username ?: $license->bios_id),
@@ -467,7 +677,20 @@ class LicenseService
 
         $durationMinutes = (int) max(1, round(((float) $license->duration_days) * 1440));
 
-        $activatedLicense = DB::transaction(function () use ($attemptedAt, $apiResponse, $durationMinutes, $license, $program, $reseller): License {
+        $activatedLicense = DB::transaction(function () use ($attemptedAt, $apiResponse, $durationMinutes, $license, $program, $reseller, $scheduledBiosLower): License {
+            // Locked re-check inside transaction
+            $scheduledRaceConflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$scheduledBiosLower])
+                ->where('id', '!=', $license->id)
+                ->tap(fn ($q) => $this->scopeBiosOwned($q))
+                ->lockForUpdate()
+                ->first();
+            if ($scheduledRaceConflict) {
+                throw ValidationException::withMessages([
+                    'license' => 'This BIOS ID was just activated by another reseller during scheduled activation.',
+                ]);
+            }
+
             $license->forceFill([
                 'status' => 'active',
                 'activated_at' => $attemptedAt,
@@ -485,7 +708,7 @@ class LicenseService
             $this->logActivity(
                 $reseller,
                 'license.scheduled_activation_executed',
-                sprintf('Scheduled activation executed for license %d.', $license->id),
+                sprintf('Scheduled activation executed for BIOS %s.', $license->bios_id),
                 [
                     'license_id' => $license->id,
                     'customer_id' => $license->customer_id,
@@ -515,6 +738,20 @@ class LicenseService
      */
     public function processDueScheduledActivations(int $limit = 200): array
     {
+        if (! Schema::hasColumns('licenses', ['is_scheduled', 'scheduled_at', 'scheduled_failed_at'])) {
+            return [
+                'processed' => 0,
+                'failed' => 0,
+            ];
+        }
+
+        if (! Schema::hasColumns('programs', ['external_api_key_encrypted', 'external_api_base_url'])) {
+            return [
+                'processed' => 0,
+                'failed' => 0,
+            ];
+        }
+
         $licenses = License::query()
             ->with(['program:id,external_api_key_encrypted,external_api_base_url', 'reseller:id,tenant_id'])
             ->where('is_scheduled', true)
@@ -561,6 +798,219 @@ class LicenseService
         return $result['license'];
     }
 
+    /**
+     * @return array{success: bool, message: string|null, response: array<string, mixed>}
+     */
+    public function changeBiosId(License $license, string $newBiosId): array
+    {
+        $actor = $this->currentActor();
+        $reseller = $this->resolveReseller($actor, $license->reseller);
+        $license->loadMissing(['customer', 'reseller']);
+        $program = Program::query()->find($license->program_id);
+        $apiKey = $program?->getDecryptedApiKey();
+        $trimmedBiosId = trim($newBiosId);
+
+        if ($trimmedBiosId === '') {
+            throw ValidationException::withMessages([
+                'new_bios_id' => 'The new BIOS ID field is required.',
+            ]);
+        }
+
+        if ($trimmedBiosId === (string) $license->bios_id) {
+            throw ValidationException::withMessages([
+                'new_bios_id' => 'The new BIOS ID must be different from the current BIOS ID.',
+            ]);
+        }
+
+        // Global cross-tenant check: new BIOS must not be active/suspended under any OTHER license
+        $newBiosLower = strtolower($trimmedBiosId);
+        $globalConflict = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+            ->where('id', '!=', $license->id)
+            ->whereIn('status', ['active', 'suspended'])
+            ->first();
+
+        if ($globalConflict) {
+            throw ValidationException::withMessages([
+                'new_bios_id' => 'This BIOS ID is currently active with another reseller and cannot be assigned.',
+            ]);
+        }
+
+        // NEW BIOS → USERNAME LINK CHECK: new BIOS must not be permanently linked to a different username
+        $licenseUsername = strtolower((string) ($license->external_username ?: $license->customer?->username ?? ''));
+        $newBiosLink = BiosUsernameLink::where('bios_id', $newBiosLower)->first();
+        if ($newBiosLink && $licenseUsername !== '' && strtolower((string) $newBiosLink->username) !== $licenseUsername) {
+            throw ValidationException::withMessages([
+                'new_bios_id' => sprintf(
+                    'This BIOS ID is permanently linked to a different username (%s). It cannot be assigned to this customer.',
+                    $newBiosLink->username
+                ),
+            ]);
+        }
+
+        // CURRENT USERNAME → BIOS LINK CHECK: if the license username is permanently linked to a different BIOS, block
+        if ($licenseUsername !== '') {
+            $usernameLink = BiosUsernameLink::whereRaw('LOWER(username) = ?', [$licenseUsername])->first();
+            if ($usernameLink && strtolower((string) $usernameLink->bios_id) !== strtolower((string) $license->bios_id)) {
+                throw ValidationException::withMessages([
+                    'new_bios_id' => sprintf(
+                        'This customer\'s username is permanently linked to BIOS ID %s and cannot be moved to a different BIOS.',
+                        $usernameLink->bios_id
+                    ),
+                ]);
+            }
+        }
+
+        // For non-active licenses or when no API key, update locally without external API
+        if ($apiKey === null || $license->status !== 'active') {
+            return DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller, $licenseUsername): array {
+                // Race guard inside transaction
+                $raceConflict = License::query()
+                    ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+                    ->where('id', '!=', $license->id)
+                    ->whereIn('status', ['active', 'suspended'])
+                    ->lockForUpdate()
+                    ->first();
+                if ($raceConflict) {
+                    throw ValidationException::withMessages([
+                        'new_bios_id' => 'This BIOS ID was just activated by another reseller. Cannot change.',
+                    ]);
+                }
+
+                $oldBiosId = (string) $license->bios_id;
+                $oldBiosLower = strtolower($oldBiosId);
+
+                $license->forceFill([
+                    'bios_id' => $trimmedBiosId,
+                ])->save();
+
+                // Update BiosUsernameLink atomically inside the same transaction
+                if ($licenseUsername !== '') {
+                    BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$oldBiosLower])->delete();
+                    BiosUsernameLink::updateOrCreate(
+                        ['bios_id' => $newBiosLower],
+                        ['username' => $licenseUsername, 'tenant_id' => $license->tenant_id]
+                    );
+                }
+
+                $this->logActivity(
+                    $reseller,
+                    'license.bios_changed',
+                    sprintf('Changed BIOS ID from %s to %s.', $oldBiosId, $trimmedBiosId),
+                    [
+                        'license_id' => $license->id,
+                        'customer_id' => $license->customer_id,
+                        'program_id' => $license->program_id,
+                        'bios_id' => $trimmedBiosId,
+                        'old_bios_id' => $oldBiosId,
+                        'new_bios_id' => $trimmedBiosId,
+                        'external_username' => $license->external_username,
+                    ],
+                );
+
+                $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+
+                return [
+                    'success' => true,
+                    'message' => null,
+                    'response' => ['response' => $license->status === 'active' ? 'BIOS updated locally.' : 'BIOS updated (license is not active).'],
+                ];
+            });
+        }
+
+        $externalUsername = (string) ($license->external_username ?: $license->customer?->username ?: $license->bios_id);
+        $apiResponse = $this->externalApiService->changeBiosId($apiKey, $externalUsername, (string) $license->bios_id, $trimmedBiosId, $program?->external_api_base_url);
+
+        $this->logBiosAccess($reseller, $trimmedBiosId, 'change', [
+            'license_id' => $license->id,
+            'old_bios_id' => $license->bios_id,
+            'new_bios_id' => $trimmedBiosId,
+            'external' => $apiResponse,
+        ]);
+
+        if (! ($apiResponse['success'] ?? false)) {
+            return [
+                'success' => false,
+                'message' => $this->extractExternalMessage($apiResponse, 'The external service rejected the BIOS change request.'),
+                'response' => $apiResponse['data'] ?? [],
+            ];
+        }
+
+        // Only verify BIOS change for active licenses (expired licenses won't be in getActiveUsers)
+        if ($program?->external_software_id && $license->status === 'active') {
+            $verification = $this->externalApiService->getActiveUsers((int) $program->external_software_id, $program->external_api_base_url);
+            $verifiedUsers = is_array($verification['data']['users'] ?? null) ? $verification['data']['users'] : [];
+            $verifiedBiosId = $verifiedUsers[$externalUsername] ?? null;
+
+            if (! ($verification['success'] ?? false) || $verifiedBiosId !== $trimmedBiosId) {
+                return [
+                    'success' => false,
+                    'message' => ! ($verification['success'] ?? false)
+                        ? 'The BIOS change was sent, but the external API could not be verified yet.'
+                        : 'The BIOS change was sent, but the external API still reports the old BIOS ID.',
+                    'response' => [
+                        ...($apiResponse['data'] ?? []),
+                        'verification' => $verification['data'] ?? [],
+                    ],
+                ];
+            }
+        }
+
+        DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller, $licenseUsername): void {
+            // Race guard inside transaction
+            $raceConflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+                ->where('id', '!=', $license->id)
+                ->whereIn('status', ['active', 'suspended'])
+                ->lockForUpdate()
+                ->first();
+            if ($raceConflict) {
+                throw ValidationException::withMessages([
+                    'new_bios_id' => 'This BIOS ID was just activated by another reseller. Cannot change.',
+                ]);
+            }
+
+            $oldBiosId = (string) $license->bios_id;
+            $oldBiosLower = strtolower($oldBiosId);
+
+            $license->forceFill([
+                'bios_id' => $trimmedBiosId,
+            ])->save();
+
+            // Update BiosUsernameLink atomically inside the same transaction
+            if ($licenseUsername !== '') {
+                BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$oldBiosLower])->delete();
+                BiosUsernameLink::updateOrCreate(
+                    ['bios_id' => $newBiosLower],
+                    ['username' => $licenseUsername, 'tenant_id' => $license->tenant_id]
+                );
+            }
+
+            $this->logActivity(
+                $reseller,
+                'license.bios_changed',
+                sprintf('Changed BIOS ID from %s to %s.', $oldBiosId, $trimmedBiosId),
+                [
+                    'license_id' => $license->id,
+                    'customer_id' => $license->customer_id,
+                    'program_id' => $license->program_id,
+                    'bios_id' => $trimmedBiosId,
+                    'old_bios_id' => $oldBiosId,
+                    'new_bios_id' => $trimmedBiosId,
+                    'external_username' => $license->external_username,
+                ],
+            );
+
+            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+        });
+
+        return [
+            'success' => true,
+            'message' => null,
+            'response' => $apiResponse['data'] ?? [],
+        ];
+    }
+
     private function assertBiosAvailable(User $reseller, Program $program, string $biosId, string $externalUsername): void
     {
         if (BiosBlacklist::blocksBios($biosId, $reseller->tenant_id)) {
@@ -583,13 +1033,15 @@ class LicenseService
             throw ValidationException::withMessages(['bios_id' => 'This BIOS ID is blacklisted.']);
         }
 
-        $duplicate = License::query()
-            ->where('bios_id', $biosId)
-            ->where('program_id', $program->id)
-            ->where('status', 'active')
+        // GLOBAL CROSS-TENANT CHECK: block if BIOS is owned by any license (active, suspended,
+        // scheduled, or paused). Plain pending (no schedule, no pause) does not block.
+        $biosIdLower = strtolower($biosId);
+        $globalDuplicate = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->tap(fn ($q) => $this->scopeBiosOwned($q))
             ->first();
 
-        if ($duplicate) {
+        if ($globalDuplicate) {
             BiosConflict::query()->create([
                 'bios_id' => $biosId,
                 'attempted_by' => $reseller->id,
@@ -601,18 +1053,45 @@ class LicenseService
 
             $this->logBiosAccess($reseller, $biosId, 'conflict', [
                 'program_id' => $program->id,
-                'license_id' => $duplicate->id,
+                'license_id' => $globalDuplicate->id,
             ]);
 
-            throw ValidationException::withMessages(['bios_id' => 'An active license already exists for this BIOS ID and program.']);
+            throw ValidationException::withMessages(['bios_id' => 'BIOS ID is already working with another reseller']);
         }
 
+        // BIOS → USERNAME LINK CHECK: if this BIOS is permanently linked to a different username, block
+        $existingBiosLink = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+        if ($existingBiosLink && strtolower((string) $existingBiosLink->username) !== strtolower($externalUsername)) {
+            throw ValidationException::withMessages([
+                'customer_name' => 'This BIOS ID is permanently linked to a different username. Please use the linked username.',
+            ]);
+        }
+
+        // USERNAME → BIOS LINK CHECK: if this username is permanently linked to a different BIOS, block
+        $usernameLower = strtolower($externalUsername);
+        $existingUsernameLink = BiosUsernameLink::whereRaw('LOWER(username) = ?', [$usernameLower])->first();
+        if ($existingUsernameLink && strtolower((string) $existingUsernameLink->bios_id) !== $biosIdLower) {
+            $this->logBiosAccess($reseller, $biosId, 'conflict', [
+                'program_id' => $program->id,
+                'conflict_type' => 'username_bios_mismatch',
+                'external_username' => $externalUsername,
+            ]);
+
+            throw ValidationException::withMessages([
+                'customer_name' => sprintf(
+                    'This username is permanently linked to BIOS ID %s. You must use that BIOS ID.',
+                    $existingUsernameLink->bios_id
+                ),
+            ]);
+        }
+
+        // Username must not be in use on this program with a different BIOS under any owned license
+        // (active, suspended, scheduled, or paused — not just effectively-active)
         $usernameConflict = License::query()
-            ->where('tenant_id', $reseller->tenant_id)
             ->where('program_id', $program->id)
-            ->where('external_username', $externalUsername)
-            ->where('bios_id', '!=', $biosId)
-            ->where('status', 'active')
+            ->whereRaw('LOWER(external_username) = ?', [$usernameLower])
+            ->whereRaw('LOWER(bios_id) != ?', [$biosIdLower])
+            ->tap(fn ($q) => $this->scopeBiosOwned($q))
             ->exists();
 
         if ($usernameConflict) {
@@ -624,6 +1103,32 @@ class LicenseService
 
             throw ValidationException::withMessages(['customer_name' => 'This username is already registered to a different BIOS ID on this program.']);
         }
+    }
+
+    /**
+     * Apply a query scope that matches licenses which "own" a BIOS and block others.
+     * Blocking statuses: active, suspended, scheduled-pending, paused-pending.
+     * Plain pending (no schedule, no pause) does NOT block — first to activate wins.
+     */
+    private function scopeBiosOwned(\Illuminate\Database\Eloquent\Builder $q): void
+    {
+        $q->where(function ($q1): void {
+            $q1->whereIn('status', ['active', 'suspended'])
+               ->orWhere(function ($q2): void {
+                   // scheduled-pending
+                   $q2->where('status', 'pending')
+                      ->where('is_scheduled', true);
+               })
+               ->orWhere(function ($q2): void {
+                   // paused-pending
+                   $q2->where('status', 'pending')
+                      ->where(function ($q3): void {
+                          $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                      })
+                      ->whereNotNull('paused_at')
+                      ->where('pause_remaining_minutes', '>', 0);
+               });
+        });
     }
 
     private function isPausedPending(License $license): bool
@@ -658,7 +1163,6 @@ class LicenseService
         $payload = [
             'tenant_id' => $reseller->tenant_id,
             'name' => $displayName,
-            'client_name' => $clientName !== '' ? $clientName : null,
             'email' => $email,
             'phone' => $data['customer_phone'] ?? null,
             'role' => UserRole::CUSTOMER,
@@ -667,6 +1171,10 @@ class LicenseService
             'username' => $customer->username_locked ? $customer->username : $externalUsername,
             'username_locked' => true,
         ];
+
+        if (Schema::hasColumn('users', 'client_name')) {
+            $payload['client_name'] = $clientName !== '' ? $clientName : null;
+        }
 
         if (! $customer->exists) {
             $payload['password'] = Hash::make(Str::password(16));
@@ -717,6 +1225,24 @@ class LicenseService
     private function resolveReseller(User $actor, ?User $relatedReseller = null): User
     {
         if ($relatedReseller) {
+            $actorRole = $actor->role?->value ?? (string) $actor->role;
+
+            // For non-super-admin actors, verify the related reseller belongs to the same tenant
+            // Skip role check if the actor IS the related reseller (manager/manager_parent operating on their own licenses)
+            if ($actorRole !== UserRole::SUPER_ADMIN->value && $relatedReseller->id !== $actor->id) {
+                if ($relatedReseller->tenant_id !== $actor->tenant_id) {
+                    throw ValidationException::withMessages([
+                        'seller_id' => ['Reseller does not belong to your organization.'],
+                    ]);
+                }
+                $relatedResellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
+                if ($relatedResellerRole !== UserRole::RESELLER->value) {
+                    throw ValidationException::withMessages([
+                        'seller_id' => ['The specified user is not a reseller.'],
+                    ]);
+                }
+            }
+
             return $relatedReseller;
         }
 
@@ -732,6 +1258,23 @@ class LicenseService
 
         if ($role === UserRole::MANAGER_PARENT->value) {
             return $actor;
+        }
+
+        if ($role === UserRole::SUPER_ADMIN->value) {
+            if (! $relatedReseller) {
+                throw ValidationException::withMessages([
+                    'seller_id' => 'A seller is required for super admin activations.',
+                ]);
+            }
+
+            $sellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
+            if (! in_array($sellerRole, [UserRole::RESELLER->value, UserRole::MANAGER->value, UserRole::MANAGER_PARENT->value], true)) {
+                throw ValidationException::withMessages([
+                    'seller_id' => 'The selected seller is not allowed to activate licenses.',
+                ]);
+            }
+
+            return $relatedReseller;
         }
 
         throw ValidationException::withMessages([
@@ -781,6 +1324,28 @@ class LicenseService
             ->value() ?: 'user_'.Str::lower(Str::random(8));
     }
 
+    private function resolveAccessibleProgram(User $actor, int $programId, User $reseller): Program
+    {
+        $query = Program::query()->whereKey($programId);
+        $role = $actor->role?->value ?? (string) $actor->role;
+
+        if ($role === UserRole::SUPER_ADMIN->value) {
+            $query->where('tenant_id', $reseller->tenant_id);
+        } else {
+            $query->where('tenant_id', $actor->tenant_id);
+        }
+
+        $program = $query->first();
+
+        if (! $program) {
+            throw ValidationException::withMessages([
+                'program_id' => 'The selected program is invalid.',
+            ]);
+        }
+
+        return $program;
+    }
+
     private function normalizeTimezone(string $timezone): string
     {
         $trimmed = trim($timezone);
@@ -793,6 +1358,16 @@ class LicenseService
         }
 
         return (string) config('app.timezone', 'UTC');
+    }
+
+    private function currentMinute(): Carbon
+    {
+        return now()->startOfMinute();
+    }
+
+    private function normalizeToMinute(Carbon $value): Carbon
+    {
+        return $value->copy()->startOfMinute();
     }
 
     /**
@@ -813,7 +1388,7 @@ class LicenseService
                 $this->logActivity(
                     $reseller,
                     'license.scheduled_activation_failed',
-                    sprintf('Scheduled activation failed for license %d.', $license->id),
+                    sprintf('Scheduled activation failed for BIOS %s.', $license->bios_id),
                     [
                         'license_id' => $license->id,
                         'customer_id' => $license->customer_id,
@@ -889,5 +1464,35 @@ class LicenseService
                 Cache::forget($key);
             }
         }
+    }
+
+    private function resolveActivationPreset(User $actor, Program $program, array $data): ?ProgramDurationPreset
+    {
+        $role = $actor->role?->value ?? (string) $actor->role;
+
+        if ($role !== UserRole::RESELLER->value) {
+            return null;
+        }
+
+        $presetId = (int) ($data['preset_id'] ?? 0);
+
+        if ($presetId <= 0) {
+            throw ValidationException::withMessages([
+                'preset_id' => 'A valid duration preset is required.',
+            ]);
+        }
+
+        $preset = ProgramDurationPreset::query()
+            ->where('program_id', $program->id)
+            ->where('is_active', true)
+            ->find($presetId);
+
+        if (! $preset) {
+            throw ValidationException::withMessages([
+                'preset_id' => 'The selected duration preset is invalid.',
+            ]);
+        }
+
+        return $preset;
     }
 }

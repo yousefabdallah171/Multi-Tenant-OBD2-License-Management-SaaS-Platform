@@ -3,11 +3,17 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Models\License;
+use App\Services\LicenseService;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LicenseController extends BaseManagerController
 {
+    public function __construct(private readonly LicenseService $licenseService)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -30,7 +36,7 @@ class LicenseController extends BaseManagerController
                     $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
                 });
             } else {
-                $query->where('status', $validated['status']);
+                $query->whereEffectiveStatus($validated['status']);
             }
         }
 
@@ -80,19 +86,36 @@ class LicenseController extends BaseManagerController
         $sellerIds = $this->teamSellerIds($request);
         $baseQuery = License::query()
             ->whereIn('reseller_id', $sellerIds)
-            ->where('status', 'active')
+            ->whereEffectivelyActive()
             ->where('expires_at', '>=', now());
 
         $day1 = (clone $baseQuery)->where('expires_at', '<=', now()->addDay())->count();
         $day3 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(3))->count();
         $day7 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(7))->count();
+        $expired = License::query()
+            ->whereIn('reseller_id', $sellerIds)
+            ->whereEffectivelyExpired()
+            ->count();
 
         return response()->json([
             'data' => [
                 'day1' => $day1,
                 'day3' => $day3,
                 'day7' => $day7,
+                'expired' => $expired,
             ],
+        ]);
+    }
+
+    public function cancelPending(Request $request, License $license): JsonResponse
+    {
+        $resolved  = $this->resolveTeamLicense($request, $license);
+        $cancelled = $this->licenseService->cancelPending($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($cancelled);
+
+        return response()->json([
+            'message' => 'Pending license cancelled successfully.',
+            'data'    => $this->serializeLicense($cancelled),
         ]);
     }
 
@@ -124,7 +147,8 @@ class LicenseController extends BaseManagerController
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
-            'status' => $license->status,
+            'pause_reason' => $license->pause_reason,
+            'status' => $license->effectiveStatus(),
         ];
     }
 }

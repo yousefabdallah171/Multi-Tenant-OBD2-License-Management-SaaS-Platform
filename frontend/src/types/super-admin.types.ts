@@ -62,8 +62,124 @@ export interface ManagedUser {
   role: 'super_admin' | 'manager_parent' | 'manager' | 'reseller' | 'customer'
   status: 'active' | 'suspended' | 'inactive'
   username_locked?: boolean
+  can_delete: boolean
   tenant: { id: number; name: string; slug?: string; status?: string } | null
   created_at: string | null
+}
+
+export interface SuperAdminCustomerSummary {
+  id: number
+  tenant: { id: number; name: string; slug?: string; status?: string } | null
+  name: string
+  client_name?: string | null
+  username?: string | null
+  email: string | null
+  phone?: string | null
+  license_id?: number | null
+  bios_id: string | null
+  external_username?: string | null
+  reseller: string | null
+  reseller_id?: number | null
+  program: string | null
+  status: string | null
+  activated_at?: string | null
+  start_at?: string | null
+  expiry: string | null
+  scheduled_at?: string | null
+  scheduled_timezone?: string | null
+  scheduled_last_attempt_at?: string | null
+  scheduled_failed_at?: string | null
+  scheduled_failure_message?: string | null
+  is_scheduled?: boolean
+  paused_at?: string | null
+  pause_remaining_minutes?: number | null
+  pause_reason?: string | null
+  is_blacklisted?: boolean
+  username_locked?: boolean
+  license_count: number
+  has_active_license?: boolean
+}
+
+export interface SuperAdminCustomerDetails extends SuperAdminCustomerSummary {
+  created_by?: { id: number; name: string; email: string } | null
+  created_at?: string | null
+  licenses: Array<{
+    id: number
+    bios_id: string
+    external_username?: string | null
+    program: string | null
+    reseller: string | null
+    reseller_id?: number | null
+    reseller_email?: string | null
+    status: string
+    duration_days?: number
+    price: number
+    activated_at: string | null
+    start_at?: string | null
+    expires_at: string | null
+    scheduled_at?: string | null
+    scheduled_timezone?: string | null
+    scheduled_last_attempt_at?: string | null
+    scheduled_failed_at?: string | null
+    scheduled_failure_message?: string | null
+    is_scheduled?: boolean
+    paused_at?: string | null
+    pause_remaining_minutes?: number | null
+    pause_reason?: string | null
+    is_blacklisted?: boolean
+  }>
+  resellers_summary?: Array<{
+    reseller_id: number | null
+    reseller_name: string | null
+    reseller_email: string | null
+    activations_count: number
+    last_activation_at: string | null
+  }>
+  ip_logs?: Array<{
+    id: number
+    ip_address: string
+    country: string | null
+    country_code?: string | null
+    city: string | null
+    isp: string | null
+    reputation_score: string
+    action: string
+    created_at: string | null
+  }>
+  activity?: Array<{
+    id: number
+    action: string
+    description: string | null
+    metadata: Record<string, unknown>
+    ip_address: string | null
+    created_at: string | null
+  }>
+}
+
+export interface ManagedUserDetail extends ManagedUser {
+  customers_count: number
+  active_licenses_count: number
+  revenue: number
+  recent_licenses: Array<{
+    id: number
+    customer: {
+      id: number
+      name: string
+      email: string | null
+    } | null
+    program: string | null
+    bios_id: string
+    status: string
+    price: number
+    expires_at: string | null
+  }>
+  recent_activity: Array<{
+    id: number
+    action: string
+    description: string | null
+    metadata: Record<string, unknown>
+    created_at: string | null
+  }>
 }
 
 export interface RoleCounts {
@@ -120,6 +236,7 @@ export interface ApiStatusSummary {
 export interface BiosBlacklistEntry {
   id: number
   bios_id: string
+  tenant?: { id: number; name: string } | null
   reason: string
   status: 'active' | 'removed'
   added_by: string | null
@@ -155,6 +272,7 @@ export interface BiosConflictItem {
 export interface FinancialReportPayload {
   summary: {
     total_platform_revenue: number
+    total_customers: number
     total_activations: number
     active_licenses: number
     avg_revenue_per_tenant: number
@@ -173,6 +291,31 @@ export interface FinancialReportPayload {
     avg_price: number
     balance: number
   }>
+}
+
+export interface TenantBackupStats {
+  customers: number
+  licenses: number
+  bios_change_requests: number
+  bios_access_logs: number
+  bios_conflicts: number
+  activity_logs: number
+  api_logs: number
+  user_ip_logs: number
+  reseller_commissions: number
+  reseller_payments: number
+  financial_reports: number
+  user_balances: number
+  [key: string]: number
+}
+
+export interface TenantBackup {
+  id: number
+  tenant_id: number
+  label: string | null
+  stats: TenantBackupStats
+  created_by: { id: number; name: string; email: string } | null
+  created_at: string | null
 }
 
 export interface SystemSettings {

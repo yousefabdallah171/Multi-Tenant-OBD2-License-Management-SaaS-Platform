@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\License;
 use App\Models\User;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -20,15 +21,29 @@ class LicenseController extends Controller
 
     public function activateLicense(Request $request): JsonResponse
     {
+        $role = $request->user()?->role?->value ?? (string) $request->user()?->role;
+        $isReseller = $role === UserRole::RESELLER->value;
+
         $validated = $request->validate([
             'program_id' => ['required', 'integer'],
+            'seller_id' => ['nullable', 'integer', 'exists:users,id'],
             'customer_name' => ['required', 'string', 'max:5000'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'bios_id' => ['required', 'string', 'max:255'],
-            'duration_days' => ['required', 'numeric', 'min:0.0001', 'max:36500'],
-            'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'preset_id' => [
+                Rule::requiredIf($isReseller),
+                'nullable',
+                'integer',
+                Rule::exists('program_duration_presets', 'id')->where(function ($query) use ($request): void {
+                    $query
+                        ->where('program_id', (int) $request->input('program_id'))
+                        ->where('is_active', true);
+                }),
+            ],
+            'duration_days' => [$isReseller ? 'nullable' : 'required', 'numeric', 'min:0.0001', 'max:36500'],
+            'price' => [$isReseller ? 'nullable' : 'required', 'numeric', 'min:0', 'max:99999999.99'],
             'is_scheduled' => ['nullable', 'boolean'],
             'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
             'scheduled_timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
@@ -36,6 +51,7 @@ class LicenseController extends Controller
 
         $license = $this->licenseService->activate($validated);
         $licenseKey = Str::upper('LIC-'.$license->id.'-'.Str::random(8));
+        LicenseCacheInvalidation::invalidateForLicense($license);
 
         return response()->json([
             'message' => 'License activated.',
@@ -64,6 +80,7 @@ class LicenseController extends Controller
                 'scheduled_failure_message' => $license->scheduled_failure_message,
                 'paused_at' => $license->paused_at?->toIso8601String(),
                 'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+                'pause_reason' => $license->pause_reason,
             ],
         ], 201);
     }
@@ -89,6 +106,7 @@ class LicenseController extends Controller
 
         $resolved = $this->resolveAccessibleLicense($request, $license);
         $renewed = $this->licenseService->renew($resolved, $validated);
+        LicenseCacheInvalidation::invalidateForLicense($renewed);
 
         return response()->json([
             'message' => 'License renewed successfully.',
@@ -100,6 +118,7 @@ class LicenseController extends Controller
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
         $deactivated = $this->licenseService->deactivate($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($deactivated);
 
         return response()->json([
             'message' => 'License deactivated successfully.',
@@ -110,10 +129,13 @@ class LicenseController extends Controller
     public function destroy(Request $request, License $license): JsonResponse
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
-        if ($resolved->status === 'active') {
-            $this->licenseService->deactivate($resolved);
+        if (! $this->canDeleteLicense($resolved)) {
+            return response()->json([
+                'message' => 'Only expired or cancelled licenses can be deleted.',
+            ], 422);
         }
 
+        LicenseCacheInvalidation::invalidateForLicense($resolved);
         $resolved->delete();
 
         return response()->json([
@@ -123,8 +145,13 @@ class LicenseController extends Controller
 
     public function pause(Request $request, License $license): JsonResponse
     {
+        $validated = $request->validate([
+            'pause_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
         $resolved = $this->resolveAccessibleLicense($request, $license);
-        $paused = $this->licenseService->pause($resolved);
+        $paused = $this->licenseService->pause($resolved, $validated);
+        LicenseCacheInvalidation::invalidateForLicense($paused);
 
         return response()->json([
             'message' => 'License paused successfully.',
@@ -136,6 +163,7 @@ class LicenseController extends Controller
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
         $resumed = $this->licenseService->resume($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($resumed);
 
         return response()->json([
             'message' => 'License resumed successfully.',
@@ -143,10 +171,23 @@ class LicenseController extends Controller
         ]);
     }
 
+    public function cancelPending(Request $request, License $license): JsonResponse
+    {
+        $resolved  = $this->resolveAccessibleLicense($request, $license);
+        $cancelled = $this->licenseService->cancelPending($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($cancelled);
+
+        return response()->json([
+            'message' => 'Pending license cancelled successfully.',
+            'data'    => $this->serializeLicense($cancelled),
+        ]);
+    }
+
     public function retryScheduled(Request $request, License $license): JsonResponse
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
         $retried = $this->licenseService->retryScheduledActivation($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($retried);
 
         return response()->json([
             'message' => 'Scheduled activation retried successfully.',
@@ -178,10 +219,11 @@ class LicenseController extends Controller
             ->get();
 
         foreach ($licenses as $license) {
-            $this->licenseService->renew($license, [
+            $updated = $this->licenseService->renew($license, [
                 'duration_days' => (float) $validated['duration_days'],
                 'price' => (float) $validated['price'],
             ]);
+            LicenseCacheInvalidation::invalidateForLicense($updated);
         }
 
         return response()->json([
@@ -212,7 +254,8 @@ class LicenseController extends Controller
             ->get();
 
         foreach ($licenses as $license) {
-            $this->licenseService->deactivate($license);
+            $updated = $this->licenseService->deactivate($license);
+            LicenseCacheInvalidation::invalidateForLicense($updated);
         }
 
         return response()->json([
@@ -242,16 +285,16 @@ class LicenseController extends Controller
             ->whereIn('id', $ids->all())
             ->get();
 
-        $count = $licenses->count();
-        foreach ($licenses as $license) {
-            if ($license->status === 'active') {
-                $this->licenseService->deactivate($license);
-            }
+        $deletableLicenses = $licenses->filter(fn (License $license): bool => $this->canDeleteLicense($license));
+        $count = $deletableLicenses->count();
+
+        foreach ($deletableLicenses as $license) {
+            LicenseCacheInvalidation::invalidateForLicense($license);
             $license->delete();
         }
 
         return response()->json([
-            'message' => 'Selected licenses deleted successfully.',
+            'message' => $count > 0 ? 'Selected licenses deleted successfully.' : 'No deletable licenses selected.',
             'count' => $count,
         ]);
     }
@@ -262,7 +305,7 @@ class LicenseController extends Controller
             return null;
         }
 
-        return str_ends_with($email, '@obd2sw.local') ? null : $email;
+        return str_starts_with($email, 'no-email+') && str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 
     private function serializeLicense(License $license): array
@@ -291,6 +334,7 @@ class LicenseController extends Controller
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license->pause_reason,
             'status' => $license->status,
         ];
     }
@@ -303,6 +347,11 @@ class LicenseController extends Controller
         }
 
         return $license;
+    }
+
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
     }
 
     private function accessibleLicenseQuery(Request $request)
@@ -325,7 +374,6 @@ class LicenseController extends Controller
             $resellerIds = User::query()
                 ->where('tenant_id', $actor->tenant_id)
                 ->where('role', UserRole::RESELLER->value)
-                ->where('created_by', $actor->id)
                 ->pluck('id')
                 ->all();
 
@@ -336,10 +384,13 @@ class LicenseController extends Controller
             return License::query()->where('tenant_id', $actor->tenant_id);
         }
 
+        if ($role === UserRole::SUPER_ADMIN->value) {
+            return License::query();
+        }
+
         throw ValidationException::withMessages([
             'auth' => 'You are not allowed to manage licenses.',
         ]);
     }
 
 }
-

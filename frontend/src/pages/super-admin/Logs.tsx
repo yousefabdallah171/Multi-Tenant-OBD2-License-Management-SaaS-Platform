@@ -26,7 +26,7 @@ export function LogsPage() {
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
+  const [perPage, setPerPage] = useState(25)
   const [tenantId, setTenantId] = useState<number | ''>('')
   const [endpoint, setEndpoint] = useState('')
   const [method, setMethod] = useState('')

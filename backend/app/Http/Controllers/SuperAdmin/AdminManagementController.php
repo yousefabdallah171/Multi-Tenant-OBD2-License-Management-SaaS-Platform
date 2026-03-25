@@ -4,6 +4,7 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Enums\UserRole;
 use App\Models\ActivityLog;
+use App\Models\License;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class AdminManagementController extends BaseSuperAdminController
         $validated = $request->validate([
             'role' => ['nullable', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'status' => ['nullable', 'in:active,suspended,inactive'],
+            'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -40,18 +41,24 @@ class AdminManagementController extends BaseSuperAdminController
         }
 
         if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
+            if ($validated['status'] === 'deactive') {
+                $query->whereIn('status', ['suspended', 'inactive']);
+            } else {
+                $query->where('status', $validated['status']);
+            }
         }
 
         if (! empty($validated['search'])) {
             $query->where(function ($builder) use ($validated): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
-                    ->orWhere('email', 'like', '%'.$validated['search'].'%');
+                    ->orWhere('email', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('username', 'like', '%'.$validated['search'].'%');
             });
         }
 
         $admins = $query->paginate($perPage);
+        collect($admins->items())->each(fn (User $user) => $user->ensureUsername());
 
         return response()->json([
             'data' => collect($admins->items())->map(fn (User $user): array => $this->serializeAdmin($user))->values(),
@@ -67,8 +74,13 @@ class AdminManagementController extends BaseSuperAdminController
             'password' => ['required', 'string', 'min:8'],
             'role' => ['required', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
+            'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
         ]);
+
+        if (($validated['status'] ?? null) === 'deactive') {
+            $validated['status'] = 'inactive';
+        }
 
         if ($validated['role'] !== UserRole::SUPER_ADMIN->value && empty($validated['tenant_id'])) {
             return response()->json(['message' => 'Tenant assignment is required for non-super-admin accounts.'], Response::HTTP_UNPROCESSABLE_ENTITY);
@@ -78,12 +90,12 @@ class AdminManagementController extends BaseSuperAdminController
             $user = User::query()->create([
                 'tenant_id' => $validated['role'] === UserRole::SUPER_ADMIN->value ? null : $validated['tenant_id'],
                 'name' => $validated['name'],
-                'username' => Str::slug($validated['name']).'-'.Str::lower(Str::random(4)),
+                'username' => User::generateUniqueUsername($validated['email'] ?? $validated['name']),
                 'email' => $validated['email'],
                 'phone' => $validated['phone'] ?? null,
                 'password' => Hash::make($validated['password']),
                 'role' => $validated['role'],
-                'status' => 'active',
+                'status' => $validated['status'] ?? 'active',
                 'created_by' => $request->user()?->id,
                 'username_locked' => false,
             ]);
@@ -104,11 +116,17 @@ class AdminManagementController extends BaseSuperAdminController
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'role' => ['sometimes', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'status' => ['sometimes', 'in:active,suspended,inactive'],
+            'status' => ['sometimes', 'in:active,suspended,inactive,deactive'],
         ]);
+
+        if (($validated['status'] ?? null) === 'deactive') {
+            $validated['status'] = 'inactive';
+        }
+
+        $this->guardSuperAdminMutation($request, $user, $validated['status'] ?? null, false);
 
         $user->update([
             ...$validated,
@@ -124,10 +142,71 @@ class AdminManagementController extends BaseSuperAdminController
         return response()->json(['data' => $this->serializeAdmin($user->fresh('tenant'))]);
     }
 
+    public function show(User $user): JsonResponse
+    {
+        abort_if(($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value, Response::HTTP_NOT_FOUND);
+
+        $member = $user->load('tenant');
+        $member->ensureUsername();
+        $stats = $this->memberStats($member);
+
+        $recentLicenses = License::query()
+            ->with(['customer:id,name,email', 'program:id,name'])
+            ->when($member->tenant_id, fn ($query) => $query->where('tenant_id', $member->tenant_id))
+            ->where('reseller_id', $member->id)
+            ->latest('activated_at')
+            ->limit(10)
+            ->get()
+            ->map(fn (License $license): array => [
+                'id' => $license->id,
+                'customer' => $license->customer ? [
+                    'id' => $license->customer->id,
+                    'name' => $license->customer->name,
+                    'email' => $license->customer->email,
+                ] : null,
+                'program' => $license->program?->name,
+                'bios_id' => $license->bios_id,
+                'status' => $license->status,
+                'price' => (float) $license->price,
+                'expires_at' => $license->expires_at?->toIso8601String(),
+            ])
+            ->values();
+
+        $recentActivity = ActivityLog::query()
+            ->when($member->tenant_id, fn ($query) => $query->where('tenant_id', $member->tenant_id))
+            ->where('user_id', $member->id)
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn (ActivityLog $activity): array => [
+                'id' => $activity->id,
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'metadata' => $activity->metadata ?? [],
+                'created_at' => $activity->created_at?->toIso8601String(),
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => [
+                ...$this->serializeAdmin($member),
+                'customers_count' => $stats['customers'],
+                'active_licenses_count' => $stats['active_licenses'],
+                'revenue' => $stats['revenue'],
+                'recent_licenses' => $recentLicenses,
+                'recent_activity' => $recentActivity,
+            ],
+        ]);
+    }
+
     public function destroy(Request $request, User $user): JsonResponse
     {
-        if ($request->user()?->is($user)) {
-            return response()->json(['message' => 'You cannot delete the current authenticated user.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        $this->guardSuperAdminMutation($request, $user, null, true);
+
+        if (! $user->canBePermanentlyDeleted()) {
+            return response()->json([
+                'message' => $user->permanentDeleteBlockedMessage() ?? 'This account cannot be deleted.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $email = $user->email;
@@ -144,13 +223,20 @@ class AdminManagementController extends BaseSuperAdminController
     {
         $validated = $request->validate([
             'new_password' => ['nullable', 'string', 'min:8'],
+            'revoke_tokens' => ['nullable', 'boolean'],
         ]);
 
         $newPassword = $validated['new_password'] ?? Str::password(12, true, true, true, false);
         $user->update(['password' => Hash::make($newPassword)]);
 
+        if (($validated['revoke_tokens'] ?? false) === true) {
+            $exceptTokenId = $request->user()?->is($user) ? $request->user()?->currentAccessToken()?->getKey() : null;
+            $user->revokeAuthTokens($exceptTokenId);
+        }
+
         $this->logActivity($request, 'admin.reset_password', sprintf('Reset password for %s.', $user->email), [
             'target_user_id' => $user->id,
+            'revoke_tokens' => $validated['revoke_tokens'] ?? false,
         ]);
 
         return response()->json([
@@ -175,6 +261,26 @@ class AdminManagementController extends BaseSuperAdminController
     }
 
     /**
+     * @return array{customers:int,active_licenses:int,revenue:float}
+     */
+    private function memberStats(User $user): array
+    {
+        $query = License::query()
+            ->when($user->tenant_id, fn ($query) => $query->where('tenant_id', $user->tenant_id))
+            ->where('reseller_id', $user->id);
+
+        $stats = $query
+            ->selectRaw('COUNT(DISTINCT customer_id) as customers, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_licenses, ROUND(COALESCE(SUM(price), 0), 2) as revenue', ['active'])
+            ->first();
+
+        return [
+            'customers' => (int) ($stats?->customers ?? 0),
+            'active_licenses' => (int) ($stats?->active_licenses ?? 0),
+            'revenue' => round((float) ($stats?->revenue ?? 0), 2),
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function serializeAdmin(User $user): array
@@ -182,15 +288,52 @@ class AdminManagementController extends BaseSuperAdminController
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'username' => $user->username,
             'email' => $user->email,
             'phone' => $user->phone,
             'role' => $user->role?->value ?? (string) $user->role,
             'status' => $user->status,
+            'username_locked' => $user->username_locked,
+            'can_delete' => $user->canBePermanentlyDeleted(),
             'tenant' => $user->tenant ? [
                 'id' => $user->tenant->id,
                 'name' => $user->tenant->name,
             ] : null,
             'created_at' => $user->created_at?->toIso8601String(),
         ];
+    }
+
+    private function guardSuperAdminMutation(Request $request, User $target, ?string $nextStatus, bool $isDelete): void
+    {
+        $role = $target->role?->value ?? (string) $target->role;
+        if ($role !== UserRole::SUPER_ADMIN->value) {
+            return;
+        }
+
+        if ($request->user()?->is($target)) {
+            $message = $isDelete
+                ? 'You cannot delete the current authenticated super admin.'
+                : 'You cannot deactivate the current authenticated super admin.';
+
+            abort(response()->json(['message' => $message], Response::HTTP_UNPROCESSABLE_ENTITY));
+        }
+
+        $willDeactivate = $isDelete || in_array($nextStatus, ['suspended', 'inactive', 'deactive'], true);
+        if (! $willDeactivate) {
+            return;
+        }
+
+        $activeSuperAdmins = User::query()
+            ->where('role', UserRole::SUPER_ADMIN->value)
+            ->where('status', 'active')
+            ->count();
+
+        if ($target->status === 'active' && $activeSuperAdmins <= 1) {
+            $message = $isDelete
+                ? 'You cannot delete the last active super admin account.'
+                : 'You cannot deactivate the last active super admin account.';
+
+            abort(response()->json(['message' => $message], Response::HTTP_UNPROCESSABLE_ENTITY));
+        }
     }
 }

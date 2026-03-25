@@ -5,7 +5,7 @@ import { healthCheck } from '@/services/api'
 
 export function Home() {
   const { t } = useTranslation()
-  const { lang, switchLanguage, isRtl } = useLanguage()
+  const { lang, switchLanguage } = useLanguage()
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['api-health'],
@@ -15,7 +15,7 @@ export function Home() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-      <section className={`mx-auto max-w-3xl px-6 py-20 ${isRtl ? 'text-right' : 'text-left'}`}>
+      <section className="mx-auto max-w-3xl px-6 py-20 text-start">
         <h1 className="text-3xl font-bold">{t('title')}</h1>
         <p className="mt-2 text-slate-600 dark:text-slate-300">{t('subtitle')}</p>
 

@@ -24,10 +24,6 @@ class BiosConflictController extends BaseManagerParentController
             ->where('tenant_id', $this->currentTenantId($request))
             ->latest();
 
-        if (! empty($validated['status'])) {
-            $query->where('resolved', $validated['status'] === 'resolved');
-        }
-
         if (! empty($validated['conflict_type'])) {
             $query->where('conflict_type', $validated['conflict_type']);
         }
@@ -40,11 +36,22 @@ class BiosConflictController extends BaseManagerParentController
             $query->whereDate('created_at', '<=', $validated['to']);
         }
 
+        $countsQuery = clone $query;
+
+        if (! empty($validated['status'])) {
+            $query->where('resolved', $validated['status'] === 'resolved');
+        }
+
         $conflicts = $query->paginate((int) ($validated['per_page'] ?? 15));
 
         return response()->json([
             'data' => collect($conflicts->items())->map(fn (BiosConflict $conflict): array => $this->serializeConflict($conflict, $request))->values(),
             'meta' => $this->paginationMeta($conflicts),
+            'status_counts' => [
+                'all' => (clone $countsQuery)->count(),
+                'open' => (clone $countsQuery)->where('resolved', false)->count(),
+                'resolved' => (clone $countsQuery)->where('resolved', true)->count(),
+            ],
         ]);
     }
 
@@ -104,6 +111,7 @@ class BiosConflictController extends BaseManagerParentController
             'bios_id' => $conflict->bios_id,
             'conflict_type' => $conflict->conflict_type,
             'attempted_by_name' => $conflict->attemptedBy?->name,
+            'reseller_name' => $conflict->attemptedBy?->name,
             'program_name' => $conflict->program?->name,
             'affected_customers' => $affectedCustomers,
             'status' => $conflict->resolved ? 'resolved' : 'open',

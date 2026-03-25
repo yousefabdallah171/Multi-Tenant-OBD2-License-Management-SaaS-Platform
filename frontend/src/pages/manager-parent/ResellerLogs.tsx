@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
@@ -11,7 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import { teamService } from '@/services/team.service'
@@ -35,12 +37,60 @@ export function ResellerLogsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(15)
-  const [sellerId, setSellerId] = useState<number | ''>('')
-  const [action, setAction] = useState<string>('')
-  const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [page, setPage] = useState(() => parsePositiveInt(searchParams.get('page'), 1))
+  const [perPage, setPerPage] = useState(() => parsePositiveInt(searchParams.get('per_page'), 15))
+  const [sellerId, setSellerId] = useState<number | ''>(() => parseOptionalNumber(searchParams.get('seller_id')))
+  const [action, setAction] = useState<string>(() => searchParams.get('action') ?? '')
+  const [range, setRange] = useState<DateRangeValue>(() => ({
+    from: searchParams.get('from') ?? '',
+    to: searchParams.get('to') ?? '',
+  }))
+
+  // Reset all filters when navigating to clean URL (e.g. sidebar click)
+  useEffect(() => {
+    if (searchParams.toString() === '') {
+      setPage(1)
+      setPerPage(15)
+      setSellerId('')
+      setAction('')
+      setRange({ from: '', to: '' })
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+
+    if (page > 1) {
+      next.set('page', String(page))
+    }
+
+    if (perPage !== 15) {
+      next.set('per_page', String(perPage))
+    }
+
+    if (sellerId !== '') {
+      next.set('seller_id', String(sellerId))
+    }
+
+    if (action !== '') {
+      next.set('action', action)
+    }
+
+    if (range.from) {
+      next.set('from', range.from)
+    }
+
+    if (range.to) {
+      next.set('to', range.to)
+    }
+
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [action, page, perPage, range.from, range.to, searchParams, sellerId, setSearchParams])
 
   const logsQuery = useQuery({
     queryKey: ['manager-parent', 'seller-logs', page, perPage, sellerId, action, range.from, range.to],
@@ -85,18 +135,28 @@ export function ResellerLogsPage() {
 
         return row.seller ? (
           <div className="space-y-1">
-            <button
-              type="button"
-              className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
-              onClick={() => {
-                if (row.seller?.id) {
-                  setSellerId(row.seller.id)
-                  setPage(1)
-                }
-              }}
-            >
-              {row.seller.name ?? '-'}
-            </button>
+            {row.seller.id && (role === 'manager' || role === 'reseller') ? (
+              <Link
+                className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
+                to={routePaths.managerParent.teamMemberDetail(lang, row.seller.id)}
+                onClick={(event) => event.stopPropagation()}
+              >
+                {row.seller.name ?? '-'}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="text-start font-medium text-sky-600 hover:underline dark:text-sky-300"
+                onClick={() => {
+                  if (row.seller?.id) {
+                    setSellerId(row.seller.id)
+                    setPage(1)
+                  }
+                }}
+              >
+                {row.seller.name ?? '-'}
+              </button>
+            )}
             {role ? <RoleBadge role={role} /> : null}
           </div>
         ) : '-'
@@ -118,7 +178,11 @@ export function ResellerLogsPage() {
         const customerName = row.customer_name ?? getMetadataString(row.metadata, 'customer_name') ?? '-'
 
         return row.customer_id ? (
-          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
+          <Link
+            className="text-sky-600 hover:underline dark:text-sky-300"
+            to={routePaths.managerParent.customerDetail(lang, row.customer_id)}
+            onClick={(event) => event.stopPropagation()}
+          >
             {customerName}
           </Link>
         ) : customerName
@@ -143,7 +207,11 @@ export function ResellerLogsPage() {
         }
 
         return (
-          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(biosId)}`}>
+          <Link
+            className="text-sky-600 hover:underline dark:text-sky-300"
+            to={routePaths.managerParent.biosDetail(lang, biosId)}
+            onClick={(event) => event.stopPropagation()}
+          >
             {biosId}
           </Link>
         )
@@ -190,7 +258,7 @@ export function ResellerLogsPage() {
     <div className="space-y-6">
       <PageHeader
         title={t('managerParent.nav.resellerLogs')}
-        description={t('managerParent.pages.activity.description')}
+        description={t('managerParent.pages.resellerLogs.description')}
         actions={
           <Button
             type="button"
@@ -208,11 +276,11 @@ export function ResellerLogsPage() {
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <MetricCard label={t('common.actions')} value={summary.total_entries} />
-        <MetricCard label={t('common.activate')} value={summary.activations} />
-        <MetricCard label={t('common.renew')} value={summary.renewals} />
-        <MetricCard label={t('common.deactivate')} value={summary.deactivations} />
-        <MetricCard label={t('common.delete')} value={summary.deletions} />
+        <StatusFilterCard label={t('managerParent.pages.activity.allActions')} count={summary.total_entries} isActive={action === ''} onClick={() => { setAction(''); setPage(1) }} color="sky" />
+        <StatusFilterCard label={t('common.activate')} count={summary.activations} isActive={action === 'license.activated'} onClick={() => { setAction('license.activated'); setPage(1) }} color="emerald" />
+        <StatusFilterCard label={t('common.renew')} count={summary.renewals} isActive={action === 'license.renewed'} onClick={() => { setAction('license.renewed'); setPage(1) }} color="sky" />
+        <StatusFilterCard label={t('common.deactivate')} count={summary.deactivations} isActive={action === 'license.deactivated'} onClick={() => { setAction('license.deactivated'); setPage(1) }} color="amber" />
+        <StatusFilterCard label={t('common.delete')} count={summary.deletions} isActive={action === 'license.delete'} onClick={() => { setAction('license.delete'); setPage(1) }} color="rose" />
         <MetricCard label={t('common.revenue')} value={formatCurrency(summary.revenue, 'USD', locale)} />
       </div>
 
@@ -264,6 +332,12 @@ export function ResellerLogsPage() {
         rowKey={(row) => row.id}
         isLoading={logsQuery.isLoading}
         emptyMessage={t('managerParent.pages.activity.noMatches')}
+        onRowClick={(row) => {
+          const role = normalizeRole(row.seller?.role)
+          if (row.seller?.id && (role === 'manager' || role === 'reseller')) {
+            navigate(routePaths.managerParent.teamMemberDetail(lang, row.seller.id))
+          }
+        }}
         pagination={{
           page: logsQuery.data?.meta.page ?? 1,
           lastPage: logsQuery.data?.meta.last_page ?? 1,
@@ -308,24 +382,8 @@ function normalizeRole(role: string | null | undefined): UserRole | null {
     : null
 }
 
-function getActionLabel(action: string, t: (key: string, options?: Record<string, unknown>) => string) {
-  if (action === 'license.activated') {
-    return t('common.activate')
-  }
-
-  if (action === 'license.renewed') {
-    return t('common.renew')
-  }
-
-  if (action === 'license.deactivated') {
-    return t('common.deactivate')
-  }
-
-  if (action === 'license.delete') {
-    return t('common.delete')
-  }
-
-  return action
+function getActionLabel(action: string, t: TFunction) {
+  return formatActivityActionLabel(action, t)
 }
 
 function getMetadataString(metadata: Record<string, unknown>, key: string) {
@@ -345,4 +403,16 @@ function getMetadataNumber(metadata: Record<string, unknown>, key: string) {
   }
 
   return null
+}
+
+function parsePositiveInt(value: string | null, fallback: number) {
+  const parsed = Number(value)
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+function parseOptionalNumber(value: string | null): number | '' {
+  const parsed = Number(value)
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : ''
 }

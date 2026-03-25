@@ -1,0 +1,155 @@
+<?php
+
+namespace App\Http\Controllers\SuperAdmin;
+
+use App\Models\BiosUsernameLink;
+use App\Models\License;
+use App\Models\Program;
+use App\Models\User;
+use App\Services\ExternalApiService;
+use App\Services\LicenseService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+class LicenseController extends BaseSuperAdminController
+{
+    public function __construct(
+        private LicenseService $licenseService,
+        private ExternalApiService $externalApiService,
+    ) {}
+
+    public function expiring(): JsonResponse
+    {
+        $baseQuery = License::query()
+            ->whereEffectivelyActive()
+            ->where('expires_at', '>=', now());
+
+        $day1 = (clone $baseQuery)->where('expires_at', '<=', now()->addDay())->count();
+        $day3 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(3))->count();
+        $day7 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(7))->count();
+        $expired = License::query()->whereEffectivelyExpired()->count();
+
+        return response()->json([
+            'data' => [
+                'day1' => $day1,
+                'day3' => $day3,
+                'day7' => $day7,
+                'expired' => $expired,
+            ],
+        ]);
+    }
+
+    public function forceActivate(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'customer_id' => ['required', 'integer', 'exists:users,id'],
+            'bios_id' => ['required', 'string', 'min:5'],
+            'program_id' => ['required', 'integer', 'exists:programs,id'],
+            'license_type' => ['nullable', 'string'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'duration_months' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $biosId = strtolower($validated['bios_id']);
+        $customer = User::query()->find($validated['customer_id']);
+        $program = Program::query()->find($validated['program_id']);
+
+        if (! $customer) {
+            throw ValidationException::withMessages(['customer_id' => 'Customer not found']);
+        }
+
+        if (! $program) {
+            throw ValidationException::withMessages(['program_id' => 'Program not found']);
+        }
+
+        $usernameLower = strtolower((string) $customer->username);
+        $biosLink = BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$biosId])->first();
+        if ($biosLink && strtolower((string) $biosLink->username) !== $usernameLower) {
+            throw ValidationException::withMessages([
+                'bios_id' => sprintf('This BIOS ID is permanently linked to username %s and cannot be force-assigned.', $biosLink->username),
+            ]);
+        }
+
+        $usernameLink = $usernameLower !== ''
+            ? BiosUsernameLink::whereRaw('LOWER(username) = ?', [$usernameLower])->first()
+            : null;
+        if ($usernameLink && strtolower((string) $usernameLink->bios_id) !== $biosId) {
+            throw ValidationException::withMessages([
+                'customer_id' => sprintf('This username is permanently linked to BIOS ID %s and cannot be force-assigned to another BIOS.', $usernameLink->bios_id),
+            ]);
+        }
+
+        $existingProgramUsername = License::query()
+            ->where('program_id', $program->id)
+            ->whereRaw('LOWER(external_username) = ?', [$usernameLower])
+            ->whereRaw('LOWER(bios_id) != ?', [$biosId])
+            ->where(function ($q): void {
+                $q->whereIn('status', ['active', 'suspended'])
+                    ->orWhere(function ($q2): void {
+                        $q2->where('status', 'pending')->where('is_scheduled', true);
+                    })
+                    ->orWhere(function ($q2): void {
+                        $q2->where('status', 'pending')
+                            ->where(function ($q3): void {
+                                $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                            })
+                            ->whereNotNull('paused_at')
+                            ->where('pause_remaining_minutes', '>', 0);
+                    });
+            })
+            ->exists();
+
+        if ($existingProgramUsername) {
+            throw ValidationException::withMessages([
+                'customer_id' => 'This username is already active on the selected program with a different BIOS ID.',
+            ]);
+        }
+
+        // Find and deactivate existing active license with same BIOS ID (any tenant)
+        $existing = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosId])
+            ->whereIn('status', ['active', 'suspended'])
+            ->first();
+
+        if ($existing) {
+            try {
+                $this->externalApiService->deleteUser($existing->bios_id);
+            } catch (\Exception $e) {
+                \Log::warning("Force-activate: Failed to deactivate old BIOS {$existing->bios_id}: {$e->getMessage()}");
+            }
+            $existing->update(['status' => 'cancelled']);
+        }
+
+        $tenantId = $customer->tenant_id;
+        $license = DB::transaction(function () use ($customer, $validated, $biosId, $tenantId) {
+            $license = License::create([
+                'customer_id' => $customer->id,
+                'program_id' => $validated['program_id'],
+                'bios_id' => $biosId,
+                'external_username' => $customer->username,
+                'status' => 'active',
+                'price' => $validated['price'],
+                'license_type' => $validated['license_type'],
+                'starts_at' => now(),
+                'expires_at' => now()->addMonths($validated['duration_months']),
+                'tenant_id' => $tenantId,
+            ]);
+
+            BiosUsernameLink::updateOrCreate(
+                ['bios_id' => $biosId],
+                ['username' => $customer->username, 'tenant_id' => $tenantId]
+            );
+
+            $customer->update(['username_locked' => true]);
+
+            return $license;
+        });
+
+        return response()->json([
+            'message' => 'License activated successfully',
+            'data' => $license,
+        ], 201);
+    }
+}

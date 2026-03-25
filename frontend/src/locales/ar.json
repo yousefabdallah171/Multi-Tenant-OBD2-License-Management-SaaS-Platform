@@ -52,6 +52,7 @@
       "programs": "البرامج",
       "licenses": "التراخيص",
       "activeLicenses": "التراخيص النشطة",
+      "activeCustomers": "العملاء النشطين حالياً",
       "revenue": "الإيراد"
     }
   },
@@ -65,6 +66,10 @@
     "password": "كلمة المرور",
     "phone": "الهاتف",
     "status": "الحالة",
+    "accountStatus": "حالة الحساب",
+    "loginLock": "قفل تسجيل الدخول",
+    "locked": "مقفل",
+    "unlocked": "غير مقفل",
     "revenue": "الإيراد",
     "users": "المستخدمون",
     "actions": "الإجراءات",
@@ -84,20 +89,41 @@
     "expired": "منتهي",
     "suspended": "معلق",
     "cancelled": "ملغي",
+    "block": "حظر",
     "pause": "إيقاف",
     "resume": "استئناف",
+    "continue": "متابعة",
     "reactivate": "إعادة تفعيل",
     "pauseSuccess": "تم إيقاف الترخيص بنجاح.",
     "resumeSuccess": "تم استئناف الترخيص بنجاح.",
     "reactivateSuccess": "تم إعادة تفعيل الترخيص بنجاح.",
+    "deactive": "غير نشط",
     "inactive": "غير نشط",
     "pending": "قيد الانتظار",
+    "scheduled": "مجدول",
+    "scheduledFailed": "فشل الجدولة",
+    "noLicense": "بدون ترخيص",
+    "statusMeaning": {
+      "active": "مفعل ويعمل الآن.",
+      "expired": "انتهت مدته تلقائياً.",
+      "scheduled": "سيتم تفعيله تلقائياً لاحقاً.",
+      "scheduledFailed": "فشل التفعيل المجدول ويحتاج إلى إعادة محاولة.",
+      "pending": "تم حفظه لكنه غير مفعل بعد.",
+      "inactive": "غير نشط وغير متاح حتى تتم إعادة تفعيله.",
+      "cancelled": "تم إيقافه وإزالته من البرنامج حتى يتم تجديده أو إعادة تفعيله.",
+      "noLicense": "يوجد ملف عميل فقط، لكن لم يتم إنشاء ترخيص بعد."
+    },
     "allRoles": "كل الأدوار",
     "allTenants": "كل الشركاء",
     "allStatuses": "كل الحالات",
     "allMethods": "كل الطرق",
+    "allResellers": "كل الموزعين",
+    "allPrograms": "كل البرامج",
     "selectTenant": "اختر الشريك",
+    "selectOption": "اختر خيارًا",
     "resetPassword": "إعادة تعيين كلمة المرور",
+    "revokeSessionsOnPasswordReset": "تسجيل خروج هذا المستخدم من جميع الأجهزة",
+    "revokeSessionsOnPasswordResetHelp": "يتم إبطال جلسات تسجيل الدخول الحالية حتى تصبح كلمة المرور الجديدة فعالة فورًا.",
     "addedBy": "أضيف بواسطة",
     "removed": "تمت الإزالة",
     "reason": "السبب",
@@ -130,7 +156,8 @@
     "csv": "CSV",
     "pdf": "PDF",
     "activate": "تفعيل",
-    "suspend": "تعليق",
+    "increaseDuration": "زيادة المدة",
+    "suspend": "تعطيل",
     "createdAt": "تاريخ الإنشاء",
     "role": "الدور",
     "tenant": "الشريك",
@@ -138,6 +165,12 @@
     "program": "البرنامج",
     "expiry": "الانتهاء",
     "activations": "التفعيلات",
+    "customerCreatedSuccess": "تم إنشاء العميل بنجاح.",
+    "customerUpdatedSuccess": "تم تحديث العميل بنجاح.",
+    "licenseActivatedSuccess": "تم تفعيل الترخيص بنجاح.",
+    "activationScheduledSuccess": "تمت جدولة التفعيل بنجاح.",
+    "scheduleUpdatedSuccess": "تم تحديث الجدولة بنجاح.",
+    "licenseRenewedSuccess": "تم تجديد الترخيص بنجاح.",
     "rowsPerPage": "عدد الصفوف",
     "totalCount": "الإجمالي {{count}}",
     "selectAllVisible": "تحديد الظاهر",
@@ -147,6 +180,14 @@
     "selectRow": "تحديد {{name}}",
     "previous": "السابق",
     "next": "التالي",
+    "retry": "إعادة المحاولة",
+    "custom": "مخصص",
+    "saved": "تم الحفظ بنجاح.",
+    "deactivated": "تم التعطيل بنجاح.",
+    "paused": "تم الإيقاف بنجاح.",
+    "resumed": "تم الاستئناف بنجاح.",
+    "new": "جديد",
+    "timezone": "المنطقة الزمنية",
     "adjustFilters": "جرّب تعديل الفلاتر الحالية أو عبارة البحث.",
     "connectionLost": "انقطع الاتصال. يرجى التحقق من الشبكة والمحاولة مرة أخرى.",
     "openNavigation": "فتح قائمة التنقل",
@@ -180,11 +221,50 @@
         "title": "تم رفض الوصول",
         "description": "ليست لديك صلاحية لعرض هذا المحتوى. إذا كنت تعتقد أن هذا خطأ، فارجع إلى لوحة التحكم أو تواصل مع المسؤول."
       },
+      "accountDisabled": {
+        "title": "تم تعطيل الحساب",
+        "reasons": {
+          "account_inactive": "هذا الحساب غير نشط حاليا. يرجى التواصل مع المدير أو المسؤول.",
+          "account_suspended": "تم إيقاف هذا الحساب حاليا. يرجى التواصل مع المدير أو المسؤول.",
+          "tenant_inactive": "مساحة العمل هذه غير نشطة حاليا. يرجى التواصل مع المدير أو المسؤول.",
+          "tenant_suspended": "تم إيقاف مساحة العمل هذه حاليا. يرجى التواصل مع المدير أو المسؤول."
+        }
+      },
       "serverError": {
         "title": "خطأ في الخادم",
         "description": "حدث خطأ غير متوقع أثناء معالجة الطلب. أعد المحاولة الآن أو عد إلى لوحة التحكم."
       }
-    }
+    },
+    "activityActions": {
+      "activation": "تفعيل",
+      "deactivation": "إلغاء التفعيل",
+      "renewal": "تجديد",
+      "resume": "استئناف",
+      "biosChanged": "تم تغيير BIOS",
+      "biosChangeRequested": "تم طلب تغيير BIOS",
+      "scheduled": "تفعيل مجدول",
+      "scheduledExecuted": "تم تنفيذ التفعيل المجدول",
+      "scheduledFailed": "فشل التفعيل المجدول",
+      "customerDeleted": "حذف عميل",
+      "teamCreate": "إنشاء عضو فريق",
+      "teamUpdate": "تحديث عضو الفريق",
+      "teamDelete": "حذف عضو الفريق",
+      "create": "إنشاء",
+      "update": "تحديث",
+      "delete": "حذف",
+      "add": "إضافة",
+      "remove": "إزالة",
+      "import": "استيراد",
+      "unblockEmail": "إلغاء حظر البريد",
+      "resetPassword": "إعادة تعيين كلمة المرور",
+      "changeUsername": "تغيير اسم المستخدم",
+      "unlockUsername": "فتح اسم المستخدم",
+      "login": "تسجيل الدخول"
+    },
+    "personalColor": "لون لوحة التحكم الشخصي",
+    "personalColorHint": "خصص لون لوحة التحكم الخاصة بك. اتركه فارغًا لاستخدام اللون الافتراضي للدور.",
+    "licenses": "التراخيص",
+    "start": "البداية"
   },
   "superAdmin": {
     "layout": {
@@ -194,6 +274,7 @@
     "nav": {
       "dashboard": "الرئيسية",
       "tenants": "الشركاء",
+      "customers": "العملاء",
       "users": "المستخدمون",
       "adminManagement": "إدارة المشرفين",
       "biosBlacklist": "قائمة BIOS السوداء",
@@ -205,6 +286,7 @@
       "apiStatus": "حالة API",
       "settings": "الإعدادات",
       "profile": "الملف الشخصي",
+      "biosHistory": "سجل BIOS",
       "biosConflicts": "تعارضات BIOS",
       "biosDetails": "تفاصيل BIOS"
     },
@@ -212,6 +294,7 @@
       "totalTenants": "إجمالي الشركاء",
       "totalRevenue": "إجمالي الإيرادات",
       "activeLicenses": "التراخيص النشطة",
+      "activeCustomers": "العملاء النشطين حالياً",
       "totalUsers": "إجمالي المستخدمين",
       "countryCoverage": "الدول المتتبعة"
     },
@@ -229,9 +312,44 @@
         "ipCountryDistribution": "توزيع الدول حسب IP",
         "ipCountryDistributionDescription": "أكثر دول تسجيل الدخول عبر المنصة."
       },
+      "customers": {
+        "title": "العملاء",
+        "description": "دليل العملاء العام مع الشريك والموزع والبرنامج والحالة واسم المستخدم وروابط تفاصيل BIOS.",
+        "createDescription": "أنشئ ملف عميل أو فعّل ترخيصًا من مساحة عمل المدير العام.",
+        "searchPlaceholder": "ابحث بالعميل أو البريد الإلكتروني أو معرّف BIOS",
+        "allResellers": "كل الموزعين",
+        "allPrograms": "كل البرامج",
+        "biosId": "معرّف BIOS",
+        "addCustomer": "إضافة عميل"
+      },
       "tenants": {
         "title": "إدارة الشركاء",
         "description": "أنشئ شركاء جدد، جهز حساب المدير الرئيسي، وراقب الإيرادات والتفعيلات.",
+        "backupsAction": "النسخ الاحتياطية",
+        "backupsTitle": "النسخ الاحتياطية",
+        "backupsDescription": "استعد النسخ الاحتياطية أو نزّلها أو استوردها. يمكن استيراد الملفات المنزلة على أي خادم.",
+        "importBackupFile": "استيراد ملف نسخة احتياطية",
+        "importBackupHint": "يقبل ملفات ‎.json‎ المصدرة من هذا الخادم أو أي خادم آخر. سيتم حفظ النسخة دون استعادتها، استخدم استعادة لتطبيقها.",
+        "backupLabelOptional": "اسم النسخة الاحتياطية (اختياري)",
+        "labelOptional": "اسم اختياري",
+        "chooseFile": "اختر ملفًا",
+        "importing": "جارٍ الاستيراد...",
+        "loadingBackups": "جارٍ تحميل النسخ الاحتياطية...",
+        "noBackupsYet": "لا توجد نسخ احتياطية بعد. أعد ضبط الشريك لإنشاء نسخة أولًا أو استورد ملفًا من الأعلى.",
+        "resetTenant": "إعادة ضبط الشريك",
+        "resetTenantData": "إعادة ضبط بيانات الشريك",
+        "resetting": "جارٍ إعادة الضبط...",
+        "restoreAction": "استعادة",
+        "downloadAction": "تنزيل",
+        "restoreBackupTitle": "استعادة النسخة الاحتياطية",
+        "restoreBackupIntro": "سيتم استبدال جميع بيانات الشريك الحالية بالنسخة الاحتياطية من",
+        "restoreBackupWarning": "سيتم مسح البيانات الحالية قبل الاستعادة.",
+        "backupContains": "تحتوي هذه النسخة الاحتياطية على:",
+        "typeToConfirm": "اكتب",
+        "toConfirm": "للتأكيد",
+        "restoring": "جارٍ الاستعادة...",
+        "deleteBackupTitle": "حذف النسخة الاحتياطية",
+        "deleteBackupDescription": "حذف النسخة الاحتياطية من {{date}}؟ لا يمكن التراجع عن هذا الإجراء.",
         "saveSuccess": "تم حفظ الشريك بنجاح.",
         "deleteSuccess": "تم تحديث حالة الشريك بنجاح.",
         "managers": "المديرون",
@@ -249,6 +367,7 @@
       "users": {
         "title": "جميع المستخدمين",
         "description": "راجع المستخدمين عبر كل الشركاء وقم بتحديث حالتهم.",
+        "accountStatusHint": "تُطبَّق هذه الفلاتر على حالة الحساب، وليس على حالة تراخيص العملاء.",
         "statusUpdated": "تم تحديث حالة المستخدم بنجاح.",
         "deleteSuccess": "تم حذف المستخدم بنجاح.",
         "deleteTitle": "حذف المستخدم"
@@ -387,8 +506,10 @@
         "title": "التقارير المالية",
         "description": "تتبع إيرادات المنصة وتوزيع البرامج وحجم التفعيلات وأرصدة الموزعين من شاشة واحدة.",
         "totalPlatformRevenue": "إجمالي إيراد المنصة",
+        "totalCustomers": "إجمالي العملاء",
         "totalActivations": "إجمالي التفعيلات",
         "activeLicenses": "التراخيص النشطة",
+        "activeCustomers": "العملاء النشطين حالياً",
         "avgRevenuePerTenant": "متوسط الإيراد لكل شريك",
         "revenueByTenant": "الإيراد حسب الشريك",
         "revenueByProgram": "الإيراد حسب البرنامج",
@@ -441,9 +562,9 @@
     "nav": {
       "dashboard": "الرئيسية",
       "teamManagement": "إدارة الفريق",
-      "resellerPricing": "تسعير الموزعين",
       "softwareManagement": "إدارة البرامج",
       "biosBlacklist": "القائمة السوداء لـ BIOS",
+      "biosHistory": "سجل BIOS",
       "biosConflicts": "تعارضات BIOS",
       "ipAnalytics": "تحليلات IP",
       "logs": "سجلات المنصة",
@@ -452,7 +573,7 @@
       "usernameManagement": "إدارة اسم المستخدم",
       "financialReports": "التقارير",
       "reports": "التقارير",
-      "activity": "النشاط",
+      "activity": "نشاط اللوحة",
       "customers": "العملاء",
       "settings": "الإعدادات",
       "profile": "الملف الشخصي",
@@ -460,7 +581,9 @@
       "licenses": "التراخيص",
       "logsGroup": "السجلات",
       "biosDetails": "تفاصيل BIOS",
-      "resellerLogs": "سجلات الموزعين"
+      "resellerLogs": "سجلات الموزعين",
+      "biosChangeRequests": "طلبات تغيير BIOS",
+      "resellerPayments": "مدفوعات الموزعين"
     },
     "pages": {
       "dashboard": {
@@ -469,6 +592,7 @@
         "teamMembers": "أعضاء الفريق",
         "customers": "العملاء",
         "activeLicenses": "التراخيص النشطة",
+        "activeCustomers": "العملاء النشطين حالياً",
         "monthlyRevenue": "الإيراد الشهري",
         "licenseExpiryForecast": "توقع انتهاء التراخيص",
         "licenseCount": "عدد التراخيص",
@@ -485,7 +609,6 @@
           "teamManagement": "إدارة الفريق",
           "managePrograms": "إدارة البرامج",
           "inviteTeamMember": "دعوة عضو فريق",
-          "updateResellerPricing": "تحديث تسعير الموزعين",
           "reviewCustomers": "مراجعة العملاء",
           "openReports": "فتح التقارير"
         }
@@ -494,6 +617,8 @@
         "title": "التقارير",
         "description": "حلل إيراد الموزعين والبرامج وجودة التفعيل واحتفاظ العملاء للنطاق الزمني المحدد.",
         "totalRevenue": "إجمالي الإيراد",
+        "totalCustomers": "إجمالي العملاء",
+        "activeCustomers": "العملاء النشطين حالياً",
         "totalActivations": "إجمالي التفعيلات",
         "successRate": "معدل النجاح",
         "revenueByReseller": "الإيراد حسب الموزع",
@@ -510,6 +635,8 @@
         "title": "التقارير",
         "description": "راجع إيرادات الشريك وأرصدة الموزعين وجودة التفعيل والاحتفاظ وصدّر العرض الحالي للتقارير.",
         "totalTenantRevenue": "إجمالي إيراد الشريك",
+        "totalCustomers": "إجمالي العملاء",
+        "activeCustomers": "العملاء النشطين حالياً",
         "totalActivations": "إجمالي التفعيلات",
         "activeLicenses": "التراخيص النشطة",
         "revenueByReseller": "الإيراد حسب الموزع",
@@ -543,7 +670,18 @@
         "defaultPricing": "التسعير الافتراضي",
         "notifications": "الإشعارات",
         "newActivationsAlerts": "تنبيهات بريدية للتفعيلات الجديدة",
-        "expiryWarningsAlerts": "تنبيهات بريدية لانتهاء الصلاحية"
+        "expiryWarningsAlerts": "تنبيهات بريدية لانتهاء الصلاحية",
+        "branding": "العلامة التجارية",
+        "brandingDescription": "تخصيص شعار لوحة التحكم ولون النقاش الأساسي.",
+        "logo": "الشعار",
+        "logoHint": "صور PNG أو SVG، بحد أقصى 2 ميجابايت. معروض في الزاوية العلوية اليسرى من جميع لوحات التحكم.",
+        "logoPreview": "معاينة الشعار",
+        "uploadLogo": "تحميل الشعار",
+        "removeLogo": "إزالة الشعار",
+        "primaryColor": "لون النقاش الأساسي",
+        "primaryColorHint": "ينطبق على تمييزات التنقل والنبرات.",
+        "logoUploaded": "تم تحديث الشعار بنجاح.",
+        "logoRemoved": "تم إزالة الشعار."
       },
       "customers": {
         "title": "العملاء",
@@ -564,14 +702,17 @@
         "addCustomer": "إضافة عميل"
       },
       "activity": {
-        "title": "النشاط",
-        "description": "راجع أحداث التدقيق على مستوى الشريك وصفِّها حسب المستخدم أو الإجراء وصدّر السجل الحالي.",
+        "title": "نشاط اللوحة",
+        "description": "راجع أحداث نشاط لوحة التحكم على مستوى الشريك وصفِّها حسب المستخدم أو الإجراء وصدّر السجل الحالي.",
         "export": "تصدير",
         "allActions": "كل الإجراءات",
         "allUsers": "كل المستخدمين",
         "system": "النظام",
         "noMatches": "لا يوجد نشاط يطابق الفلاتر الحالية.",
         "totalEntries": "إجمالي السجلات: {{count}}"
+      },
+      "resellerLogs": {
+        "description": "راجع إجراءات التراخيص التي ينفذها الموزعون عبر فريقك."
       },
       "biosBlacklist": {
         "title": "قائمة BIOS السوداء",
@@ -615,7 +756,7 @@
         "customers": "العملاء",
         "activeLicenses": "التراخيص النشطة",
         "inviteManager": "دعوة مدير",
-        "inviteReseller": "دعوة موزع",
+        "inviteReseller": "إنشاء موزع",
         "visibleTeamMembers": "أعضاء الفريق الظاهرون",
         "customersRepresented": "العملاء المخدومون",
         "visibleRevenue": "الإيراد الظاهر",
@@ -645,13 +786,12 @@
         "nameValidation": "يجب أن يتكون اسم البرنامج من حرفين على الأقل.",
         "downloadValidation": "أدخل رابط تحميل صالحًا.",
         "installationGuideValidation": "أدخل رابط دليل تثبيت صالحًا.",
-        "numberValidation": "يجب أن تكون أيام التجربة والسعر الأساسي أرقامًا صالحة.",
+        "numberValidation": "يجب أن يكون رقم الهاتف صالحًا عند إدخاله.",
         "grid": "شبكة",
         "table": "جدول",
         "addProgram": "إضافة برنامج",
         "searchPlaceholder": "ابحث باسم البرنامج",
         "noDescription": "لا يوجد وصف متاح.",
-        "trialDays": "أيام التجربة",
         "editProgram": "تعديل البرنامج",
         "editDescription": "حدّث تفاصيل البرنامج المحدد.",
         "formDescription": "أنشئ برنامجًا جديدًا مع التسعير وروابط التحميل ودليل التثبيت.",
@@ -691,33 +831,6 @@
         "newUsername": "اسم المستخدم الجديد",
         "usernameRequired": "اسم المستخدم مطلوب.",
         "saveUsername": "حفظ اسم المستخدم"
-      },
-      "resellerPricing": {
-        "title": "تسعير الموزعين",
-        "description": "حدّد أسعار البرامج الخاصة بكل موزع وعدّل نسب العمولة وراجع سجل التسعير.",
-        "updateSuccess": "تم تحديث التسعير بنجاح.",
-        "bulkSuccess": "تم تطبيق التسعير الجماعي على {{count}} صفًا.",
-        "basePrice": "السعر الأساسي",
-        "resellerPrice": "سعر الموزع",
-        "margin": "الهامش %",
-        "commission": "العمولة %",
-        "selectResellerFirst": "اختر موزعًا أولًا.",
-        "oldPrice": "السعر السابق",
-        "newPrice": "السعر الجديد",
-        "changedBy": "تم التغيير بواسطة",
-        "bulkUpdate": "تحديث جماعي",
-        "pricingHistory": "سجل التسعير",
-        "bulkUpdateTitle": "تحديث جماعي للتسعير",
-        "bulkUpdateDescription": "اختر حسابات الموزعين وطبّق إما نسبة زيادة أو سعرًا ثابتًا على جميع البرامج.",
-        "resellers": "الموزعون",
-        "mode": "الوضع",
-        "markupMode": "زيادة مئوية",
-        "fixedMode": "سعر ثابت",
-        "markupValue": "نسبة الزيادة %",
-        "fixedValue": "السعر الثابت",
-        "bulkValidation": "اختر موزعًا واحدًا على الأقل وأدخل قيمة صحيحة.",
-        "applying": "جارٍ التطبيق...",
-        "applyBulkUpdate": "تطبيق التحديث الجماعي"
       },
       "ipAnalytics": {
         "title": "تحليلات IP",
@@ -825,7 +938,6 @@
         "noDescription": "لا يوجد وصف متاح.",
         "openDownload": "فتح رابط التحميل",
         "searchPlaceholder": "ابحث باسم البرنامج",
-        "trialDays": "أيام التجربة",
         "version": "الإصدار"
       },
       "licenses": {
@@ -846,19 +958,23 @@
       "customers": "العملاء",
       "software": "البرامج",
       "reports": "التقارير",
-      "activity": "النشاط",
+      "activity": "نشاط اللوحة",
       "profile": "الملف الشخصي",
       "softwareManagement": "إدارة البرامج",
       "licenses": "التراخيص",
-      "resellerLogs": "سجلات الموزعين"
+      "resellerLogs": "سجلات الموزعين",
+      "biosChangeRequests": "طلبات تغيير BIOS",
+      "biosDetails": "BIOS",
+      "resellerPayments": "مدفوعات الموزعين"
     },
     "pages": {
       "dashboard": {
         "title": "لوحة التحكم",
-        "description": "تابع فريق الموزعين وقاعدة العملاء والتراخيص النشطة والإيراد دون الدخول في مسارات الموزع الحصرية.",
+        "description": "تابع فريق الموزعين وقاعدة العملاء والعملاء النشطين والإيراد دون الدخول في مسارات الموزع الحصرية.",
         "teamResellers": "موزعو الفريق",
         "teamCustomers": "عملاء الفريق",
         "activeLicenses": "التراخيص النشطة",
+        "activeCustomers": "العملاء النشطين حالياً",
         "teamRevenue": "إيراد الفريق",
         "teamActivations": "تفعيلات الفريق",
         "recentTeamActivity": "أحدث نشاطات الفريق",
@@ -894,8 +1010,8 @@
       },
       "team": {
         "title": "الفريق",
-        "description": "راجع الموزعين المسندين إليك. هذا العرض للقراءة فقط ومقصور على فريقك.",
-        "searchPlaceholder": "ابحث باسم الموزع أو بريده الإلكتروني",
+        "description": "أنشئ حسابات الموزعين تحت نطاق المدير وتابع حالتها ونشاطها من مكان واحد.",
+        "searchPlaceholder": "ابحث باسم المستخدم أو البريد الإلكتروني",
         "resellerDetail": "تفاصيل الموزع",
         "resellerDetailDescription": "راجع أداء موزع الفريق الأخير.",
         "recentLicenses": "التراخيص الأخيرة",
@@ -907,17 +1023,36 @@
         "joined": "انضم",
         "columns": {
           "reseller": "الموزع"
-        }
+        },
+        "inviteReseller": "إنشاء موزع",
+        "inviteTitle": "إنشاء موزع",
+        "inviteDescription": "أنشئ حساب موزع جديدًا ضمن نطاق المدير.",
+        "editTitle": "تعديل الموزع",
+        "editDescription": "حدّث بيانات حساب الموزع المحدد.",
+        "createAccount": "إنشاء الحساب",
+        "saveChanges": "حفظ التغييرات",
+        "createSuccess": "تم إنشاء حساب الموزع بنجاح.",
+        "updateSuccess": "تم تحديث حساب الموزع بنجاح.",
+        "statusUpdated": "تم تحديث حالة الموزع بنجاح.",
+        "deleteSuccess": "تم حذف حساب الموزع بنجاح.",
+        "deleteTitle": "حذف الموزع",
+        "deleteDescription": "هل تريد حذف الموزع {{email}} نهائيًا؟",
+        "nameValidation": "يرجى إدخال اسم الموزع.",
+        "emailValidation": "يرجى إدخال بريد إلكتروني صالح.",
+        "passwordValidation": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل."
       },
       "activity": {
-        "title": "النشاط",
-        "description": "راجع أحدث إجراءات المدير والموزعين عبر فريقك.",
+        "title": "نشاط اللوحة",
+        "description": "راجع أحدث إجراءات لوحة التحكم عبر فريقك.",
         "clearDates": "مسح التواريخ",
         "exportReport": "تصدير التقرير",
         "allActions": "كل الإجراءات",
         "allResellers": "كل الموزعين",
         "noMatches": "لا يوجد نشاط يطابق الفلاتر الحالية.",
         "totalEntries": "إجمالي السجلات: {{count}}"
+      },
+      "resellerLogs": {
+        "description": "راجع إجراءات التراخيص التي ينفذها الموزعون عبر فريقك."
       },
       "software": {
         "title": "البرامج",
@@ -1011,7 +1146,11 @@
         "programName": "اسم البرنامج",
         "programDescription": "وصف البرنامج",
         "downloadLink": "رابط التحميل",
+        "fileSize": "حجم الملف",
+        "installationGuideUrl": "رابط دليل التثبيت",
+        "systemRequirements": "متطلبات النظام",
         "trialDays": "أيام التجربة",
+        "basePrice": "السعر الأساسي",
         "price": "السعر",
         "iconUrl": "رابط الأيقونة",
         "version": "الإصدار",
@@ -1042,17 +1181,22 @@
       "dashboard": "لوحة التحكم",
       "customers": "العملاء",
       "software": "البرامج",
+      "ipAnalytics": "تحليلات IP",
+      "activations": "التفعيلات",
       "licenses": "التراخيص",
       "reports": "التقارير",
-      "activity": "النشاط",
-      "profile": "الملف الشخصي"
+      "resellerLogs": "سجلات الموزع",
+      "activity": "نشاط اللوحة",
+      "profile": "الملف الشخصي",
+      "paymentStatus": "حالة المدفوعات"
     },
     "pages": {
       "dashboard": {
         "title": "لوحة التحكم",
-        "description": "تابع العملاء والتراخيص النشطة والإيراد الحالي وأحدث أعمال التفعيل ضمن نطاق حسابك كموزع.",
+        "description": "تابع قاعدة العملاء والعملاء النشطين والإيراد الحالي وأحدث أعمال التفعيل ضمن نطاق حسابك كموزع.",
         "customers": "العملاء",
         "activeLicenses": "التراخيص النشطة",
+        "activeCustomers": "العملاء النشطين حالياً",
         "monthlyActivations": "التفعيلات الشهرية",
         "activationTrend": "اتجاه التفعيل",
         "revenueTrend": "اتجاه الإيراد",
@@ -1068,15 +1212,23 @@
         "quickActionsList": {
           "activateNewCustomer": "تفعيل عميل جديد",
           "manageLicenses": "إدارة التراخيص",
-          "exportReports": "تصدير التقارير"
+          "exportReports": "التقارير"
         }
+      },
+      "resellerLogs": {
+        "description": "راجع سجل التفعيل والتجديد والإلغاء وطلبات تغيير BIOS الخاصة بك."
+      },
+      "ipAnalytics": {
+        "title": "تحليلات IP",
+        "description": "افحص وصول IP لعملائك فقط، وصفّ النشاط المشبوه، وراجع المواقع ومزودي الخدمة والطوابع الزمنية.",
+        "searchPlaceholder": "ابحث باسم المستخدم أو معرّف BIOS أو البرنامج أو عنوان IP"
       },
       "customers": {
         "title": "العملاء",
         "description": "أنشئ العملاء وفعّلهم ثم أدر عمليات التجديد والإلغاء من مساحة عملك الشخصية كموزع.",
         "createDescription": "أنشئ ملف عميل أو فعّل ترخيصاً من مساحة عمل الموزع.",
         "addCustomer": "إضافة عميل",
-        "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني أو BIOS ID",
+        "searchPlaceholder": "ابحث بالاسم أو البريد الإلكتروني أو معرّف BIOS",
         "table": {
           "bios": "BIOS ID"
         },
@@ -1215,8 +1367,11 @@
         "weekly": "أسبوعي",
         "monthly": "شهري",
         "totalRevenue": "إجمالي الإيراد",
+        "totalCustomers": "إجمالي العملاء",
+        "activeCustomers": "العملاء النشطين حالياً",
         "totalActivations": "إجمالي التفعيلات",
         "avgPrice": "متوسط السعر",
+        "avgPriceHint": "إيراد التفعيل مقسوم على عدد التفعيلات داخل النطاق الزمني المحدد.",
         "successRate": "معدل النجاح",
         "activationCount": "عدد التفعيلات",
         "topPrograms": "أفضل البرامج مبيعًا"
@@ -1253,8 +1408,8 @@
         "passwordSaved": "تم تحديث كلمة المرور بنجاح."
       },
       "activity": {
-        "title": "النشاط",
-        "description": "راجع إجراءات التفعيل والتجديد والإلغاء وتسجيل الدخول الخاصة بك.",
+        "title": "نشاط اللوحة",
+        "description": "راجع إجراءات لوحة التحكم الخاصة بك، بما فيها التفعيل والتجديد والإلغاء وتسجيل الدخول.",
         "allActions": "كل الإجراءات",
         "activation": "تفعيل",
         "renewal": "تجديد",
@@ -1269,7 +1424,9 @@
     "title": "تسجيل الدخول",
     "subtitle": "منصة إدارة تراخيص OBD2SW",
     "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "أدخل بريدك الإلكتروني",
     "passwordLabel": "كلمة المرور",
+    "passwordPlaceholder": "أدخل كلمة المرور",
     "submitBtn": "تسجيل الدخول",
     "signingIn": "جارٍ تسجيل الدخول...",
     "networkError": "لا يمكن الوصول إلى الخادم الخلفي. تحقق من الشبكة ورابط API.",
@@ -1321,7 +1478,13 @@
     "externalLogsEndpoint": "مسار سجلات API الخارجي",
     "externalLogsEndpointPlaceholder": "مثال: apilogs",
     "externalSoftwareIdPlaceholder": "مثال: 8",
-    "logsEndpointHint": "مسار السجلات فقط: apilogs. سيصبح الطلب الكامل /apilogs/[ID]."
+    "logsEndpointHint": "مسار السجلات فقط: apilogs. سيصبح الطلب الكامل /apilogs/[ID].",
+    "durationPresetsTitle": "إعدادات المدد الجاهزة",
+    "durationPresetsHint": "أنشئ مددًا محفوظة لتسهيل اختيار مدة الترخيص بسرعة.",
+    "presetLabel": "العنوان",
+    "presetLabelPlaceholder": "مثال: شهر",
+    "presetDurationDays": "عدد الأيام",
+    "addPreset": "إضافة مدة"
   },
   "programLogs": {
     "title": "سجلات المستخدمين",
@@ -1362,6 +1525,13 @@
   },
   "activate": {
     "title": "تفعيل الترخيص",
+    "username": "اسم المستخدم (API)",
+    "usernameHint": "اسم مستخدم API يتم تنسيقه تلقائيًا بدون مسافات",
+    "usernamePlaceholder": "مثال: john_doe",
+    "usernameNoSpaces": "اسم المستخدم لا يمكن أن يحتوي على مسافات",
+    "clientName": "اسم العرض للعميل",
+    "clientNameHint": "اسم واضح للعرض داخل لوحة التحكم",
+    "clientNamePlaceholder": "الاسم الكامل للعميل (اختياري)",
     "customerName": "اسم العميل",
     "customerEmail": "البريد الإلكتروني للعميل",
     "biosId": "معرّف BIOS",
@@ -1417,7 +1587,28 @@
     "quickPreset1Day": "1 يوم",
     "quickPreset7Days": "7 أيام",
     "quickPreset30Days": "30 يوماً",
-    "quickPreset90Days": "90 يوماً"
+    "quickPreset90Days": "90 يوماً",
+    "presetDurationSummary": "{{days}} يوم",
+    "presetPriceSummary": "$ {{price}}",
+    "pricePresetLocked": "السعر مرتبط بالإعداد المسبق المحدد.",
+    "durationDays": "المدة بالأيام",
+    "expiryPreview": "معاينة الانتهاء",
+    "biosConflict": "معرف BIOS يعمل بالفعل مع موزع آخر",
+    "biosAvailable": "معرف BIOS متاح",
+    "biosChecking": "جارٍ التحقق من توفر BIOS...",
+    "biosBlacklisted": "معرف BIOS هذا مدرج في القائمة السوداء ولا يمكن استخدامه",
+    "biosLinkedUsername": "تم ملء اسم المستخدم تلقائياً من سجل BIOS",
+    "usernameTaken": "اسم المستخدم نشط بالفعل مع عميل آخر",
+    "usernameAvailable": "اسم المستخدم متاح",
+    "biosLocked": "مقفل بعد التفعيل",
+    "biosLockedHint": "استخدم طلب تغيير BIOS لتحديث المعرف"
+  },
+  "dateRange": {
+    "last7Days": "آخر 7 أيام",
+    "last30Days": "آخر 30 يومًا",
+    "last3Months": "آخر 3 أشهر",
+    "lastYear": "آخر سنة",
+    "custom": "مخصص"
   },
   "customerPortal": {
     "layout": {
@@ -1497,7 +1688,11 @@
     }
   },
   "validation": {
-    "nameNotBiosId": "أدخل الاسم الكامل للعميل (مثال: أحمد محمد)"
+    "nameNotBiosId": "أدخل الاسم الكامل للعميل (مثال: أحمد محمد)",
+    "required": "الحقل مطلوب",
+    "invalidEmail": "صيغة البريد الإلكتروني غير صحيحة",
+    "invalidPhone": "رقم الهاتف غير صالح",
+    "invalidNumber": "رقم غير صالح"
   },
   "onlineWidget": {
     "title": "متصل الآن",
@@ -1508,6 +1703,7 @@
   },
   "biosDetails": {
     "title": "تفاصيل BIOS ID",
+    "description": "ابحث عن معرّف BIOS لمراجعة النظرة العامة وسجل التراخيص ونشاط الموزعين وحالة القائمة السوداء.",
     "search": "ابحث عن BIOS ID",
     "overview": "نظرة عامة",
     "licenses": "سجل التراخيص",
@@ -1524,12 +1720,168 @@
     "avgDaysBetween": "متوسط الأيام بين عمليات الشراء",
     "customer": "العميل",
     "notBlacklisted": "غير مدرج في القائمة السوداء",
-    "reseller": "الموزع"
+    "reseller": "الموزع",
+    "searchPlaceholder": "ابحث بمعرّف BIOS ID",
+    "overviewSections": {
+      "biosInfo": "معلومات BIOS",
+      "currentLicense": "الترخيص الحالي",
+      "saleSummary": "ملخص البيع"
+    },
+    "resellerMetrics": {
+      "lastActivity": "آخر نشاط",
+      "programsSold": "البرامج المباعة"
+    },
+    "saleSummarySentence": "باع {{reseller}} برنامج {{program}} إلى {{customer}}",
+    "saleSummaryMeta": "{{days}} يوم | {{price}} | {{activatedAt}}",
+    "activityTypes": {
+      "activate": "تفعيل",
+      "renew": "تجديد",
+      "pause": "إيقاف",
+      "deactivate": "إلغاء التفعيل"
+    }
   },
   "settings": {
     "error": "فشل حفظ الإعدادات",
     "saved": "تم تحديث الإعدادات بنجاح",
     "serverTimezone": "المنطقة الزمنية للخادم",
     "timezonePurpose": "حدد المنطقة الزمنية لكل عروض لوحة التحكم والمهام المجدولة."
+  },
+  "customerDetail": {
+    "resellerTimeline": "سجل الموزع الزمني",
+    "soldBy": "تم البيع بواسطة",
+    "period": "الفترة",
+    "biosChanges": "تغييرات BIOS",
+    "requestedBy": "طُلب بواسطة",
+    "approvedBy": "اعتمد بواسطة",
+    "noBiosChangeRequests": "لا توجد طلبات تغيير BIOS"
+  },
+  "customers": {
+    "filterByManagerParent": "فلترة حسب المدير الرئيسي",
+    "filterByManager": "فلترة حسب المدير"
+  },
+  "biosChangeRequests": {
+    "title": "طلبات تغيير BIOS",
+    "description": "راجع طلبات تغيير BIOS القادمة من الموزعين ووافق عليها أو ارفضها مع سجل واضح للمراجعة.",
+    "requestAction": "طلب تغيير BIOS ID",
+    "submitted": "تم إرسال طلب تغيير BIOS.",
+    "sameBiosValidation": "معرّف BIOS الجديد مطابق لمعرّف BIOS الحالي.",
+    "approved": "تمت الموافقة على طلب تغيير BIOS.",
+    "rejected": "تم رفض طلب تغيير BIOS.",
+    "empty": "لا توجد طلبات تغيير BIOS.",
+    "currentBios": "معرّف BIOS الحالي",
+    "oldBios": "BIOS القديم",
+    "newBios": "BIOS الجديد",
+    "newBiosPlaceholder": "أدخل معرّف BIOS الجديد",
+    "reasonPlaceholder": "سبب تغيير BIOS",
+    "newBiosValidation": "أدخل معرّف BIOS جديدًا صالحًا.",
+    "reasonValidation": "أدخل سبب تغيير BIOS.",
+    "approve": "موافقة",
+    "reject": "رفض",
+    "rejectTitle": "رفض طلب تغيير BIOS",
+    "rejectPlaceholder": "أدخل سبب الرفض",
+    "rejectValidation": "أدخل سبب الرفض.",
+    "status": {
+      "pending": "قيد الانتظار",
+      "approved": "تمت الموافقة",
+      "rejected": "مرفوض",
+      "approvedPendingSync": "تمت الموافقة، بانتظار المزامنة"
+    },
+    "history": "سجل تغيير BIOS",
+    "reason": "السبب",
+    "reviewerNotes": "ملاحظات المراجع",
+    "reviewedAt": "تاريخ المراجعة"
+  },
+  "payments": {
+    "title": "مدفوعات الموزعين",
+    "description": "راجع أرصدة عمولات الموزعين، وسجّل الدفعات، وحافظ على تحديث فترات العمولات الشهرية.",
+    "statusTitle": "حالة المدفوعات",
+    "statusDescription": "تابع مبيعاتك وإجمالي العمولات وسجل المدفوعات والرصيد المتبقي حالياً.",
+    "statusSimpleDescription": "اعرض إجمالي مبيعاتك، وما دفعته بالفعل إلى مديرك، وما تبقى عليك سداده.",
+    "summary": {
+      "totalSales": "إجمالي المبيعات",
+      "commissionRate": "نسبة العمولة",
+      "totalOwed": "إجمالي المستحق",
+      "totalPaid": "إجمالي المدفوع",
+        "outstanding": "الرصيد المستحق",
+        "totalPaidToManager": "المبلغ الذي دفعته للمدير",
+        "remainingToPay": "المتبقي غير المدفوع",
+        "creditToReceive": "مبلغ يجب أن تستلمه",
+        "creditHelpText": "لقد دفعت أكثر من المبلغ المستحق. يجب إعادة هذا الرصيد إليك أو احتسابه لصالحك.",
+        "helpText": "تعرض هذه الصفحة حجم مبيعاتك، وما دفعته بالفعل إلى مديرك، وما تبقى عليك سداده."
+      },
+    "filters": {
+      "period": "الفترة"
+    },
+    "columns": {
+      "reseller": "الموزع",
+      "period": "الفترة",
+      "sales": "المبيعات",
+      "rate": "النسبة",
+      "owed": "العمولة المستحقة",
+      "paid": "المبلغ المدفوع",
+      "outstanding": "المتبقي",
+      "date": "التاريخ",
+      "amount": "المبلغ",
+      "method": "طريقة الدفع",
+      "reference": "المرجع",
+      "notes": "ملاحظات"
+    },
+    "status": {
+      "unpaid": "غير مدفوع",
+      "partial": "مدفوع جزئياً",
+      "paid": "مدفوع"
+    },
+    "sections": {
+      "commissions": "فترات العمولات",
+      "amountsOwedByPeriod": "المبالغ المستحقة حسب الفترة",
+      "amountsOwedByPeriodHint": "يعرض كل صف ما باعه هذا الموزع، وما يستحقه لتلك الفترة، وما دفعه بالفعل، وما تبقى عليه.",
+      "history": "سجل المدفوعات",
+      "monthlyBreakdown": "التفصيل الشهري",
+      "overview": "نظرة عامة على المدفوعات",
+      "historyHint": "هذه هي المدفوعات التي دفعتها بالفعل إلى مديرك."
+    },
+    "actions": {
+      "view": "عرض",
+      "recordPayment": "تسجيل دفعة",
+      "addCommission": "إضافة عمولة",
+      "editCommission": "تعديل العمولة",
+      "editPayment": "تعديل الدفعة"
+    },
+    "dialogs": {
+      "recordPayment": "تسجيل دفعة",
+      "editPayment": "تعديل الدفعة",
+      "addCommission": "إضافة عمولة",
+      "editCommission": "تعديل العمولة"
+    },
+    "fields": {
+      "commission": "فترة العمولة",
+      "amount": "المبلغ",
+      "paymentDate": "تاريخ الدفع",
+      "paymentMethod": "طريقة الدفع",
+      "reference": "المرجع",
+      "notes": "ملاحظات",
+      "period": "الفترة",
+      "totalSales": "إجمالي المبيعات",
+      "commissionRate": "نسبة العمولة (%)",
+      "commissionOwed": "العمولة المستحقة"
+    },
+    "methods": {
+      "bank_transfer": "تحويل بنكي",
+      "cash": "نقداً",
+      "other": "أخرى"
+    },
+    "empty": {
+      "resellers": "لم يتم العثور على سجلات مدفوعات للموزعين ضمن الفلاتر الحالية.",
+      "payments": "لا يوجد سجل مدفوعات بعد.",
+      "commissions": "لا توجد فترات عمولات بعد."
+    },
+    "validation": {
+      "payment": "اختر فترة عمولة وتاريخ دفع ومبلغاً صالحاً.",
+      "commission": "أدخل فترة صالحة ونسبة عمولة صحيحة ومبلغ عمولة مستحق صالح."
+    },
+    "messages": {
+      "paymentSaved": "تم حفظ الدفعة بنجاح.",
+      "commissionSaved": "تم حفظ العمولة بنجاح."
+    }
   }
 }

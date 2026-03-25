@@ -16,6 +16,9 @@ class ResellerLogController extends BaseManagerParentController
         'license.renewed',
         'license.deactivated',
         'license.delete',
+        'bios.change_requested',
+        'bios.change_approved',
+        'bios.change_rejected',
     ];
 
     public function index(Request $request): JsonResponse
@@ -53,8 +56,8 @@ class ResellerLogController extends BaseManagerParentController
         $query = ActivityLog::query()
             ->with('user:id,name,role')
             ->where('tenant_id', $tenantId)
-            ->whereIn('user_id', $sellerIds)
             ->whereIn('action', self::TRACKED_ACTIONS)
+            ->whereIn('user_id', $sellerIds)
             ->latest();
 
         if (! empty($validated['seller_id'])) {
@@ -63,10 +66,6 @@ class ResellerLogController extends BaseManagerParentController
             } else {
                 $query->where('user_id', (int) $validated['seller_id']);
             }
-        }
-
-        if (! empty($validated['action'])) {
-            $query->where('action', $validated['action']);
         }
 
         if (! empty($validated['from'])) {
@@ -78,6 +77,11 @@ class ResellerLogController extends BaseManagerParentController
         }
 
         $summaryQuery = clone $query;
+
+        if (! empty($validated['action'])) {
+            $query->where('action', $validated['action']);
+        }
+
         $activities = $query->paginate((int) ($validated['per_page'] ?? 15));
         $licenseIds = collect($activities->items())
             ->map(fn (ActivityLog $activity): int => (int) (($activity->metadata ?? [])['license_id'] ?? 0))

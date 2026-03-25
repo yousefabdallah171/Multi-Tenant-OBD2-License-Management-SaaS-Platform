@@ -4,52 +4,76 @@ namespace App\Http\Controllers\ManagerParent;
 
 use App\Models\License;
 use App\Services\ExportTaskService;
+use App\Support\LicenseCacheInvalidation;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ReportController extends BaseManagerParentController
 {
     public function revenueByReseller(Request $request): JsonResponse
     {
-        $licenses = $this->filteredLicenses($request);
+        $validated = $this->validatedFilters($request);
+        $tenantId = $this->currentTenantId($request);
 
         return response()->json([
-            'data' => $licenses
-                ->groupBy(fn (License $license): string => $license->reseller?->name ?? 'Unknown')
-                ->map(fn ($group, string $reseller): array => [
-                    'reseller' => $reseller,
-                    'revenue' => round((float) $group->sum('price'), 2),
-                    'activations' => $group->count(),
-                ])
-                ->sortByDesc('revenue')
-                ->values(),
+            'data' => Cache::remember($this->cacheKey($tenantId, 'revenue-by-reseller', $validated), now()->addSeconds(90), function () use ($tenantId, $validated): array {
+                return $this->baseQuery($tenantId, $validated)
+                    ->leftJoin('users as resellers', 'resellers.id', '=', 'licenses.reseller_id')
+                    ->selectRaw("COALESCE(resellers.name, 'Unknown') as reseller, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue, COUNT(*) as activations")
+                    ->groupBy('licenses.reseller_id', 'resellers.name')
+                    ->orderByDesc('revenue')
+                    ->get()
+                    ->map(fn ($row): array => [
+                        'reseller' => (string) $row->reseller,
+                        'revenue' => round((float) $row->revenue, 2),
+                        'activations' => (int) $row->activations,
+                    ])
+                    ->values()
+                    ->all();
+            }),
         ]);
     }
 
     public function revenueByProgram(Request $request): JsonResponse
     {
-        $licenses = $this->filteredLicenses($request);
+        $validated = $this->validatedFilters($request);
+        $tenantId = $this->currentTenantId($request);
 
         return response()->json([
-            'data' => $licenses
-                ->groupBy(fn (License $license): string => $license->program?->name ?? 'Unknown')
-                ->map(fn ($group, string $program): array => [
-                    'program' => $program,
-                    'revenue' => round((float) $group->sum('price'), 2),
-                    'activations' => $group->count(),
-                ])
-                ->sortByDesc('revenue')
-                ->values(),
+            'data' => Cache::remember($this->cacheKey($tenantId, 'revenue-by-program', $validated), now()->addSeconds(90), function () use ($tenantId, $validated): array {
+                return $this->baseQuery($tenantId, $validated)
+                    ->leftJoin('programs', 'programs.id', '=', 'licenses.program_id')
+                    ->selectRaw("COALESCE(programs.name, 'Unknown') as program, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue, COUNT(*) as activations")
+                    ->groupBy('licenses.program_id', 'programs.name')
+                    ->orderByDesc('revenue')
+                    ->get()
+                    ->map(fn ($row): array => [
+                        'program' => (string) $row->program,
+                        'revenue' => round((float) $row->revenue, 2),
+                        'activations' => (int) $row->activations,
+                    ])
+                    ->values()
+                    ->all();
+            }),
         ]);
     }
 
     public function activationRate(Request $request): JsonResponse
     {
-        $licenses = $this->filteredLicenses($request);
-        $total = max($licenses->count(), 1);
-        $success = $licenses->where('status', 'active')->count();
-        $failure = $licenses->whereIn('status', ['pending', 'suspended'])->count();
+        $validated = $this->validatedFilters($request);
+        $tenantId = $this->currentTenantId($request);
+
+        $totals = Cache::remember($this->cacheKey($tenantId, 'activation-rate', $validated), now()->addSeconds(90), function () use ($tenantId, $validated) {
+            return $this->baseQuery($tenantId, $validated)
+                ->selectRaw("COUNT(*) as total, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as success, SUM(CASE WHEN status IN ('pending', 'suspended') THEN 1 ELSE 0 END) as failure")
+                ->first();
+        });
+
+        $total = max((int) ($totals?->total ?? 0), 1);
+        $success = (int) ($totals?->success ?? 0);
+        $failure = (int) ($totals?->failure ?? 0);
 
         return response()->json([
             'data' => [
@@ -61,18 +85,35 @@ class ReportController extends BaseManagerParentController
 
     public function retention(Request $request): JsonResponse
     {
-        $licenses = $this->filteredLicenses($request);
+        $validated = $this->validatedFilters($request);
+        $tenantId = $this->currentTenantId($request);
         $months = collect(range(5, 0))
             ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
 
+        $grouped = Cache::remember($this->cacheKey($tenantId, 'retention', $validated), now()->addSeconds(90), function () use ($tenantId, $validated): array {
+            return $this->baseQuery($tenantId, $validated)
+                ->whereNotNull('licenses.activated_at')
+                ->where('licenses.activated_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(5))
+                ->selectRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m') as month_key, COUNT(DISTINCT licenses.customer_id) as customers, COUNT(*) as activations")
+                ->groupByRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m')")
+                ->get()
+                ->mapWithKeys(fn ($row): array => [
+                    (string) $row->month_key => [
+                        'customers' => (int) $row->customers,
+                        'activations' => (int) $row->activations,
+                    ],
+                ])
+                ->all();
+        });
+
         return response()->json([
-            'data' => $months->map(function (CarbonImmutable $month) use ($licenses): array {
-                $monthly = $licenses->filter(fn (License $license): bool => $license->activated_at?->format('Y-m') === $month->format('Y-m'));
+            'data' => $months->map(function (CarbonImmutable $month) use ($grouped): array {
+                $key = $month->format('Y-m');
 
                 return [
                     'month' => $month->format('M Y'),
-                    'customers' => $monthly->pluck('customer_id')->filter()->unique()->count(),
-                    'activations' => $monthly->count(),
+                    'customers' => (int) ($grouped[$key]['customers'] ?? 0),
+                    'activations' => (int) ($grouped[$key]['activations'] ?? 0),
                 ];
             })->values(),
         ]);
@@ -110,19 +151,40 @@ class ReportController extends BaseManagerParentController
         return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
-    private function filteredLicenses(Request $request)
+    /**
+     * @return array{from:?string,to:?string}
+     */
+    private function validatedFilters(Request $request): array
     {
         $validated = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
         ]);
 
+        return [
+            'from' => $validated['from'] ?? null,
+            'to' => $validated['to'] ?? null,
+        ];
+    }
+
+    private function baseQuery(int $tenantId, array $validated)
+    {
         return License::query()
-            ->where('tenant_id', $this->currentTenantId($request))
-            ->with(['program:id,name', 'reseller:id,name'])
-            ->when(! empty($validated['from']), fn ($query) => $query->whereDate('activated_at', '>=', $validated['from']))
-            ->when(! empty($validated['to']), fn ($query) => $query->whereDate('activated_at', '<=', $validated['to']))
-            ->get();
+            ->from('licenses')
+            ->where('licenses.tenant_id', $tenantId)
+            ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
+            ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']));
+    }
+
+    private function cacheKey(int $tenantId, string $type, array $validated): string
+    {
+        return sprintf(
+            'manager-parent:%d:reports:v%d:%s:%s',
+            $tenantId,
+            LicenseCacheInvalidation::reportVersion("manager-parent:{$tenantId}:reports:version"),
+            $type,
+            md5(json_encode($validated))
+        );
     }
 
     /**

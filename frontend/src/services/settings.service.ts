@@ -23,7 +23,7 @@ const defaultSettings: SystemSettings = {
     session_timeout: 60,
   },
   widgets: {
-    show_online_widget_to_resellers: false,
+    show_online_widget_to_resellers: true,
   },
 }
 

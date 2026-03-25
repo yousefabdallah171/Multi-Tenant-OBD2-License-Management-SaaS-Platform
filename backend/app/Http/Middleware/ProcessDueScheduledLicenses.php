@@ -16,10 +16,25 @@ class ProcessDueScheduledLicenses
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() && Cache::add('licenses:scheduled-fallback:run', true, now()->addSeconds(15))) {
-            $this->licenseService->processDueScheduledActivations(25);
+        if ($request->user() && $this->shouldRunThrottle('licenses:scheduled-fallback:run', now()->addSeconds(15))) {
+            try {
+                $this->licenseService->processDueScheduledActivations(25);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
         }
 
         return $next($request);
+    }
+
+    private function shouldRunThrottle(string $key, \DateTimeInterface $ttl): bool
+    {
+        try {
+            return Cache::add($key, true, $ttl);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
     }
 }

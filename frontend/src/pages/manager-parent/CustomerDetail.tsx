@@ -1,16 +1,28 @@
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Lock } from 'lucide-react'
+import { useDebounce } from '@/hooks/useDebounce'
+import { availabilityService } from '@/services/availability.service'
+import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { BlockBadge } from '@/components/shared/BlockBadge'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
-import { StatusBadge } from '@/components/shared/StatusBadge'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatDate } from '@/lib/utils'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
+import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { customerService } from '@/services/customer.service'
+import { managerParentService } from '@/services/manager-parent.service'
+import type { CustomerLicenseHistoryEntry } from '@/types/manager-parent.types'
 import { IpLocationCell } from '@/utils/countryFlag'
 
 export function CustomerDetailPage() {
@@ -18,16 +30,63 @@ export function CustomerDetailPage() {
   const { lang } = useLanguage()
   const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const queryClient = useQueryClient()
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
+  const [changeDialogOpen, setChangeDialogOpen] = useState(false)
+  const [newBiosId, setNewBiosId] = useState('')
+  const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string; linked_username: string | null } | null>(null)
+  const debouncedNewBiosId = useDebounce(newBiosId.trim(), 400)
+
+  useEffect(() => {
+    if (debouncedNewBiosId.length < 3) { setBiosCheckResult(null); return }
+    availabilityService.checkBios(debouncedNewBiosId).then(setBiosCheckResult)
+  }, [debouncedNewBiosId])
 
   const query = useQuery({
     queryKey: ['manager-parent', 'customer-detail', customerId],
     queryFn: () => customerService.getOne(customerId),
     enabled: Number.isFinite(customerId),
+    ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_DETAIL),
+  })
+
+  const licenseHistoryQuery = useQuery({
+    queryKey: ['manager-parent', 'customer-license-history', customerId],
+    queryFn: () => managerParentService.getCustomerLicenseHistory(customerId),
+    enabled: Number.isFinite(customerId),
+  })
+
+  const biosChangeHistoryQuery = useQuery({
+    queryKey: ['manager-parent', 'customer-bios-change-history', customerId],
+    queryFn: () => managerParentService.getCustomerBiosChangeHistory(customerId),
+    enabled: Number.isFinite(customerId),
   })
 
   const customer = query.data?.data
+  const licenseHistoryGroups = groupCustomerLicenseHistoryByReseller(licenseHistoryQuery.data?.data ?? [])
+  const customerUsername = resolveCustomerDetailUsername(customer)?.trim().toLowerCase() ?? ''
+
+  const requestableLicense = customer?.licenses?.find((l: { status: string }) => l.status === 'active')
+    ?? customer?.licenses?.find((l: { status: string }) => l.status === 'expired')
+    ?? customer?.licenses?.find((l: { status: string }) => l.status === 'cancelled')
+    ?? customer?.licenses?.[0]
+    ?? null
+
+  const directChangeMutation = useMutation({
+    mutationFn: () => managerParentService.directChangeBiosId(
+      (requestableLicense as { id: number } | null)?.id ?? 0,
+      newBiosId.trim(),
+    ),
+    onSuccess: (response) => {
+      toast.success(response.message ?? 'BIOS ID changed successfully.')
+      setChangeDialogOpen(false)
+      setNewBiosId('')
+      setBiosCheckResult(null)
+      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'customer-detail', customerId] })
+      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'customer-bios-change-history', customerId] })
+    },
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
+  })
 
   return (
     <div className="space-y-6">
@@ -37,7 +96,15 @@ export function CustomerDetailPage() {
           {t('common.back')}
         </Button>
       </div>
-      <PageHeader title={customer?.name ?? t('managerParent.pages.customers.customerDetails')} description={customer?.email ?? t('managerParent.pages.customers.customerDetailsDescription')} />
+      <PageHeader
+        title={customer?.name ?? t('managerParent.pages.customers.customerDetails')}
+        description={resolveCustomerDetailUsername(customer) ?? t('managerParent.pages.customers.customerDetailsDescription')}
+        actions={requestableLicense ? (
+          <Button type="button" onClick={() => setChangeDialogOpen(true)}>
+            {lang === 'ar' ? 'تغيير BIOS ID' : 'Change BIOS ID'}
+          </Button>
+        ) : null}
+      />
 
       {customer ? (
         <>
@@ -46,9 +113,14 @@ export function CustomerDetailPage() {
             <CardContent className="grid gap-4 md:grid-cols-3">
               <Info label={t('common.name')} value={customer.name} />
               <Info label={t('common.email')} value={customer.email} />
-              <Info label={t('common.username')} value={customer.username ?? '-'} />
+              <Info
+                label={t('common.username')}
+                value={resolveCustomerDetailUsername(customer) ?? '-'}
+                isLocked={customer.username_locked}
+                lockTooltip={t('activate.biosLockedHint')}
+              />
               <Info label={t('common.phone')} value={customer.phone ?? '-'} />
-              <Info label={t('common.status')} value={customer.status ? <StatusBadge status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} /> : '-'} />
+              <Info label={t('common.status')} value={customer.status ? <LicenseStatusBadges status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(customer.is_blacklisted)} /> : '-'} />
               <Info label={t('common.createdAt')} value={customer.created_at ? formatDate(customer.created_at, locale) : '-'} />
             </CardContent>
           </Card>
@@ -59,28 +131,44 @@ export function CustomerDetailPage() {
               <TabsTrigger value="bios">{t('managerParent.pages.customers.biosId')}</TabsTrigger>
               <TabsTrigger value="ips">{t('managerParent.pages.ipAnalytics.title')}</TabsTrigger>
               <TabsTrigger value="activity">{t('managerParent.nav.activity')}</TabsTrigger>
+              <TabsTrigger value="bios-changes">{t('customerDetail.biosChanges', { defaultValue: 'BIOS Changes' })}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="licenses">
               <Card>
                 <CardHeader><CardTitle>{t('managerParent.pages.customers.licenseHistory')}</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  {(customer.licenses ?? []).map((license) => (
-                    <div key={license.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                      <div className="grid gap-2 md:grid-cols-4">
-                        <Info label={t('common.program')} value={license.program ?? '-'} />
-                        <Info
-                          label={t('managerParent.pages.customers.biosId')}
-                          value={(
-                            <Link className="text-sky-600 hover:underline" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(license.bios_id)}`}>
-                              {license.bios_id}
-                            </Link>
-                          )}
-                        />
-                        <Info label={t('common.reseller')} value={license.reseller ?? '-'} />
-                        <Info label={t('common.status')} value={<StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending'} />} />
+                  {licenseHistoryGroups.map((group) => (
+                    <details key={group.key} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800" open>
+                      <summary className="cursor-pointer list-none">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="font-medium">{t('customerDetail.resellerTimeline')}: {group.name}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              {group.items.length} {t('common.activations')} | {group.period}
+                            </p>
+                          </div>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{group.email}</p>
+                        </div>
+                      </summary>
+                      <div className="mt-4 space-y-3">
+                        {group.items.map((license) => (
+                          <div key={license.id} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40">
+                            <div className="grid gap-3 md:grid-cols-5">
+                              <Info label={t('common.program')} value={license.program_name ?? '-'} />
+                              <Info label={t('customerDetail.soldBy')} value={group.name} />
+                              <Info label={t('customerDetail.period')} value={formatCustomerLicensePeriod(license, locale)} />
+                              <Info label={t('common.price')} value={`$${Number(license.price).toFixed(2)}`} />
+                              <Info label={t('common.status')} value={<LicenseStatusBadges status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(license.is_blacklisted)} />} />
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
+                              <span>{t('managerParent.pages.customers.biosId')}: <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link></span>
+                              <span>{t('common.username')}: {resolveLicenseUsername(customer, license.external_username) ?? '-'}</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
+                    </details>
                   ))}
                 </CardContent>
               </Card>
@@ -90,7 +178,7 @@ export function CustomerDetailPage() {
               <Card>
                 <CardContent className="space-y-2 p-4">
                   {(customer.licenses ?? []).map((license) => (
-                    <Link key={`bios-${license.id}`} className="block rounded-xl border border-slate-200 p-3 text-sky-600 hover:underline dark:border-slate-700" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(license.bios_id)}`}>
+                    <Link key={`bios-${license.id}`} className="block rounded-xl border border-slate-200 p-3 text-sky-600 hover:underline dark:border-slate-700" to={routePaths.managerParent.biosDetail(lang, license.bios_id)}>
                       {license.bios_id}
                     </Link>
                   ))}
@@ -102,13 +190,17 @@ export function CustomerDetailPage() {
               <Card>
                 <CardHeader><CardTitle>{t('managerParent.pages.ipAnalytics.title')}</CardTitle></CardHeader>
                 <CardContent className="space-y-2">
-                  {(customer.ip_logs ?? []).map((log) => (
-                    <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                      <p className="font-medium">{log.ip_address}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
-                    </div>
-                  ))}
+                  {(customer.ip_logs ?? []).length === 0 ? (
+                    <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} />
+                  ) : (
+                    (customer.ip_logs ?? []).map((log) => (
+                      <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                        <p className="font-medium">{log.ip_address}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
+                      </div>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -117,28 +209,228 @@ export function CustomerDetailPage() {
               <Card>
                 <CardHeader><CardTitle>{t('managerParent.nav.activity')}</CardTitle></CardHeader>
                 <CardContent className="space-y-2">
-                  {(customer.activity ?? []).map((entry) => (
-                    <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                      <p className="font-medium">{entry.action}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description ?? '-'}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                  {(customer.activity ?? []).length === 0 ? (
+                    <EmptyState title={t('common.noData')} description={t('managerParent.pages.activity.noMatches')} />
+                  ) : (
+                    (customer.activity ?? []).map((entry) => (
+                      <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium">{formatActivityActionLabel(entry.action, t)}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
+                          </div>
+                          <div className="text-start">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="bios-changes">
+              <Card>
+                <CardHeader><CardTitle>{t('biosChangeRequests.title')}</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {(biosChangeHistoryQuery.data?.data ?? []).map((change) => (
+                    <div key={change.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="flex-1 space-y-1">
+                          <p className="font-medium">{change.old_bios_id} → {change.new_bios_id}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{change.reason || '-'}</p>
+                          {change.requested_by ? <p className="text-xs text-slate-600 dark:text-slate-300">{t('customerDetail.requestedBy', { defaultValue: 'Requested by' })}: {change.requested_by}</p> : null}
+                          {change.reviewed_by ? <p className="text-xs text-slate-600 dark:text-slate-300">{t('customerDetail.approvedBy', { defaultValue: 'Approved by' })}: {change.reviewed_by}</p> : null}
+                        </div>
+                        <div className="text-start">
+                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                            change.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                            : change.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                            : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
+                          }`}>
+                            {change.status}
+                          </span>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{change.created_at ? formatDate(change.created_at, locale) : '-'}</p>
+                        </div>
+                      </div>
                     </div>
                   ))}
+                  {biosChangeHistoryQuery.data?.data?.length === 0 && !biosChangeHistoryQuery.isLoading ? (
+                    <div className="rounded-2xl border border-slate-200 p-4 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                      {t('customerDetail.noBiosChangeRequests', { defaultValue: 'No BIOS change requests' })}
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
         </>
       ) : null}
+
+      <Dialog open={changeDialogOpen} onOpenChange={(open) => { setChangeDialogOpen(open); if (!open) { setNewBiosId(''); setBiosCheckResult(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{lang === 'ar' ? 'تغيير BIOS ID مباشرة' : 'Change BIOS ID Directly'}</DialogTitle>
+            <DialogDescription>
+              {lang === 'ar' ? 'سيتم تطبيق التغيير فوراً بدون موافقة.' : 'This change is applied immediately without approval.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosChangeRequests.currentBios')}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium font-mono">{(requestableLicense as { bios_id?: string } | null)?.bios_id ?? '-'}</p>
+                {(requestableLicense as { is_blacklisted?: boolean } | null)?.is_blacklisted ? <BlockBadge /> : null}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Input
+                value={newBiosId}
+                onChange={(event) => { setNewBiosId(event.target.value); setBiosCheckResult(null) }}
+                placeholder={t('biosChangeRequests.newBiosPlaceholder')}
+              />
+              {biosCheckResult && (
+                <div className="space-y-1">
+                  <p className={`text-xs ${biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {biosCheckResult.is_blacklisted || !biosCheckResult.available ? '✗ ' : '✓ '}{biosCheckResult.message}
+                  </p>
+                  {biosCheckResult.linked_username && biosCheckResult.linked_username.trim().toLowerCase() !== customerUsername ? (
+                    <p className="text-xs text-rose-600">
+                      {lang === 'ar'
+                        ? `هذا الـ BIOS مرتبط باسم المستخدم ${biosCheckResult.linked_username} وليس بهذا العميل.`
+                        : `This BIOS ID is linked to username "${biosCheckResult.linked_username}" and not this customer.`}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setChangeDialogOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              disabled={directChangeMutation.isPending}
+              onClick={() => {
+                const license = requestableLicense as { id: number; bios_id?: string } | null
+                if (!license) { toast.error(t('common.error')); return }
+                if (newBiosId.trim().length < 5) { toast.error(t('biosChangeRequests.newBiosValidation')); return }
+                if ((license.bios_id ?? '').trim().toLowerCase() === newBiosId.trim().toLowerCase()) {
+                  toast.error(t('biosChangeRequests.sameBiosValidation')); return
+                }
+                if (biosCheckResult?.is_blacklisted) { toast.error(t('customers.biosBlacklisted')); return }
+                if (
+                  biosCheckResult?.linked_username
+                  && biosCheckResult.linked_username.trim().toLowerCase() !== customerUsername
+                ) {
+                  toast.error(
+                    lang === 'ar'
+                      ? `هذا الـ BIOS مرتبط باسم المستخدم ${biosCheckResult.linked_username} وليس بهذا العميل.`
+                      : `This BIOS ID is linked to username "${biosCheckResult.linked_username}" and not this customer.`,
+                  )
+                  return
+                }
+                if (biosCheckResult !== null && !biosCheckResult.available) {
+                  toast.error(biosCheckResult.message || t('common.error')); return
+                }
+                directChangeMutation.mutate()
+              }}
+            >
+              {lang === 'ar' ? 'تطبيق التغيير' : 'Apply Change'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-function Info({ label, value }: { label: string; value: React.ReactNode }) {
+function resolveCustomerDetailUsername(customer: { external_username?: string | null; username?: string | null; licenses?: Array<{ external_username?: string | null }> } | undefined) {
+  return customer?.licenses?.find((license) => license.external_username)?.external_username || customer?.external_username || customer?.username || null
+}
+
+function resolveLicenseUsername(customer: { name?: string | null; client_name?: string | null; username?: string | null }, externalUsername?: string | null) {
+  const candidate = externalUsername?.trim()
+  const storedUsername = customer.username?.trim()
+
+  if (candidate && candidate !== customer.name && candidate !== customer.client_name) {
+    return candidate
+  }
+
+  return storedUsername || candidate || null
+}
+
+function groupCustomerLicenseHistoryByReseller(entries: CustomerLicenseHistoryEntry[]) {
+  const groups = new Map<string, { key: string; name: string; email: string; items: CustomerLicenseHistoryEntry[] }>()
+
+  for (const entry of entries) {
+    const key = String(entry.reseller_id ?? `unknown-${entry.reseller_name ?? 'unknown'}`)
+    const existing = groups.get(key)
+    if (existing) {
+      existing.items.push(entry)
+      continue
+    }
+
+    groups.set(key, {
+      key,
+      name: entry.reseller_name ?? 'Unknown',
+      email: entry.reseller_email ?? '-',
+      items: [entry],
+    })
+  }
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    period: formatCustomerGroupPeriod(group.items),
+  }))
+}
+
+function formatCustomerGroupPeriod(entries: CustomerLicenseHistoryEntry[]) {
+  const timestamps = entries
+    .map((entry) => entry.activated_at)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value).getTime())
+    .filter((value) => Number.isFinite(value))
+    .sort((left, right) => left - right)
+
+  if (timestamps.length === 0) {
+    return '-'
+  }
+
+  return `${new Date(timestamps[0]).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - ${new Date(timestamps[timestamps.length - 1]).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
+}
+
+function formatCustomerLicensePeriod(entry: CustomerLicenseHistoryEntry, locale: string) {
+  const start = entry.start_at ? formatDate(entry.start_at, locale) : '-'
+  const end = entry.expires_at ? formatDate(entry.expires_at, locale) : '-'
+  return `${start} -> ${end}`
+}
+
+function Info({
+  label,
+  value,
+  isLocked,
+  lockTooltip,
+}: {
+  label: string
+  value: React.ReactNode
+  isLocked?: boolean
+  lockTooltip?: string
+}) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="mt-1 whitespace-pre-line font-medium">{value}</p>
+    <div
+      className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40"
+      title={isLocked ? lockTooltip : undefined}
+    >
+      <div className="flex items-center gap-1">
+        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        {isLocked && <Lock className="h-3 w-3 text-amber-600" />}
+      </div>
+      <div className={`mt-1 whitespace-pre-line font-medium ${isLocked ? 'text-slate-400 dark:text-slate-600' : ''}`}>
+        {value}
+      </div>
     </div>
   )
 }

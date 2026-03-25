@@ -30,7 +30,7 @@ export function BiosBlacklistPage() {
   const queryClient = useQueryClient()
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
+  const [perPage, setPerPage] = useState(25)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -74,6 +74,14 @@ export function BiosBlacklistPage() {
     },
   })
 
+  const purgeMutation = useMutation({
+    mutationFn: (id: number) => biosService.purgeFromBlacklist(id),
+    onSuccess: () => {
+      toast.success(t('superAdmin.pages.biosBlacklist.purgeSuccess', { defaultValue: 'Entry permanently deleted.' }))
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'bios-blacklist'] })
+    },
+  })
+
   const importMutation = useMutation({
     mutationFn: (file: File) => biosService.importBlacklist(file),
     onSuccess: (data) => {
@@ -84,7 +92,8 @@ export function BiosBlacklistPage() {
 
   const columns = useMemo<Array<DataTableColumn<BiosBlacklistEntry>>>(
     () => [
-      { key: 'bios', label: t('superAdmin.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
+      { key: 'bios', label: t('superAdmin.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <button type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.superAdmin.biosDetail(lang, row.bios_id))}><code>{row.bios_id}</code></button> },
+      { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? 'Global' },
       { key: 'addedBy', label: t('common.addedBy'), sortable: true, sortValue: (row) => row.added_by ?? '', render: (row) => row.added_by ?? '-' },
       { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.reason, render: (row) => row.reason || '-' },
       { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
@@ -101,18 +110,30 @@ export function BiosBlacklistPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => navigate(`${routePaths.superAdmin.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`)}>
+              <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.biosDetail(lang, row.bios_id))}>
                 {t('superAdmin.pages.biosBlacklist.viewHistory')}
               </DropdownMenuItem>
               <DropdownMenuItem disabled={row.status === 'removed'} onSelect={() => removeMutation.mutate(row.id)}>
                 {t('superAdmin.pages.biosBlacklist.remove')}
               </DropdownMenuItem>
+              {row.status === 'removed' && (
+                <DropdownMenuItem
+                  className="text-red-600 dark:text-red-400"
+                  onSelect={() => {
+                    if (window.confirm(t('superAdmin.pages.biosBlacklist.purgeConfirm', { defaultValue: 'Permanently delete this entry? This cannot be undone.' }))) {
+                      purgeMutation.mutate(row.id)
+                    }
+                  }}
+                >
+                  {t('superAdmin.pages.biosBlacklist.purge', { defaultValue: 'Delete Permanently' })}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         ),
       },
     ],
-    [lang, locale, navigate, removeMutation, t],
+    [lang, locale, navigate, purgeMutation, removeMutation, t],
   )
   const trendData = (statsQuery.data?.data ?? []).map((item) => ({
     ...item,

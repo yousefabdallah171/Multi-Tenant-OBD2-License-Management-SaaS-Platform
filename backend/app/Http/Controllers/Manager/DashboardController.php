@@ -91,22 +91,20 @@ class DashboardController extends BaseManagerController
                 ];
             }
 
-            $stats = License::query()
-                ->whereIn('reseller_id', $sellerIds)
-                ->selectRaw(
-                    "SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_licenses,
-                    COALESCE(SUM(price), 0) as team_revenue,
-                    SUM(CASE WHEN activated_at BETWEEN ? AND ? THEN 1 ELSE 0 END) as monthly_activations",
-                    [now()->startOfMonth(), now()->endOfMonth()],
-                )
-                ->first();
+            $licenseQuery = License::query()->whereIn('reseller_id', $sellerIds);
 
             return [
                 'team_resellers' => count($resellerIds),
                 'team_customers' => $this->teamCustomersQuery($request)->count(),
-                'active_licenses' => (int) ($stats?->active_licenses ?? 0),
-                'team_revenue' => round((float) ($stats?->team_revenue ?? 0), 2),
-                'monthly_activations' => (int) ($stats?->monthly_activations ?? 0),
+                'active_licenses' => (int) (clone $licenseQuery)
+                    ->whereEffectivelyActive()
+                    ->whereNotNull('customer_id')
+                    ->distinct('customer_id')
+                    ->count('customer_id'),
+                'team_revenue' => round((float) (clone $licenseQuery)->sum('price'), 2),
+                'monthly_activations' => (int) (clone $licenseQuery)
+                    ->whereBetween('activated_at', [now()->startOfMonth(), now()->endOfMonth()])
+                    ->count(),
             ];
         });
     }
@@ -193,9 +191,8 @@ class DashboardController extends BaseManagerController
                 ->with('user:id,name')
                 ->whereIn('user_id', $userIds)
                 ->latest()
-                ->limit(100)
+                ->limit(10)
                 ->get()
-                ->take(10)
                 ->map(fn (ActivityLog $entry): array => [
                     'id' => $entry->id,
                     'action' => $entry->action,

@@ -20,6 +20,10 @@ interface SoftwareIpRow {
   username: string
   bios_id: string | null
   customer_id: number | null
+  reseller_id: number | null
+  customer_name: string | null
+  customer_username: string | null
+  reseller_name: string | null
   program_id: number | null
   program_name: string | null
   external_software_id: number | null
@@ -68,6 +72,10 @@ export function IpAnalyticsPage() {
     username: row.username,
     bios_id: row.bios_id ?? null,
     customer_id: row.customer_id ?? null,
+    reseller_id: row.reseller_id ?? null,
+    customer_name: row.customer_name ?? null,
+    customer_username: row.customer_username ?? null,
+    reseller_name: row.reseller_name ?? null,
     program_id: row.program_id ?? null,
     program_name: row.program_name ?? null,
     external_software_id: row.external_software_id ?? null,
@@ -100,11 +108,25 @@ export function IpAnalyticsPage() {
       label: t('common.username'),
       sortable: true,
       sortValue: (row) => row.username,
-      render: (row) => row.customer_id ? (
-        <Link className="text-sky-600 hover:underline" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
-          {row.username}
-        </Link>
-      ) : row.username,
+      render: (row) => {
+        if (row.customer_id) {
+          return (
+            <Link className="text-sky-600 hover:underline" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
+              {row.customer_username || row.customer_name || row.username}
+            </Link>
+          )
+        }
+
+        if (row.reseller_id) {
+          return (
+            <Link className="text-sky-600 hover:underline" to={routePaths.managerParent.teamMemberDetail(lang, row.reseller_id)}>
+              {row.reseller_name || row.username}
+            </Link>
+          )
+        }
+
+        return row.username
+      },
     },
     {
       key: 'bios_id',
@@ -112,7 +134,7 @@ export function IpAnalyticsPage() {
       sortable: true,
       sortValue: (row) => row.bios_id ?? '',
       render: (row) => row.bios_id ? (
-        <Link className="text-sky-600 hover:underline" to={`${routePaths.managerParent.biosDetails(lang)}?bios=${encodeURIComponent(row.bios_id)}`}>
+        <Link className="text-sky-600 hover:underline" to={routePaths.managerParent.biosDetail(lang, row.bios_id)}>
           <code>{row.bios_id}</code>
         </Link>
       ) : <code>-</code>,

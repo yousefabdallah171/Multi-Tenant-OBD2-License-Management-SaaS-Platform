@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Banknote, KeyRound, ShieldCheck, UserRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -5,12 +6,13 @@ import { useNavigate } from 'react-router-dom'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { resellerService } from '@/services/reseller.service'
 
@@ -43,6 +45,15 @@ export function DashboardPage() {
 
   const stats = statsQuery.data?.stats
   const recentActivity = activityQuery.data?.data ?? []
+  const currentMonthRange = useMemo(() => {
+    const today = new Date()
+    const start = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    return {
+      from: formatDateInput(start),
+      to: formatDateInput(today),
+    }
+  }, [])
   const activationSeries = (activationsQuery.data?.data ?? []).map((point) => ({
     ...point,
     month: point.month ? localizeMonthLabel(point.month, locale) : point.month,
@@ -60,11 +71,8 @@ export function DashboardPage() {
         description={t('reseller.pages.dashboard.description')}
         actions={
           <>
-            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.reseller.customers(lang))}>
+            <Button type="button" onClick={() => navigate(routePaths.reseller.customers(lang))}>
               {t('reseller.pages.dashboard.actions.customers')}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.reseller.licenses(lang))}>
-              {t('reseller.pages.dashboard.actions.licenses')}
             </Button>
             <Button type="button" onClick={() => navigate(routePaths.reseller.reports(lang))}>
               {t('reseller.pages.dashboard.actions.reports')}
@@ -74,18 +82,33 @@ export function DashboardPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <div className="rounded-3xl bg-gradient-to-br from-sky-50 to-cyan-100/60 p-[1px] dark:from-sky-950/40 dark:to-cyan-950/20">
-          <StatsCard title={t('reseller.pages.dashboard.customers')} value={stats?.customers ?? 0} icon={UserRound} color="sky" />
-        </div>
-        <div className="rounded-3xl bg-gradient-to-br from-emerald-50 to-teal-100/60 p-[1px] dark:from-emerald-950/40 dark:to-teal-950/20">
-          <StatsCard title={t('reseller.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
-        </div>
-        <div className="rounded-3xl bg-gradient-to-br from-rose-50 to-orange-100/60 p-[1px] dark:from-rose-950/40 dark:to-orange-950/20">
-          <StatsCard title={t('common.revenue')} value={formatCurrency(stats?.revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
-        </div>
-        <div className="rounded-3xl bg-gradient-to-br from-amber-50 to-yellow-100/60 p-[1px] dark:from-amber-950/40 dark:to-yellow-950/20">
-          <StatsCard title={t('reseller.pages.dashboard.monthlyActivations')} value={stats?.monthly_activations ?? 0} icon={KeyRound} color="amber" />
-        </div>
+        {statsQuery.isLoading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : (
+          <>
+            <button type="button" className="rounded-3xl bg-gradient-to-br from-sky-50 to-cyan-100/60 p-[1px] text-start dark:from-sky-950/40 dark:to-cyan-950/20" onClick={() => navigate(routePaths.reseller.customers(lang))}>
+              <StatsCard title={t('reseller.pages.dashboard.customers')} value={stats?.customers ?? 0} icon={UserRound} color="sky" />
+            </button>
+            <button type="button" className="rounded-3xl bg-gradient-to-br from-emerald-50 to-teal-100/60 p-[1px] text-start dark:from-emerald-950/40 dark:to-teal-950/20" onClick={() => navigate(`${routePaths.reseller.customers(lang)}?status=active`)}>
+              <StatsCard title={t('reseller.pages.dashboard.activeCustomers')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="emerald" />
+            </button>
+            <div className="rounded-3xl bg-gradient-to-br from-rose-50 to-orange-100/60 p-[1px] dark:from-rose-950/40 dark:to-orange-950/20">
+              <StatsCard title={t('common.revenue')} value={formatCurrency(stats?.revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+            </div>
+            <button
+              type="button"
+              className="rounded-3xl bg-gradient-to-br from-amber-50 to-yellow-100/60 p-[1px] text-start dark:from-amber-950/40 dark:to-yellow-950/20"
+              onClick={() => navigate(`${routePaths.reseller.activations(lang)}?from=${encodeURIComponent(currentMonthRange.from)}&to=${encodeURIComponent(currentMonthRange.to)}`)}
+            >
+              <StatsCard title={t('reseller.pages.dashboard.monthlyActivations')} value={stats?.monthly_activations ?? 0} icon={KeyRound} color="amber" />
+            </button>
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -122,7 +145,7 @@ export function DashboardPage() {
                     <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${resolveActivityStyles(entry.action).badge}`}>
                       {resolveActivityStyles(entry.action).icon}
                     </span>
-                    <p className="font-medium text-slate-950 dark:text-white">{entry.action}</p>
+                    <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(entry.action, t)}</p>
                     {entry.description ? <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description}</p> : null}
                   </div>
                   <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
@@ -137,12 +160,8 @@ export function DashboardPage() {
             <CardTitle className="text-lg">{t('reseller.pages.dashboard.quickActions')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button type="button" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.customers(lang))}>
+            <Button type="button" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.customerCreate(lang))}>
               {t('reseller.pages.dashboard.quickActionsList.activateNewCustomer')}
-              <ActionIcon className="h-4 w-4" />
-            </Button>
-            <Button type="button" variant="secondary" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.licenses(lang))}>
-              {t('reseller.pages.dashboard.quickActionsList.manageLicenses')}
               <ActionIcon className="h-4 w-4" />
             </Button>
             <Button type="button" variant="secondary" className="w-full justify-between transition-shadow hover:shadow-md" onClick={() => navigate(routePaths.reseller.reports(lang))}>
@@ -154,6 +173,14 @@ export function DashboardPage() {
       </div>
     </div>
   )
+}
+
+function formatDateInput(value: Date) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function resolveActivityStyles(action: string) {
@@ -184,3 +211,5 @@ function resolveActivityStyles(action: string) {
     icon: <UserRound className="h-4 w-4" />,
   }
 }
+
+

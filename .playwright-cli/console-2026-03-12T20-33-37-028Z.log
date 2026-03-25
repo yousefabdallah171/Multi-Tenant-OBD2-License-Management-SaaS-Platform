@@ -1,0 +1,3 @@
+[  515844ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/super-admin/reports/financial?from=2025-03-13&to=2026-03-12:0
+[  515848ms] Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+[  526976ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/api/super-admin/reports/financial?from=2025-03-13&to=2026-03-12:0

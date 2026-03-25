@@ -66,5 +66,15 @@ class BiosDetailsController extends BaseSuperAdminController
             'data' => $this->biosDetailsService->searchBiosIds((string) $validated['query'], null),
         ]);
     }
-}
 
+    public function recent(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        return response()->json([
+            'data' => $this->biosDetailsService->getRecentBiosIds(null, (int) ($validated['limit'] ?? 20)),
+        ]);
+    }
+}

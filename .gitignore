@@ -26,7 +26,13 @@ tests-frontend/cypress/screenshots/
 tests-frontend/cypress/videos/
 tests-frontend/jest-cache/
 tests-frontend/reports/
-docs-organized/
+docs-organized/*
+!docs-organized/PHASE-13-Performance/
+docs-organized/PHASE-13-Performance/*
+!docs-organized/PHASE-13-Performance/09-Post-Launch-Performance-Fixes.md
+!docs-organized/PHASE-15-UX-Polish-BulkFix/
+docs-organized/PHASE-15-UX-Polish-BulkFix/*
+!docs-organized/PHASE-15-UX-Polish-BulkFix/11-Post-Launch-UX-And-Auth-Fixes.md
 nginx/
 scripts/
 frontend/lighthouse-*.report.html
@@ -34,6 +40,15 @@ frontend/lighthouse-*.report.json
 frontend/lighthouse-*
 backend/tests/
 backend/database/seeders/ProductionSeeder.php
+.playwright-cli/
+artifacts/
+frontend/artifacts/
+output-backend-serve.log
+output-frontend-vite.log
+
+# Playwright test output
+test-results/
+playwright-report/
 
 # IDE
 .idea/

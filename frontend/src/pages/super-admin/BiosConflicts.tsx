@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
@@ -11,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { biosService, type BiosConflictParams } from '@/services/bios.service'
 import type { BiosConflictItem } from '@/types/super-admin.types'
 
@@ -25,9 +28,10 @@ export function BiosConflictsPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(15)
+  const [perPage, setPerPage] = useState(25)
   const [status, setStatus] = useState<BiosConflictParams['status']>('')
   const [conflictType, setConflictType] = useState('')
   const [dateRange, setDateRange] = useState({ from: '', to: '' })
@@ -68,7 +72,7 @@ export function BiosConflictsPage() {
       label: t('superAdmin.pages.biosConflicts.columns.biosId'),
       sortable: true,
       sortValue: (row) => row.bios_id,
-      render: (row) => <code>{row.bios_id}</code>,
+      render: (row) => <button type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.superAdmin.biosDetail(lang, row.bios_id))}><code>{row.bios_id}</code></button>,
     },
     {
       key: 'tenant',
@@ -88,7 +92,15 @@ export function BiosConflictsPage() {
       key: 'customers',
       label: t('superAdmin.pages.biosConflicts.columns.affectedCustomers'),
       render: (row) => (row.affected_customers.length > 0
-        ? row.affected_customers.map((customer) => customer.name).join(', ')
+        ? row.affected_customers.map((customer) => customer.id != null ? (
+          <button key={customer.id} type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.superAdmin.customerDetail(lang, Number(customer.id)))}>
+            {customer.name}
+          </button>
+        ) : <span key={customer.name}>{customer.name}</span>).reduce<ReactNode[]>((acc, node, index) => {
+          if (index > 0) acc.push(<span key={`sep-${index}`}>, </span>)
+          acc.push(node)
+          return acc
+        }, [])
         : t('superAdmin.pages.biosConflicts.noCustomers')),
     },
     {
@@ -132,16 +144,10 @@ export function BiosConflictsPage() {
 
       <Card>
         <CardContent className="space-y-4 p-4">
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant={status === '' ? 'default' : 'secondary'} onClick={() => setStatus('')}>
-              {t('common.all')}
-            </Button>
-            <Button type="button" size="sm" variant={status === 'open' ? 'default' : 'secondary'} onClick={() => setStatus('open')}>
-              {t('superAdmin.pages.biosConflicts.status.open')}
-            </Button>
-            <Button type="button" size="sm" variant={status === 'resolved' ? 'default' : 'secondary'} onClick={() => setStatus('resolved')}>
-              {t('superAdmin.pages.biosConflicts.status.resolved')}
-            </Button>
+          <div className="grid gap-3 md:grid-cols-3">
+            <StatusFilterCard label={t('common.all')} count={conflictsQuery.data?.status_counts.all ?? 0} isActive={status === ''} onClick={() => { setStatus(''); setPage(1) }} color="sky" />
+            <StatusFilterCard label={t('superAdmin.pages.biosConflicts.status.open')} count={conflictsQuery.data?.status_counts.open ?? 0} isActive={status === 'open'} onClick={() => { setStatus('open'); setPage(1) }} color="rose" />
+            <StatusFilterCard label={t('superAdmin.pages.biosConflicts.status.resolved')} count={conflictsQuery.data?.status_counts.resolved ?? 0} isActive={status === 'resolved'} onClick={() => { setStatus('resolved'); setPage(1) }} color="emerald" />
           </div>
           <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
             <select

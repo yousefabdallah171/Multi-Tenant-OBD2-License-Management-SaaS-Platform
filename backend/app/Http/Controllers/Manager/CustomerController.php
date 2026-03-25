@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Manager;
 use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\BiosBlacklist;
+use App\Models\BiosUsernameLink;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\UserIpLog;
@@ -12,7 +13,9 @@ use App\Models\User;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -25,6 +28,7 @@ class CustomerController extends BaseManagerController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'manager_id' => ['nullable', 'integer'],
             'reseller_id' => ['nullable', 'integer'],
             'program_id' => ['nullable', 'integer'],
             'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
@@ -35,17 +39,22 @@ class CustomerController extends BaseManagerController
         $sellerIds = $this->teamSellerIds($request);
 
         $query = $this->teamCustomersQuery($request)
-            ->select(['id', 'tenant_id', 'name', 'email', 'phone', 'role', 'created_at'])
+            ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
-                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'status', 'price', 'activated_at', 'expires_at', 'scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
+                ->select($this->licenseListColumns())
                 ->with(['program:id,name', 'reseller:id,name'])])
             ->latest();
+
+        if (! empty($validated['manager_id'])) {
+            $query->where('created_by', (int) $validated['manager_id']);
+        }
 
         if (! empty($validated['search'])) {
             $query->where(function ($builder) use ($validated, $sellerIds): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('username', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->whereIn('reseller_id', $sellerIds)
@@ -53,44 +62,63 @@ class CustomerController extends BaseManagerController
             });
         }
 
-        if (! empty($validated['reseller_id'])) {
-            $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                ->whereIn('reseller_id', $sellerIds)
-                ->where('reseller_id', $validated['reseller_id']));
-        }
-
-        if (! empty($validated['program_id'])) {
-            $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                ->whereIn('reseller_id', $sellerIds)
-                ->where('program_id', $validated['program_id']));
-        }
-
-        if (! empty($validated['status'])) {
-            $query->whereHas('customerLicenses', function ($licenseQuery) use ($sellerIds, $validated): void {
-                $licenseQuery->whereIn('reseller_id', $sellerIds);
-
-                if ($validated['status'] === 'scheduled') {
-                    $licenseQuery->where('status', 'pending')->where('is_scheduled', true);
-                    return;
-                }
-
-                if ($validated['status'] === 'pending') {
-                    $licenseQuery->where('status', 'pending')->where(function ($pendingQuery): void {
-                        $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
-                    });
-                    return;
-                }
-
-                $licenseQuery->where('status', $validated['status']);
-            });
-        }
-
-        $customers = $query->paginate((int) ($validated['per_page'] ?? 10));
+        $allCustomers = $query->get();
+        $customers = $this->paginateCollection(
+            $allCustomers->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated)),
+            (int) $request->integer('page', 1),
+            (int) ($validated['per_page'] ?? 25),
+        );
 
         return response()->json([
-            'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user))->values(),
+            'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user, $validated))->values(),
             'meta' => $this->paginationMeta($customers),
         ]);
+    }
+
+    public function licenseHistory(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveTeamUser($request, $user);
+        $sellerIds = $this->teamSellerIds($request);
+
+        $licenses = License::query()
+            ->with(['program:id,name', 'reseller:id,name,email'])
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('customer_id', $customer->id)
+            ->whereIn('reseller_id', $sellerIds)
+            ->orderByDesc('activated_at')
+            ->get()
+            ->map(fn (License $license): array => $this->serializeLicenseHistoryEntry($license))
+            ->values();
+
+        return response()->json([
+            'data' => $licenses,
+        ]);
+    }
+
+    public function biosChangeHistory(Request $request, User $user): JsonResponse
+    {
+        $customer = $this->resolveTeamUser($request, $user);
+
+        $changes = \App\Models\BiosChangeRequest::query()
+            ->with(['license:id,customer_id', 'reseller:id,name', 'reviewer:id,name'])
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->whereHas('license', fn ($q) => $q->where('customer_id', $customer->id))
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn ($change): array => [
+                'id' => $change->id,
+                'old_bios_id' => $change->old_bios_id,
+                'new_bios_id' => $change->new_bios_id,
+                'reason' => $change->reason,
+                'status' => $change->status === 'approved_pending_sync' ? 'approved' : $change->status,
+                'requested_by' => $change->reseller?->name,
+                'reviewed_by' => $change->reviewer?->name,
+                'created_at' => $change->created_at?->toIso8601String(),
+                'reviewed_at' => $change->reviewed_at?->toIso8601String(),
+            ])
+            ->values();
+
+        return response()->json(['data' => $changes]);
     }
 
     public function show(Request $request, User $user): JsonResponse
@@ -101,7 +129,7 @@ class CustomerController extends BaseManagerController
         $customer->load([
             'customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
-                ->select(['id', 'tenant_id', 'customer_id', 'reseller_id', 'program_id', 'bios_id', 'external_username', 'status', 'duration_days', 'price', 'activated_at', 'expires_at', 'scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes'])
+                ->select($this->licenseDetailColumns())
                 ->with(['program:id,name', 'reseller:id,name,email']),
             'createdBy:id,name,email',
         ]);
@@ -168,7 +196,7 @@ class CustomerController extends BaseManagerController
         return response()->json([
             'data' => [
                 ...$this->serializeCustomer($customer),
-                'username' => $customer->username,
+                'username' => $customer->customerLicenses->sortByDesc('activated_at')->first()?->external_username ?: $customer->username,
                 'phone' => $customer->phone,
                 'created_by' => $customer->createdBy ? [
                     'id' => $customer->createdBy->id,
@@ -184,7 +212,7 @@ class CustomerController extends BaseManagerController
                     'reseller' => $license->reseller?->name,
                     'reseller_id' => $license->reseller_id,
                     'reseller_email' => $license->reseller?->email,
-                    'status' => $license->status,
+                    'status' => $license->effectiveStatus(),
                     'duration_days' => (float) $license->duration_days,
                     'price' => (float) $license->price,
                     'activated_at' => $license->activated_at?->toIso8601String(),
@@ -198,6 +226,8 @@ class CustomerController extends BaseManagerController
                     'scheduled_failure_message' => $license->scheduled_failure_message,
                     'paused_at' => $license->paused_at?->toIso8601String(),
                     'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+                    'pause_reason' => $license->pause_reason,
+                    'is_blacklisted' => BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id),
                 ])->values(),
                 'resellers_summary' => $sellersSummary,
                 'ip_logs' => $ipLogs,
@@ -222,6 +252,15 @@ class CustomerController extends BaseManagerController
         $email = isset($validated['email']) && is_string($validated['email']) && trim($validated['email']) !== ''
             ? strtolower(trim($validated['email']))
             : sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $this->currentTenantId($request), $username);
+
+        if (! empty($validated['bios_id']) && ! empty($validated['program_id'])) {
+            $this->assertPendingLicenseCanBeCreated(
+                $request,
+                (string) $validated['bios_id'],
+                (int) $validated['program_id'],
+                $this->currentManager($request),
+            );
+        }
 
         $customer = User::query()
             ->where(function ($query) use ($email, $username): void {
@@ -326,14 +365,17 @@ class CustomerController extends BaseManagerController
             ->whereIn('reseller_id', $sellerIds)
             ->get();
 
+        if ($licenses->contains(fn (License $license): bool => ! $this->canDeleteLicense($license))) {
+            return response()->json([
+                'message' => 'Only customers with expired or cancelled licenses can be deleted.',
+            ], 422);
+        }
+
         $customerName = $customer->name;
         $customerId = $customer->id;
         $licensesCount = $licenses->count();
 
         foreach ($licenses as $license) {
-            if ($license->status === 'active') {
-                $this->licenseService->deactivate($license);
-            }
             $license->delete();
         }
 
@@ -354,7 +396,50 @@ class CustomerController extends BaseManagerController
         ]);
     }
 
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
+    }
+
     private function createPendingLicense(Request $request, User $customer, string $biosId, int $programId, User $seller): void
+    {
+        $program = $this->assertPendingLicenseCanBeCreated($request, $biosId, $programId, $seller);
+        $normalizedBiosId = trim($biosId);
+        $biosIdLower = strtolower($normalizedBiosId);
+
+        DB::transaction(function () use ($request, $customer, $normalizedBiosId, $biosIdLower, $program, $seller): void {
+            // Race condition guard: re-check with lock inside transaction
+            $raceConflict = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->whereIn('status', ['active', 'suspended', 'pending'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($raceConflict) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID was just claimed by another user. Please try a different BIOS ID.',
+                ]);
+            }
+
+            License::query()->create([
+                'tenant_id' => $this->currentTenantId($request),
+                'customer_id' => $customer->id,
+                'reseller_id' => $seller->id,
+                'program_id' => $program->id,
+                'bios_id' => $normalizedBiosId,
+                'external_username' => $customer->username,
+                'external_activation_response' => 'Pending activation.',
+                'duration_days' => 0,
+                'price' => 0,
+                'activated_at' => now(),
+                'expires_at' => now(),
+                'status' => 'pending',
+                ...($this->supportsScheduledLicenses() ? ['is_scheduled' => false] : []),
+            ]);
+        });
+    }
+
+    private function assertPendingLicenseCanBeCreated(Request $request, string $biosId, int $programId, User $seller): Program
     {
         $program = Program::query()
             ->whereKey($programId)
@@ -380,55 +465,176 @@ class CustomerController extends BaseManagerController
             ]);
         }
 
-        $existingLicense = License::query()
-            ->where('tenant_id', $this->currentTenantId($request))
-            ->where('reseller_id', $seller->id)
-            ->where('program_id', $program->id)
-            ->where('bios_id', $normalizedBiosId)
-            ->whereIn('status', ['active', 'pending', 'suspended'])
+        // GLOBAL cross-tenant check: BIOS must not be active or suspended in ANY tenant
+        $biosIdLower = strtolower($normalizedBiosId);
+        $globalActive = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->whereIn('status', ['active', 'suspended'])
             ->first();
 
-        if ($existingLicense) {
+        if ($globalActive) {
             throw ValidationException::withMessages([
-                'bios_id' => 'A license already exists for this BIOS ID and program.',
+                'bios_id' => 'This BIOS ID is currently active with another reseller.',
             ]);
         }
 
-        License::query()->create([
-            'tenant_id' => $this->currentTenantId($request),
-            'customer_id' => $customer->id,
-            'reseller_id' => $seller->id,
-            'program_id' => $program->id,
-            'bios_id' => $normalizedBiosId,
-            'external_username' => $customer->username,
-            'external_activation_response' => 'Pending activation.',
-            'duration_days' => 0,
-            'price' => 0,
-            'activated_at' => now(),
-            'expires_at' => now(),
-            'status' => 'pending',
-            'is_scheduled' => false,
-        ]);
+        // Enforce permanent BIOS↔username link (both directions)
+        $customerName = strtolower(trim((string) $request->input('name', '')));
+        $derivedUsername = (string) \Illuminate\Support\Str::of($customerName)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+
+        if ($derivedUsername !== '') {
+            $usernameLower = $derivedUsername;
+
+            // Check if customer already exists (re-activation)
+            $existingCustomer = User::query()
+                ->where('tenant_id', $this->currentTenantId($request))
+                ->whereRaw('LOWER(username) = ?', [$usernameLower])
+                ->where('role', UserRole::CUSTOMER->value)
+                ->first();
+
+            // BIOS → username: this BIOS must not be linked to a different username
+            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            if ($linkByBios && strtolower((string) $linkByBios->username) !== $usernameLower) {
+                throw ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID is permanently linked to a different username (' . $linkByBios->username . ').',
+                ]);
+            }
+
+            // Username → BIOS: only block for new customers (existing may have had BIOS changed)
+            if (! $existingCustomer) {
+                $linkByUsername = BiosUsernameLink::where('username', $usernameLower)
+                    ->where('bios_id', '!=', $biosIdLower)
+                    ->first();
+                if ($linkByUsername) {
+                    throw ValidationException::withMessages([
+                        'customer_name' => 'This username is permanently linked to a different BIOS ID (' . $linkByUsername->bios_id . ').',
+                    ]);
+                }
+
+                // Also check historical licenses — covers cases where BiosUsernameLink entry was cleaned up
+                $historicalConflict = \App\Models\License::query()
+                    ->whereRaw('LOWER(external_username) = ?', [$usernameLower])
+                    ->whereRaw('LOWER(bios_id) != ?', [$biosIdLower])
+                    ->exists();
+                if ($historicalConflict && ! $linkByBios) {
+                    throw ValidationException::withMessages([
+                        'customer_name' => 'This username was previously activated with a different BIOS ID. Each username is permanently tied to one BIOS ID.',
+                    ]);
+                }
+            }
+        } else {
+            // No derived username — still check BIOS→username link
+            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            if ($linkByBios) {
+                throw ValidationException::withMessages([
+                    'bios_id' => 'This BIOS ID is permanently linked to a specific username. Please provide the correct customer name.',
+                ]);
+            }
+        }
+
+        // Pending licenses do NOT block — any role may create a pending license for this BIOS.
+        // Only block if there's a suspended license (active/suspended already caught globally above).
+        $existingSuspended = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->where('status', 'suspended')
+            ->first();
+
+        if ($existingSuspended) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'This BIOS ID belongs to a suspended license and cannot be used.',
+            ]);
+        }
+
+        return $program;
     }
 
-    private function serializeCustomer(User $user): array
+    /**
+     * @return list<string>
+     */
+    private function licenseListColumns(): array
     {
-        $license = $user->customerLicenses->sortByDesc('activated_at')->first();
+        return [
+            'id',
+            'tenant_id',
+            'customer_id',
+            'reseller_id',
+            'program_id',
+            'bios_id',
+            'status',
+            'price',
+            'activated_at',
+            'expires_at',
+            ...$this->optionalScheduledColumns(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function licenseDetailColumns(): array
+    {
+        return [
+            'id',
+            'tenant_id',
+            'customer_id',
+            'reseller_id',
+            'program_id',
+            'bios_id',
+            'external_username',
+            'status',
+            'duration_days',
+            'price',
+            'activated_at',
+            'expires_at',
+            ...$this->optionalScheduledColumns(),
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function optionalScheduledColumns(): array
+    {
+        $columns = [];
+
+        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes', 'pause_reason'] as $column) {
+            if (Schema::hasColumn('licenses', $column)) {
+                $columns[] = $column;
+            }
+        }
+
+        return $columns;
+    }
+
+    private function supportsScheduledLicenses(): bool
+    {
+        return Schema::hasColumn('licenses', 'is_scheduled');
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function serializeCustomer(User $user, array $filters = []): array
+    {
+        $license = $this->resolveDisplayLicense($user, $filters);
         $hasActiveLicense = $user->customerLicenses->contains(
-            fn ($item) => ($item->status ?? null) === 'active'
+            fn ($item) => $item->isEffectivelyActive()
         );
 
         return [
             'id' => $user->id,
             'name' => $user->name,
+            'client_name' => $user->client_name,
+            'username' => $license?->external_username ?: $user->username,
             'email' => $this->visibleEmail($user->email),
             'phone' => $user->phone,
             'license_id' => $license?->id,
             'bios_id' => $license?->bios_id,
+            'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
             'reseller_id' => $license?->reseller?->id,
             'program' => $license?->program?->name,
-            'status' => $license?->status,
+            'status' => $license?->effectiveStatus() ?? 'pending',
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),
@@ -440,9 +646,138 @@ class CustomerController extends BaseManagerController
             'scheduled_failure_message' => $license?->scheduled_failure_message,
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license?->pause_reason,
+            'is_blacklisted' => $license ? BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id) : false,
+            'bios_active_elsewhere' => $license && $license->bios_id
+                ? License::query()
+                    ->whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])
+                    ->where('id', '!=', $license->id)
+                    ->whereIn('status', ['active', 'suspended'])
+                    ->exists()
+                : false,
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
         ];
+    }
+
+    private function serializeLicenseHistoryEntry(License $license): array
+    {
+        return [
+            'id' => $license->id,
+            'program_name' => $license->program?->name,
+            'reseller_id' => $license->reseller_id,
+            'reseller_name' => $license->reseller?->name,
+            'reseller_email' => $license->reseller?->email,
+            'bios_id' => $license->bios_id,
+            'external_username' => $license->external_username,
+            'activated_at' => $license->activated_at?->toIso8601String(),
+            'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
+            'expires_at' => $license->expires_at?->toIso8601String(),
+            'duration_days' => (float) $license->duration_days,
+            'price' => (float) $license->price,
+            'status' => $license->effectiveStatus(),
+            'paused_at' => $license->paused_at?->toIso8601String(),
+            'pause_reason' => $license->pause_reason,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function resolveDisplayLicense(User $user, array $filters = []): ?License
+    {
+        $licenses = $user->customerLicenses->sortByDesc(
+            fn (License $license) => ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0
+        );
+
+        $filtered = $licenses->filter(fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters));
+
+        if ($filtered->isNotEmpty()) {
+            return $filtered->first();
+        }
+
+        return $this->hasScopedLicenseFilters($filters) ? null : $licenses->first();
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function customerMatchesDisplayFilters(User $user, array $filters): bool
+    {
+        $status = isset($filters['status']) && is_string($filters['status']) ? $filters['status'] : '';
+        $license = $this->resolveDisplayLicense($user, $filters);
+
+        if (! $license) {
+            return in_array($status, ['', 'all', 'pending'], true) && ! $this->hasScopedLicenseFilters($filters);
+        }
+
+        if ($status === '' || $status === 'all') {
+            return true;
+        }
+
+        return $this->displayLicenseMatchesStatus($license, $status);
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function licenseMatchesDisplayFilters(License $license, array $filters): bool
+    {
+        return $this->licenseMatchesScopeFilters($license, $filters)
+            && $this->displayLicenseMatchesStatus($license, isset($filters['status']) && is_string($filters['status']) ? $filters['status'] : '');
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function licenseMatchesScopeFilters(License $license, array $filters): bool
+    {
+        $resellerId = isset($filters['reseller_id']) ? (int) $filters['reseller_id'] : null;
+        if ($resellerId) {
+            if ((int) $license->reseller_id !== $resellerId) {
+                return false;
+            }
+        }
+
+        $programId = isset($filters['program_id']) ? (int) $filters['program_id'] : null;
+        if ($programId) {
+            if ((int) $license->program_id !== $programId) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function displayLicenseMatchesStatus(License $license, string $status): bool
+    {
+        if ($status === '' || $status === 'all') {
+            return true;
+        }
+
+        if ($status === 'scheduled') {
+            return $this->supportsScheduledLicenses()
+                && $license->status === 'pending'
+                && (bool) $license->is_scheduled;
+        }
+
+        if ($status === 'pending') {
+            if (! $this->supportsScheduledLicenses()) {
+                return $license->status === 'pending';
+            }
+
+            return $license->status === 'pending' && ! (bool) $license->is_scheduled;
+        }
+
+        return $license->effectiveStatus() === $status;
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function hasScopedLicenseFilters(array $filters): bool
+    {
+        return ! empty($filters['program_id']) || ! empty($filters['reseller_id']);
     }
 
     private function visibleEmail(?string $email): ?string
@@ -451,7 +786,7 @@ class CustomerController extends BaseManagerController
             return null;
         }
 
-        return str_ends_with($email, '@obd2sw.local') ? null : $email;
+        return str_starts_with($email, 'no-email+') && str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 
     private function resolveCustomerEmail(User $customer, ?string $email, int $tenantId): string

@@ -48,8 +48,8 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 | Field | Value |
 |-------|-------|
 | **Version** | 1.0.0 |
-| **Status** | Phase 12 UX Editing + seller tracking + pause/resume licensing complete (deployment hardening pending) |
-| **Last Updated** | 2026-03-05 |
+| **Status** | Phase 15 UX consolidation, detail-page unification, and runtime verification in progress |
+| **Last Updated** | 2026-03-10 |
 | **Scale** | Multi-tenant SaaS, 4 active dashboard roles, queued exports, tenant-scoped external API workflows |
 | **Budget** | $30 |
 | **Timeline** | 15 Days (Day 0 - Day 14) |
@@ -83,7 +83,84 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | PHASE-09-Deployment | :red_circle: Not Started | Day 12-13 |
 | PHASE-10-Documentation | :red_circle: Not Started | Day 14 |
 
-### Latest Implemented Features (2026-03-05)
+### Latest Implemented Features (2026-03-10)
+
+**Super Admin Customers + BIOS Consistency**
+- Added a full global Super Admin customer workspace at `/:lang/super-admin/customers` with list, detail, create, edit, renew, deactivate, pause, resume, retry, and delete actions.
+- Added canonical Super Admin customer routes:
+  - `/:lang/super-admin/customers`
+  - `/:lang/super-admin/customers/create`
+  - `/:lang/super-admin/customers/:id`
+- Super Admin customer tables and detail pages now drill into canonical BIOS and user/customer pages consistently.
+- BIOS detail username resolution now prefers stored license/customer usernames instead of parsed BIOS prefixes, with schema-safe fallback logic for legacy rows.
+- Super Admin BIOS blacklist now shows tenant-scoped entries across the full platform, not only global rows.
+- Super Admin BIOS conflicts now drill into canonical BIOS and customer pages.
+- Super Admin customer detail was hardened for older local schemas where optional `user_ip_logs` columns are missing.
+- Shared license action routes now allow `super_admin`, so customer actions from the Super Admin workspace reuse the same backend workflows as other roles.
+
+**Super Admin Safety Hardening**
+- Super Admin cannot delete the currently authenticated Super Admin account.
+- Super Admin cannot deactivate the currently authenticated Super Admin account.
+- Super Admin cannot delete or deactivate the last remaining active Super Admin account.
+- Frontend actions are disabled for protected Super Admin rows, and backend validation enforces the same safety rules.
+
+**Super Admin Alignment + Reseller Runtime Cleanup**
+- Super Admin admin-management rows, names, and usernames now open the canonical full user detail route at `/:lang/super-admin/users/:id`.
+- Super Admin API Status was hardened to avoid loading the full `api_logs` table into memory; endpoint health now resolves through targeted latest-log lookups.
+- Reseller activation form labels now use translated user-facing copy instead of raw i18n keys.
+- Reseller dashboard and activity feeds now translate license/customer action labels into readable UI text.
+- Reseller dashboard chart containers were hardened so the prior Recharts `width(-1)/height(-1)` warnings no longer appear during runtime verification.
+- Completed a real browser/runtime verification pass for Reseller and Super Admin routes after these fixes.
+
+**Canonical Detail Pages + BIOS Linking**
+- Manager now has a real team-member detail page at `/:lang/manager/team/:id` instead of a drawer-only flow.
+- Manager reseller logs now open canonical manager team-member pages from the user column.
+- BIOS IDs across manager and manager-parent detail/log pages now route into canonical BIOS detail pages.
+- BIOS detail pages now support activity-only BIOS records, so scheduled/deactivated BIOS IDs still show program, reseller, external username, and last activity context even after the license row is gone.
+
+**Runtime Verification Pass**
+- Ran a real browser smoke pass across Manager and Manager Parent dashboard workspaces after the latest consolidation changes.
+- Verified canonical detail pages for team members, customers, and BIOS IDs load without in-page server/access error states.
+- Reconfirmed customer lists, software pages, reports, activity, reseller logs, API status, settings, and profile routes for both role scopes.
+
+**Customer Summary Updates**
+- Added `Expired` summary cards to Manager Parent, Manager, and Reseller customer pages alongside the existing 1-day, 3-day, and 7-day expiry alerts.
+
+**Cross-Role UX Consistency**
+- Manager Parent, Manager, and Super Admin dashboard stat cards now route into the relevant canonical pages instead of acting as static tiles.
+- Manager Parent and Manager customer pages now keep filter state in the URL, so dashboard deep-links like `?status=active` open the correct tab immediately.
+- Manager Parent, Manager, and Super Admin reports now default to the last-year date range so charts and tables render immediately on first load.
+- Manager and Super Admin dashboard activity feeds now format raw event keys into readable action labels.
+
+### Previous Implemented Features (2026-03-09)
+
+**Route Consolidation & Detail UX**
+- Merged duplicate report pages into single canonical report pages for Super Admin and Manager Parent.
+- Merged duplicate license pages into the customer pages for Manager Parent, Manager, and Reseller.
+- Replaced duplicate username-management pages with canonical team/admin-management pages.
+- Added full-page detail routes for Manager Parent team members and Super Admin users.
+
+**Password & Profile UX**
+- Manual reset-password flows now accept typed passwords.
+- Added show/hide password toggles to create/reset/profile password forms.
+
+**Sidebar Information Architecture**
+- Grouped related sidebar entries into submenus for Super Admin and Manager Parent:
+  - Admin Management + Users
+  - BIOS Blacklist + BIOS Details + BIOS Conflicts
+  - Settings + Profile
+
+**Manager + Software Workflow Alignment**
+- Manager team page now supports reseller invite, edit, deactivate/reactivate, delete, unlock, username change, and password reset actions.
+- Manager reports now use the same tenant-wide financial reporting surface as Manager Parent reports.
+- Removed reseller-specific pricing from the product flow so resellers use the normal software base price.
+- Removed `Trial Days` from manager-parent software catalog and program-management UI.
+
+**Customer Page Stability**
+- Fixed authenticated customer pages failing on older local schemas missing scheduled-license columns.
+- Added schema-safe guards to scheduled-license processing and customer list queries.
+
+### Previously Implemented Features (2026-03-05)
 
 **Pause/Resume & Reactivate Licensing (New)**
 - Added `pause` and `resume` actions for resellers to temporarily pause active licenses
@@ -290,13 +367,11 @@ const canManageUsers = useHasPermission('manage_users');
 |-------|------|-------------|
 | `/:lang/super-admin/dashboard` | Dashboard | 5 stats cards + 3 charts + activity feed |
 | `/:lang/super-admin/tenants` | Tenant Management | CRUD + stats per tenant |
-| `/:lang/super-admin/users` | All Users | Cross-tenant user table + IP info |
+| `/:lang/super-admin/users` | All Users | Cross-tenant user table + full-page user detail |
 | `/:lang/super-admin/admin-management` | Admin Management | Manage admin-level accounts |
-| `/:lang/super-admin/reports` | Reports | Cross-tenant analytics + export |
-| `/:lang/super-admin/financial-reports` | Financial Reports | Revenue breakdown all tenants |
+| `/:lang/super-admin/reports` | Reports | Canonical reports page (financial merged) |
 | `/:lang/super-admin/bios-blacklist` | BIOS Blacklist | Global BIOS blacklist CRUD |
 | `/:lang/super-admin/bios-history` | BIOS History | Full history all tenants |
-| `/:lang/super-admin/username-management` | Username Management | Unlock and rename usernames |
 | `/:lang/super-admin/security-locks` | Security Locks | Locked-account and blocked-IP review |
 | `/:lang/super-admin/logs` | System Logs | All activity + API logs |
 | `/:lang/super-admin/api-status` | API Health | External API monitor |
@@ -309,12 +384,11 @@ const canManageUsers = useHasPermission('manage_users');
 |-------|------|-------------|
 | `/:lang/dashboard` | Dashboard | Tenant stats overview |
 | `/:lang/team-management` | Team Management | Add Managers/Resellers |
-| `/:lang/reseller-pricing` | Reseller Pricing | Pricing tiers & commissions |
+| `/:lang/team-management/:id` | Team Member Detail | Full-page team-member detail |
 | `/:lang/software` | Software | Tenant software catalog |
-| `/:lang/licenses` | Licenses | Tenant license management + bulk actions |
+| `/:lang/customers` | Customers | Canonical tenant customer/license view |
 | `/:lang/program-logs` | Program Logs | External activation/login events per program |
 | `/:lang/software-management` | Software Management | Programs + Download Links CRUD |
-| `/:lang/financial-reports` | Financial Reports | Tenant-level revenue |
 | `/:lang/bios-blacklist` | BIOS Blacklist | Tenant-level blacklist |
 | `/:lang/bios-history` | BIOS History | Tenant activation history |
 | `/:lang/bios-conflicts` | BIOS Conflicts | Conflict history + resolution |
@@ -322,10 +396,8 @@ const canManageUsers = useHasPermission('manage_users');
 | `/:lang/logs` | Logs | Tenant API/operation logs |
 | `/:lang/reseller-logs` | Reseller Logs | Seller activity + revenue tracking |
 | `/:lang/api-status` | API Status | Tenant view for API health |
-| `/:lang/username-management` | Username Management | Tenant user credentials |
-| `/:lang/reports` | Reports | Tenant revenue & analytics |
+| `/:lang/reports` | Reports | Canonical tenant reports page (financial merged) |
 | `/:lang/activity` | Activity Log | Tenant-wide audit log |
-| `/:lang/customers` | Customers | Aggregated customer view |
 | `/:lang/settings` | Settings | Tenant configuration |
 | `/:lang/profile` | Profile | Profile management |
 
@@ -336,13 +408,11 @@ Additional workflow/detail routes also exist for program create/edit/activate an
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/manager/dashboard` | Dashboard | Personal + team stats |
-| `/:lang/manager/team` | Team | Manage resellers only |
-| `/:lang/manager/username-management` | Username Management | Team credentials only |
-| `/:lang/manager/customers` | Customers | Team customer overview |
-| `/:lang/manager/licenses` | Licenses | Team license management + bulk actions |
+| `/:lang/manager/team` | Team | Canonical reseller-management page with full reseller actions |
+| `/:lang/manager/customers` | Customers | Canonical team customer/license view |
 | `/:lang/manager/software` | Software | Available programs (read-only) |
 | `/:lang/manager/software-management` | Software Management | Team-scoped CRUD + activation popup |
-| `/:lang/manager/reports` | Reports | Personal/team reports |
+| `/:lang/manager/reports` | Reports | Tenant-wide reports with the same financial layout as Manager Parent |
 | `/:lang/manager/activity` | Activity | Team activity logs |
 | `/:lang/manager/reseller-logs` | Reseller Logs | Team seller activity and direct-sale tracking |
 | `/:lang/manager/profile` | Profile | Profile management |
@@ -354,8 +424,7 @@ Additional workflow/detail routes also exist for customer detail pages and progr
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/reseller/dashboard` | Dashboard | Personal stats + balance |
-| `/:lang/reseller/customers` | Customers | BIOS activation wizard |
-| `/:lang/reseller/licenses` | Licenses | License management |
+| `/:lang/reseller/customers` | Customers | Canonical customer/license page with BIOS activation wizard |
 | `/:lang/reseller/software` | Software Catalog | Read-only list + Activate modal |
 | `/:lang/reseller/reports` | Reports | Personal sales reports |
  

@@ -7,6 +7,7 @@ use App\Http\Requests\RenewLicenseRequest;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Services\LicenseService;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -23,6 +24,8 @@ class LicenseController extends BaseResellerController
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'program_id' => ['nullable', 'integer', 'min:1'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
         ]);
 
         $query = $this->licenseQuery($request)
@@ -37,7 +40,7 @@ class LicenseController extends BaseResellerController
                     $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
                 });
             } else {
-                $query->where('status', $validated['status']);
+                $query->whereEffectiveStatus($validated['status']);
             }
         }
 
@@ -56,6 +59,14 @@ class LicenseController extends BaseResellerController
                     })
                     ->orWhereHas('program', fn ($programQuery) => $programQuery->where('name', 'like', '%'.$validated['search'].'%'));
             });
+        }
+
+        if (! empty($validated['from'])) {
+            $query->whereDate('activated_at', '>=', $validated['from']);
+        }
+
+        if (! empty($validated['to'])) {
+            $query->whereDate('activated_at', '<=', $validated['to']);
         }
 
         $licenses = $query->paginate((int) ($validated['per_page'] ?? 10));
@@ -108,6 +119,7 @@ class LicenseController extends BaseResellerController
     public function activate(ActivateLicenseRequest $request): JsonResponse
     {
         $license = $this->licenseService->activate($request->validated());
+        LicenseCacheInvalidation::invalidateForLicense($license);
 
         return response()->json([
             'message' => 'License activated successfully.',
@@ -119,6 +131,7 @@ class LicenseController extends BaseResellerController
     {
         $resolved = $this->resolveLicense($request, $license);
         $renewed = $this->licenseService->renew($resolved, $renewLicenseRequest->validated());
+        LicenseCacheInvalidation::invalidateForLicense($renewed);
 
         return response()->json([
             'message' => 'License renewed successfully.',
@@ -140,10 +153,13 @@ class LicenseController extends BaseResellerController
     public function destroy(Request $request, License $license): JsonResponse
     {
         $resolved = $this->resolveLicense($request, $license);
-        if ($resolved->status === 'active') {
-            $this->licenseService->deactivate($resolved);
+        if (! $this->canDeleteLicense($resolved)) {
+            return response()->json([
+                'message' => 'Only expired or cancelled licenses can be deleted.',
+            ], 422);
         }
 
+        LicenseCacheInvalidation::invalidateForLicense($resolved);
         $resolved->delete();
 
         return response()->json([
@@ -151,10 +167,26 @@ class LicenseController extends BaseResellerController
         ]);
     }
 
+    public function cancelPending(Request $request, License $license): JsonResponse
+    {
+        $resolved   = $this->resolveLicense($request, $license);
+        $cancelled  = $this->licenseService->cancelPending($resolved);
+
+        return response()->json([
+            'message' => 'Pending license cancelled successfully.',
+            'data'    => $this->serializeLicense($cancelled),
+        ]);
+    }
+
     public function pause(Request $request, License $license): JsonResponse
     {
+        $validated = $request->validate([
+            'pause_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
         $resolved = $this->resolveLicense($request, $license);
-        $paused = $this->licenseService->pause($resolved);
+        $paused = $this->licenseService->pause($resolved, $validated);
+        LicenseCacheInvalidation::invalidateForLicense($paused);
 
         return response()->json([
             'message' => 'License paused successfully.',
@@ -166,6 +198,7 @@ class LicenseController extends BaseResellerController
     {
         $resolved = $this->resolveLicense($request, $license);
         $resumed = $this->licenseService->resume($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($resumed);
 
         return response()->json([
             'message' => 'License resumed successfully.',
@@ -182,13 +215,23 @@ class LicenseController extends BaseResellerController
         $days = (int) ($validated['days'] ?? 7);
         $licenses = $this->licenseQuery($request)
             ->with(['customer:id,name,email', 'program:id,name'])
-            ->where('status', 'active')
+            ->whereEffectivelyActive()
             ->whereBetween('expires_at', [now(), now()->addDays($days)])
             ->orderBy('expires_at')
             ->get();
 
+        $expired = $this->licenseQuery($request)
+            ->whereEffectivelyExpired()
+            ->count();
+
         return response()->json([
             'data' => $licenses->map(fn (License $license): array => $this->serializeLicense($license))->values(),
+            'summary' => [
+                'day1' => $licenses->filter(fn (License $license): bool => $license->expires_at !== null && $license->expires_at->lte(now()->copy()->addDay()))->count(),
+                'day3' => $licenses->filter(fn (License $license): bool => $license->expires_at !== null && $license->expires_at->lte(now()->copy()->addDays(3)))->count(),
+                'day7' => $licenses->count(),
+                'expired' => $expired,
+            ],
         ]);
     }
 
@@ -204,10 +247,11 @@ class LicenseController extends BaseResellerController
         $licenses = $this->licenseQuery($request)->whereIn('id', $validated['ids'])->get();
 
         foreach ($licenses as $license) {
-            $this->licenseService->renew($license, [
+            $updated = $this->licenseService->renew($license, [
                 'duration_days' => (int) $validated['duration_days'],
                 'price' => (float) $validated['price'],
             ]);
+            LicenseCacheInvalidation::invalidateForLicense($updated);
         }
 
         return response()->json([
@@ -226,7 +270,8 @@ class LicenseController extends BaseResellerController
         $licenses = $this->licenseQuery($request)->whereIn('id', $validated['ids'])->get();
 
         foreach ($licenses as $license) {
-            $this->licenseService->deactivate($license);
+            $updated = $this->licenseService->deactivate($license);
+            LicenseCacheInvalidation::invalidateForLicense($updated);
         }
 
         return response()->json([
@@ -246,18 +291,23 @@ class LicenseController extends BaseResellerController
             ->whereIn('id', $validated['ids'])
             ->get();
 
-        $count = $licenses->count();
-        foreach ($licenses as $license) {
-            if ($license->status === 'active') {
-                $this->licenseService->deactivate($license);
-            }
+        $deletableLicenses = $licenses->filter(fn (License $license): bool => $this->canDeleteLicense($license));
+        $count = $deletableLicenses->count();
+
+        foreach ($deletableLicenses as $license) {
+            LicenseCacheInvalidation::invalidateForLicense($license);
             $license->delete();
         }
 
         return response()->json([
-            'message' => 'Selected licenses deleted successfully.',
+            'message' => $count > 0 ? 'Selected licenses deleted successfully.' : 'No deletable licenses selected.',
             'count' => $count,
         ]);
+    }
+
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
     }
 
     private function serializeLicense(License $license): array
@@ -286,7 +336,8 @@ class LicenseController extends BaseResellerController
             'scheduled_failure_message' => $license->scheduled_failure_message,
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
-            'status' => $license->status,
+            'pause_reason' => $license->pause_reason,
+            'status' => $license->effectiveStatus(),
         ];
     }
 }

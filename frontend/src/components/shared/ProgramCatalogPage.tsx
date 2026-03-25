@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Activity, ArrowUpRight, BadgeDollarSign, PackageSearch, Timer } from 'lucide-react'
+import { Activity, ArrowUpRight, BadgeDollarSign, PackageSearch } from 'lucide-react'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StaggerGroup, StaggerItem } from '@/components/shared/PageTransition'
@@ -19,10 +19,12 @@ interface ProgramCatalogPageProps {
   title: string
   description: string
   translationPrefix: string
+  showBasePrice?: boolean
+  showLicensesSold?: boolean
   onActivate?: (program: { id: number; name: string; base_price: number; has_external_api: boolean; external_software_id: number | null }) => void
 }
 
-export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix, onActivate }: ProgramCatalogPageProps) {
+export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix, showBasePrice = true, showLicensesSold = true, onActivate }: ProgramCatalogPageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -36,6 +38,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
   })
 
   const programs = programsQuery.data?.data ?? []
+  const effectiveShowLicensesSold = translationPrefix === 'reseller.pages.software' ? false : showLicensesSold
 
   return (
     <div className="space-y-6">
@@ -91,35 +94,25 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                 <CardContent className="space-y-4 p-5">
                   <p className="min-h-16 text-sm text-slate-600 dark:text-slate-300">{program.description || t(`${translationPrefix}.noDescription`)}</p>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <BadgeDollarSign className="h-3.5 w-3.5 rounded-full bg-sky-200/60 p-0.5 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" />
-                        {t(`${translationPrefix}.basePrice`)}
-                      </p>
-                      <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
-                    </div>
-                    <div className="rounded-2xl border border-cyan-100 bg-cyan-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <Timer className="h-3.5 w-3.5 rounded-full bg-cyan-200/60 p-0.5 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300" />
-                        {t(`${translationPrefix}.trialDays`)}
-                      </p>
-                      <p className="mt-1 font-semibold">{program.trial_days}</p>
-                    </div>
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <Activity className="h-3.5 w-3.5 rounded-full bg-blue-200/60 p-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" />
-                        {t(`${translationPrefix}.licensesSold`)}
-                      </p>
-                      <p className="mt-1 font-semibold">{program.licenses_sold}</p>
-                    </div>
-                    <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                      <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <Activity className="h-3.5 w-3.5 rounded-full bg-indigo-200/60 p-0.5 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" />
-                        {t(`${translationPrefix}.activeLicenses`)}
-                      </p>
-                      <p className="mt-1 font-semibold">{program.active_licenses_count}</p>
-                    </div>
+                  <div className={`grid gap-3 ${(showBasePrice || effectiveShowLicensesSold) && showBasePrice !== effectiveShowLicensesSold ? 'sm:grid-cols-1' : showBasePrice && effectiveShowLicensesSold ? 'sm:grid-cols-2' : ''}`}>
+                    {showBasePrice ? (
+                      <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                        <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          <BadgeDollarSign className="h-3.5 w-3.5 rounded-full bg-sky-200/60 p-0.5 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" />
+                          {t(`${translationPrefix}.basePrice`)}
+                        </p>
+                        <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
+                      </div>
+                    ) : null}
+                    {effectiveShowLicensesSold ? (
+                      <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                        <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          <Activity className="h-3.5 w-3.5 rounded-full bg-blue-200/60 p-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" />
+                          {t(`${translationPrefix}.licensesSold`)}
+                        </p>
+                        <p className="mt-1 font-semibold">{program.licenses_sold}</p>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex gap-2">

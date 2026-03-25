@@ -71,6 +71,10 @@ class IpAnalyticsService
                 'ip_address' => $log['ip_address'],
                 'bios_id' => $license?->bios_id,
                 'customer_id' => $license?->customer_id,
+                'customer_name' => $license?->customer?->name,
+                'customer_username' => $license?->customer?->username,
+                'reseller_id' => $license?->reseller_id,
+                'reseller_name' => $license?->reseller?->name,
                 'program_id' => $program?->id,
                 'program_name' => $program?->name,
                 'external_software_id' => $externalId,
@@ -97,6 +101,7 @@ class IpAnalyticsService
         }
 
         return License::query()
+            ->with(['customer:id,name,username', 'reseller:id,name,email'])
             ->where('tenant_id', $tenantId)
             ->where('program_id', $programId)
             ->where(function ($query) use ($normalized): void {
@@ -111,4 +116,3 @@ class IpAnalyticsService
             ->first();
     }
 }
-

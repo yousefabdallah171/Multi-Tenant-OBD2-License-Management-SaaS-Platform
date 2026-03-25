@@ -7,6 +7,8 @@ use App\Models\BiosAccessLog;
 use App\Models\BiosBlacklist;
 use App\Models\BiosConflict;
 use App\Models\License;
+use App\Models\Program;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -16,7 +18,7 @@ class BiosDetailsService
     public function getBiosOverview(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
-            ->with(['customer:id,name,email', 'reseller:id,name,email'])
+            ->with(['customer:id,name,username,email,phone', 'reseller:id,name,email,phone', 'program:id,name'])
             ->where('bios_id', $biosId);
 
         $this->applyTenantScope($query, $tenantId);
@@ -25,38 +27,101 @@ class BiosDetailsService
         $blacklist = $this->getBlacklistStatus($biosId, $tenantId);
 
         if ($licenses->isEmpty()) {
+            $latestActivity = ActivityLog::query()
+                ->where(function ($query) use ($biosId): void {
+                    $query
+                        ->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.bios_id'))) = ?", [strtolower($biosId)])
+                        ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.old_bios_id'))) = ?", [strtolower($biosId)]);
+                })
+                ->when($tenantId !== null, fn (Builder $query) => $query->where('tenant_id', $tenantId))
+                ->latest()
+                ->first();
             $lastAccessLog = $this->biosAccessLogsQuery($biosId, $tenantId)->latest()->first();
             $lastConflict = $this->biosConflictsQuery($biosId, $tenantId)->latest()->first();
 
-            abort_if(! $lastAccessLog && ! $lastConflict && ! $blacklist, 404, 'BIOS not found.');
+            abort_if(! $lastAccessLog && ! $lastConflict && ! $blacklist && ! $latestActivity, 404, 'BIOS not found.');
 
             $lastActivity = collect([
+                $latestActivity?->created_at?->toIso8601String(),
                 $lastAccessLog?->created_at?->toIso8601String(),
                 $lastConflict?->created_at?->toIso8601String(),
                 $blacklist['date'] ?? null,
             ])->filter()->sortDesc()->first();
 
-            [$username, $originalBiosId] = $this->splitBiosId($biosId);
+            $activityMetadata = $latestActivity?->metadata ?? [];
+            $customer = ! empty($activityMetadata['customer_id'])
+                ? User::query()->select(['id', 'name', 'username', 'email', 'phone'])->find((int) $activityMetadata['customer_id'])
+                : null;
+            $reseller = ! empty($latestActivity?->user_id)
+                ? User::query()->select(['id', 'name', 'email', 'phone'])->find((int) $latestActivity->user_id)
+                : null;
+            $program = ! empty($activityMetadata['program_id'])
+                ? Program::query()->select(['id', 'name'])->find((int) $activityMetadata['program_id'])
+                : null;
+            $originalBiosId = $this->splitBiosId($biosId)[1];
+            $resolvedUsername = $this->resolveOverviewUsername(null, $customer, $activityMetadata, $biosId);
 
             return [
                 'bios_id' => $biosId,
                 'original_bios_id' => $originalBiosId,
-                'username' => $username,
-                'customer' => null,
-                'reseller' => null,
-                'status' => ($blacklist['is_blacklisted'] ?? false) ? 'blacklisted' : ($lastAccessLog?->metadata['status'] ?? $lastAccessLog?->action),
+                'username' => $resolvedUsername,
+                'customer' => $customer ? [
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'username' => $customer->username,
+                    'email' => $customer->email,
+                    'phone' => $customer->phone,
+                ] : null,
+                'reseller' => $reseller ? [
+                    'id' => $reseller->id,
+                    'name' => $reseller->name,
+                    'email' => $reseller->email,
+                    'phone' => $reseller->phone,
+                ] : null,
+                'status' => ($blacklist['is_blacklisted'] ?? false) ? 'blacklisted' : ($activityMetadata['status'] ?? $lastAccessLog?->metadata['status'] ?? $lastAccessLog?->action ?? $latestActivity?->action),
                 'first_activation' => null,
                 'last_activity' => $lastActivity,
                 'total_activations' => 0,
                 'total_licenses' => 0,
+                'avg_duration_days' => 0,
+                'total_revenue' => 0,
                 'avg_days_between_purchases' => 0,
+                'latest_license' => $latestActivity ? [
+                    'id' => (int) ($activityMetadata['license_id'] ?? 0),
+                    'status' => $activityMetadata['status'] ?? null,
+                    'price' => (float) ($activityMetadata['price'] ?? 0),
+                    'duration_days' => (int) ($activityMetadata['duration_days'] ?? 0),
+                    'activated_at' => $latestActivity->created_at?->toIso8601String(),
+                    'expires_at' => null,
+                    'external_username' => $activityMetadata['external_username'] ?? null,
+                    'program' => $program ? [
+                        'id' => $program->id,
+                        'name' => $program->name,
+                    ] : null,
+                    'customer' => $customer ? [
+                        'id' => $customer->id,
+                        'name' => $customer->name,
+                        'email' => $customer->email,
+                        'phone' => $customer->phone,
+                    ] : null,
+                    'reseller' => $reseller ? [
+                        'id' => $reseller->id,
+                        'name' => $reseller->name,
+                        'email' => $reseller->email,
+                        'phone' => $reseller->phone,
+                    ] : null,
+                ] : null,
                 'blacklist' => $blacklist,
             ];
         }
 
         $first = $licenses->first();
         $last = $licenses->sortByDesc('activated_at')->first();
-        [$username, $originalBiosId] = $this->splitBiosId($biosId);
+        $overviewLicense = $licenses
+            ->sortByDesc(fn (License $license): int => $this->overviewLicenseSortKey($license))
+            ->first();
+        $originalBiosId = $this->splitBiosId($biosId)[1];
+        $resolvedUsername = $this->resolveOverviewUsername($overviewLicense ?? $last, $overviewLicense?->customer, [], $biosId);
 
         $intervals = [];
         $sorted = $licenses->sortBy('activated_at')->values();
@@ -71,25 +136,88 @@ class BiosDetailsService
         return [
             'bios_id' => $biosId,
             'original_bios_id' => $originalBiosId,
-            'username' => $username,
-            'customer' => $first?->customer ? [
-                'id' => $first->customer->id,
-                'name' => $first->customer->name,
-                'email' => $first->customer->email,
+            'username' => $resolvedUsername,
+            'customer' => $overviewLicense?->customer ? [
+                'id' => $overviewLicense->customer->id,
+                'name' => $overviewLicense->customer->name,
+                'username' => $overviewLicense->customer->username,
+                'email' => $overviewLicense->customer->email,
+                'phone' => $overviewLicense->customer->phone,
             ] : null,
-            'reseller' => $first?->reseller ? [
-                'id' => $first->reseller->id,
-                'name' => $first->reseller->name,
-                'email' => $first->reseller->email,
+            'reseller' => $overviewLicense?->reseller ? [
+                'id' => $overviewLicense->reseller->id,
+                'name' => $overviewLicense->reseller->name,
+                'email' => $overviewLicense->reseller->email,
+                'phone' => $overviewLicense->reseller->phone,
             ] : null,
-            'status' => $last?->status,
+            'status' => $overviewLicense?->effectiveStatus() ?? $last?->effectiveStatus(),
             'first_activation' => $first?->activated_at?->toIso8601String(),
             'last_activity' => $last?->activated_at?->toIso8601String(),
             'total_activations' => $licenses->count(),
             'total_licenses' => $licenses->count(),
+            'avg_duration_days' => (float) round((float) $licenses->avg('duration_days'), 2),
+            'total_revenue' => (float) round((float) $licenses->sum('price'), 2),
             'avg_days_between_purchases' => empty($intervals) ? 0 : (int) round(array_sum($intervals) / count($intervals)),
+            'latest_license' => $last ? [
+                'id' => $last->id,
+                'status' => $last->status,
+                'price' => (float) $last->price,
+                'duration_days' => (int) $last->duration_days,
+                'activated_at' => $last->activated_at?->toIso8601String(),
+                'expires_at' => $last->expires_at?->toIso8601String(),
+                'external_username' => $last->external_username,
+                'program' => $last->program ? [
+                    'id' => $last->program->id,
+                    'name' => $last->program->name,
+                ] : null,
+                'customer' => $last->customer ? [
+                    'id' => $last->customer->id,
+                    'name' => $last->customer->name,
+                    'email' => $last->customer->email,
+                    'phone' => $last->customer->phone,
+                ] : null,
+                'reseller' => $last->reseller ? [
+                    'id' => $last->reseller->id,
+                    'name' => $last->reseller->name,
+                    'email' => $last->reseller->email,
+                    'phone' => $last->reseller->phone,
+                ] : null,
+            ] : null,
             'blacklist' => $blacklist,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     */
+    private function resolveOverviewUsername(?License $license, ?User $customer, array $metadata, string $biosId): string
+    {
+        $licenseExternalUsername = is_string($license?->external_username) ? trim((string) $license->external_username) : '';
+        $customerUsername = is_string($customer?->username) ? trim((string) $customer->username) : '';
+        $customerDisplayName = trim((string) ($customer?->client_name ?: $customer?->name ?: ''));
+
+        if ($licenseExternalUsername !== '') {
+            $normalizedExternal = mb_strtolower($licenseExternalUsername);
+            $normalizedDisplay = $customerDisplayName !== '' ? mb_strtolower($customerDisplayName) : '';
+
+            if ($customerUsername !== '' && $normalizedExternal === $normalizedDisplay) {
+                return $customerUsername;
+            }
+        }
+
+        $candidates = [
+            $licenseExternalUsername !== '' ? $licenseExternalUsername : null,
+            $customerUsername !== '' ? $customerUsername : null,
+            is_string($metadata['external_username'] ?? null) ? $metadata['external_username'] : null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return trim($candidate);
+            }
+        }
+
+        return $this->splitBiosId($biosId)[0];
     }
 
     public function getBiosLicenseHistory(string $biosId, ?int $tenantId = null, array $filters = []): LengthAwarePaginator
@@ -117,7 +245,7 @@ class BiosDetailsService
     public function getResellerBreakdown(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
-            ->with('reseller:id,name,email')
+            ->with(['reseller:id,name,email', 'program:id,name'])
             ->where('bios_id', $biosId);
 
         $this->applyTenantScope($query, $tenantId);
@@ -133,6 +261,13 @@ class BiosDetailsService
                     'email' => $first?->reseller?->email,
                     'activation_count' => $licenses->count(),
                     'total_revenue' => (float) $licenses->sum('price'),
+                    'last_activity_at' => $licenses->sortByDesc('activated_at')->first()?->activated_at?->toIso8601String(),
+                    'programs_sold' => $licenses
+                        ->map(fn (License $license): ?string => $license->program?->name)
+                        ->filter()
+                        ->unique()
+                        ->values()
+                        ->all(),
                 ];
             })
             ->values()
@@ -159,10 +294,11 @@ class BiosDetailsService
     public function getBiosActivity(string $biosId, ?int $tenantId = null): array
     {
         $activityQuery = ActivityLog::query()
+            ->with('user:id,name')
             ->where(function ($query) use ($biosId): void {
                 $query
-                    ->where('description', 'like', '%'.$biosId.'%')
-                    ->orWhere('metadata->bios_id', $biosId);
+                    ->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.bios_id'))) = ?", [strtolower($biosId)])
+                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.old_bios_id'))) = ?", [strtolower($biosId)]);
             })
             ->latest()
             ->limit(200);
@@ -176,9 +312,11 @@ class BiosDetailsService
             'action' => $log->action,
             'description' => $log->description,
             'created_at' => $log->created_at?->toIso8601String(),
+            'reseller_name' => $log->user?->name,
         ]);
 
         $accessLogs = $this->biosAccessLogsQuery($biosId, $tenantId)
+            ->with('user:id,name')
             ->latest()
             ->limit(100)
             ->get()
@@ -187,6 +325,7 @@ class BiosDetailsService
                 'action' => 'bios.'.$log->action,
                 'description' => (string) ($log->metadata['description'] ?? sprintf('BIOS %s action %s.', $log->bios_id, $log->action)),
                 'created_at' => $log->created_at?->toIso8601String(),
+                'reseller_name' => $log->user?->name,
             ]);
 
         $conflicts = $this->biosConflictsQuery($biosId, $tenantId)
@@ -198,6 +337,7 @@ class BiosDetailsService
             'action' => 'bios.conflict',
             'description' => sprintf('Conflict type: %s', $conflict->conflict_type),
             'created_at' => $conflict->created_at?->toIso8601String(),
+            'reseller_name' => null,
         ]);
 
         $blacklistEvents = $this->biosBlacklistQuery($biosId, $tenantId)
@@ -209,6 +349,7 @@ class BiosDetailsService
                 'action' => 'bios.blacklist',
                 'description' => $entry->reason !== '' ? $entry->reason : 'BIOS added to blacklist.',
                 'created_at' => $entry->created_at?->toIso8601String(),
+                'reseller_name' => null,
             ]);
 
         return $activities
@@ -222,11 +363,17 @@ class BiosDetailsService
 
     public function searchBiosIds(string $query, ?int $tenantId = null): array
     {
+        $normalizedQuery = trim($query);
+
+        if (mb_strlen($normalizedQuery) < 3) {
+            return [];
+        }
+
         $licenseIds = License::query()
-            ->select('bios_id')
-            ->distinct()
-            ->where('bios_id', 'like', '%'.$query.'%')
-            ->orderByDesc('id')
+            ->selectRaw('bios_id, MAX(id) as latest_id')
+            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
+            ->groupBy('bios_id')
+            ->orderByDesc('latest_id')
             ->limit(20);
 
         if ($tenantId !== null) {
@@ -234,26 +381,26 @@ class BiosDetailsService
         }
 
         $blacklistIds = $this->biosBlacklistQuery(null, $tenantId)
-            ->select('bios_id')
-            ->distinct()
-            ->where('bios_id', 'like', '%'.$query.'%')
-            ->orderByDesc('id')
+            ->selectRaw('bios_id, MAX(id) as latest_id')
+            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
+            ->groupBy('bios_id')
+            ->orderByDesc('latest_id')
             ->limit(20)
             ->pluck('bios_id');
 
         $accessLogIds = $this->biosAccessLogsQuery(null, $tenantId)
-            ->select('bios_id')
-            ->distinct()
-            ->where('bios_id', 'like', '%'.$query.'%')
-            ->orderByDesc('id')
+            ->selectRaw('bios_id, MAX(id) as latest_id')
+            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
+            ->groupBy('bios_id')
+            ->orderByDesc('latest_id')
             ->limit(20)
             ->pluck('bios_id');
 
         $conflictIds = $this->biosConflictsQuery(null, $tenantId)
-            ->select('bios_id')
-            ->distinct()
-            ->where('bios_id', 'like', '%'.$query.'%')
-            ->orderByDesc('id')
+            ->selectRaw('bios_id, MAX(id) as latest_id')
+            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
+            ->groupBy('bios_id')
+            ->orderByDesc('latest_id')
             ->limit(20)
             ->pluck('bios_id');
 
@@ -265,6 +412,58 @@ class BiosDetailsService
             ->unique()
             ->values()
             ->take(20)
+            ->all();
+    }
+
+    public function getRecentBiosIds(?int $tenantId = null, int $limit = 20): array
+    {
+        $licenseIds = License::query()
+            ->whereNotNull('bios_id')
+            ->where('bios_id', '!=', '')
+            ->orderByDesc('id')
+            ->limit($limit * 5);
+
+        if ($tenantId !== null) {
+            $licenseIds->where('tenant_id', $tenantId);
+        }
+
+        $blacklistQuery = $this->biosBlacklistQuery(null, $tenantId)
+            ->whereNotNull('bios_id')
+            ->where('bios_id', '!=', '')
+            ->where('status', 'active')
+            ->orderByDesc('id')
+            ->limit($limit * 5);
+
+        // For tenant-scoped views, only include blacklist entries that belong to that tenant
+        // (exclude global entries that have no relation to this tenant's data)
+        if ($tenantId !== null) {
+            $blacklistQuery->where('tenant_id', $tenantId);
+        }
+
+        $blacklistIds = $blacklistQuery->pluck('bios_id');
+
+        $accessLogIds = $this->biosAccessLogsQuery(null, $tenantId)
+            ->whereNotNull('bios_id')
+            ->where('bios_id', '!=', '')
+            ->orderByDesc('id')
+            ->limit($limit * 5)
+            ->pluck('bios_id');
+
+        $conflictIds = $this->biosConflictsQuery(null, $tenantId)
+            ->whereNotNull('bios_id')
+            ->where('bios_id', '!=', '')
+            ->orderByDesc('id')
+            ->limit($limit * 5)
+            ->pluck('bios_id');
+
+        return $licenseIds->pluck('bios_id')
+            ->concat($blacklistIds)
+            ->concat($accessLogIds)
+            ->concat($conflictIds)
+            ->filter()
+            ->unique()
+            ->values()
+            ->take($limit)
             ->all();
     }
 
@@ -342,6 +541,22 @@ class BiosDetailsService
         if ($tenantId !== null) {
             $query->where('tenant_id', $tenantId);
         }
+    }
+
+    private function overviewLicenseSortKey(License $license): int
+    {
+        $priority = match ($license->effectiveStatus()) {
+            'active' => 5,
+            'scheduled' => 4,
+            'pending' => 3,
+            'suspended' => 2,
+            'expired', 'cancelled' => 1,
+            default => 0,
+        };
+
+        $timestamp = ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0;
+
+        return ($priority * 1000000000000) + $timestamp;
     }
 
     /**

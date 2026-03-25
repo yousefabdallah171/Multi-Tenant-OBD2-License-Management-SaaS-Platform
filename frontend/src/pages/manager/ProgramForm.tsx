@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { ProgramPresetEditor, createDefaultEditablePresets, mapProgramPresetsToEditable, type EditableProgramPreset } from '@/components/software/ProgramPresetEditor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -25,7 +26,6 @@ interface FormState {
   file_size: string
   system_requirements: string
   installation_guide_url: string
-  trial_days: string
   base_price: string
   status: 'active' | 'inactive'
   icon: string
@@ -43,7 +43,6 @@ const EMPTY_FORM: FormState = {
   file_size: '',
   system_requirements: '',
   installation_guide_url: '',
-  trial_days: '0',
   base_price: '0',
   status: 'active',
   icon: '',
@@ -60,8 +59,8 @@ export function ProgramFormPage() {
   const { id } = useParams<{ id: string }>()
   const editingId = id ? Number(id) : null
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  const [presets, setPresets] = useState<EditableProgramPreset[]>(createDefaultEditablePresets())
   const [showApiKey, setShowApiKey] = useState(false)
-  const [showApiBaseUrl, setShowApiBaseUrl] = useState(false)
   const [hasConfiguredApi, setHasConfiguredApi] = useState(false)
 
   const programQuery = useQuery({
@@ -85,7 +84,6 @@ export function ProgramFormPage() {
       file_size: program.file_size ?? '',
       system_requirements: program.system_requirements ?? '',
       installation_guide_url: program.installation_guide_url ?? '',
-      trial_days: String(program.trial_days ?? 0),
       base_price: String(program.base_price ?? 0),
       status: program.status,
       icon: program.icon ?? '',
@@ -94,6 +92,7 @@ export function ProgramFormPage() {
       external_api_base_url: '',
       external_logs_endpoint: program.external_logs_endpoint || 'apilogs',
     })
+    setPresets(mapProgramPresetsToEditable(program.duration_presets))
   }, [programQuery.data])
 
   const mutation = useMutation({
@@ -102,7 +101,6 @@ export function ProgramFormPage() {
         throw new Error(t('software.externalApiBaseUrlRequired'))
       }
 
-      const trialDays = Number(form.trial_days)
       const basePrice = Number(form.base_price)
       const parsedExternalSoftwareId = form.external_software_id.trim() ? Number(form.external_software_id) : NaN
 
@@ -114,12 +112,21 @@ export function ProgramFormPage() {
         file_size: form.file_size.trim() || null,
         system_requirements: form.system_requirements.trim() || null,
         installation_guide_url: form.installation_guide_url.trim() || null,
-        trial_days: Number.isFinite(trialDays) ? trialDays : 0,
         base_price: Number.isFinite(basePrice) ? basePrice : 0,
         icon: form.icon.trim() || null,
         active: form.status === 'active',
         external_software_id: Number.isFinite(parsedExternalSoftwareId) && parsedExternalSoftwareId > 0 ? parsedExternalSoftwareId : null,
         external_logs_endpoint: form.external_logs_endpoint.trim() || 'apilogs',
+        presets: presets
+          .filter((preset) => preset.label.trim() !== '')
+          .map((preset, index) => ({
+            id: preset.id,
+            label: preset.label.trim(),
+            duration_days: Number(preset.duration_days),
+            price: Number(preset.price),
+            sort_order: index + 1,
+            is_active: preset.is_active,
+          })),
       }
 
       if (form.external_api_key.trim()) {
@@ -148,6 +155,7 @@ export function ProgramFormPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow={t('manager.layout.eyebrow')}
         title={editingId ? t('manager.pages.softwareManagement.editProgram') : t('manager.pages.softwareManagement.addProgram')}
         description={editingId ? t('manager.pages.softwareManagement.editDescription') : t('manager.pages.softwareManagement.formDescription')}
         actions={(
@@ -158,45 +166,35 @@ export function ProgramFormPage() {
       />
 
       <Card>
-        <CardContent className="grid gap-6 p-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <Field label={t('manager.pages.softwareManagement.programName')}><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.version')}><Input value={form.version} onChange={(event) => setForm((current) => ({ ...current, version: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.programDescription')}><Textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.downloadLink')}><Input value={form.download_link} onChange={(event) => setForm((current) => ({ ...current, download_link: event.target.value }))} /></Field>
+        <CardContent className="space-y-6 p-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-4">
+            <Field label={t('manager.pages.softwareManagement.programName')} hint={t('software.fieldHints.programName', { defaultValue: 'Public program name shown in your tenant catalog and activation screens.' })}><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.version')} hint={t('software.fieldHints.version', { defaultValue: 'Use the release version your team will recognize, such as 1.0 or 2026.03.' })}><Input value={form.version} onChange={(event) => setForm((current) => ({ ...current, version: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.programDescription')} hint={t('software.fieldHints.description', { defaultValue: 'Short summary for managers and resellers so they know what this software is for.' })}><Textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.downloadLink')} hint={t('software.fieldHints.downloadLink', { defaultValue: 'Direct installer or download page URL used when the software is opened from the dashboard.' })}><Input value={form.download_link} onChange={(event) => setForm((current) => ({ ...current, download_link: event.target.value }))} /></Field>
             <Field label={t('manager.pages.softwareManagement.iconUrl')}><Input value={form.icon} onChange={(event) => setForm((current) => ({ ...current, icon: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.fileSize')}><Input value={form.file_size} onChange={(event) => setForm((current) => ({ ...current, file_size: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.systemRequirements')}><Textarea value={form.system_requirements} onChange={(event) => setForm((current) => ({ ...current, system_requirements: event.target.value }))} /></Field>
-          </div>
+            <Field label={t('manager.pages.softwareManagement.fileSize', { defaultValue: 'File Size' })} hint={t('software.fieldHints.fileSize', { defaultValue: 'Optional display value such as 245 MB so the team knows how large the download is.' })}><Input value={form.file_size} onChange={(event) => setForm((current) => ({ ...current, file_size: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.systemRequirements', { defaultValue: 'System Requirements' })} hint={t('software.fieldHints.systemRequirements', { defaultValue: 'Optional OS, hardware, or dependency requirements shown before installation.' })}><Textarea value={form.system_requirements} onChange={(event) => setForm((current) => ({ ...current, system_requirements: event.target.value }))} /></Field>
+            <Field label={t('manager.pages.softwareManagement.installationGuideUrl', { defaultValue: 'Installation Guide URL' })} hint={t('software.fieldHints.installationGuideUrl', { defaultValue: 'Optional documentation page that explains setup, drivers, or activation steps.' })}><Input value={form.installation_guide_url} onChange={(event) => setForm((current) => ({ ...current, installation_guide_url: event.target.value }))} /></Field>
+            </div>
 
-          <div className="space-y-4">
-            <Field label={t('manager.pages.softwareManagement.trialDays')}><Input type="number" min={0} value={form.trial_days} onChange={(event) => setForm((current) => ({ ...current, trial_days: event.target.value }))} /></Field>
-            <Field label={t('manager.pages.softwareManagement.price')}><Input type="number" min={0} step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} /></Field>
-            <Field label={t('common.status')}>
-              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as 'active' | 'inactive' }))} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                <option value="active">{t('common.active')}</option>
-                <option value="inactive">{t('common.inactive')}</option>
-              </select>
-            </Field>
-            <Field label={t('software.externalSoftwareId')}>
+            <div className="space-y-4">
+            <Field label={t('manager.pages.softwareManagement.basePrice', { defaultValue: t('manager.pages.softwareManagement.price') })} hint={t('software.fieldHints.basePrice', { defaultValue: 'Default sale price used when a reseller does not override it manually.' })}><Input type="number" min={0} step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} /></Field>
+            <Field label={t('software.externalSoftwareId')} hint={t('software.fieldHints.externalSoftwareId', { defaultValue: 'Numeric software ID used by the external API for user add/remove and logs.' })}>
               <Input type="number" min={1} placeholder={t('software.externalSoftwareIdPlaceholder')} value={form.external_software_id} onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))} />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
             </Field>
-            <Field label={t('software.externalApiBaseUrl')}>
-              <div className="flex gap-2">
-                <Input
-                  type={showApiBaseUrl ? 'url' : 'password'}
-                  placeholder={editingId ? t('software.externalApiBaseUrlReplacePlaceholder') : t('software.externalApiBaseUrlPlaceholder')}
-                  value={form.external_api_base_url}
-                  onChange={(event) => setForm((current) => ({ ...current, external_api_base_url: event.target.value }))}
-                />
-                <Button type="button" variant="outline" size="icon" onClick={() => setShowApiBaseUrl((value) => !value)}>
-                  {showApiBaseUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
+            <Field label={t('software.externalApiBaseUrl')} hint={t('software.fieldHints.externalApiBaseUrl', { defaultValue: 'Base host for the software API. Enter only the main host, without endpoint paths.' })}>
+              <Input
+                type="url"
+                placeholder={editingId ? t('software.externalApiBaseUrlReplacePlaceholder') : t('software.externalApiBaseUrlPlaceholder')}
+                value={form.external_api_base_url}
+                onChange={(event) => setForm((current) => ({ ...current, external_api_base_url: event.target.value }))}
+              />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiBaseUrlHint')}</p>
             </Field>
-            <Field label={t('software.externalLogsEndpoint')}>
+            <Field label={t('software.externalLogsEndpoint')} hint={t('software.fieldHints.externalLogsEndpoint', { defaultValue: 'Path used to read external activity logs for this software, for example apilogs.' })}>
               <Input
                 placeholder={t('software.externalLogsEndpointPlaceholder')}
                 value={form.external_logs_endpoint}
@@ -204,7 +202,7 @@ export function ProgramFormPage() {
               />
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.logsEndpointHint')}</p>
             </Field>
-            <Field label={t('software.externalApiKey')}>
+            <Field label={t('software.externalApiKey')} hint={t('software.fieldHints.externalApiKey', { defaultValue: 'Secret API key used for external add-user and delete-user requests.' })}>
               <div className="flex gap-2">
                 <Input type={showApiKey ? 'text' : 'password'} maxLength={50} placeholder={editingId ? t('software.apiKeyReplacePlaceholder') : t('software.externalApiKeyPlaceholder')} value={form.external_api_key} onChange={(event) => setForm((current) => ({ ...current, external_api_key: event.target.value }))} />
                 <Button type="button" variant="outline" size="icon" onClick={() => setShowApiKey((value) => !value)}>
@@ -216,7 +214,10 @@ export function ProgramFormPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.addUserUrlExample')}</p>
               {editingId && hasConfiguredApi ? <p className="text-xs text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p> : null}
             </Field>
+            </div>
           </div>
+
+          <ProgramPresetEditor presets={presets} onChange={setPresets} />
         </CardContent>
       </Card>
 
@@ -244,11 +245,12 @@ function getApiErrorMessage(error: unknown, fallback: string) {
     ?? fallback
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
+      {hint ? <p className="text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
     </div>
   )
 }

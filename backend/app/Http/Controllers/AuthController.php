@@ -8,10 +8,13 @@ use App\Mail\SuspiciousLoginMail;
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\LoginSecurityService;
+use App\Enums\UserRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -81,7 +84,21 @@ class AuthController extends Controller
         }
 
         if ($user->status !== 'active') {
-            return response()->json(['message' => 'User account is not active.'], Response::HTTP_FORBIDDEN);
+            return $this->inactiveAccountResponse(
+                $user->status === 'suspended' ? 'account_suspended' : 'account_inactive',
+                $user->status === 'suspended'
+                    ? 'This account is currently suspended.'
+                    : 'This account is currently inactive.',
+            );
+        }
+
+        if ($userRole !== UserRole::SUPER_ADMIN->value && $user->tenant && $user->tenant->status !== 'active') {
+            return $this->inactiveAccountResponse(
+                $user->tenant->status === 'suspended' ? 'tenant_suspended' : 'tenant_inactive',
+                $user->tenant->status === 'suspended'
+                    ? 'This workspace is currently suspended.'
+                    : 'This workspace is currently inactive.',
+            );
         }
 
         $knownIp = $user->ipLogs()
@@ -118,19 +135,40 @@ class AuthController extends Controller
         $token = $user->createToken('auth-token')->plainTextToken;
         $this->loginSecurity->clearAttempts($email, $ip);
 
+        $cookieName = config('sanctum.cookie_name', 'auth_token');
+        $expirationMinutes = config('sanctum.expiration') ?? 60 * 24 * 14;
+        $isSecure = request()->isSecure() || app()->environment('production');
+
+        $cookie = cookie(
+            name: $cookieName,
+            value: $token,
+            minutes: $expirationMinutes,
+            path: '/',
+            domain: null,
+            secure: $isSecure,
+            httpOnly: true,
+            raw: false,
+            sameSite: 'Strict',
+        );
+
         return response()
             ->json([
-                'token' => $token,
+                'token' => $token, // kept for backward compat / mobile clients
                 'user' => $user,
             ])
-            ->withHeaders($this->rateHeaders($email, $this->loginSecurity));
+            ->withHeaders($this->rateHeaders($email, $this->loginSecurity))
+            ->withCookie($cookie);
     }
 
     public function logout(Request $request): JsonResponse
     {
         $request->user()?->currentAccessToken()?->delete();
 
-        return response()->json(['message' => 'Logged out successfully.']);
+        $cookieName = config('sanctum.cookie_name', 'auth_token');
+
+        return response()
+            ->json(['message' => 'Logged out successfully.'])
+            ->withCookie(cookie()->forget($cookieName));
     }
 
     public function me(Request $request): JsonResponse
@@ -145,19 +183,40 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
-        ]);
+        try {
+            $validated = $request->validate([
+                'name' => ['required', 'string', 'max:255'],
+                'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id],
+                'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+?\d{6,20}$/'],
+                'timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
+                'branding.primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            ]);
 
-        $user->update($validated);
+            $supportsBranding = Schema::hasColumn('users', 'branding');
 
-        return response()->json([
-            'message' => 'Profile updated successfully.',
-            'user' => $user->fresh('tenant'),
-        ]);
+            if ($supportsBranding && isset($validated['branding'])) {
+                $user->branding = $validated['branding'];
+            }
+
+            unset($validated['branding']);
+
+            $user->update($validated);
+
+            return response()->json([
+                'message' => 'Profile updated successfully.',
+                'user' => $user->fresh('tenant'),
+            ]);
+        } catch (\Throwable $exception) {
+            Log::error('profile.update.failed', [
+                'user_id' => $user?->id,
+                'payload_keys' => array_keys($request->all()),
+                'timezone' => $request->input('timezone'),
+                'has_branding' => $request->has('branding'),
+                'message' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
+        }
     }
 
     public function updatePassword(Request $request): JsonResponse
@@ -237,5 +296,13 @@ class AuthController extends Controller
             ],
             'ip_address' => $ip,
         ]);
+    }
+
+    private function inactiveAccountResponse(string $reason, string $message): JsonResponse
+    {
+        return response()->json([
+            'message' => $message,
+            'reason' => $reason,
+        ], Response::HTTP_FORBIDDEN);
     }
 }

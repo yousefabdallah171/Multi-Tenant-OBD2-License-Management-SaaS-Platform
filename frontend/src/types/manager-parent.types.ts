@@ -1,4 +1,5 @@
 import type { LogEntry, PaginationMeta } from '@/types/super-admin.types'
+import type { ProgramDurationPreset } from '@/types/manager-reseller.types'
 
 export interface ManagerParentDashboardStats {
   users: number
@@ -40,13 +41,16 @@ export interface ChartPoint {
 export interface TeamMemberSummary {
   id: number
   name: string
+  username: string | null
   email: string
   phone: string | null
   role: 'manager' | 'reseller'
   status: 'active' | 'suspended' | 'inactive'
+  username_locked: boolean
   customers_count: number
   active_licenses_count: number
   revenue: number
+  can_delete: boolean
   created_at: string | null
 }
 
@@ -77,6 +81,22 @@ export interface TeamMemberDetail extends TeamMemberSummary {
     metadata: Record<string, unknown>
     created_at: string | null
   }>
+  seller_log_history: Array<{
+    id: number
+    action: string
+    description: string | null
+    customer_id: number | null
+    customer_name: string | null
+    customer_email: string | null
+    program_id: number | null
+    program_name: string | null
+    bios_id: string | null
+    license_id: number | null
+    license_status: string | null
+    price: number | null
+    ip_address: string | null
+    created_at: string | null
+  }>
 }
 
 export interface ProgramSummary {
@@ -100,6 +120,7 @@ export interface ProgramSummary {
   active_licenses_count: number
   revenue: number
   created_at: string | null
+  duration_presets?: ProgramDurationPreset[]
 }
 
 export interface ProgramLog {
@@ -222,10 +243,13 @@ export interface SellerLogSummary {
 export interface CustomerSummary {
   id: number
   name: string
+  client_name?: string | null
+  username?: string | null
   email: string | null
   phone?: string | null
   license_id?: number | null
   bios_id: string | null
+  external_username?: string | null
   reseller: string | null
   program: string | null
   status: string | null
@@ -240,12 +264,17 @@ export interface CustomerSummary {
   is_scheduled?: boolean
   paused_at?: string | null
   pause_remaining_minutes?: number | null
+  pause_reason?: string | null
+  is_blacklisted?: boolean
+  bios_active_elsewhere?: boolean
+  username_locked?: boolean
   license_count: number
   has_active_license?: boolean
 }
 
 export interface CustomerDetails extends CustomerSummary {
   username?: string | null
+  external_username?: string | null
   phone?: string | null
   created_by?: { id: number; name: string; email: string } | null
   created_at?: string | null
@@ -271,6 +300,8 @@ export interface CustomerDetails extends CustomerSummary {
     is_scheduled?: boolean
     paused_at?: string | null
     pause_remaining_minutes?: number | null
+    pause_reason?: string | null
+    is_blacklisted?: boolean
   }>
   resellers_summary?: Array<{
     reseller_id: number | null
@@ -300,6 +331,45 @@ export interface CustomerDetails extends CustomerSummary {
   }>
 }
 
+export interface CustomerLicenseHistoryEntry {
+  id: number
+  program_name: string | null
+  reseller_id: number | null
+  reseller_name: string | null
+  reseller_email?: string | null
+  bios_id: string
+  external_username?: string | null
+  activated_at: string | null
+  start_at?: string | null
+  expires_at: string | null
+  duration_days: number
+  price: number
+  status: string
+  is_blacklisted?: boolean
+  paused_at?: string | null
+  pause_reason?: string | null
+}
+
+export interface ManagerParentBiosChangeRequest {
+  id: number
+  license_id: number
+  customer_id: number | null
+  customer_name: string | null
+  program_name: string | null
+  old_bios_id: string
+  new_bios_id: string
+  reason: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  reseller_id: number | null
+  reseller_name: string | null
+  reseller_email: string | null
+  reviewer_id?: number | null
+  reviewer_name?: string | null
+  reviewer_notes?: string | null
+  reviewed_at?: string | null
+  created_at: string | null
+}
+
 export interface TenantSettings {
   business: {
     company_name: string
@@ -317,6 +387,7 @@ export interface TenantSettings {
   }
   branding: {
     logo: string | null
+    primary_color: string | null
   }
 }
 
@@ -342,6 +413,8 @@ export interface IpAnalyticsEntry {
   customer_id: number | null
   customer_name?: string | null
   customer_username?: string | null
+  reseller_id?: number | null
+  reseller_name?: string | null
   license_id?: number | null
   program_id?: number | null
   program_name?: string | null
@@ -383,6 +456,8 @@ export interface FinancialReportData {
   summary: {
     total_revenue: number
     total_activations: number
+    total_customers: number
+    active_customers: number
     active_licenses: number
   }
   revenue_by_reseller: Array<{ reseller: string; revenue: number; activations: number }>
@@ -440,6 +515,7 @@ export interface BiosConflictItem {
   bios_id: string
   conflict_type: string
   attempted_by_name: string | null
+  reseller_name?: string | null
   program_name: string | null
   affected_customers: Array<{ id: number | null; name: string; username?: string | null }>
   status: 'open' | 'resolved'

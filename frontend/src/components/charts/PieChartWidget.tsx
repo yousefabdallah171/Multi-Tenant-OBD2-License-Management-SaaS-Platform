@@ -108,7 +108,7 @@ export function PieChartWidget<TData extends ChartRow>({
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: activeColors[index % activeColors.length] }} />
                     <span className="truncate text-slate-700 dark:text-slate-200">{label}</span>
                   </div>
-                  <div className="text-right text-slate-500 dark:text-slate-400">
+                  <div className="text-end text-slate-500 dark:text-slate-400">
                     <div>{formatChartNumber(percentage, locale, { maximumFractionDigits: 1 })}%</div>
                     <div className="text-xs">{valueFormatter ? valueFormatter(value, item) : formatChartNumber(value, locale)}</div>
                   </div>

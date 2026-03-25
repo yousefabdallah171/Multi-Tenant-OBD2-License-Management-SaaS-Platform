@@ -1,16 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound } from 'lucide-react'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
-import { StatusBadge } from '@/components/shared/StatusBadge'
+import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -22,12 +23,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { useLanguage } from '@/hooks/useLanguage'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone } from '@/lib/timezones'
-import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, isLikelyBios, shouldRenewLicense } from '@/lib/utils'
+import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
+import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
+import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -35,8 +37,7 @@ import { resellerService } from '@/services/reseller.service'
 import { formatUsername, rawBiosId } from '@/utils/biosId'
 import type { RenewLicenseData, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
-const STATUS_OPTIONS = ['all', 'active', 'scheduled', 'expired', 'cancelled', 'pending'] as const
-const DEFAULT_TIMEZONE = resolveDisplayTimezone()
+const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
 interface ActivationFormState {
   customer_name: string
@@ -57,23 +58,25 @@ interface ActivationFormState {
   scheduled_timezone: string
 }
 
-const EMPTY_ACTIVATION_FORM: ActivationFormState = {
-  customer_name: '',
-  client_name: '',
-  customer_email: '',
-  customer_phone: '',
-  bios_id: '',
-  program_id: '',
-  duration_value: '30',
-  duration_unit: 'days',
-  mode: 'end_date',
-  end_date: formatDateTimeLocalInTimezone(new Date(Date.now() + 30 * 86400000), DEFAULT_TIMEZONE),
-  is_scheduled: false,
-  schedule_mode: 'relative',
-  schedule_offset_value: '1',
-  schedule_offset_unit: 'hours',
-  scheduled_date_time: '',
-  scheduled_timezone: DEFAULT_TIMEZONE,
+function createEmptyActivationForm(defaultTimezone: string): ActivationFormState {
+  return {
+    customer_name: '',
+    client_name: '',
+    customer_email: '',
+    customer_phone: '',
+    bios_id: '',
+    program_id: '',
+    duration_value: '30',
+    duration_unit: 'days',
+    mode: 'end_date',
+    end_date: formatDateTimeLocalInTimezone(new Date(Date.now() + 30 * 86400000), defaultTimezone),
+    is_scheduled: false,
+    schedule_mode: 'relative',
+    schedule_offset_value: '1',
+    schedule_offset_unit: 'hours',
+    scheduled_date_time: '',
+    scheduled_timezone: defaultTimezone,
+  }
 }
 
 export function CustomersPage() {
@@ -81,7 +84,10 @@ export function CustomersPage() {
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const { timezone: displayTimezone } = useResolvedTimezone()
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const text = useMemo(() => (lang === 'ar'
     ? {
@@ -89,7 +95,7 @@ export function CustomersPage() {
         title: 'العملاء',
         description: 'أنشئ العملاء وفعلهم ثم أدِر عمليات التجديد والإلغاء من مساحة عملك الشخصية كموزع.',
         addCustomer: 'إضافة عميل',
-        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي', pending: 'موقف' },
+        statusOptions: { all: 'الكل', active: 'نشط', expired: 'منتهي', cancelled: 'ملغي', pending: 'قيد الانتظار' },
         searchPlaceholder: 'ابحث بالاسم أو البريد الإلكتروني أو BIOS ID',
         table: {
           customer: 'العميل',
@@ -101,7 +107,7 @@ export function CustomersPage() {
           expiry: 'الانتهاء',
           actions: 'الإجراءات',
         },
-        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء', pause: 'إيقاف', resume: 'استئناف', reactivate: 'إعادة تفعيل' },
+        actions: { view: 'عرض', renew: 'تجديد', deactivate: 'إلغاء', pause: 'إيقاف', resume: 'استئناف', reactivate: 'إعادة تفعيل', continue: 'متابعة' },
         activationDialog: {
           title: 'إضافة عميل',
           description: 'انتقل بين الخطوات لإنشاء العميل وتفعيل الترخيص.',
@@ -216,6 +222,7 @@ export function CustomersPage() {
           pause: t('common.pause'),
           resume: t('common.resume'),
           reactivate: t('common.reactivate'),
+          continue: t('common.continue', { defaultValue: 'Continue' }),
         },
         activationDialog: {
           title: t('reseller.pages.customers.activationDialog.title'),
@@ -307,19 +314,22 @@ export function CustomersPage() {
           requestFailed: t('reseller.pages.customers.validation.requestFailed'),
         },
       }), [lang, t])
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>('all')
-  const [programFilter, setProgramFilter] = useState<number | ''>('')
+  const initialStatus = searchParams.get('status')
+  const [page, setPage] = useState(Number(searchParams.get('page') || 1))
+  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 25))
+  const [search, setSearch] = useState(searchParams.get('search') || '')
+  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
+    STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
+  )
+  const [programFilter, setProgramFilter] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [editTarget, setEditTarget] = useState<ResellerCustomerSummary | null>(null)
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
-  const [activationForm, setActivationForm] = useState<ActivationFormState>(EMPTY_ACTIVATION_FORM)
+  const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
   const [activationError, setActivationError] = useState('')
-  const [renewLicenseId, setRenewLicenseId] = useState<number | null>(null)
   const [deactivateTarget, setDeactivateTarget] = useState<ResellerCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ResellerCustomerSummary | null>(null)
+  const [pauseReason, setPauseReason] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<ResellerCustomerSummary | null>(null)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [priceInput, setPriceInput] = useState('0.00')
@@ -327,6 +337,13 @@ export function CustomersPage() {
   const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const customerFilterParams = useMemo(
+    () => ({
+      search: search || undefined,
+      program_id: programFilter || undefined,
+    }),
+    [programFilter, search],
+  )
 
   const customersQuery = useQuery({
     queryKey: ['reseller', 'customers', page, perPage, search, status, programFilter],
@@ -334,10 +351,10 @@ export function CustomersPage() {
       resellerService.getCustomers({
         page,
         per_page: perPage,
-        search,
+        ...customerFilterParams,
         status: status === 'all' ? '' : status,
-        program_id: programFilter || undefined,
       }),
+    ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
   })
 
   const programsQuery = useQuery({
@@ -345,13 +362,17 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
   })
 
-  const renewLicenseQuery = useQuery({
-    queryKey: ['reseller', 'customers', 'renew-license', renewLicenseId],
-    queryFn: () => licenseService.getById(renewLicenseId ?? 0),
-    enabled: renewLicenseId !== null,
+  const [allCountQuery, activeCountQuery, suspendedCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+    queries: [
+      { queryKey: ['reseller', 'customers', 'count', 'all', customerFilterParams], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'active', customerFilterParams], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'suspended', customerFilterParams], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'suspended' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'scheduled', customerFilterParams], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'scheduled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'expired', customerFilterParams], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'cancelled', customerFilterParams], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+      { queryKey: ['reseller', 'customers', 'count', 'pending', customerFilterParams], queryFn: () => resellerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'pending' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
+    ],
   })
-  const renewLicense = renewLicenseQuery.data?.data
-  const renewProgram = (programsQuery.data?.data ?? []).find((program) => program.id === renewLicense?.program_id || program.name === renewLicense?.program)
 
   const activationSteps = text.activationDialog.steps
 
@@ -388,7 +409,7 @@ export function CustomersPage() {
     mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
       resellerService.updateCustomer(editTarget?.id ?? 0, payload),
     onSuccess: () => {
-      toast.success(t('common.saved', { defaultValue: 'Saved' }))
+      toast.success(t('common.customerUpdatedSuccess', { defaultValue: 'Customer updated successfully.' }))
       setEditTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] })
     },
@@ -409,9 +430,13 @@ export function CustomersPage() {
         is_scheduled: activationForm.is_scheduled || undefined,
         scheduled_date_time: activationForm.is_scheduled ? buildScheduledDateTime(activationForm) : undefined,
         scheduled_timezone: activationForm.is_scheduled ? activationForm.scheduled_timezone : undefined,
-      }),
+    }),
     onSuccess: () => {
-      toast.success(text.toasts.activated)
+      toast.success(
+        activationForm.is_scheduled
+          ? t('common.activationScheduledSuccess', { defaultValue: 'Activation scheduled successfully.' })
+          : t('common.licenseActivatedSuccess', { defaultValue: 'License activated successfully.' }),
+      )
       resetActivationDialog()
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
@@ -422,22 +447,7 @@ export function CustomersPage() {
     onError: (error) => {
       const message = getApiErrorMessage(error, text.validation.requestFailed)
       setActivationError(message)
-      toast.error(message)
     },
-  })
-
-  const renewMutation = useMutation({
-    mutationFn: (payload: RenewLicenseData) => licenseService.renew(renewLicenseId ?? 0, payload),
-    onSuccess: () => {
-      toast.success(text.toasts.renewed)
-      setRenewLicenseId(null)
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'dashboard'] }),
-        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
-      ])
-    },
-    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
   const deactivateMutation = useMutation({
@@ -455,10 +465,11 @@ export function CustomersPage() {
   })
 
   const pauseMutation = useMutation({
-    mutationFn: (licenseId: number) => licenseService.pause(licenseId),
+    mutationFn: (licenseId: number) => licenseService.pause(licenseId, { pause_reason: pauseReason.trim() || undefined }),
     onSuccess: () => {
       toast.success(text.toasts.paused)
       setPauseTarget(null)
+      setPauseReason('')
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
         queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
@@ -471,6 +482,18 @@ export function CustomersPage() {
     mutationFn: (licenseId: number) => licenseService.resume(licenseId),
     onSuccess: () => {
       toast.success(text.toasts.resumed)
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
+  const cancelPendingMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.cancelPending(licenseId),
+    onSuccess: () => {
+      toast.success(lang === 'ar' ? 'تم إلغاء الترخيص المعلق بنجاح.' : 'Pending license cancelled successfully.')
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
         queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
@@ -551,7 +574,9 @@ export function CustomersPage() {
   })
 
   const customerRows = customersQuery.data?.data ?? []
-  const selectableIds = customerRows.map((row) => row.license_id).filter((id): id is number => typeof id === 'number')
+  const selectableIds = customerRows
+    .filter((row) => typeof row.license_id === 'number' && canDeleteLicense(row))
+    .map((row) => row.license_id as number)
   const allVisibleSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedLicenseIds.includes(id))
   const someVisibleSelected = selectableIds.some((id) => selectedLicenseIds.includes(id))
 
@@ -577,9 +602,9 @@ export function CustomersPage() {
             }}
           />
         ),
-        render: (row) => typeof row.license_id === 'number' ? (
-          <input
-            type="checkbox"
+      render: (row) => typeof row.license_id === 'number' && canDeleteLicense(row) ? (
+        <input
+          type="checkbox"
           checked={selectedLicenseIds.includes(row.license_id)}
           onChange={(event) => {
             if (event.target.checked) {
@@ -599,7 +624,7 @@ export function CustomersPage() {
         render: (row) => (
           <div>
             <p className="font-medium text-slate-950 dark:text-white">
-              <span className={`me-2 inline-block h-2.5 w-2.5 rounded-full ${row.status === 'active' ? 'bg-emerald-500' : row.status === 'pending' ? 'bg-amber-500' : row.status === 'cancelled' ? 'bg-rose-500' : 'bg-slate-400'}`} />
+              <span className={`me-2 inline-block h-2.5 w-2.5 rounded-full ${row.status === 'active' ? 'bg-emerald-500' : row.status === 'pending' ? 'bg-amber-500' : row.status === 'cancelled' ? 'bg-rose-500' : row.status === 'expired' ? 'bg-rose-400' : 'bg-slate-400'}`} />
               <Link
                 className="text-start text-sky-600 hover:underline dark:text-sky-300"
                 to={routePaths.reseller.customerDetail(lang, row.id)}
@@ -607,8 +632,18 @@ export function CustomersPage() {
                 {resolveResellerCustomerLabel(row)}
               </Link>
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{row.email ?? '-'}</p>
           </div>
+        ),
+      },
+      {
+        key: 'username',
+        label: t('common.username'),
+        sortable: true,
+        sortValue: (row) => resolveResellerCustomerUsername(row),
+        render: (row) => (
+          <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customerDetail(lang, row.id)}>
+            {resolveResellerCustomerUsername(row)}
+          </Link>
         ),
       },
       {
@@ -633,21 +668,52 @@ export function CustomersPage() {
         render: (row) => row.phone ?? '-',
       },
       { key: 'program', label: text.table.program, sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
-      { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale) : '-') },
-      { key: 'status', label: text.table.status, sortable: true, sortValue: (row) => getLicenseDisplayStatus(row), render: (row) => <StatusBadge status={getLicenseDisplayStatus(row)} /> },
+      { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale, displayTimezone) : '-') },
+      {
+        key: 'status',
+        label: text.table.status,
+        sortable: true,
+        sortValue: (row) => row.status ? getLicenseDisplayStatus(row) : '',
+        render: (row) => row.status ? (
+          <div className="flex flex-col items-start gap-1">
+            <div className="relative inline-flex">
+              <LicenseStatusBadges status={getLicenseDisplayStatus(row)} isBlocked={Boolean(row.is_blacklisted)} />
+              {isPlainPendingLicense(row) ? (
+                <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
+                  {t('common.new', { defaultValue: lang === 'ar' ? 'جديد' : 'New' })}
+                </span>
+              ) : null}
+            </div>
+            {row.bios_active_elsewhere ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-[10px] font-semibold leading-none text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300">
+                <ShieldOff className="h-2.5 w-2.5" />
+                {t('customers.activeElsewhere', { defaultValue: lang === 'ar' ? 'نشط مع موزع آخر' : 'Active w/ other reseller' })}
+              </span>
+            ) : null}
+          </div>
+        ) : '-',
+      },
+      { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
       { key: 'price', label: text.table.price, sortable: true, sortValue: (row) => row.price, render: (row) => formatCurrency(row.price, 'USD', locale) },
-      { key: 'expiry', label: text.table.expiry, sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
+      { key: 'expiry', label: text.table.expiry, sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale, displayTimezone) : '-') },
       {
         key: 'actions',
         label: text.table.actions,
-        render: (row) => {
-          const displayStatus = getLicenseDisplayStatus(row)
-          const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
-          const renewActionLabel = displayStatus === 'active'
-            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
-            : isScheduleEditable
+      render: (row) => {
+        const displayStatus = getLicenseDisplayStatus(row)
+        const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
+        const isPausedPending = isPausedPendingLicense(row)
+        const isPlainPending = isPlainPendingLicense(row)
+        const canDeleteRow = canDeleteCustomerRow(row)
+        const isBlacklisted = Boolean(row.is_blacklisted)
+        const isBiosActiveElsewhere = Boolean(row.bios_active_elsewhere)
+        const renewActionLabel = displayStatus === 'active'
+          ? text.actions.renew
+          : isScheduleEditable
               ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : text.actions.renew
+              : isPlainPending
+                ? t('common.activate', { defaultValue: 'Activate' })
+                : text.actions.renew
 
           return (
           <DropdownMenu>
@@ -663,7 +729,16 @@ export function CustomersPage() {
                   {text.actions.view}
                 </Link>
               </DropdownMenuItem>
+              {typeof row.license_id === 'number' && !isBlacklisted && !isBiosActiveElsewhere ? (
+                <DropdownMenuItem asChild>
+                  <Link to={routePaths.reseller.customerBiosChangeRequest(lang, row.id)}>
+                    <Cpu className="me-2 h-4 w-4" />
+                    {t('biosChangeRequests.requestAction', { defaultValue: 'Request BIOS ID Change' })}
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
+                disabled={isBlacklisted}
                 onClick={(event) => {
                   event.stopPropagation()
                   setEditTarget(row)
@@ -672,11 +747,13 @@ export function CustomersPage() {
                 <Pencil className="me-2 h-4 w-4" />
                 {t('common.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
-                {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) && (
+                {typeof row.license_id === 'number' && (displayStatus === 'active' || shouldRenewLicense(row)) && !isBlacklisted && !isBiosActiveElsewhere && (
                   <DropdownMenuItem
                     onClick={(event) => {
                       event.stopPropagation()
-                      setRenewLicenseId(row.license_id!)
+                      navigate(routePaths.reseller.licenseRenew(lang, row.license_id!), {
+                        state: { returnTo: `${location.pathname}${location.search}` },
+                      })
                     }}
                   >
                     <RotateCw className="me-2 h-4 w-4" />
@@ -695,7 +772,7 @@ export function CustomersPage() {
                     {t('common.retryNow', { defaultValue: 'Retry Now' })}
                   </DropdownMenuItem>
                 )}
-                {typeof row.license_id === 'number' && canReactivateLicense(row) && (
+                {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBlacklisted && !isBiosActiveElsewhere && (
                   <DropdownMenuItem
                     disabled={resumeMutation.isPending}
                     onClick={(event) => {
@@ -704,10 +781,22 @@ export function CustomersPage() {
                     }}
                   >
                     <Play className="me-2 h-4 w-4" />
-                    {text.actions.reactivate}
+                    {isPausedPending ? text.actions.continue : text.actions.reactivate}
                   </DropdownMenuItem>
                 )}
-                {typeof row.license_id === 'number' && displayStatus === 'active' && (
+                {typeof row.license_id === 'number' && isPlainPending && (
+                  <DropdownMenuItem
+                    disabled={cancelPendingMutation.isPending}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      cancelPendingMutation.mutate(row.license_id!)
+                    }}
+                  >
+                    <X className="me-2 h-4 w-4" />
+                    {lang === 'ar' ? 'إلغاء المعلق' : 'Cancel Pending'}
+                  </DropdownMenuItem>
+                )}
+                {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted && (
                   <>
                     <DropdownMenuItem
                       onClick={(event) => {
@@ -729,23 +818,46 @@ export function CustomersPage() {
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setDeleteTarget(row)
-                  }}
-                >
-                  <Trash2 className="me-2 h-4 w-4" />
-                  {t('common.delete')}
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {canDeleteRow ? (
+                  <DropdownMenuItem
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setDeleteTarget(row)
+                    }}
+                  >
+                    <Trash2 className="me-2 h-4 w-4" />
+                    {t('common.delete')}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )
         },
       },
     ],
-    [allVisibleSelected, lang, locale, selectedLicenseIds, selectableIds, someVisibleSelected, text, retryScheduledMutation.isPending, t],
+    [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectedLicenseIds, selectableIds, someVisibleSelected, text, retryScheduledMutation.isPending, cancelPendingMutation.isPending, t],
   )
+
+  // Reset all filters when navigating to clean URL (e.g. sidebar click)
+  useEffect(() => {
+    if (searchParams.toString() === '') {
+      setPage(1)
+      setPerPage(25)
+      setSearch('')
+      setStatus('all')
+      setProgramFilter('')
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (page > 1) next.set('page', String(page))
+    if (perPage !== 25) next.set('per_page', String(perPage))
+    if (search) next.set('search', search)
+    if (status !== 'all') next.set('status', status)
+    if (programFilter) next.set('program_id', String(programFilter))
+    setSearchParams(next, { replace: true })
+  }, [page, perPage, programFilter, search, setSearchParams, status])
   return (
     <div className="space-y-6">
       <PageHeader
@@ -760,21 +872,86 @@ export function CustomersPage() {
         }
       />
 
-      <Tabs
-        value={status}
-        onValueChange={(value) => {
-          setStatus(value as (typeof STATUS_OPTIONS)[number])
-          setPage(1)
-        }}
-      >
-        <TabsList>
-          {STATUS_OPTIONS.map((option) => (
-            <TabsTrigger key={option} value={option}>
-              {option === 'scheduled' ? t('common.scheduled', { defaultValue: 'Scheduled' }) : text.statusOptions[option]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <TabsContent value={status} className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-7">
+        <StatusFilterCard
+          label={text.statusOptions.all}
+          count={allCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'all'}
+          onClick={() => {
+            setStatus('all')
+            setPage(1)
+          }}
+          color="sky"
+        />
+        <StatusFilterCard
+          label={text.statusOptions.active}
+          description={getStatusMeaning('active', t)}
+          count={activeCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'active'}
+          onClick={() => {
+            setStatus('active')
+            setPage(1)
+          }}
+          color="emerald"
+        />
+        <StatusFilterCard
+          label={t('common.suspended')}
+          description={getStatusMeaning('suspended', t)}
+          count={suspendedCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'suspended'}
+          onClick={() => {
+            setStatus('suspended')
+            setPage(1)
+          }}
+          color="amber"
+        />
+        <StatusFilterCard
+          label={t('common.scheduled', { defaultValue: 'Scheduled' })}
+          description={getStatusMeaning('scheduled', t)}
+          count={scheduledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'scheduled'}
+          onClick={() => {
+            setStatus('scheduled')
+            setPage(1)
+          }}
+          color="amber"
+        />
+        <StatusFilterCard
+          label={text.statusOptions.expired}
+          description={getStatusMeaning('expired', t)}
+          count={expiredCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'expired'}
+          onClick={() => {
+            setStatus('expired')
+            setPage(1)
+          }}
+          color="rose"
+        />
+        <StatusFilterCard
+          label={text.statusOptions.cancelled}
+          description={getStatusMeaning('cancelled', t)}
+          count={cancelledCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'cancelled'}
+          onClick={() => {
+            setStatus('cancelled')
+            setPage(1)
+          }}
+          color="slate"
+        />
+        <StatusFilterCard
+          label={text.statusOptions.pending}
+          description={getStatusMeaning('pending', t)}
+          count={pendingCountQuery.data?.meta.total ?? 0}
+          isActive={status === 'pending'}
+          onClick={() => {
+            setStatus('pending')
+            setPage(1)
+          }}
+          color="amber"
+        />
+      </div>
+
+      <div className="space-y-4">
           <Card>
             <CardContent className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_200px]">
               <Input
@@ -831,8 +1008,7 @@ export function CustomersPage() {
               setPage(1)
             }}
           />
-        </TabsContent>
-      </Tabs>
+      </div>
 
       <Dialog
         open={activationOpen}
@@ -936,11 +1112,10 @@ export function CustomersPage() {
                 </FormField>
                 {selectedProgram ? (
                   <Card className="md:col-span-2">
-                    <CardContent className="grid gap-4 p-4 md:grid-cols-3">
+                    <CardContent className="grid gap-4 p-4 md:grid-cols-2">
                       <InfoPair label={text.activationDialog.program} value={selectedProgram.name} />
-                      <InfoPair label={text.activationDialog.basePrice} value={formatCurrency(selectedProgram.base_price, 'USD', locale)} />
                       <InfoPair label={text.activationDialog.trialDays} value={selectedProgram.trial_days} />
-                      <div className="md:col-span-3 text-sm text-slate-500 dark:text-slate-400">{selectedProgram.description || text.activationDialog.noDescription}</div>
+                      <div className="md:col-span-2 text-sm text-slate-500 dark:text-slate-400">{selectedProgram.description || text.activationDialog.noDescription}</div>
                     </CardContent>
                   </Card>
                 ) : null}
@@ -1184,7 +1359,7 @@ export function CustomersPage() {
                 <Card>
                   <CardContent className="grid gap-4 p-4 md:grid-cols-3">
                     <InfoPair label={text.activationDialog.durationDays} value={Math.round(durationDays) || 0} />
-                    <InfoPair label={text.activationDialog.expiryPreview} value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
+                    <InfoPair label={text.activationDialog.expiryPreview} value={expiryPreview ? formatDate(expiryPreview, locale, displayTimezone) : '-'} />
                     <InfoPair label={text.activationDialog.price} value={formatCurrency(totalPrice, 'USD', locale)} />
                   </CardContent>
                 </Card>
@@ -1213,7 +1388,7 @@ export function CustomersPage() {
                         <InfoPair label={text.activationDialog.program} value={selectedProgram?.name ?? '-'} />
                         <InfoPair label={text.activationDialog.duration} value={`${durationDays.toFixed(2)} ${text.units.days}`} />
                         <InfoPair label={text.activationDialog.price} value={formatCurrency(totalPrice, 'USD', locale)} />
-                        <InfoPair label={text.activationDialog.expiry} value={expiryPreview ? formatDate(expiryPreview, locale) : '-'} />
+                        <InfoPair label={text.activationDialog.expiry} value={expiryPreview ? formatDate(expiryPreview, locale, displayTimezone) : '-'} />
                       </div>
                     </div>
                   </CardContent>
@@ -1264,41 +1439,6 @@ export function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      <RenewLicenseDialog
-        open={renewLicenseId !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRenewLicenseId(null)
-          }
-        }}
-        title={renewLicense
-          ? getLicenseDisplayStatus(renewLicense) === 'active'
-            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
-            : getLicenseDisplayStatus(renewLicense) === 'scheduled' || getLicenseDisplayStatus(renewLicense) === 'scheduled_failed'
-              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : text.renewDialog.title
-          : text.renewDialog.title}
-        description={renewLicense ? text.renewDialog.descriptionWithProgram(renewLicense.program ?? text.detail.program, renewLicense.bios_id) : text.renewDialog.descriptionFallback}
-        confirmLabel={renewLicense
-          ? getLicenseDisplayStatus(renewLicense) === 'active'
-            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
-            : getLicenseDisplayStatus(renewLicense) === 'scheduled' || getLicenseDisplayStatus(renewLicense) === 'scheduled_failed'
-              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : text.renewDialog.renew
-          : text.renewDialog.renew}
-        confirmLoadingLabel={text.renewDialog.renewing}
-        cancelLabel={text.renewDialog.cancel}
-        anchorDate={renewLicense?.expires_at}
-        initialScheduledAt={renewLicense?.scheduled_at}
-        initialScheduledTimezone={renewLicense?.scheduled_timezone}
-        initialExpiresAt={renewLicense?.expires_at}
-        initialPrice={renewLicense?.price ?? 0}
-        autoPricePerDay={renewProgram?.base_price ?? (renewLicense && renewLicense.duration_days > 0 ? renewLicense.price / renewLicense.duration_days : 0)}
-        resetKey={renewLicenseId}
-        isPending={renewMutation.isPending}
-        onSubmit={(payload) => renewMutation.mutate(payload)}
-      />
-
       <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
@@ -1336,7 +1476,10 @@ export function CustomersPage() {
       <ConfirmDialog
         open={pauseTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setPauseTarget(null)
+          if (!open) {
+            setPauseTarget(null)
+            setPauseReason('')
+          }
         }}
         title={text.pauseDialog.title}
         description={pauseTarget ? text.pauseDialog.description(pauseTarget.bios_id ?? '-') : undefined}
@@ -1346,7 +1489,18 @@ export function CustomersPage() {
             pauseMutation.mutate(pauseTarget.license_id)
           }
         }}
-      />
+      >
+        <div className="space-y-2">
+          <Label>{t('common.reason')}</Label>
+          <textarea
+            className="min-h-24 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            value={pauseReason}
+            onChange={(event) => setPauseReason(event.target.value)}
+            placeholder={t('common.reason')}
+            maxLength={500}
+          />
+        </div>
+      </ConfirmDialog>
 
       <RenewLicenseDialog
         open={bulkRenewOpen}
@@ -1402,7 +1556,7 @@ export function CustomersPage() {
   function resetActivationDialog() {
     setActivationOpen(false)
     setActivationStep(0)
-    setActivationForm(EMPTY_ACTIVATION_FORM)
+    setActivationForm(createEmptyActivationForm(displayTimezone))
     setActivationError('')
   }
 }
@@ -1522,7 +1676,7 @@ function buildScheduledDateTime(form: ActivationFormState) {
   if (form.schedule_offset_unit === 'minutes') date.setMinutes(date.getMinutes() + amount)
   if (form.schedule_offset_unit === 'hours') date.setHours(date.getHours() + amount)
   if (form.schedule_offset_unit === 'days') date.setDate(date.getDate() + amount)
-  return date.toISOString()
+  return formatDateTimeLocalInTimezone(date, form.scheduled_timezone)
 }
 
 function normalizePhoneInput(value: string) {
@@ -1558,3 +1712,6 @@ function resolveResellerCustomerLabel(row: ResellerCustomerSummary) {
   return row.name || '-'
 }
 
+function resolveResellerCustomerUsername(row: ResellerCustomerSummary) {
+  return row.external_username || row.username || '-'
+}

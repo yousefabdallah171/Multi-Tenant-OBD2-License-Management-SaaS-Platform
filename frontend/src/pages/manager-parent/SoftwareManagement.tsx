@@ -28,7 +28,6 @@ interface ProgramFormState {
   file_size: string
   system_requirements: string
   installation_guide_url: string
-  trial_days: string
   base_price: string
   external_api_key: string
   external_software_id: string
@@ -44,7 +43,6 @@ const EMPTY_FORM: ProgramFormState = {
   file_size: '',
   system_requirements: '',
   installation_guide_url: '',
-  trial_days: '0',
   base_price: '0',
   external_api_key: '',
   external_software_id: '',
@@ -145,7 +143,7 @@ export function SoftwareManagementPage() {
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => navigate(routePaths.managerParent.activateLicense(lang, row.id), { state: { returnTo: routePaths.managerParent.softwareManagement(lang) } })}
+            onClick={() => navigate(`${routePaths.managerParent.customerCreate(lang)}?program_id=${row.id}`)}
           >
             {t('common.activate')}
           </Button>
@@ -183,9 +181,8 @@ export function SoftwareManagementPage() {
     }
 
     const basePrice = Number(form.base_price)
-    const trialDays = Number(form.trial_days)
 
-    if (Number.isNaN(basePrice) || basePrice < 0 || Number.isNaN(trialDays) || trialDays < 0) {
+    if (Number.isNaN(basePrice) || basePrice < 0) {
       toast.error(t('managerParent.pages.softwareManagement.numberValidation'))
       return
     }
@@ -208,7 +205,6 @@ export function SoftwareManagementPage() {
       file_size: form.file_size.trim() || null,
       system_requirements: form.system_requirements.trim() || null,
       installation_guide_url: form.installation_guide_url.trim() || null,
-      trial_days: trialDays,
       base_price: basePrice,
       external_software_id: form.external_software_id.trim() ? Number(form.external_software_id) : null,
       status: form.status,
@@ -311,10 +307,6 @@ export function SoftwareManagementPage() {
                     <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.trialDays')}</p>
-                    <p className="mt-1 font-semibold">{program.trial_days}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
                     <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalSoftwareId')}</p>
                     <p className="mt-1 font-semibold">{program.external_software_id ?? '-'}</p>
                   </div>
@@ -330,7 +322,7 @@ export function SoftwareManagementPage() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate(routePaths.managerParent.activateLicense(lang, program.id), { state: { returnTo: routePaths.managerParent.softwareManagement(lang) } })}
+                    onClick={() => navigate(`${routePaths.managerParent.customerCreate(lang)}?program_id=${program.id}`)}
                   >
                     {t('common.activate')}
                   </Button>
@@ -399,10 +391,6 @@ export function SoftwareManagementPage() {
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="program-requirements">{t('managerParent.pages.softwareManagement.systemRequirements')}</Label>
               <Textarea id="program-requirements" value={form.system_requirements} onChange={(event) => setForm((current) => ({ ...current, system_requirements: event.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="program-trial">{t('managerParent.pages.softwareManagement.trialDays')}</Label>
-              <Input id="program-trial" type="number" value={form.trial_days} onChange={(event) => setForm((current) => ({ ...current, trial_days: event.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="program-price">{t('managerParent.pages.softwareManagement.basePrice')}</Label>

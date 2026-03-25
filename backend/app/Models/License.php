@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use App\Traits\BelongsToTenant;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class License extends Model
 {
@@ -33,6 +36,7 @@ class License extends Model
         'activated_at_scheduled',
         'paused_at',
         'pause_remaining_minutes',
+        'pause_reason',
         'status',
     ];
 
@@ -71,5 +75,68 @@ class License extends Model
     public function program(): BelongsTo
     {
         return $this->belongsTo(Program::class);
+    }
+
+    public function biosChangeRequests(): HasMany
+    {
+        return $this->hasMany(BiosChangeRequest::class);
+    }
+
+    public function effectiveStatus(?CarbonInterface $referenceTime = null): string
+    {
+        $referenceTime ??= now();
+
+        if ($this->status === 'active' && $this->expires_at !== null && $this->expires_at->lt($this->minuteWindowEnd($referenceTime))) {
+            return 'expired';
+        }
+
+        return (string) $this->status;
+    }
+
+    public function isEffectivelyActive(?CarbonInterface $referenceTime = null): bool
+    {
+        return $this->effectiveStatus($referenceTime) === 'active';
+    }
+
+    public function scopeWhereEffectiveStatus(Builder $query, string $status, ?CarbonInterface $referenceTime = null): Builder
+    {
+        $referenceTime ??= now();
+        $minuteWindowEnd = $this->minuteWindowEnd($referenceTime);
+
+        return match ($status) {
+            'active' => $query
+                ->where('status', 'active')
+                ->where(function (Builder $activeQuery) use ($referenceTime): void {
+                    $activeQuery
+                        ->whereNull('expires_at')
+                        ->orWhere('expires_at', '>=', $this->minuteWindowEnd($referenceTime));
+                }),
+            'expired' => $query->where(function (Builder $expiredQuery) use ($minuteWindowEnd): void {
+                $expiredQuery
+                    ->where('status', 'expired')
+                    ->orWhere(function (Builder $staleActiveQuery) use ($minuteWindowEnd): void {
+                        $staleActiveQuery
+                            ->where('status', 'active')
+                            ->whereNotNull('expires_at')
+                            ->where('expires_at', '<', $minuteWindowEnd);
+                    });
+            }),
+            default => $query->where('status', $status),
+        };
+    }
+
+    public function scopeWhereEffectivelyActive(Builder $query, ?CarbonInterface $referenceTime = null): Builder
+    {
+        return $query->whereEffectiveStatus('active', $referenceTime);
+    }
+
+    public function scopeWhereEffectivelyExpired(Builder $query, ?CarbonInterface $referenceTime = null): Builder
+    {
+        return $query->whereEffectiveStatus('expired', $referenceTime);
+    }
+
+    private function minuteWindowEnd(CarbonInterface $referenceTime): CarbonInterface
+    {
+        return $referenceTime->copy()->startOfMinute()->addMinute();
     }
 }

@@ -70,7 +70,7 @@ export function OnlineUsersWidget() {
       {collapsed ? (
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
           onClick={() => setCollapsed(false)}
         >
           <Circle className="h-2.5 w-2.5 fill-emerald-500 text-emerald-500" />
@@ -80,7 +80,7 @@ export function OnlineUsersWidget() {
         <div className="w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
           <button
             type="button"
-            className="flex w-full items-center justify-between border-b border-slate-200 px-4 py-3 text-sm font-semibold dark:border-slate-700"
+            className="flex min-h-11 w-full items-center justify-between border-b border-slate-200 px-4 py-3 text-sm font-semibold dark:border-slate-700"
             onClick={() => setCollapsed(true)}
           >
             <span>{t('onlineWidget.title')} ({rows.length})</span>

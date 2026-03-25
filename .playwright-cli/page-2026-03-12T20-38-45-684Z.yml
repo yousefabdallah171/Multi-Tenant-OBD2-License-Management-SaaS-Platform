@@ -1,0 +1,220 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e34]:
+    - link "Skip to content" [ref=e35] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e39]:
+          - paragraph [ref=e40]: Manager
+          - generic [ref=e41]:
+            - heading "Manager Workspace" [level=1] [ref=e42]
+            - generic [ref=e43]: "Server Timezone: UTC"
+        - generic [ref=e44]:
+          - button "Toggle theme" [ref=e45] [cursor=pointer]:
+            - img [ref=e46]
+            - generic [ref=e48]: Dark mode
+          - button "Switch language" [ref=e49] [cursor=pointer]:
+            - img [ref=e50]
+            - generic [ref=e53]: AR
+          - button "Open user menu" [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]:
+              - generic [ref=e56]: Mohamed Reseller
+              - generic [ref=e57]: reseller2@obd2sw.com
+            - generic [ref=e59]: Manager
+    - generic [ref=e60]:
+      - complementary [ref=e62]:
+        - navigation [ref=e63]:
+          - link "Dashboard" [ref=e64] [cursor=pointer]:
+            - /url: /en/manager/dashboard
+            - img [ref=e65]
+            - generic [ref=e70]: Dashboard
+          - link "Team" [ref=e71] [cursor=pointer]:
+            - /url: /en/manager/team
+            - img [ref=e72]
+            - generic [ref=e77]: Team
+          - link "Customers" [ref=e78] [cursor=pointer]:
+            - /url: /en/manager/customers
+            - img [ref=e79]
+            - generic [ref=e82]: Customers
+          - link "Software" [ref=e83] [cursor=pointer]:
+            - /url: /en/manager/software
+            - img [ref=e84]
+            - generic [ref=e88]: Software
+          - link "Software Management" [ref=e89] [cursor=pointer]:
+            - /url: /en/manager/software-management
+            - img [ref=e90]
+            - generic [ref=e94]: Software Management
+          - link "Reports" [ref=e95] [cursor=pointer]:
+            - /url: /en/manager/reports
+            - img [ref=e96]
+            - generic [ref=e98]: Reports
+          - link "Panel Activity" [ref=e99] [cursor=pointer]:
+            - /url: /en/manager/activity
+            - img [ref=e100]
+            - generic [ref=e103]: Panel Activity
+          - link "Reseller Logs" [ref=e104] [cursor=pointer]:
+            - /url: /en/manager/reseller-logs
+            - img [ref=e105]
+            - generic [ref=e108]: Reseller Logs
+          - link "Profile" [ref=e109] [cursor=pointer]:
+            - /url: /en/manager/profile
+            - img [ref=e110]
+            - generic [ref=e113]: Profile
+      - generic [ref=e114]:
+        - main [ref=e115]:
+          - generic [ref=e117]:
+            - generic [ref=e118]:
+              - generic [ref=e119]:
+                - paragraph [ref=e120]: Manager
+                - heading "Dashboard" [level=2] [ref=e121]
+                - paragraph [ref=e122]: Track your reseller team, customer base, active customers, and revenue without crossing into reseller-only workflows.
+              - generic [ref=e123]:
+                - button "Team" [ref=e124] [cursor=pointer]
+                - button "Customer Overview" [ref=e125] [cursor=pointer]
+                - button "Reports" [ref=e126] [cursor=pointer]
+            - generic [ref=e127]:
+              - button "Team Resellers 1" [ref=e128] [cursor=pointer]:
+                - generic [ref=e130]:
+                  - generic [ref=e131]:
+                    - paragraph [ref=e132]: Team Resellers
+                    - paragraph [ref=e133]: "1"
+                  - img [ref=e135]
+              - button "Team Customers 7" [ref=e140] [cursor=pointer]:
+                - generic [ref=e142]:
+                  - generic [ref=e143]:
+                    - paragraph [ref=e144]: Team Customers
+                    - paragraph [ref=e145]: "7"
+                  - img [ref=e147]
+              - button "Active Customers 2" [ref=e150] [cursor=pointer]:
+                - generic [ref=e152]:
+                  - generic [ref=e153]:
+                    - paragraph [ref=e154]: Active Customers
+                    - paragraph [ref=e155]: "2"
+                  - img [ref=e157]
+              - button "Team Revenue $145.01" [ref=e160] [cursor=pointer]:
+                - generic [ref=e162]:
+                  - generic [ref=e163]:
+                    - paragraph [ref=e164]: Team Revenue
+                    - paragraph [ref=e165]: $145.01
+                  - img [ref=e167]
+            - generic [ref=e170]:
+              - generic [ref=e171]:
+                - heading "Team Activations" [level=2] [ref=e174]
+                - generic [ref=e178]:
+                  - generic:
+                    - status:
+                      - paragraph: Dec 2025
+                      - list:
+                        - listitem: "Activations : 0"
+                  - application [ref=e179]:
+                    - generic [ref=e189]:
+                      - generic [ref=e190]:
+                        - generic [ref=e192]: Jun 2025
+                        - generic [ref=e194]: Sep 2025
+                        - generic [ref=e196]: Dec 2025
+                        - generic [ref=e198]: Mar 2026
+                      - generic [ref=e199]:
+                        - generic [ref=e201]: "0"
+                        - generic [ref=e203]: "2"
+                        - generic [ref=e205]: "4"
+                        - generic [ref=e207]: "6"
+                        - generic [ref=e209]: "8"
+              - generic [ref=e210]:
+                - heading "Team Revenue" [level=2] [ref=e213]
+                - application [ref=e218]:
+                  - generic [ref=e230]:
+                    - generic [ref=e231]:
+                      - generic [ref=e233]: "0"
+                      - generic [ref=e235]: "25"
+                      - generic [ref=e237]: "50"
+                      - generic [ref=e239]: "75"
+                      - generic [ref=e241]: "100"
+                    - generic [ref=e242]:
+                      - generic [ref=e244]: AhmedReseller
+                      - generic [ref=e246]: MohamedReseller
+            - generic [ref=e247]:
+              - generic [ref=e248]:
+                - heading "Recent Team Activity" [level=2] [ref=e250]
+                - generic [ref=e251]:
+                  - generic [ref=e253]:
+                    - generic [ref=e254]:
+                      - paragraph [ref=e255]: Ahmed Reseller
+                      - paragraph [ref=e256]: Customer Deleted
+                      - paragraph [ref=e257]: Deleted customer profile for Temp Customer 20260312195505367.
+                    - generic [ref=e258]: Mar 12, 2026, 7:55 PM
+                  - generic [ref=e260]:
+                    - generic [ref=e261]:
+                      - paragraph [ref=e262]: Mohamed Reseller
+                      - paragraph [ref=e263]: Delete Team Member
+                      - paragraph [ref=e264]: Removed reseller temp.manager.20260312195505367@obd2sw.local.
+                    - generic [ref=e265]: Mar 12, 2026, 7:55 PM
+                  - generic [ref=e267]:
+                    - generic [ref=e268]:
+                      - paragraph [ref=e269]: Mohamed Reseller
+                      - paragraph [ref=e270]: Status
+                      - paragraph [ref=e271]: Updated status for temp.manager.20260312195505367@obd2sw.local.
+                    - generic [ref=e272]: Mar 12, 2026, 7:55 PM
+                  - generic [ref=e274]:
+                    - generic [ref=e275]:
+                      - paragraph [ref=e276]: Mohamed Reseller
+                      - paragraph [ref=e277]: Status
+                      - paragraph [ref=e278]: Updated status for temp.manager.20260312195505367@obd2sw.local.
+                    - generic [ref=e279]: Mar 12, 2026, 7:55 PM
+                  - generic [ref=e281]:
+                    - generic [ref=e282]:
+                      - paragraph [ref=e283]: Mohamed Reseller
+                      - paragraph [ref=e284]: Reset Password
+                      - paragraph [ref=e285]: Reset password for temp.manager.20260312195505367@obd2sw.local.
+                    - generic [ref=e286]: Mar 12, 2026, 7:55 PM
+                  - generic [ref=e288]:
+                    - generic [ref=e289]:
+                      - paragraph [ref=e290]: Mohamed Reseller
+                      - paragraph [ref=e291]: Change Username
+                      - paragraph [ref=e292]: Changed username for temp.manager.20260312195505367@obd2sw.local.
+                    - generic [ref=e293]: Mar 12, 2026, 7:55 PM
+                  - generic [ref=e295]:
+                    - generic [ref=e296]:
+                      - paragraph [ref=e297]: Mohamed Reseller
+                      - paragraph [ref=e298]: Update Team Member
+                      - paragraph [ref=e299]: Updated reseller temp.manager.20260312195505367@obd2sw.local.
+                    - generic [ref=e300]: Mar 12, 2026, 7:55 PM
+                  - generic [ref=e302]:
+                    - generic [ref=e303]:
+                      - paragraph [ref=e304]: Mohamed Reseller
+                      - paragraph [ref=e305]: Create Team Member
+                      - paragraph [ref=e306]: Created reseller account for temp.manager.20260312195505367@obd2sw.local.
+                    - generic [ref=e307]: Mar 12, 2026, 7:55 PM
+                  - generic [ref=e309]:
+                    - generic [ref=e310]:
+                      - paragraph [ref=e311]: Ahmed Reseller
+                      - paragraph [ref=e312]: Deactivation
+                      - paragraph [ref=e313]: Deactivated license 14 for BIOS TEST-BIOS-20260312195505367.
+                    - generic [ref=e314]: Mar 12, 2026, 7:55 PM
+                  - generic [ref=e316]:
+                    - generic [ref=e317]:
+                      - paragraph [ref=e318]: Ahmed Reseller
+                      - paragraph [ref=e319]: Renewal
+                      - paragraph [ref=e320]: Renewed license 14 for BIOS TEST-BIOS-20260312195505367.
+                    - generic [ref=e321]: Mar 12, 2026, 7:55 PM
+              - generic [ref=e322]:
+                - heading "Manager Actions" [level=2] [ref=e324]
+                - generic [ref=e325]:
+                  - button "Review Team Resellers" [ref=e326] [cursor=pointer]:
+                    - text: Review Team Resellers
+                    - img [ref=e327]
+                  - button "Customer Overview" [ref=e329] [cursor=pointer]:
+                    - text: Customer Overview
+                    - img [ref=e330]
+                  - button "Reports" [ref=e332] [cursor=pointer]:
+                    - text: Reports
+                    - img [ref=e333]
+                  - button "Monthly Activations 5" [ref=e335] [cursor=pointer]:
+                    - text: Monthly Activations
+                    - paragraph [ref=e336]: "5"
+        - contentinfo [ref=e337]: 2026 OBD2SW License Platform
+    - button "0 online" [ref=e339] [cursor=pointer]:
+      - img [ref=e340]
+      - text: 0 online
+    - generic:
+      - region "Notifications alt+T"
+  - generic [ref=e342]: Ahmed Reseller
