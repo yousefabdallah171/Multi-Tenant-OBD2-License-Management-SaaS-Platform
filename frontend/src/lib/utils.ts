@@ -7,12 +7,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDate(value: string | Date, locale = 'en-US', timeZone = resolveDisplayTimezone()) {
+export function formatDate(value: string | Date | null | undefined, locale = 'en-US', timeZone = resolveDisplayTimezone()) {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return '-'
   return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone,
-  }).format(new Date(value))
+  }).format(d)
 }
 
 export function formatCurrency(value: number, currency = 'USD', locale = 'en-US') {
