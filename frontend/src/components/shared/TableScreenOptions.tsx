@@ -87,10 +87,10 @@ export function TableScreenOptions({
           role="dialog"
           aria-label={t('common.screenOptions', { defaultValue: 'Screen Options' })}
           style={panelStyle}
-          className="z-[9999] w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-950"
+          className="z-[9999] w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-950"
         >
           <div className="space-y-1">
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 md:text-base">
               {t('common.columns', { defaultValue: 'Columns' })}
             </p>
             <div className="space-y-1">
@@ -102,7 +102,7 @@ export function TableScreenOptions({
                   aria-pressed={column.visible}
                   aria-label={column.label}
                   className={cn(
-                    'flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900/60',
+                    'flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900/60 md:text-base',
                     column.locked && 'cursor-not-allowed opacity-70',
                   )}
                   onClick={(e) => {
@@ -127,7 +127,7 @@ export function TableScreenOptions({
                       className="pointer-events-none h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950"
                     />
                     {column.locked ? (
-                      <span className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+                      <span className="text-sm font-semibold uppercase tracking-wide text-slate-400 md:text-base">
                         {t('common.locked', { defaultValue: 'Locked' })}
                       </span>
                     ) : null}
@@ -141,7 +141,7 @@ export function TableScreenOptions({
             <>
               <div className="my-3 h-px bg-slate-200 dark:bg-slate-800" />
               <div className="space-y-2">
-                <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 md:text-base">
                   {t('common.pagination', { defaultValue: 'Pagination' })}
                 </p>
                 <div className="grid grid-cols-4 gap-2">
@@ -151,7 +151,7 @@ export function TableScreenOptions({
                       type="button"
                       size="sm"
                       variant={pageSize === option ? 'default' : 'outline'}
-                      className="h-9 rounded-lg px-2"
+                      className="h-10 rounded-lg px-3 text-sm md:h-11 md:px-4 md:text-base"
                       onClick={(e) => {
                         e.stopPropagation()
                         onPageSizeChange(option)
@@ -179,7 +179,7 @@ export function TableScreenOptions({
         aria-controls={isOpen ? panelId : undefined}
         aria-haspopup="dialog"
         className={cn(
-          'rounded-xl border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70',
+          'rounded-xl border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70 md:text-base',
           isLoading && 'opacity-100',
         )}
         onClick={handleToggle}
