@@ -405,6 +405,7 @@ export function TeamPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_team"
         columns={columns}
         data={teamQuery.data?.data ?? []}
         rowKey={(row) => row.id}

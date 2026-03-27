@@ -37,7 +37,7 @@ class CustomerController extends BaseSuperAdminController
             ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->select($this->licenseListColumns())
-                ->with(['program:id,name', 'reseller:id,name'])])
+                ->with(['program:id,name', 'reseller:id,name,role'])])
             ->latest();
 
         if (! empty($validated['tenant_id'])) {
@@ -75,7 +75,7 @@ class CustomerController extends BaseSuperAdminController
             'tenant:id,name,slug,status',
             'customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->select($this->licenseDetailColumns())
-                ->with(['program:id,name', 'reseller:id,name,email']),
+                ->with(['program:id,name', 'reseller:id,name,email,role']),
             'createdBy:id,name,email',
         ]);
 
@@ -88,6 +88,7 @@ class CustomerController extends BaseSuperAdminController
                     'reseller_id' => $latest?->reseller_id,
                     'reseller_name' => $latest?->reseller?->name,
                     'reseller_email' => $latest?->reseller?->email,
+                    'reseller_role' => $latest?->reseller?->role?->value ?? ($latest?->reseller ? (string) $latest->reseller->role : null),
                     'activations_count' => $licenses->count(),
                     'last_activation_at' => $latest?->activated_at?->toIso8601String(),
                 ];
@@ -157,6 +158,7 @@ class CustomerController extends BaseSuperAdminController
                     'reseller' => $license->reseller?->name,
                     'reseller_id' => $license->reseller_id,
                     'reseller_email' => $license->reseller?->email,
+                    'reseller_role' => $license->reseller?->role?->value ?? ($license->reseller ? (string) $license->reseller->role : null),
                     'status' => $license->effectiveStatus(),
                     'duration_days' => (float) $license->duration_days,
                     'price' => (float) $license->price,
@@ -184,17 +186,17 @@ class CustomerController extends BaseSuperAdminController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'name' => ['required', 'string', 'min:2', 'max:10'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'tenant_id' => ['required', 'integer', 'exists:tenants,id'],
             'seller_id' => ['nullable', 'integer', 'exists:users,id', 'required_with:bios_id,program_id'],
-            'bios_id' => ['nullable', 'string', 'min:3', 'max:255', 'required_with:program_id,seller_id'],
+            'bios_id' => ['nullable', 'string', 'min:3', 'max:10', 'required_with:program_id,seller_id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id,seller_id'],
         ]);
 
-        $username = Str::of((string) $validated['name'])->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+        $username = Str::of((string) $validated['name'])->ascii()->replaceMatches('/[^A-Za-z0-9_]+/', '_')->trim('_')->value();
         $username = $username !== '' ? $username : 'customer_'.Str::lower(Str::random(6));
         $email = isset($validated['email']) && is_string($validated['email']) && trim($validated['email']) !== ''
             ? strtolower(trim($validated['email']))
@@ -213,7 +215,7 @@ class CustomerController extends BaseSuperAdminController
 
         $customer = User::query()
             ->where(function ($query) use ($email, $username): void {
-                $query->where('email', $email)->orWhere('username', $username);
+                $query->where('email', $email)->orWhereRaw('LOWER(username) = ?', [Str::lower($username)]);
             })
             ->first();
 
@@ -267,7 +269,7 @@ class CustomerController extends BaseSuperAdminController
 
         $customer->load(['tenant', 'customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->select($this->licenseListColumns())
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         return response()->json(['data' => $this->serializeCustomer($customer)], 201);
     }
@@ -294,7 +296,7 @@ class CustomerController extends BaseSuperAdminController
 
         $user->load(['tenant', 'customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->select($this->licenseListColumns())
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         return response()->json(['data' => $this->serializeCustomer($user)]);
     }
@@ -340,6 +342,7 @@ class CustomerController extends BaseSuperAdminController
             'program_id',
             'bios_id',
             'status',
+            'duration_days',
             'activated_at',
             'expires_at',
             'price',
@@ -414,7 +417,9 @@ class CustomerController extends BaseSuperAdminController
             'bios_id' => $license?->bios_id,
             'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
+            'reseller_role' => $license?->reseller?->role?->value ?? ($license?->reseller ? (string) $license->reseller->role : null),
             'reseller_id' => $license?->reseller_id,
+            'duration_days' => $license ? (float) $license->duration_days : null,
             'program' => $license?->program?->name,
             'status' => $license?->effectiveStatus() ?? 'pending',
             'activated_at' => $license?->activated_at?->toIso8601String(),
@@ -695,6 +700,19 @@ class CustomerController extends BaseSuperAdminController
             ]);
         }
 
+        // Duplicate guard: same seller already has a non-expired/cancelled license for this BIOS.
+        $existingByThisSeller = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->where('reseller_id', $seller->id)
+            ->whereNotIn('status', ['expired', 'cancelled'])
+            ->exists();
+
+        if ($existingByThisSeller) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'You already have this customer saved with this BIOS ID. Please manage them from your customer list.',
+            ]);
+        }
+
         // Enforce permanent BIOS↔username link (both directions)
         $customerName = strtolower(trim((string) request()->input('name', '')));
         $derivedUsername = (string) \Illuminate\Support\Str::of($customerName)->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
@@ -772,16 +790,30 @@ class CustomerController extends BaseSuperAdminController
         $biosIdLower = strtolower($normalizedBiosId);
 
         DB::transaction(function () use ($customer, $tenantId, $normalizedBiosId, $biosIdLower, $program, $seller): void {
-            // Race condition guard: re-check with lock inside transaction
+            // Race condition guard: re-check with lock inside transaction.
+            // Pending licenses do NOT block — first to activate wins (Rule 2.3).
             $raceConflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
-                ->whereIn('status', ['active', 'suspended', 'pending'])
+                ->whereIn('status', ['active', 'suspended'])
                 ->lockForUpdate()
                 ->first();
 
             if ($raceConflict) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'bios_id' => 'This BIOS ID was just claimed by another user. Please try a different BIOS ID.',
+                    'bios_id' => 'This BIOS ID is already active or suspended. Please try a different BIOS ID.',
+                ]);
+            }
+
+            $sellerDuplicate = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->where('reseller_id', $seller->id)
+                ->whereNotIn('status', ['expired', 'cancelled'])
+                ->lockForUpdate()
+                ->exists();
+
+            if ($sellerDuplicate) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'bios_id' => 'You already have this customer saved with this BIOS ID.',
                 ]);
             }
 

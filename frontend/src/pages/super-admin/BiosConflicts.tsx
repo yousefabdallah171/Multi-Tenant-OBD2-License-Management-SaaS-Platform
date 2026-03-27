@@ -175,6 +175,7 @@ export function BiosConflictsPage() {
       </Card>
 
       <DataTable
+        tableKey="super_admin_bios_conflicts"
         columns={columns}
         data={conflictsQuery.data?.data ?? []}
         rowKey={(row) => row.id}

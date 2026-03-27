@@ -422,6 +422,7 @@ export function AdminManagementPage() {
 
 
       <DataTable
+        tableKey="super_admin_admin_management"
         columns={columns}
         data={adminsQuery.data?.data ?? []}
         rowKey={(row) => row.id}

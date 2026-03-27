@@ -339,6 +339,7 @@ export function SoftwareManagementPage() {
         </div>
       ) : (
         <DataTable
+          tableKey="manager_parent_software_management"
           columns={columns}
           data={list}
           rowKey={(row) => row.id}

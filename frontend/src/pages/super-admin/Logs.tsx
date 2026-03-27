@@ -176,6 +176,7 @@ export function LogsPage() {
       </Card>
 
       <DataTable
+        tableKey="super_admin_logs"
         columns={columns}
         data={logsQuery.data?.data ?? []}
         rowKey={(row) => row.id}

@@ -62,7 +62,6 @@ function buildRelativeSchedule(value: number, unit: DurationUnit) {
   if (unit === 'days') next.setDate(next.getDate() + value)
   return next
 }
-
 export function CustomerCreatePage({ title, description, backPath, createCustomer }: CustomerCreatePageProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -182,7 +181,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     if (!Number.isFinite(value) || value <= 0) {
       return
     }
-
     setScheduleAt(formatDateTimeLocalInTimezone(buildRelativeSchedule(value, scheduleAfterUnit), scheduleTimezone))
   }, [scheduleAfterUnit, scheduleAfterValue, scheduleEnabled, scheduleMode, scheduleTimezone])
 
@@ -418,6 +416,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                   onChange={(event) => { if (!usernameIsLocked) { setCustomerName(event.target.value); setSubmitError('') } }}
                   onBlur={(event) => { if (!usernameIsLocked) setCustomerName(formatUsername(event.target.value)) }}
                   disabled={usernameIsLocked}
+                  maxLength={10}
                   className={usernameIsLocked ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed' : ''}
                   data-testid="customer-name"
                 />
@@ -478,6 +477,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 <Input
                   value={biosId}
                   onChange={(event) => { setBiosId(event.target.value); setSubmitError('') }}
+                  maxLength={10}
                   data-testid="bios-id"
                 />
               </Field>

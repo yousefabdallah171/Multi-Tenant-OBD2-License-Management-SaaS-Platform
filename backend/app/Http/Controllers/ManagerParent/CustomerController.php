@@ -43,7 +43,7 @@ class CustomerController extends BaseManagerParentController
             ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->select($this->licenseListColumns())
-                ->with(['program:id,name', 'reseller:id,name'])])
+                ->with(['program:id,name', 'reseller:id,name,role'])])
             ->latest();
 
         $creatorIds = collect([
@@ -84,7 +84,7 @@ class CustomerController extends BaseManagerParentController
         abort_unless(($customer->role?->value ?? (string) $customer->role) === UserRole::CUSTOMER->value, 404);
 
         $licenses = License::query()
-            ->with(['program:id,name', 'reseller:id,name,email'])
+            ->with(['program:id,name', 'reseller:id,name,email,role'])
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('customer_id', $customer->id)
             ->orderByDesc('activated_at')
@@ -134,7 +134,7 @@ class CustomerController extends BaseManagerParentController
         $user->load([
             'customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->select($this->licenseDetailColumns())
-                ->with(['program:id,name', 'reseller:id,name,email']),
+                ->with(['program:id,name', 'reseller:id,name,email,role']),
             'createdBy:id,name,email',
         ]);
 
@@ -147,6 +147,7 @@ class CustomerController extends BaseManagerParentController
                     'reseller_id' => $latest?->reseller_id,
                     'reseller_name' => $latest?->reseller?->name,
                     'reseller_email' => $latest?->reseller?->email,
+                    'reseller_role' => $latest?->reseller?->role?->value ?? ($latest?->reseller ? (string) $latest->reseller->role : null),
                     'activations_count' => $licenses->count(),
                     'last_activation_at' => $latest?->activated_at?->toIso8601String(),
                 ];
@@ -212,6 +213,7 @@ class CustomerController extends BaseManagerParentController
                     'reseller' => $license->reseller?->name,
                     'reseller_id' => $license->reseller_id,
                     'reseller_email' => $license->reseller?->email,
+                    'reseller_role' => $license->reseller?->role?->value ?? ($license->reseller ? (string) $license->reseller->role : null),
                     'status' => $license->effectiveStatus(),
                     'duration_days' => (float) $license->duration_days,
                     'price' => (float) $license->price,
@@ -239,15 +241,15 @@ class CustomerController extends BaseManagerParentController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'name' => ['required', 'string', 'min:2', 'max:10'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
-            'bios_id' => ['nullable', 'string', 'min:3', 'max:255', 'required_with:program_id'],
+            'bios_id' => ['nullable', 'string', 'min:3', 'max:10', 'required_with:program_id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id'],
         ]);
 
-        $username = Str::of((string) $validated['name'])->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+        $username = Str::of((string) $validated['name'])->ascii()->replaceMatches('/[^A-Za-z0-9_]+/', '_')->trim('_')->value();
         $username = $username !== '' ? $username : 'customer_'.Str::lower(Str::random(6));
         $email = isset($validated['email']) && is_string($validated['email']) && trim($validated['email']) !== ''
             ? strtolower(trim($validated['email']))
@@ -264,7 +266,7 @@ class CustomerController extends BaseManagerParentController
 
         $customer = User::query()
             ->where(function ($query) use ($email, $username): void {
-                $query->where('email', $email)->orWhere('username', $username);
+                $query->where('email', $email)->orWhereRaw('LOWER(username) = ?', [Str::lower($username)]);
             })
             ->first();
 
@@ -317,7 +319,7 @@ class CustomerController extends BaseManagerParentController
         }
 
         $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         return response()->json(['data' => $this->serializeCustomer($customer)], 201);
     }
@@ -344,7 +346,7 @@ class CustomerController extends BaseManagerParentController
         ])->save();
 
         $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
-            ->with(['program:id,name', 'reseller:id,name'])]);
+            ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         $this->logActivity($request, 'customer.updated', sprintf('Updated customer %d.', $customer->id), [
             'customer_id' => $customer->id,
@@ -406,16 +408,30 @@ class CustomerController extends BaseManagerParentController
         $biosIdLower = strtolower($normalizedBiosId);
 
         DB::transaction(function () use ($request, $customer, $normalizedBiosId, $biosIdLower, $program, $seller): void {
-            // Race condition guard: re-check with lock inside transaction
+            // Race condition guard: re-check with lock inside transaction.
+            // Pending licenses do NOT block — first to activate wins (Rule 2.3).
             $raceConflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
-                ->whereIn('status', ['active', 'suspended', 'pending'])
+                ->whereIn('status', ['active', 'suspended'])
                 ->lockForUpdate()
                 ->first();
 
             if ($raceConflict) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'bios_id' => 'This BIOS ID was just claimed by another user. Please try a different BIOS ID.',
+                    'bios_id' => 'This BIOS ID is already active or suspended. Please try a different BIOS ID.',
+                ]);
+            }
+
+            $sellerDuplicate = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->where('reseller_id', $seller->id)
+                ->whereNotIn('status', ['expired', 'cancelled'])
+                ->lockForUpdate()
+                ->exists();
+
+            if ($sellerDuplicate) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'bios_id' => 'You already have this customer saved with this BIOS ID.',
                 ]);
             }
 
@@ -473,6 +489,19 @@ class CustomerController extends BaseManagerParentController
         if ($globalActive) {
             throw ValidationException::withMessages([
                 'bios_id' => 'This BIOS ID is currently active with another reseller.',
+            ]);
+        }
+
+        // Duplicate guard: same seller already has a non-expired/cancelled license for this BIOS.
+        $existingByThisSeller = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+            ->where('reseller_id', $seller->id)
+            ->whereNotIn('status', ['expired', 'cancelled'])
+            ->exists();
+
+        if ($existingByThisSeller) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'You already have this customer saved with this BIOS ID. Please manage them from your customer list.',
             ]);
         }
 
@@ -559,6 +588,7 @@ class CustomerController extends BaseManagerParentController
             'program_id',
             'bios_id',
             'status',
+            'duration_days',
             'activated_at',
             'expires_at',
             'price',
@@ -630,6 +660,8 @@ class CustomerController extends BaseManagerParentController
             'bios_id' => $license?->bios_id,
             'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
+            'reseller_role' => $license?->reseller?->role?->value ?? ($license?->reseller ? (string) $license->reseller->role : null),
+            'duration_days' => $license ? (float) $license->duration_days : null,
             'program' => $license?->program?->name,
             'status' => $license?->effectiveStatus() ?? 'pending',
             'activated_at' => $license?->activated_at?->toIso8601String(),
@@ -665,6 +697,7 @@ class CustomerController extends BaseManagerParentController
             'reseller_id' => $license->reseller_id,
             'reseller_name' => $license->reseller?->name,
             'reseller_email' => $license->reseller?->email,
+            'reseller_role' => $license->reseller?->role?->value ?? ($license->reseller ? (string) $license->reseller->role : null),
             'bios_id' => $license->bios_id,
             'external_username' => $license->external_username,
             'activated_at' => $license->activated_at?->toIso8601String(),

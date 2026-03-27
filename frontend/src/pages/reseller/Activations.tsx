@@ -140,6 +140,7 @@ export function ActivationsPage() {
       </Card>
 
       <DataTable
+        tableKey="reseller_activations"
         columns={columns}
         data={rows}
         rowKey={(row) => row.id}

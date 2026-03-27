@@ -139,6 +139,7 @@ export function BiosChangeRequestPage({ eyebrow, backPath, getCustomer, submitRe
                   value={newBiosId}
                   onChange={(event) => { setNewBiosId(event.target.value); setBiosCheckResult(null) }}
                   placeholder={t('biosChangeRequests.newBiosPlaceholder')}
+                  maxLength={10}
                 />
                 {biosCheckResult && (
                   <p className={`text-xs ${biosCheckResult.is_blacklisted || !biosCheckResult.available || usernameMismatch ? 'text-rose-600' : 'text-emerald-600'}`}>

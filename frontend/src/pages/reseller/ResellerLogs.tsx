@@ -210,6 +210,7 @@ export function ResellerLogsPage() {
       </Card>
 
       <DataTable
+        tableKey="reseller_reseller_logs"
         columns={columns}
         data={logsQuery.data?.data ?? []}
         rowKey={(row) => row.id}

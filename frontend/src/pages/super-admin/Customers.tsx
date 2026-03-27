@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2 } from 'lucide-react'
+import { MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -9,13 +9,14 @@ import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
-import { canDeleteCustomerRow, canReactivateLicense, canRetryScheduledLicense, formatDate, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canDeleteCustomerRow, canReactivateLicense, canRetryScheduledLicense, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, resolveLicenseDurationDays, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
@@ -23,6 +24,7 @@ import { superAdminCustomerService } from '@/services/super-admin-customer.servi
 import { tenantService } from '@/services/tenant.service'
 import { userService } from '@/services/user.service'
 import type { SuperAdminCustomerSummary } from '@/types/super-admin.types'
+import type { UserRole } from '@/types/user.types'
 
 const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
@@ -45,7 +47,6 @@ export function CustomersPage() {
   const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
   const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [editTarget, setEditTarget] = useState<SuperAdminCustomerSummary | null>(null)
-  const [deactivateTarget, setDeactivateTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SuperAdminCustomerSummary | null>(null)
@@ -75,19 +76,26 @@ export function CustomersPage() {
   const tenantsQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'tenants'],
     queryFn: () => tenantService.getAll({ per_page: 100 }),
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   })
 
   const sellersQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'sellers', tenantId],
     queryFn: () => userService.getAll({ per_page: 100, tenant_id: tenantId || '', role: 'reseller', status: 'active' }),
+    enabled: tenantId !== '',
+    staleTime: 10 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
   })
 
   const programsQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'programs'],
     queryFn: () => programService.getAll({ per_page: 100 }),
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   })
 
-  const [allCountQuery, activeCountQuery, suspendedCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
       {
         queryKey: ['super-admin', 'customers', 'count', 'all', customerFilterParams],
@@ -97,11 +105,6 @@ export function CustomersPage() {
       {
         queryKey: ['super-admin', 'customers', 'count', 'active', customerFilterParams],
         queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }),
-        ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
-      },
-      {
-        queryKey: ['super-admin', 'customers', 'count', 'suspended', customerFilterParams],
-        queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...customerFilterParams, status: 'suspended' }),
         ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
       },
       {
@@ -158,16 +161,6 @@ export function CustomersPage() {
     onSuccess: () => {
       toast.success(t('common.customerUpdatedSuccess', { defaultValue: 'Customer updated successfully.' }))
       setEditTarget(null)
-      invalidate(queryClient)
-    },
-    onError: () => toast.error(t('common.error')),
-  })
-
-  const deactivateMutation = useMutation({
-    mutationFn: (licenseId: number) => licenseService.deactivate(licenseId),
-    onSuccess: () => {
-      toast.success(t('common.deactivated', { defaultValue: 'Deactivated successfully.' }))
-      setDeactivateTarget(null)
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -242,18 +235,31 @@ export function CustomersPage() {
           </Link>
         ),
       },
-      { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? '-' },
-      { key: 'phone', label: t('common.phone'), sortable: true, sortValue: (row) => row.phone ?? '', render: (row) => row.phone ?? '-' },
+      { key: 'tenant', label: t('common.tenant'), sortable: true, defaultHidden: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? '-' },
+      { key: 'phone', label: t('common.phone'), sortable: true, defaultHidden: true, sortValue: (row) => row.phone ?? '', render: (row) => row.phone ?? '-' },
       {
         key: 'bios',
         label: t('superAdmin.pages.customers.biosId'),
         sortable: true,
         sortValue: (row) => row.bios_id ?? '',
         render: (row) => row.bios_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, row.bios_id)}>{row.bios_id}</Link> : '-',
-      },
-      { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
-      { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
-      { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => row.start_at ?? '', render: (row) => (row.start_at ? formatDate(row.start_at, locale) : '-') },
+        },
+        { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => (
+          <RoleIdentity
+            name={row.reseller}
+            role={resolveUserRole(row.reseller_role)}
+            href={row.reseller_id ? routePaths.superAdmin.userDetail(lang, row.reseller_id) : undefined}
+          />
+        ) },
+        {
+          key: 'duration',
+          label: t('common.duration'),
+          sortable: true,
+          sortValue: (row) => resolveLicenseDurationDays(row.duration_days, row.start_at, row.expiry) ?? 0,
+          render: (row) => formatLicenseDurationDays(row.duration_days, t, row.start_at, row.expiry),
+        },
+        { key: 'program', label: t('common.program'), sortable: true, defaultHidden: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+      { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, defaultHidden: true, sortValue: (row) => row.start_at ?? '', render: (row) => (row.start_at ? formatDate(row.start_at, locale) : '-') },
       {
         key: 'status',
         label: t('common.status'),
@@ -270,12 +276,12 @@ export function CustomersPage() {
           </div>
         ) : '-',
       },
-      { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
-      { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
+      { key: 'reason', label: t('common.reason'), sortable: true, defaultHidden: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
+      { key: 'expiry', label: t('common.expiry'), sortable: true, defaultHidden: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale) : '-') },
       {
         key: 'actions',
         label: t('common.actions'),
-      render: (row) => {
+        render: (row) => {
         const displayStatus = row.status ? getLicenseDisplayStatus(row) : null
         const isScheduleEditable = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
         const isPausedPending = isPausedPendingLicense(row)
@@ -308,12 +314,6 @@ export function CustomersPage() {
                   <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.licenseRenew(lang, row.license_id ?? 0), { state: { returnTo: `${location.pathname}${location.search}` } })}>
                     <RotateCw className="me-2 h-4 w-4" />
                     {renewActionLabel}
-                  </DropdownMenuItem>
-                ) : null}
-                {row.license_id && row.status === 'active' && !isBlacklisted ? (
-                  <DropdownMenuItem onSelect={() => setDeactivateTarget(row)}>
-                    <ShieldOff className="me-2 h-4 w-4" />
-                    {t('common.deactivate')}
                   </DropdownMenuItem>
                 ) : null}
                 {row.license_id && row.status === 'active' && !row.paused_at && !isBlacklisted ? (
@@ -363,7 +363,7 @@ export function CustomersPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-7">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -384,17 +384,6 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="emerald"
-        />
-        <StatusFilterCard
-          label={t('common.suspended')}
-          description={getStatusMeaning('suspended', t)}
-          count={suspendedCountQuery.data?.meta.total ?? 0}
-          isActive={status === 'suspended'}
-          onClick={() => {
-            setStatus('suspended')
-            setPage(1)
-          }}
-          color="amber"
         />
         <StatusFilterCard
           label={t('common.scheduled', { defaultValue: 'Scheduled' })}
@@ -463,6 +452,7 @@ export function CustomersPage() {
       </Card>
 
       <DataTable
+        tableKey="super_admin_customers"
         columns={columns}
         data={customersQuery.data?.data ?? []}
         rowKey={(row) => row.id}
@@ -491,7 +481,6 @@ export function CustomersPage() {
         isPending={editMutation.isPending}
       />
 
-      <ConfirmDialog open={deactivateTarget !== null} onOpenChange={(open) => !open && setDeactivateTarget(null)} title={t('common.deactivate')} description={deactivateTarget?.name ?? ''} confirmLabel={t('common.deactivate')} onConfirm={() => deactivateTarget?.license_id && deactivateMutation.mutate(deactivateTarget.license_id)} />
       <ConfirmDialog
         open={pauseTarget !== null}
         onOpenChange={(open) => {
@@ -527,6 +516,14 @@ export function CustomersPage() {
       <ConfirmDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)} title={t('common.delete')} description={deleteTarget?.name ?? ''} confirmLabel={t('common.delete')} isDestructive onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} />
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function invalidate(queryClient: ReturnType<typeof useQueryClient>) {

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { EmptyState } from '@/components/shared/EmptyState'
+import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -52,6 +52,53 @@ export function SecurityLocksPage() {
   const lockedAccounts = locksQuery.data?.locked_accounts ?? []
   const blockedIps = locksQuery.data?.blocked_ips ?? []
   const auditRows = useMemo<SecurityAuditLog[]>(() => auditQuery.data?.data ?? [], [auditQuery.data?.data])
+  const lockedColumns = useMemo<Array<DataTableColumn<(typeof lockedAccounts)[number]>>>(() => [
+    { key: 'email', label: t('common.email'), sortable: true, sortValue: (row) => row.email, render: (row) => row.email },
+    { key: 'device', label: t('security.device'), sortable: true, sortValue: (row) => row.device, render: (row) => row.device },
+    { key: 'ip', label: t('security.lastIp'), sortable: true, sortValue: (row) => row.ip, render: (row) => row.ip },
+    { key: 'country', label: t('security.country'), sortable: true, sortValue: (row) => `${row.country_name ?? ''}${row.city ?? ''}`, render: (row) => <IpLocationCell country={row.country_name} city={row.city} countryCode={row.country_code ?? ''} /> },
+    { key: 'isp', label: t('security.isp'), sortable: true, sortValue: (row) => row.isp ?? '', render: (row) => row.isp || '-' },
+    { key: 'attempts', label: t('security.attempts'), sortable: true, sortValue: (row) => row.attempt_count, render: (row) => row.attempt_count },
+    { key: 'retry_after', label: t('security.retryAfter'), sortable: true, sortValue: (row) => row.seconds_remaining, render: (row) => `${row.seconds_remaining}s` },
+    {
+      key: 'actions',
+      label: t('common.actions'),
+      render: (row) => (
+        <Button type="button" size="sm" onClick={() => unblockEmailMutation.mutate(row.email)} disabled={unblockEmailMutation.isPending}>
+          {t('security.unblock')}
+        </Button>
+      ),
+    },
+  ], [t, unblockEmailMutation])
+  const blockedColumns = useMemo<Array<DataTableColumn<(typeof blockedIps)[number]>>>(() => [
+    { key: 'ip', label: t('security.lastIp'), sortable: true, sortValue: (row) => row.ip, render: (row) => row.ip },
+    { key: 'device', label: t('security.device'), sortable: true, sortValue: (row) => row.device, render: (row) => row.device },
+    { key: 'country', label: t('security.country'), sortable: true, sortValue: (row) => `${row.country_name ?? ''}${row.city ?? ''}`, render: (row) => <IpLocationCell country={row.country_name} city={row.city} countryCode={row.country_code ?? ''} /> },
+    { key: 'isp', label: t('security.isp'), sortable: true, sortValue: (row) => row.isp ?? '', render: (row) => row.isp || '-' },
+    { key: 'blocked_at', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.blocked_at ?? '', render: (row) => row.blocked_at ? formatDate(row.blocked_at, locale) : '-' },
+    {
+      key: 'actions',
+      label: t('common.actions'),
+      render: (row) => (
+        <Button type="button" size="sm" onClick={() => unblockIpMutation.mutate(row.ip)} disabled={unblockIpMutation.isPending}>
+          {t('security.unblock')}
+        </Button>
+      ),
+    },
+  ], [locale, t, unblockIpMutation])
+  const auditColumns = useMemo<Array<DataTableColumn<SecurityAuditLog>>>(() => [
+    { key: 'created_at', label: t('common.timestamp'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => row.created_at ? formatDate(row.created_at, locale) : '-' },
+    { key: 'admin', label: t('common.user'), sortable: true, sortValue: (row) => row.admin?.name ?? 'System', render: (row) => row.admin?.name ?? 'System' },
+    { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => formatActivityActionLabel(row.action, t) },
+    {
+      key: 'target',
+      label: t('security.target'),
+      sortable: true,
+      sortValue: (row) => String((row.metadata.unblocked_ip as string | undefined) ?? (row.metadata.unblocked_email as string | undefined) ?? (row.metadata.blocked_ip as string | undefined) ?? '-'),
+      render: (row) => String((row.metadata.unblocked_ip as string | undefined) ?? (row.metadata.unblocked_email as string | undefined) ?? (row.metadata.blocked_ip as string | undefined) ?? '-'),
+    },
+    { key: 'admin_ip', label: t('security.adminIp'), sortable: true, sortValue: (row) => row.admin_ip ?? '', render: (row) => row.admin_ip ?? '-' },
+  ], [locale, t])
 
   return (
     <div className="space-y-6">
@@ -73,46 +120,13 @@ export function SecurityLocksPage() {
               <CardTitle>{t('security.lockedAccounts')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-start dark:border-slate-800">
-                      <th className="p-2">{t('common.email')}</th>
-                      <th className="p-2">{t('security.device')}</th>
-                      <th className="p-2">{t('security.lastIp')}</th>
-                      <th className="p-2">{t('security.country')}</th>
-                      <th className="p-2">{t('security.isp')}</th>
-                      <th className="p-2">{t('security.attempts')}</th>
-                      <th className="p-2">{t('security.retryAfter')}</th>
-                      <th className="p-2">{t('common.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lockedAccounts.map((row) => (
-                      <tr key={row.email} className="border-b border-slate-100 dark:border-slate-900">
-                        <td className="p-2">{row.email}</td>
-                        <td className="p-2">{row.device}</td>
-                        <td className="p-2">{row.ip}</td>
-                        <td className="p-2"><IpLocationCell country={row.country_name} city={row.city} countryCode={row.country_code ?? ''} /></td>
-                        <td className="p-2">{row.isp || '-'}</td>
-                        <td className="p-2">{row.attempt_count}</td>
-                        <td className="p-2">{row.seconds_remaining}s</td>
-                        <td className="p-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => unblockEmailMutation.mutate(row.email)}
-                            disabled={unblockEmailMutation.isPending}
-                          >
-                            {t('security.unblock')}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {lockedAccounts.length === 0 ? <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} /> : null}
-              </div>
+              <DataTable
+                tableKey="super_admin_security_locks_locked_accounts"
+                columns={lockedColumns}
+                data={lockedAccounts}
+                rowKey={(row) => row.email}
+                emptyMessage={t('common.noData')}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -123,42 +137,13 @@ export function SecurityLocksPage() {
               <CardTitle>{t('security.blockedIps')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-start dark:border-slate-800">
-                      <th className="p-2">{t('security.lastIp')}</th>
-                      <th className="p-2">{t('security.device')}</th>
-                      <th className="p-2">{t('security.country')}</th>
-                      <th className="p-2">{t('security.isp')}</th>
-                      <th className="p-2">{t('common.createdAt')}</th>
-                      <th className="p-2">{t('common.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {blockedIps.map((row) => (
-                      <tr key={row.ip} className="border-b border-slate-100 dark:border-slate-900">
-                        <td className="p-2">{row.ip}</td>
-                        <td className="p-2">{row.device}</td>
-                        <td className="p-2"><IpLocationCell country={row.country_name} city={row.city} countryCode={row.country_code ?? ''} /></td>
-                        <td className="p-2">{row.isp || '-'}</td>
-                        <td className="p-2">{row.blocked_at ? formatDate(row.blocked_at, locale) : '-'}</td>
-                        <td className="p-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => unblockIpMutation.mutate(row.ip)}
-                            disabled={unblockIpMutation.isPending}
-                          >
-                            {t('security.unblock')}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {blockedIps.length === 0 ? <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} /> : null}
-              </div>
+              <DataTable
+                tableKey="super_admin_security_locks_blocked_ips"
+                columns={blockedColumns}
+                data={blockedIps}
+                rowKey={(row) => row.ip}
+                emptyMessage={t('common.noData')}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -169,34 +154,13 @@ export function SecurityLocksPage() {
               <CardTitle>{t('security.auditLog')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-start dark:border-slate-800">
-                      <th className="p-2">{t('common.timestamp')}</th>
-                      <th className="p-2">{t('common.user')}</th>
-                      <th className="p-2">{t('common.action')}</th>
-                      <th className="p-2">{t('security.target')}</th>
-                      <th className="p-2">{t('security.adminIp')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {auditRows.map((row) => {
-                      const target = String((row.metadata.unblocked_ip as string | undefined) ?? (row.metadata.unblocked_email as string | undefined) ?? (row.metadata.blocked_ip as string | undefined) ?? '-')
-                      return (
-                        <tr key={row.id} className="border-b border-slate-100 dark:border-slate-900">
-                          <td className="p-2">{row.created_at ? formatDate(row.created_at, locale) : '-'}</td>
-                          <td className="p-2">{row.admin?.name ?? 'System'}</td>
-                          <td className="p-2">{formatActivityActionLabel(row.action, t)}</td>
-                          <td className="p-2">{target}</td>
-                          <td className="p-2">{row.admin_ip ?? '-'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                {auditRows.length === 0 ? <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} /> : null}
-              </div>
+              <DataTable
+                tableKey="super_admin_security_locks_audit"
+                columns={auditColumns}
+                data={auditRows}
+                rowKey={(row) => row.id}
+                emptyMessage={t('common.noData')}
+              />
             </CardContent>
           </Card>
         </TabsContent>

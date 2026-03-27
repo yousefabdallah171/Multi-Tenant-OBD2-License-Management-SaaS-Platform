@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Reseller;
 use App\Models\License;
 use App\Models\ResellerCommission;
 use App\Models\ResellerPayment;
+use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -29,10 +30,9 @@ class PaymentStatusController extends BaseResellerController
             ->orderByDesc('id')
             ->get();
 
-        $totalSales = round((float) License::query()
-            ->where('tenant_id', $tenantId)
-            ->where('reseller_id', $reseller->id)
-            ->sum('price'), 2);
+        $totalSales = round((float) (RevenueAnalytics::baseQuery([], $tenantId, null, $reseller->id)
+            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_sales'))
+            ->first()?->total_sales ?? 0), 2);
 
         $latestRate = $commissions->first()?->commission_rate;
         $totalPaid = round((float) $payments->sum('amount'), 2);

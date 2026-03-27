@@ -184,6 +184,7 @@ export function IpAnalyticsPage() {
         />
       ) : (
         <DataTable
+          tableKey="manager_parent_ip_analytics"
           columns={columns}
           data={rows}
           rowKey={(row) => row.id}

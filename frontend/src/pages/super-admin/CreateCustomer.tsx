@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RoleOptionPicker } from '@/components/shared/RoleOptionPicker'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
@@ -21,6 +22,7 @@ import { superAdminCustomerService } from '@/services/super-admin-customer.servi
 import { tenantService } from '@/services/tenant.service'
 import { userService } from '@/services/user.service'
 import { formatUsername } from '@/utils/biosId'
+import type { UserRole } from '@/types/user.types'
 
 type DurationUnit = 'minutes' | 'hours' | 'days'
 type ScheduleMode = 'after' | 'on'
@@ -332,7 +334,7 @@ export function CreateCustomerPage() {
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={t('activate.username', { defaultValue: 'Username (API)' })} hint={t('activate.usernameHint', { defaultValue: 'API username — auto-formatted (no spaces)' })} error={errors.customerName}>
-              <Input value={customerName} placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })} onChange={(event) => setCustomerName(event.target.value)} onBlur={(event) => setCustomerName(formatUsername(event.target.value))} />
+              <Input value={customerName} placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })} maxLength={10} onChange={(event) => setCustomerName(event.target.value)} onBlur={(event) => setCustomerName(formatUsername(event.target.value))} />
             </Field>
             <Field label={t('activate.clientName', { defaultValue: 'Client Display Name' })} hint={t('activate.clientNameHint', { defaultValue: 'Human-readable name for display in your dashboard' })}>
               <Input value={clientName} placeholder={t('activate.clientNamePlaceholder', { defaultValue: 'Full client name (optional)' })} onChange={(event) => setClientName(event.target.value)} />
@@ -346,19 +348,14 @@ export function CreateCustomerPage() {
               </select>
             </Field>
             <Field label={t('common.reseller')} error={errors.sellerId}>
-              <select
+              <RoleOptionPicker
                 value={sellerId}
-                onChange={(event) => setSellerId(event.target.value ? Number(event.target.value) : '')}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                onChange={(value) => setSellerId(value)}
+                options={sellerOptions.map((seller) => ({ id: seller.id, name: seller.name, role: resolveUserRole(seller.role) }))}
+                placeholder={sellerPlaceholder}
+                emptyLabel={sellerPlaceholder}
                 disabled={!tenantId || sellersQuery.isLoading}
-              >
-                <option value="">{sellerPlaceholder}</option>
-                {sellerOptions.map((seller) => (
-                  <option key={seller.id} value={seller.id}>
-                    {`${seller.name} (${t(`roles.${seller.role}`)})`}
-                  </option>
-                ))}
-              </select>
+              />
             </Field>
             <Field label={t('activate.customerEmail', { defaultValue: 'Customer Email' })} error={errors.email}>
               <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
@@ -376,7 +373,7 @@ export function CreateCustomerPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
-              <Input value={biosId} onChange={(event) => setBiosId(event.target.value)} />
+              <Input value={biosId} maxLength={10} onChange={(event) => setBiosId(event.target.value)} />
             </Field>
             <Field label={t('common.program')} error={errors.programId}>
               <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
@@ -545,6 +542,14 @@ export function CreateCustomerPage() {
       </Card>
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function Field({ label, children, hint, error }: { label: string; children: React.ReactNode; hint?: string; error?: string }) {

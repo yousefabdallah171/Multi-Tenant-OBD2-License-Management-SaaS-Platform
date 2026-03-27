@@ -56,7 +56,7 @@ export function PaymentStatusPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <DataTable columns={paymentColumns} data={data?.payment_history ?? []} rowKey={(row) => row.id} isLoading={query.isLoading} emptyMessage={t('payments.empty.payments')} />
+          <DataTable tableKey="reseller_payment_history" columns={paymentColumns} data={data?.payment_history ?? []} rowKey={(row) => row.id} isLoading={query.isLoading} emptyMessage={t('payments.empty.payments')} />
         </CardContent>
       </Card>
     </div>

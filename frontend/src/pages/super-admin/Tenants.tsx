@@ -328,9 +328,10 @@ export function TenantsPage() {
       </Card>
 
       {tenantsQuery.isLoading ? (
-        <DataTable columns={columns} data={[]} rowKey={(row) => row.id} isLoading />
+        <DataTable tableKey="super_admin_tenants" columns={columns} data={[]} rowKey={(row) => row.id} isLoading />
       ) : (
         <DataTable
+          tableKey="super_admin_tenants"
           columns={columns}
           data={tenantsQuery.data?.data ?? []}
           rowKey={(row) => row.id}

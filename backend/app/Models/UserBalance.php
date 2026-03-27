@@ -17,6 +17,7 @@ class UserBalance extends Model
         'total_revenue',
         'total_activations',
         'pending_balance',
+        'granted_value',
         'last_activity_at',
     ];
 
@@ -26,6 +27,7 @@ class UserBalance extends Model
             'total_revenue' => 'decimal:2',
             'total_activations' => 'integer',
             'pending_balance' => 'decimal:2',
+            'granted_value' => 'decimal:2',
             'last_activity_at' => 'datetime',
         ];
     }

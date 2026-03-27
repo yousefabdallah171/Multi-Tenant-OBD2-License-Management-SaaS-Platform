@@ -172,6 +172,9 @@
     "scheduleUpdatedSuccess": "تم تحديث الجدولة بنجاح.",
     "licenseRenewedSuccess": "تم تجديد الترخيص بنجاح.",
     "rowsPerPage": "عدد الصفوف",
+    "screenOptions": "خيارات الشاشة",
+    "locked": "مثبت",
+    "pagination": "الترقيم",
     "totalCount": "الإجمالي {{count}}",
     "selectAllVisible": "تحديد الظاهر",
     "clearVisible": "إلغاء الظاهر",
@@ -1732,13 +1735,15 @@
       "programsSold": "البرامج المباعة"
     },
     "saleSummarySentence": "باع {{reseller}} برنامج {{program}} إلى {{customer}}",
-    "saleSummaryMeta": "{{days}} يوم | {{price}} | {{activatedAt}}",
+    "saleSummaryMeta": "{{duration}} | {{price}} | {{activatedAt}}",
     "activityTypes": {
       "activate": "تفعيل",
       "renew": "تجديد",
       "pause": "إيقاف",
       "deactivate": "إلغاء التفعيل"
-    }
+    },
+    "noSoftwareActivity": "لا يوجد نشاط برنامج",
+    "noSoftwareActivityDesc": "هذا المعرّف BIOS لم يتصل بالبرنامج بعد بناءً على البيانات المتاحة."
   },
   "settings": {
     "error": "فشل حفظ الإعدادات",
@@ -1757,7 +1762,8 @@
   },
   "customers": {
     "filterByManagerParent": "فلترة حسب المدير الرئيسي",
-    "filterByManager": "فلترة حسب المدير"
+    "filterByManager": "فلترة حسب المدير",
+    "pausedByAdmin": "موقوف من المسؤول"
   },
   "biosChangeRequests": {
     "title": "طلبات تغيير BIOS",

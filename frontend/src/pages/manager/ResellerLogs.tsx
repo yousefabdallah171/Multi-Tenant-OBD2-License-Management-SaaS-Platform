@@ -6,6 +6,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { RoleOptionPicker } from '@/components/shared/RoleOptionPicker'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -261,21 +262,16 @@ export function ResellerLogsPage() {
 
       <Card>
         <CardContent className="grid gap-3 p-4 lg:grid-cols-[260px_240px_minmax(0,1fr)]">
-          <select
+          <RoleOptionPicker
             value={sellerId}
-            onChange={(event) => {
-              setSellerId(event.target.value ? Number(event.target.value) : '')
+            onChange={(value) => {
+              setSellerId(value)
               setPage(1)
             }}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-          >
-            <option value="">{t('common.all')} {t('common.users')}</option>
-            {sellerOptions.map((seller) => (
-              <option key={seller.id} value={seller.id}>
-                {seller.name} ({t(`roles.${seller.role}`)})
-              </option>
-            ))}
-          </select>
+            options={sellerOptions}
+            placeholder={`${t('common.all')} ${t('common.users')}`}
+            emptyLabel={`${t('common.all')} ${t('common.users')}`}
+          />
           <select
             value={action}
             onChange={(event) => {
@@ -302,6 +298,7 @@ export function ResellerLogsPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_reseller_logs"
         columns={columns}
         data={logsQuery.data?.data ?? []}
         rowKey={(row) => row.id}

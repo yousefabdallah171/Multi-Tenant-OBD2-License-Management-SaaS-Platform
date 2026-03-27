@@ -238,7 +238,7 @@ class LicenseService
             'is_scheduled' => $isScheduled,
         ]);
 
-        $renewedLicense = DB::transaction(function () use ($license, $data, $reseller, $apiResponse, $isScheduled, $renewBiosLower): License {
+        $renewedLicense = DB::transaction(function () use ($actor, $license, $data, $reseller, $apiResponse, $isScheduled, $renewBiosLower): License {
             // Locked re-check inside transaction to close the race window
             if (! $isScheduled) {
                 $renewRaceConflict = License::query()
@@ -289,7 +289,14 @@ class LicenseService
                 'pause_reason' => null,
             ])->save();
 
-            $this->balanceService->recordRevenue($reseller, (float) $license->price);
+            $attribution = $this->resolveRevenueAttribution($actor, $license);
+
+            $this->balanceService->recordRevenue(
+                $reseller,
+                (float) $license->price,
+                false,
+                $attribution['attribution_type']
+            );
             $this->logActivity(
                 $reseller,
                 'license.renewed',
@@ -302,6 +309,13 @@ class LicenseService
                     'external_username' => $license->external_username,
                     'duration_days' => $durationDays,
                     'price' => (float) $license->price,
+                    'actor_id' => $attribution['actor_id'],
+                    'actor_role' => $attribution['actor_role'],
+                    'owner_user_id' => $attribution['owner_user_id'],
+                    'owner_role' => $attribution['owner_role'],
+                    'seller_id' => (int) $reseller->id,
+                    'seller_role' => $reseller->role?->value ?? (string) $reseller->role,
+                    'attribution_type' => $attribution['attribution_type'],
                 ],
             );
 
@@ -448,6 +462,9 @@ class LicenseService
 
         if ($apiKey !== null) {
             $apiResponse = $this->externalApiService->deactivateUser($apiKey, (string) $license->external_username, $program?->external_api_base_url);
+            if (! ($apiResponse['success'] ?? false)) {
+                throw new \RuntimeException('External API deactivation failed: '.($apiResponse['data']['response'] ?? 'Unknown error'));
+            }
         }
 
         $this->logBiosAccess($reseller, $license->bios_id, 'pause', [
@@ -455,11 +472,14 @@ class LicenseService
             'external' => $apiResponse,
         ]);
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse, $data): License {
+        $actorRole = $actor->role?->value ?? (string) $actor->role;
+        $hasPausedByRole = \Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role');
+
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $data, $actorRole, $hasPausedByRole): License {
             $remainingMinutes = max(1, $this->currentMinute()->diffInMinutes($license->expires_at, false));
             $pauseReason = Str::limit(trim((string) ($data['pause_reason'] ?? '')), 500, '...');
 
-            $license->forceFill([
+            $pauseData = [
                 'status' => 'pending',
                 'external_deletion_response' => (string) ($apiResponse['data']['response'] ?? 'Paused locally.'),
                 'paused_at' => $this->currentMinute(),
@@ -471,7 +491,11 @@ class LicenseService
                 'scheduled_failed_at' => null,
                 'scheduled_failure_message' => null,
                 'is_scheduled' => false,
-            ])->save();
+            ];
+            if ($hasPausedByRole) {
+                $pauseData['paused_by_role'] = $actorRole;
+            }
+            $license->forceFill($pauseData)->save();
 
             $this->logActivity(
                 $reseller,
@@ -560,7 +584,9 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending, $biosIdLower): License {
+        $hasPausedByRole = \Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role');
+
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending, $biosIdLower, $hasPausedByRole): License {
             // Re-check inside transaction with a lock to prevent race condition
             $conflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
@@ -579,7 +605,7 @@ class LicenseService
                 ? max(1, (int) ($license->pause_remaining_minutes ?? 0))
                 : null;
 
-            $license->forceFill([
+            $resumeData = [
                 'status' => 'active',
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
                 'expires_at' => $remainingMinutes !== null ? $this->currentMinute()->addMinutes($remainingMinutes) : $license->expires_at,
@@ -592,7 +618,11 @@ class LicenseService
                 'scheduled_failed_at' => null,
                 'scheduled_failure_message' => null,
                 'is_scheduled' => false,
-            ])->save();
+            ];
+            if ($hasPausedByRole) {
+                $resumeData['paused_by_role'] = null;
+            }
+            $license->forceFill($resumeData)->save();
 
             $this->logActivity(
                 $reseller,
@@ -1305,8 +1335,7 @@ class LicenseService
     {
         $candidate = Str::of($customerName)
             ->ascii()
-            ->lower()
-            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->replaceMatches('/[^A-Za-z0-9]+/', '_')
             ->trim('_')
             ->limit(50, '')
             ->value();
@@ -1317,8 +1346,7 @@ class LicenseService
 
         return Str::of($biosId)
             ->ascii()
-            ->lower()
-            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->replaceMatches('/[^A-Za-z0-9]+/', '_')
             ->trim('_')
             ->limit(50, '')
             ->value() ?: 'user_'.Str::lower(Str::random(8));
@@ -1494,5 +1522,48 @@ class LicenseService
         }
 
         return $preset;
+    }
+
+    /**
+     * @return array{
+     *     actor_id:int,
+     *     actor_role:string,
+     *     owner_user_id:int|null,
+     *     owner_role:string|null,
+     *     attribution_type:string
+     * }
+     */
+    private function resolveRevenueAttribution(User $actor, License $license): array
+    {
+        $license->loadMissing([
+            'customer.createdBy:id,role',
+            'reseller:id,role',
+        ]);
+
+        $owner = $license->customer?->createdBy;
+        $ownerRole = $owner?->role?->value ?? (string) $owner?->role;
+
+        if (! $owner || ! in_array($ownerRole, [
+            UserRole::SUPER_ADMIN->value,
+            UserRole::MANAGER_PARENT->value,
+            UserRole::MANAGER->value,
+            UserRole::RESELLER->value,
+        ], true)) {
+            $owner = $license->reseller;
+            $ownerRole = $owner?->role?->value ?? (string) $owner?->role;
+        }
+
+        $ownerUserId = $owner?->id ? (int) $owner->id : null;
+        $actorRole = $actor->role?->value ?? (string) $actor->role;
+
+        return [
+            'actor_id' => (int) $actor->id,
+            'actor_role' => $actorRole,
+            'owner_user_id' => $ownerUserId,
+            'owner_role' => $ownerRole !== '' ? $ownerRole : null,
+            'attribution_type' => $ownerUserId !== null && $ownerUserId === (int) $actor->id
+                ? BalanceService::TYPE_EARNED
+                : BalanceService::TYPE_GRANTED,
+        ];
     }
 }

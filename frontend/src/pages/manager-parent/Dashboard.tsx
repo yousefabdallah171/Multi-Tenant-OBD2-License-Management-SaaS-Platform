@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
+import type { UserRole } from '@/types/user.types'
 
 function localizeExpiryRange(range: string, t: ReturnType<typeof useTranslation>['t']) {
   const match = range.match(/^(\d+)-(\d+)\s+days$/i)
@@ -187,8 +189,11 @@ export function DashboardPage() {
               <div key={member.id} className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-950 dark:text-white">{member.name}</p>
-                    <p className="text-xs capitalize text-slate-500 dark:text-slate-400">{t(`roles.${member.role}`)}</p>
+                    <RoleIdentity
+                      name={member.name}
+                      role={resolveUserRole(member.role)}
+                      href={member.id ? routePaths.managerParent.teamMemberDetail(lang, member.id) : undefined}
+                    />
                   </div>
                   <div className="text-start">
                     <p className="font-semibold text-slate-950 dark:text-white">{formatCurrency(member.revenue, 'USD', locale)}</p>
@@ -202,5 +207,13 @@ export function DashboardPage() {
       </div>
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 

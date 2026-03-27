@@ -5,13 +5,18 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonTable } from '@/components/shared/SkeletonTable'
+import { TableScreenOptions } from '@/components/shared/TableScreenOptions'
+import { useTablePreferences } from '@/hooks/useTablePreferences'
 import { cn } from '@/lib/utils'
 
 export interface DataTableColumn<T> {
   key: string
   label: React.ReactNode
+  screenLabel?: string
   sortable?: boolean
   className?: string
+  alwaysVisible?: boolean
+  defaultHidden?: boolean
   render: (row: T) => React.ReactNode
   sortValue?: (row: T) => string | number
 }
@@ -34,6 +39,8 @@ interface DataTableProps<T> {
   onPageChange?: (page: number) => void
   onPageSizeChange?: (pageSize: number) => void
   pageSizeOptions?: number[]
+  hidePageSizeSelector?: boolean
+  tableKey?: string
 }
 
 export function DataTable<T>({
@@ -48,11 +55,40 @@ export function DataTable<T>({
   pagination,
   onPageChange,
   onPageSizeChange,
-  pageSizeOptions = [10, 25, 50],
+  pageSizeOptions = [10, 25, 50, 100],
+  hidePageSizeSelector = false,
+  tableKey,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const preferenceColumns = useMemo(
+    () =>
+      columns.map((column) => ({
+        key: column.key,
+        label: column.screenLabel ?? (typeof column.label === 'string' ? column.label : column.key),
+        alwaysVisible: column.alwaysVisible,
+        defaultHidden: column.defaultHidden,
+      })),
+    [columns],
+  )
+  const screenOptionColumns = useMemo(
+    () =>
+      columns.map((column) => ({
+        key: column.key,
+        label: column.screenLabel ?? (typeof column.label === 'string' ? column.label : column.key),
+      })),
+    [columns],
+  )
+  const { visibleColumnSet, lockedColumns, toggleColumn, isLoading: preferencesLoading } = useTablePreferences({
+    tableKey,
+    columns: preferenceColumns,
+    perPage: pagination?.perPage,
+    onPerPageChange: onPageSizeChange,
+    pageSizeOptions,
+  })
+
+  const visibleColumns = useMemo(() => columns.filter((column) => visibleColumnSet.has(column.key)), [columns, visibleColumnSet])
 
   const filteredData = useMemo(() => {
     if (!searchTerm || !searchValue) {
@@ -73,7 +109,7 @@ export function DataTable<T>({
       return filteredData
     }
 
-    const column = columns.find((item) => item.key === sortKey)
+    const column = visibleColumns.find((item) => item.key === sortKey) ?? columns.find((item) => item.key === sortKey)
 
     if (!column?.sortValue) {
       return filteredData
@@ -98,7 +134,7 @@ export function DataTable<T>({
       const comparison = leftValue > rightValue ? 1 : -1
       return sortDirection === 'asc' ? comparison : -comparison
     })
-  }, [columns, filteredData, sortDirection, sortKey])
+  }, [columns, filteredData, sortDirection, sortKey, visibleColumns])
 
   const toggleSort = (column: DataTableColumn<T>) => {
     if (!column.sortable) {
@@ -122,11 +158,28 @@ export function DataTable<T>({
 
   return (
     <Card className="overflow-hidden">
+      {tableKey ? (
+        <div className="flex justify-end border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <TableScreenOptions
+            columns={screenOptionColumns.map((column) => ({
+              key: column.key,
+              label: column.label,
+              locked: lockedColumns.includes(column.key),
+              visible: visibleColumnSet.has(column.key),
+            }))}
+            pageSize={pagination?.perPage ?? null}
+            pageSizeOptions={pageSizeOptions}
+            onToggleColumn={toggleColumn}
+            onPageSizeChange={onPageSizeChange}
+            isLoading={preferencesLoading}
+          />
+        </div>
+      ) : null}
       <div className="max-h-[70vh] overflow-auto">
         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
           <thead className="sticky top-0 z-20 border-b border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-950/70">
             <tr>
-              {columns.map((column) => {
+              {visibleColumns.map((column) => {
                 const isActive = sortKey === column.key
                 return (
                   <th
@@ -158,10 +211,10 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-900">
-            {isLoading ? <SkeletonTable columnCount={columns.length} /> : null}
+            {isLoading ? <SkeletonTable columnCount={visibleColumns.length || columns.length} /> : null}
             {!isLoading && sortedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-6">
+                <td colSpan={visibleColumns.length || columns.length} className="px-4 py-6">
                   <EmptyState
                     title={emptyMessage || t('common.noData')}
                     description={t('common.adjustFilters')}
@@ -176,7 +229,7 @@ export function DataTable<T>({
                     className={cn('transition hover:bg-sky-50/70 dark:hover:bg-sky-950/20', onRowClick ? 'cursor-pointer' : '')}
                     onClick={() => onRowClick?.(row)}
                   >
-                    {columns.map((column) => (
+                    {visibleColumns.map((column) => (
                       <td key={`${rowKey(row)}-${column.key}`} className={cn('px-4 py-4 align-top text-sm text-slate-700 dark:text-slate-200', column.className)}>
                         {column.render(row)}
                       </td>
@@ -191,7 +244,7 @@ export function DataTable<T>({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
           <span>{t('common.totalCount', { count: pagination.total })}</span>
           <div className="flex flex-wrap items-center gap-3">
-            {onPageSizeChange ? (
+            {onPageSizeChange && !hidePageSizeSelector && !tableKey ? (
               <label className="flex items-center gap-2">
                 <span>{t('common.rowsPerPage')}</span>
                 <select

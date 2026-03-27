@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -13,6 +14,7 @@ import { formatActivityActionLabel, formatDate, formatReadableActivityDescriptio
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import type { LicenseHistoryEntry } from '@/types/manager-reseller.types'
+import type { UserRole } from '@/types/user.types'
 import { IpLocationCell } from '@/utils/countryFlag'
 
 export function CustomerDetailPage() {
@@ -110,7 +112,16 @@ export function CustomerDetailPage() {
                       <div key={license.id} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40">
                         <div className="grid gap-3 md:grid-cols-5">
                           <Info label={t('common.program')} value={license.program_name ?? '-'} />
-                          <Info label={t('customerDetail.soldBy')} value={group.name} />
+                          <Info
+                            label={t('customerDetail.soldBy')}
+                            value={
+                              <RoleIdentity
+                                name={group.name}
+                                role={resolveUserRole(group.role)}
+                                href={group.id ? routePaths.manager.teamMemberDetail(lang, group.id) : undefined}
+                              />
+                            }
+                          />
                           <Info label={t('customerDetail.period')} value={formatLicensePeriod(license, locale)} />
                           <Info label={t('common.price')} value={`$${Number(license.price).toFixed(2)}`} />
                           <Info label={t('common.status')} value={<LicenseStatusBadges status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(license.is_blacklisted)} />} />
@@ -132,7 +143,11 @@ export function CustomerDetailPage() {
             <CardContent className="space-y-2">
               {(customer.resellers_summary ?? []).map((reseller) => (
                 <div key={`${reseller.reseller_id}-${reseller.reseller_email}`} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                  <p className="font-medium">{reseller.reseller_name ?? '-'}</p>
+                  <RoleIdentity
+                    name={reseller.reseller_name}
+                    role={resolveUserRole(reseller.reseller_role)}
+                    href={reseller.reseller_id ? routePaths.manager.teamMemberDetail(lang, reseller.reseller_id) : undefined}
+                  />
                   <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.reseller_email ?? '-'}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{reseller.activations_count} activations</p>
                 </div>
@@ -230,8 +245,16 @@ function resolveLicenseUsername(customer: { name?: string | null; client_name?: 
   return storedUsername || candidate || null
 }
 
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
+}
+
 function groupLicenseHistoryByReseller(entries: LicenseHistoryEntry[]) {
-  const groups = new Map<string, { key: string; name: string; email: string; items: LicenseHistoryEntry[] }>()
+  const groups = new Map<string, { key: string; id: number | null; name: string; email: string; role: string | null; items: LicenseHistoryEntry[] }>()
 
   for (const entry of entries) {
     const key = String(entry.reseller_id ?? `unknown-${entry.reseller_name ?? 'unknown'}`)
@@ -243,8 +266,10 @@ function groupLicenseHistoryByReseller(entries: LicenseHistoryEntry[]) {
 
     groups.set(key, {
       key,
+      id: entry.reseller_id ?? null,
       name: entry.reseller_name ?? 'Unknown',
       email: entry.reseller_email ?? '-',
+      role: entry.reseller_role ?? null,
       items: [entry],
     })
   }

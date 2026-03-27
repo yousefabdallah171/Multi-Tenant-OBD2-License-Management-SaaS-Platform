@@ -133,7 +133,9 @@ export interface ManagerCustomerSummary {
   bios_id: string | null
   external_username?: string | null
   reseller: string | null
+  reseller_role?: string | null
   reseller_id: number | null
+  duration_days?: number | null
   program: string | null
   status: string | null
   activated_at?: string | null
@@ -169,6 +171,7 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
     reseller: string | null
     reseller_id?: number | null
     reseller_email?: string | null
+    reseller_role?: string | null
     status: string
     duration_days?: number
     price: number
@@ -190,6 +193,7 @@ export interface ManagerCustomerDetails extends ManagerCustomerSummary {
     reseller_id: number | null
     reseller_name: string | null
     reseller_email: string | null
+    reseller_role?: string | null
     activations_count: number
     last_activation_at: string | null
   }>
@@ -226,6 +230,7 @@ export interface ResellerCustomerSummary {
   external_username: string | null
   program: string | null
   program_id: number | null
+  duration_days?: number | null
   status: 'active' | 'expired' | 'suspended' | 'cancelled' | 'pending' | null
   price: number
   activated_at: string | null
@@ -240,6 +245,7 @@ export interface ResellerCustomerSummary {
   paused_at?: string | null
   pause_remaining_minutes?: number | null
   pause_reason?: string | null
+  paused_by_role?: string | null
   is_blacklisted?: boolean
   bios_active_elsewhere?: boolean
   username_locked?: boolean
@@ -380,6 +386,7 @@ export interface LicenseHistoryEntry {
   reseller_id: number | null
   reseller_name: string | null
   reseller_email?: string | null
+  reseller_role?: string | null
   bios_id: string
   external_username?: string | null
   activated_at: string | null
@@ -406,6 +413,7 @@ export interface BiosChangeRequest {
   reseller_id?: number | null
   reseller_name?: string | null
   reseller_email?: string | null
+  reseller_role?: string | null
   reviewer_id?: number | null
   reviewer_name?: string | null
   reviewer_notes?: string | null
@@ -633,6 +641,7 @@ export interface ResellerReportPoint {
 
 export interface ResellerReportSummary {
   total_revenue: number
+  granted_value: number
   total_activations: number
   total_customers: number
   active_customers: number

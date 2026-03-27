@@ -12,13 +12,20 @@ use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class BiosDetailsService
 {
+    public function __construct(
+        private readonly ExternalApiService $externalApiService,
+        private readonly IpAnalyticsService $ipAnalyticsService,
+    ) {
+    }
     public function getBiosOverview(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
-            ->with(['customer:id,name,username,email,phone', 'reseller:id,name,email,phone', 'program:id,name'])
+            ->with(['customer:id,name,username,email,phone', 'reseller:id,name,email,phone,role', 'program:id,name'])
             ->where('bios_id', $biosId);
 
         $this->applyTenantScope($query, $tenantId);
@@ -69,14 +76,15 @@ class BiosDetailsService
                     'id' => $customer->id,
                     'name' => $customer->name,
                     'username' => $customer->username,
-                    'email' => $customer->email,
+                    'email' => $this->visibleEmail($customer->email),
                     'phone' => $customer->phone,
                 ] : null,
                 'reseller' => $reseller ? [
                     'id' => $reseller->id,
                     'name' => $reseller->name,
-                    'email' => $reseller->email,
+                    'email' => $this->visibleEmail($reseller->email),
                     'phone' => $reseller->phone,
+                    'role' => $reseller->role?->value ?? (string) $reseller->role,
                 ] : null,
                 'status' => ($blacklist['is_blacklisted'] ?? false) ? 'blacklisted' : ($activityMetadata['status'] ?? $lastAccessLog?->metadata['status'] ?? $lastAccessLog?->action ?? $latestActivity?->action),
                 'first_activation' => null,
@@ -90,7 +98,7 @@ class BiosDetailsService
                     'id' => (int) ($activityMetadata['license_id'] ?? 0),
                     'status' => $activityMetadata['status'] ?? null,
                     'price' => (float) ($activityMetadata['price'] ?? 0),
-                    'duration_days' => (int) ($activityMetadata['duration_days'] ?? 0),
+                    'duration_days' => (float) round((float) ($activityMetadata['duration_days'] ?? 0), 4),
                     'activated_at' => $latestActivity->created_at?->toIso8601String(),
                     'expires_at' => null,
                     'external_username' => $activityMetadata['external_username'] ?? null,
@@ -101,13 +109,13 @@ class BiosDetailsService
                     'customer' => $customer ? [
                         'id' => $customer->id,
                         'name' => $customer->name,
-                        'email' => $customer->email,
+                        'email' => $this->visibleEmail($customer->email),
                         'phone' => $customer->phone,
                     ] : null,
                     'reseller' => $reseller ? [
                         'id' => $reseller->id,
                         'name' => $reseller->name,
-                        'email' => $reseller->email,
+                        'email' => $this->visibleEmail($reseller->email),
                         'phone' => $reseller->phone,
                     ] : null,
                 ] : null,
@@ -141,28 +149,29 @@ class BiosDetailsService
                 'id' => $overviewLicense->customer->id,
                 'name' => $overviewLicense->customer->name,
                 'username' => $overviewLicense->customer->username,
-                'email' => $overviewLicense->customer->email,
+                'email' => $this->visibleEmail($overviewLicense->customer->email),
                 'phone' => $overviewLicense->customer->phone,
             ] : null,
             'reseller' => $overviewLicense?->reseller ? [
                 'id' => $overviewLicense->reseller->id,
                 'name' => $overviewLicense->reseller->name,
-                'email' => $overviewLicense->reseller->email,
+                'email' => $this->visibleEmail($overviewLicense->reseller->email),
                 'phone' => $overviewLicense->reseller->phone,
+                'role' => $overviewLicense->reseller->role?->value ?? (string) $overviewLicense->reseller->role,
             ] : null,
             'status' => $overviewLicense?->effectiveStatus() ?? $last?->effectiveStatus(),
             'first_activation' => $first?->activated_at?->toIso8601String(),
             'last_activity' => $last?->activated_at?->toIso8601String(),
             'total_activations' => $licenses->count(),
             'total_licenses' => $licenses->count(),
-            'avg_duration_days' => (float) round((float) $licenses->avg('duration_days'), 2),
+            'avg_duration_days' => (float) round((float) $licenses->avg('duration_days'), 4),
             'total_revenue' => (float) round((float) $licenses->sum('price'), 2),
             'avg_days_between_purchases' => empty($intervals) ? 0 : (int) round(array_sum($intervals) / count($intervals)),
             'latest_license' => $last ? [
                 'id' => $last->id,
                 'status' => $last->status,
                 'price' => (float) $last->price,
-                'duration_days' => (int) $last->duration_days,
+                'duration_days' => (float) round((float) $last->duration_days, 4),
                 'activated_at' => $last->activated_at?->toIso8601String(),
                 'expires_at' => $last->expires_at?->toIso8601String(),
                 'external_username' => $last->external_username,
@@ -173,13 +182,13 @@ class BiosDetailsService
                 'customer' => $last->customer ? [
                     'id' => $last->customer->id,
                     'name' => $last->customer->name,
-                    'email' => $last->customer->email,
+                    'email' => $this->visibleEmail($last->customer->email),
                     'phone' => $last->customer->phone,
                 ] : null,
                 'reseller' => $last->reseller ? [
                     'id' => $last->reseller->id,
                     'name' => $last->reseller->name,
-                    'email' => $last->reseller->email,
+                    'email' => $this->visibleEmail($last->reseller->email),
                     'phone' => $last->reseller->phone,
                 ] : null,
             ] : null,
@@ -223,7 +232,7 @@ class BiosDetailsService
     public function getBiosLicenseHistory(string $biosId, ?int $tenantId = null, array $filters = []): LengthAwarePaginator
     {
         $query = License::query()
-            ->with(['program:id,name', 'reseller:id,name,email'])
+            ->with(['program:id,name', 'reseller:id,name,email,role'])
             ->where('bios_id', $biosId)
             ->orderByDesc('activated_at');
 
@@ -245,7 +254,7 @@ class BiosDetailsService
     public function getResellerBreakdown(string $biosId, ?int $tenantId = null): array
     {
         $query = License::query()
-            ->with(['reseller:id,name,email', 'program:id,name'])
+            ->with(['reseller:id,name,email,role', 'program:id,name'])
             ->where('bios_id', $biosId);
 
         $this->applyTenantScope($query, $tenantId);
@@ -258,7 +267,8 @@ class BiosDetailsService
                 return [
                     'id' => $first?->reseller_id,
                     'name' => $first?->reseller?->name,
-                    'email' => $first?->reseller?->email,
+                    'email' => $this->visibleEmail($first?->reseller?->email),
+                    'role' => $first?->reseller?->role?->value ?? ($first?->reseller?->role !== null ? (string) $first?->reseller?->role : null),
                     'activation_count' => $licenses->count(),
                     'total_revenue' => (float) $licenses->sum('price'),
                     'last_activity_at' => $licenses->sortByDesc('activated_at')->first()?->activated_at?->toIso8601String(),
@@ -276,19 +286,162 @@ class BiosDetailsService
 
     public function getIpAnalytics(string $biosId, ?int $tenantId = null): array
     {
-        $query = BiosAccessLog::query()
-            ->where('bios_id', $biosId)
-            ->orderByDesc('created_at');
-
-        if ($tenantId !== null) {
-            $query->where('tenant_id', $tenantId);
+        // For Super Admin (tenantId=null), resolve from the BIOS's license
+        $resolvedTenantId = $tenantId;
+        if ($resolvedTenantId === null) {
+            $license = License::query()->where('bios_id', $biosId)->whereNotNull('tenant_id')->orderByDesc('activated_at')->first(['tenant_id', 'activated_at']);
+            if (! $license) {
+                return [];
+            }
+            $resolvedTenantId = (int) $license->tenant_id;
         }
 
-        return $query->limit(200)->get()->map(fn (BiosAccessLog $log): array => [
-            'ip_address' => $log->ip_address,
-            'action' => $log->action,
-            'created_at' => $log->created_at?->toIso8601String(),
-        ])->all();
+        $cacheKey = "ip-analytics:matched:{$resolvedTenantId}";
+        $matched = Cache::get($cacheKey);
+
+        if (! is_array($matched)) {
+            $response = $this->externalApiService->getGlobalLogs();
+            if (! ($response['success'] ?? false)) {
+                return [];
+            }
+            $parsed = $this->ipAnalyticsService->parseExternalLogs((string) ($response['data']['raw'] ?? ''));
+            $matched = $this->ipAnalyticsService->matchLogsToDatabaseRecords($parsed, $resolvedTenantId);
+            $matched = array_values(array_filter($matched, static fn (array $row): bool => ($row['program_id'] ?? null) !== null));
+            $matched = array_reverse($matched);
+            try {
+                Cache::put($cacheKey, $matched, now()->addMinutes(5));
+            } catch (\Throwable) {
+            }
+        }
+
+        $normalizedBiosId = strtolower($biosId);
+        $filtered = array_values(array_filter($matched, static fn (array $row): bool =>
+            isset($row['bios_id']) && strtolower((string) $row['bios_id']) === $normalizedBiosId
+        ));
+
+        if (empty($filtered)) {
+            return [];
+        }
+
+        $uniqueIps = array_values(array_filter(array_unique(array_column($filtered, 'ip_address')), static fn ($ip): bool => is_string($ip) && $ip !== ''));
+        $geoByIp = $this->fetchGeoData($uniqueIps);
+
+        return array_map(function (array $row) use ($geoByIp): array {
+            $geo = $geoByIp[$row['ip_address']] ?? [
+                'country' => 'Unknown', 'country_code' => '', 'city' => '',
+                'isp' => '', 'proxy' => false,
+            ];
+
+            return [
+                'ip_address' => $row['ip_address'],
+                'timestamp' => $this->parseRawTimestamp($row['timestamp'] ?? null),
+                'country' => $geo['country'],
+                'country_code' => $geo['country_code'],
+                'city' => $geo['city'],
+                'isp' => $geo['isp'],
+                'proxy' => (bool) $geo['proxy'],
+                'username' => $row['username'],
+                'program_name' => $row['program_name'] ?? null,
+            ];
+        }, $filtered);
+    }
+
+    private function parseRawTimestamp(?string $raw): ?string
+    {
+        if ($raw === null || trim($raw) === '') {
+            return null;
+        }
+        try {
+            return Carbon::parse($raw)->toIso8601String();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @param  string[]  $ips
+     * @return array<string, array{country: string, country_code: string, city: string, isp: string, proxy: bool}>
+     */
+    private function fetchGeoData(array $ips): array
+    {
+        if (empty($ips)) {
+            return [];
+        }
+
+        $fallback = ['country' => 'Unknown', 'country_code' => '', 'city' => '', 'isp' => '', 'proxy' => false];
+        $result = [];
+        $uncachedIps = [];
+
+        foreach ($ips as $ip) {
+            $cached = Cache::get('ip-analytics:geo:'.$ip);
+            if (is_array($cached)) {
+                $result[$ip] = [
+                    'country' => (string) ($cached['country'] ?? 'Unknown'),
+                    'country_code' => (string) ($cached['country_code'] ?? ''),
+                    'city' => (string) ($cached['city'] ?? ''),
+                    'isp' => (string) ($cached['isp'] ?? ''),
+                    'proxy' => (bool) ($cached['proxy'] ?? false),
+                ];
+                continue;
+            }
+            $uncachedIps[] = $ip;
+        }
+
+        foreach (array_chunk($uncachedIps, 100) as $chunk) {
+            try {
+                $payload = array_map(static fn (string $ip): array => ['query' => $ip], $chunk);
+                $response = Http::timeout(8)
+                    ->post('http://ip-api.com/batch?fields=status,country,countryCode,city,isp,org,proxy,hosting,query', $payload);
+
+                if (! $response->successful()) {
+                    foreach ($chunk as $ip) {
+                        $result[$ip] = $fallback;
+                        $this->cacheGeo('ip-analytics:geo:'.$ip, $fallback);
+                    }
+                    continue;
+                }
+
+                foreach ($response->json() as $item) {
+                    $ip = (string) ($item['query'] ?? '');
+                    if ($ip === '' || ($item['status'] ?? '') !== 'success') {
+                        if ($ip !== '') {
+                            $result[$ip] = $fallback;
+                            $this->cacheGeo('ip-analytics:geo:'.$ip, $fallback);
+                        }
+                        continue;
+                    }
+
+                    $geo = [
+                        'country' => (string) ($item['country'] ?? 'Unknown'),
+                        'country_code' => (string) ($item['countryCode'] ?? ''),
+                        'city' => (string) ($item['city'] ?? ''),
+                        'isp' => (string) (($item['org'] ?? '') !== '' ? ($item['org'] ?? '') : ($item['isp'] ?? '')),
+                        'proxy' => (bool) (($item['proxy'] ?? false) || ($item['hosting'] ?? false)),
+                    ];
+
+                    $result[$ip] = $geo;
+                    $this->cacheGeo('ip-analytics:geo:'.$ip, $geo);
+                }
+            } catch (\Throwable) {
+                foreach ($chunk as $ip) {
+                    $result[$ip] = $fallback;
+                    $this->cacheGeo('ip-analytics:geo:'.$ip, $fallback);
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array{country: string, country_code: string, city: string, isp: string, proxy: bool}  $payload
+     */
+    private function cacheGeo(string $key, array $payload): void
+    {
+        try {
+            Cache::put($key, $payload, now()->addHour());
+        } catch (\Throwable) {
+        }
     }
 
     public function getBiosActivity(string $biosId, ?int $tenantId = null): array
@@ -573,5 +726,14 @@ class BiosDetailsService
         $original = substr($biosId, $position + 1);
 
         return [$username, $original];
+    }
+
+    private function visibleEmail(?string $email): ?string
+    {
+        if (! $email) {
+            return null;
+        }
+
+        return str_starts_with($email, 'no-email+') && str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 }

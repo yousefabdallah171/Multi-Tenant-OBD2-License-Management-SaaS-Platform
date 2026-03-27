@@ -15,7 +15,6 @@ export function rawBiosId(biosId: string, externalUsername?: string | null): str
  */
 export function formatUsername(value: string | null | undefined): string {
   return String(value ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/[^A-Za-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
 }

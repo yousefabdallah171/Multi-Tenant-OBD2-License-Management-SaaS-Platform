@@ -176,6 +176,9 @@
     "scheduleUpdatedSuccess": "Schedule updated successfully.",
     "licenseRenewedSuccess": "License renewed successfully.",
     "rowsPerPage": "Rows per page",
+    "screenOptions": "Screen Options",
+    "locked": "Locked",
+    "pagination": "Pagination",
     "totalCount": "{{count}} total",
     "selectAllVisible": "Select all visible",
     "clearVisible": "Clear visible",
@@ -1738,13 +1741,15 @@
       "programsSold": "Programs Sold"
     },
     "saleSummarySentence": "{{reseller}} sold {{program}} to {{customer}}",
-    "saleSummaryMeta": "{{days}} days | {{price}} | {{activatedAt}}",
+    "saleSummaryMeta": "{{duration}} | {{price}} | {{activatedAt}}",
     "activityTypes": {
       "activate": "Activate",
       "renew": "Renew",
       "pause": "Pause",
       "deactivate": "Deactivate"
-    }
+    },
+    "noSoftwareActivity": "No software activity found",
+    "noSoftwareActivityDesc": "This BIOS ID has not connected to the software yet based on available data."
   },
   "customerDetail": {
     "resellerTimeline": "Reseller Timeline",
@@ -1757,7 +1762,8 @@
   },
   "customers": {
     "filterByManagerParent": "Filter by Manager Parent",
-    "filterByManager": "Filter by Manager"
+    "filterByManager": "Filter by Manager",
+    "pausedByAdmin": "Paused by Admin"
   },
   "biosChangeRequests": {
     "title": "BIOS Change Requests",

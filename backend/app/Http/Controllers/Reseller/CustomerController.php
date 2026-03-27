@@ -81,6 +81,7 @@ class CustomerController extends BaseResellerController
             'program_id',
             'bios_id',
             'status',
+            'duration_days',
             'price',
             'activated_at',
             'expires_at',
@@ -95,7 +96,7 @@ class CustomerController extends BaseResellerController
     {
         $columns = [];
 
-        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes', 'pause_reason'] as $column) {
+        foreach (['scheduled_at', 'scheduled_timezone', 'scheduled_last_attempt_at', 'scheduled_failed_at', 'scheduled_failure_message', 'is_scheduled', 'paused_at', 'pause_remaining_minutes', 'pause_reason', 'paused_by_role'] as $column) {
             if (Schema::hasColumn('licenses', $column)) {
                 $columns[] = $column;
             }
@@ -112,15 +113,15 @@ class CustomerController extends BaseResellerController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'name' => ['required', 'string', 'min:2', 'max:10'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
-            'bios_id' => ['nullable', 'string', 'min:3', 'max:255', 'required_with:program_id'],
+            'bios_id' => ['nullable', 'string', 'min:3', 'max:10', 'required_with:program_id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id'],
         ]);
 
-        $username = Str::of((string) $validated['name'])->lower()->replaceMatches('/[^a-z0-9_]+/', '_')->trim('_')->value();
+        $username = Str::of((string) $validated['name'])->ascii()->replaceMatches('/[^A-Za-z0-9_]+/', '_')->trim('_')->value();
         $username = $username !== '' ? $username : 'customer_'.Str::lower(Str::random(6));
         $email = isset($validated['email']) && is_string($validated['email']) && trim($validated['email']) !== ''
             ? strtolower(trim($validated['email']))
@@ -138,7 +139,7 @@ class CustomerController extends BaseResellerController
 
         $customer = User::query()
             ->where(function ($query) use ($email, $username): void {
-                $query->where('email', $email)->orWhere('username', $username);
+                $query->where('email', $email)->orWhereRaw('LOWER(username) = ?', [Str::lower($username)]);
             })
             ->first();
 
@@ -383,6 +384,7 @@ class CustomerController extends BaseResellerController
             'external_username' => $license?->external_username,
             'program' => $license?->program?->name,
             'program_id' => $license?->program_id,
+            'duration_days' => $license ? (float) $license->duration_days : null,
             'status' => $license?->effectiveStatus() ?? 'pending',
             'price' => $license ? (float) $license->price : 0,
             'activated_at' => $license?->activated_at?->toIso8601String(),
@@ -397,6 +399,7 @@ class CustomerController extends BaseResellerController
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'pause_reason' => $license?->pause_reason,
+            'paused_by_role' => $license?->paused_by_role ?? null,
             'is_blacklisted' => $license ? BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id) : false,
             'bios_active_elsewhere' => $biosActiveElsewhere,
             'license_count' => $user->customerLicenses->count(),
@@ -557,8 +560,8 @@ class CustomerController extends BaseResellerController
         $biosIdLower = strtolower($normalizedBiosId);
 
         DB::transaction(function () use ($request, $customer, $normalizedBiosId, $biosIdLower, $program, $seller): void {
-            // Race condition guard: re-check with lock inside transaction
-            // Allow same reseller's own pending (they can upgrade it), block everything else
+            // Race condition guard: re-check with lock inside transaction.
+            // Block active/suspended by anyone, and same-seller duplicate pending.
             $raceConflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
                 ->whereIn('status', ['active', 'suspended'])
@@ -568,6 +571,19 @@ class CustomerController extends BaseResellerController
             if ($raceConflict) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'bios_id' => 'This BIOS ID was just activated by another reseller.',
+                ]);
+            }
+
+            $sellerDuplicate = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
+                ->where('reseller_id', $seller->id)
+                ->whereNotIn('status', ['expired', 'cancelled'])
+                ->lockForUpdate()
+                ->exists();
+
+            if ($sellerDuplicate) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'bios_id' => 'You already have this customer saved with this BIOS ID.',
                 ]);
             }
 
@@ -637,6 +653,20 @@ class CustomerController extends BaseResellerController
         if ($globalActive) {
             throw ValidationException::withMessages([
                 'bios_id' => 'This BIOS ID is currently active with another reseller.',
+            ]);
+        }
+
+        // Duplicate guard: same seller already has a non-expired/cancelled license for this BIOS.
+        // This prevents the same reseller from saving the same customer twice.
+        $existingByThisSeller = License::query()
+            ->whereRaw('LOWER(bios_id) = ?', [$biosIdLowerGlobal])
+            ->where('reseller_id', $seller->id)
+            ->whereNotIn('status', ['expired', 'cancelled'])
+            ->exists();
+
+        if ($existingByThisSeller) {
+            throw ValidationException::withMessages([
+                'bios_id' => 'You already have this customer saved with this BIOS ID. Please manage them from your customer list.',
             ]);
         }
 

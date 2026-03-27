@@ -11,6 +11,7 @@ import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -23,12 +24,13 @@ import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
-import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, shouldRenewLicense } from '@/lib/utils'
+import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, resolveLicenseDurationDays, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
 import { programService } from '@/services/program.service'
 import type { DurationUnit, ManagerCustomerSummary, RenewLicenseData } from '@/types/manager-reseller.types'
+import type { UserRole } from '@/types/user.types'
 import { formatUsername } from '@/utils/biosId'
 
 const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
@@ -100,13 +102,11 @@ export function CustomersPage() {
   const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [editTarget, setEditTarget] = useState<ManagerCustomerSummary | null>(null)
-  const [deactivateTarget, setDeactivateTarget] = useState<ManagerCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ManagerCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ManagerCustomerSummary | null>(null)
   const [pauseReason, setPauseReason] = useState('')
   const [selectedLicenseIds, setSelectedLicenseIds] = useState<number[]>([])
   const [bulkRenewOpen, setBulkRenewOpen] = useState(false)
-  const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const customerFilterParams = useMemo(
     () => ({
@@ -148,11 +148,10 @@ export function CustomersPage() {
     return [{ id: user.id, name: user.name }]
   }, [user])
 
-  const [allCountQuery, activeCountQuery, suspendedCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
+  const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
       { queryKey: ['manager', 'customers', 'count', 'all', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager', 'customers', 'count', 'active', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'active' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
-      { queryKey: ['manager', 'customers', 'count', 'suspended', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'suspended' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager', 'customers', 'count', 'scheduled', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'scheduled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager', 'customers', 'count', 'expired', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'expired' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
       { queryKey: ['manager', 'customers', 'count', 'cancelled', customerFilterParams], queryFn: () => managerService.getCustomers({ page: 1, per_page: 1, ...customerFilterParams, status: 'cancelled' }), ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS) },
@@ -199,15 +198,6 @@ export function CustomersPage() {
       invalidate(queryClient)
     },
     onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
-  })
-
-  const deactivateMutation = useMutation({
-    mutationFn: (licenseId: number) => licenseService.deactivate(licenseId),
-    onSuccess: () => {
-      setDeactivateTarget(null)
-      invalidate(queryClient)
-    },
-    onError: () => toast.error(t('common.error')),
   })
 
   const pauseMutation = useMutation({
@@ -259,16 +249,6 @@ export function CustomersPage() {
     mutationFn: (payload: RenewLicenseData) => licenseService.bulkRenew(selectedLicenseIds, payload),
     onSuccess: () => {
       setBulkRenewOpen(false)
-      setSelectedLicenseIds([])
-      invalidate(queryClient)
-    },
-    onError: () => toast.error(t('common.error')),
-  })
-
-  const bulkDeactivateMutation = useMutation({
-    mutationFn: () => licenseService.bulkDeactivate(selectedLicenseIds),
-    onSuccess: () => {
-      setBulkDeactivateOpen(false)
       setSelectedLicenseIds([])
       invalidate(queryClient)
     },
@@ -378,6 +358,7 @@ export function CustomersPage() {
     {
       key: 'phone',
       label: t('common.phone'),
+      defaultHidden: true,
       sortable: true,
       sortValue: (row) => row.phone ?? '',
       render: (row) => (row.phone && row.phone.length > 20 ? '—' : row.phone ?? '-'),
@@ -393,8 +374,21 @@ export function CustomersPage() {
         </Link>
       ) : '-',
     },
-    { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
-    { key: 'program', label: t('common.program'), sortable: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
+    { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => (
+      <RoleIdentity
+        name={row.reseller}
+        role={resolveUserRole(row.reseller_role)}
+        href={row.reseller_id ? routePaths.manager.teamMemberDetail(lang, row.reseller_id) : undefined}
+      />
+    ) },
+    {
+      key: 'duration',
+      label: t('common.duration'),
+      sortable: true,
+      sortValue: (row) => resolveLicenseDurationDays(row.duration_days, getLicenseStartDate(row), row.expiry) ?? 0,
+      render: (row) => formatLicenseDurationDays(row.duration_days, t, getLicenseStartDate(row), row.expiry),
+    },
+    { key: 'program', label: t('common.program'), sortable: true, defaultHidden: true, sortValue: (row) => row.program ?? '', render: (row) => row.program ?? '-' },
     {
       key: 'status',
       label: t('common.status'),
@@ -417,9 +411,9 @@ export function CustomersPage() {
         </div>
       ) : '-'),
     },
-    { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
-    { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale, displayTimezone) : '-') },
-    { key: 'expiry', label: t('common.expiry'), sortable: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale, displayTimezone) : '-') },
+    { key: 'reason', label: t('common.reason'), sortable: true, defaultHidden: true, sortValue: (row) => row.pause_reason ?? '', render: (row) => isPausedPendingLicense(row) ? (row.pause_reason ?? '-') : '-' },
+    { key: 'start', label: t('common.start', { defaultValue: 'Start' }), sortable: true, defaultHidden: true, sortValue: (row) => String(getLicenseStartDate(row) ?? ''), render: (row) => (getLicenseStartDate(row) ? formatDate(getLicenseStartDate(row)!, locale, displayTimezone) : '-') },
+    { key: 'expiry', label: t('common.expiry'), sortable: true, defaultHidden: true, sortValue: (row) => row.expiry ?? '', render: (row) => (row.expiry ? formatDate(row.expiry, locale, displayTimezone) : '-') },
     {
       key: 'actions',
       label: t('common.actions'),
@@ -478,16 +472,10 @@ export function CustomersPage() {
               </DropdownMenuItem>
             ) : null}
             {typeof row.license_id === 'number' && displayStatus === 'active' && !isBlacklisted ? (
-              <>
-                <DropdownMenuItem onClick={() => setDeactivateTarget(row)}>
-                  <ShieldOff className="me-2 h-4 w-4" />
-                  {t('common.deactivate')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPauseTarget(row)}>
-                  <Pause className="me-2 h-4 w-4" />
-                  {t('common.pause')}
-                </DropdownMenuItem>
-              </>
+              <DropdownMenuItem onClick={() => setPauseTarget(row)}>
+                <Pause className="me-2 h-4 w-4" />
+                {t('common.pause')}
+              </DropdownMenuItem>
             ) : null}
             {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBlacklisted && !isBiosActiveElsewhere ? (
               <DropdownMenuItem onClick={() => resumeMutation.mutate(row.license_id!)}>
@@ -555,7 +543,7 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-7">
+      <div className="grid gap-3 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -576,17 +564,6 @@ export function CustomersPage() {
             setPage(1)
           }}
           color="emerald"
-        />
-        <StatusFilterCard
-          label={t('common.suspended')}
-          description={getStatusMeaning('suspended', t)}
-          count={suspendedCountQuery.data?.meta.total ?? 0}
-          isActive={status === 'suspended'}
-          onClick={() => {
-            setStatus('suspended')
-            setPage(1)
-          }}
-          color="amber"
         />
         <StatusFilterCard
           label={t('common.scheduled', { defaultValue: 'Scheduled' })}
@@ -664,13 +641,13 @@ export function CustomersPage() {
                 <span className="text-sm text-slate-600 dark:text-slate-300">{selectedLicenseIds.length} {t('common.selected', { defaultValue: 'selected' })}</span>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="secondary" onClick={() => setBulkRenewOpen(true)}>{t('reseller.pages.licenses.bulkRenew')}</Button>
-                  <Button type="button" variant="secondary" onClick={() => setBulkDeactivateOpen(true)}>{t('reseller.pages.licenses.bulkDeactivate')}</Button>
                   <Button type="button" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>{t('common.deleteSelected', { defaultValue: 'Delete Selected' })}</Button>
                 </div>
               </CardContent>
             </Card>
           ) : null}
           <DataTable
+            tableKey="manager_customers"
             columns={columns}
             data={rows}
             rowKey={(row) => row.id}
@@ -718,7 +695,7 @@ export function CustomersPage() {
           {activationStep === 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
               <FormField label={t('activate.username', { defaultValue: 'Username (API)' })} htmlFor="m-customer-username">
-                <Input id="m-customer-username" placeholder={t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })} value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} onBlur={() => setActivationForm((current) => ({ ...current, customer_name: formatUsername(current.customer_name) }))} />
+                <Input id="m-customer-username" placeholder={t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })} maxLength={10} value={activationForm.customer_name} onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))} onBlur={() => setActivationForm((current) => ({ ...current, customer_name: formatUsername(current.customer_name) }))} />
               </FormField>
               <FormField label={t('activate.clientName', { defaultValue: 'Client Display Name' })} htmlFor="m-client-name">
                 <Input id="m-client-name" placeholder={t('activate.clientName', { defaultValue: 'Client Display Name' })} value={activationForm.client_name} onChange={(event) => setActivationForm((current) => ({ ...current, client_name: event.target.value }))} />
@@ -734,7 +711,7 @@ export function CustomersPage() {
           ) : null}
           {activationStep === 1 ? (
             <div className="grid gap-3 md:grid-cols-2">
-              <Input placeholder={t('reseller.pages.customers.activationDialog.biosId')} value={activationForm.bios_id} onChange={(event) => setActivationForm((current) => ({ ...current, bios_id: event.target.value }))} />
+              <Input placeholder={t('reseller.pages.customers.activationDialog.biosId')} maxLength={10} value={activationForm.bios_id} onChange={(event) => setActivationForm((current) => ({ ...current, bios_id: event.target.value }))} />
               <select value={activationForm.program_id} onChange={(event) => setActivationForm((current) => ({ ...current, program_id: event.target.value ? Number(event.target.value) : '' }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
                 <option value="">{t('reseller.pages.customers.activationDialog.selectProgram')}</option>
                 {(programsQuery.data?.data ?? []).map((program) => (
@@ -897,34 +874,6 @@ export function CustomersPage() {
       />
 
       <ConfirmDialog
-        open={deactivateTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeactivateTarget(null)
-          }
-        }}
-        title={t('common.deactivate')}
-        description={deactivateTarget?.bios_id ?? undefined}
-        confirmLabel={t('common.deactivate')}
-        isDestructive
-        onConfirm={() => {
-          if (deactivateTarget?.license_id) {
-            deactivateMutation.mutate(deactivateTarget.license_id)
-          }
-        }}
-      />
-
-      <ConfirmDialog
-        open={bulkDeactivateOpen}
-        onOpenChange={setBulkDeactivateOpen}
-        title={t('reseller.pages.licenses.confirm.bulkDeactivateTitle')}
-        description={t('reseller.pages.licenses.confirm.bulkDeactivateDescription', { count: selectedLicenseIds.length })}
-        confirmLabel={t('reseller.pages.licenses.confirm.deactivateSelected')}
-        isDestructive
-        onConfirm={() => bulkDeactivateMutation.mutate()}
-      />
-
-      <ConfirmDialog
         open={bulkDeleteOpen}
         onOpenChange={setBulkDeleteOpen}
         title={t('common.bulkDelete', { defaultValue: 'Bulk Delete' })}
@@ -986,6 +935,14 @@ export function CustomersPage() {
 
 function resolveCustomerApiUsername(row: ManagerCustomerSummary) {
   return row.external_username || row.username || '-'
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | DurationUnit) {

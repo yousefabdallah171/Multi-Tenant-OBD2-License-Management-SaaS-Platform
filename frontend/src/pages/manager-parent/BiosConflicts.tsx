@@ -153,6 +153,7 @@ export function BiosConflictsPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_parent_bios_conflicts"
         columns={columns}
         data={conflictsQuery.data?.data ?? []}
         rowKey={(row) => row.id}

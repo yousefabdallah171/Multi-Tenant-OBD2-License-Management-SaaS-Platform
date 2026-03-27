@@ -7,6 +7,7 @@ use App\Models\ResellerCommission;
 use App\Models\ResellerPayment;
 use App\Models\User;
 use App\Services\ResellerCommissionService;
+use App\Support\RevenueAnalytics;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -45,12 +46,14 @@ class ResellerPaymentController extends BaseManagerController
             ->groupBy('reseller_id')
             ->pluck('total_paid', 'reseller_id');
 
-        $salesByReseller = License::query()
-            ->where('tenant_id', $tenantId)
-            ->whereIn('reseller_id', $resellers->pluck('id'))
-            ->whereBetween('activated_at', [$start, $end])
-            ->selectRaw('reseller_id, ROUND(COALESCE(SUM(price), 0), 2) as total_sales')
-            ->groupBy('reseller_id')
+        $salesByReseller = RevenueAnalytics::baseQuery(
+            ['from' => $start->toDateString(), 'to' => $end->toDateString()],
+            $tenantId,
+            $resellers->pluck('id')->all()
+        )
+            ->selectRaw('activity_logs.user_id as reseller_id')
+            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_sales'))
+            ->groupBy('activity_logs.user_id')
             ->pluck('total_sales', 'reseller_id');
 
         $rows = $resellers->map(function (User $reseller) use ($commissions, $paymentsByReseller, $salesByReseller, $period): array {
@@ -105,7 +108,9 @@ class ResellerPaymentController extends BaseManagerController
             ->orderByDesc('id')
             ->get();
 
-        $totalSales = round((float) License::where('reseller_id', $reseller->id)->sum('price'), 2);
+        $totalSales = round((float) (RevenueAnalytics::baseQuery([], $reseller->tenant_id, null, $reseller->id)
+            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_sales'))
+            ->first()?->total_sales ?? 0), 2);
         $totalPaid = round((float) $payments->sum('amount'), 2);
         $commissionsData = $commissions->map(fn (ResellerCommission $commission): array => $this->serializeCommission($commission))->values();
 

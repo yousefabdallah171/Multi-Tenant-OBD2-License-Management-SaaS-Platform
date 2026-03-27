@@ -164,7 +164,7 @@ export function UsersPage() {
         <StatusFilterCard label={t('common.all')} count={Object.values(usersQuery.data?.role_counts ?? {}).reduce((sum, count) => sum + count, 0)} isActive={role === ''} onClick={() => { setRole(''); setPage(1) }} color="sky" />
         <StatusFilterCard label={t('roles.super_admin')} count={usersQuery.data?.role_counts.super_admin ?? 0} isActive={role === 'super_admin'} onClick={() => { setRole('super_admin'); setPage(1) }} color="rose" />
         <StatusFilterCard label={t('roles.manager_parent')} count={usersQuery.data?.role_counts.manager_parent ?? 0} isActive={role === 'manager_parent'} onClick={() => { setRole('manager_parent'); setPage(1) }} color="sky" />
-        <StatusFilterCard label={t('roles.manager')} count={usersQuery.data?.role_counts.manager ?? 0} isActive={role === 'manager'} onClick={() => { setRole('manager'); setPage(1) }} color="sky" />
+        <StatusFilterCard label={t('roles.manager')} count={usersQuery.data?.role_counts.manager ?? 0} isActive={role === 'manager'} onClick={() => { setRole('manager'); setPage(1) }} color="slate" />
         <StatusFilterCard label={t('roles.reseller')} count={usersQuery.data?.role_counts.reseller ?? 0} isActive={role === 'reseller'} onClick={() => { setRole('reseller'); setPage(1) }} color="emerald" />
         <StatusFilterCard label={t('roles.customer')} count={usersQuery.data?.role_counts.customer ?? 0} isActive={role === 'customer'} onClick={() => { setRole('customer'); setPage(1) }} color="amber" />
       </div>
@@ -221,9 +221,10 @@ export function UsersPage() {
       </Card>
 
       {usersQuery.isLoading ? (
-        <DataTable columns={columns} data={[]} rowKey={(row) => row.id} isLoading />
+        <DataTable tableKey="super_admin_users" columns={columns} data={[]} rowKey={(row) => row.id} isLoading />
       ) : (
         <DataTable
+          tableKey="super_admin_users"
           columns={columns}
           data={usersQuery.data?.data ?? []}
           rowKey={(row) => row.id}

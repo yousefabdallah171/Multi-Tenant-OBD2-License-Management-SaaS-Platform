@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -16,6 +17,7 @@ import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import type { ManagerParentBiosChangeRequest } from '@/types/manager-parent.types'
+import type { UserRole } from '@/types/user.types'
 
 type StatusFilter = '' | 'pending' | 'approved' | 'rejected'
 
@@ -104,7 +106,13 @@ export function BiosChangeRequestsPage() {
       label: t('common.reseller'),
       sortable: true,
       sortValue: (row) => row.reseller_name ?? '',
-      render: (row) => row.reseller_name ?? '-',
+      render: (row) => (
+        <RoleIdentity
+          name={row.reseller_name}
+          role={resolveUserRole(row.reseller_role)}
+          href={row.reseller_id ? routePaths.managerParent.teamMemberDetail(lang, row.reseller_id) : undefined}
+        />
+      ),
     },
     {
       key: 'created_at',
@@ -166,6 +174,7 @@ export function BiosChangeRequestsPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_parent_bios_change_requests"
         columns={columns}
         data={query.data?.data ?? []}
         isLoading={query.isLoading}
@@ -217,6 +226,14 @@ export function BiosChangeRequestsPage() {
       </Dialog>
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function StatusPill({ status, t }: { status: ManagerParentBiosChangeRequest['status']; t: (key: string) => string }) {

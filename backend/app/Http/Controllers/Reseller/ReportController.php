@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Reseller;
 
 use App\Services\ExportTaskService;
 use App\Support\LicenseCacheInvalidation;
+use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -18,12 +19,14 @@ class ReportController extends BaseResellerController
 
         return response()->json([
             'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
-                $summary = $this->baseQuery($request, $validated)
-                    ->selectRaw('ROUND(COALESCE(SUM(licenses.price), 0), 2) as total_revenue, COUNT(*) as total_activations')
+                $summary = $this->revenueQuery($request, $validated)
+                    ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
+                    ->selectRaw(RevenueAnalytics::revenueSumExpression('granted', 'activity_logs', 'granted_value'))
                     ->first();
 
                 $totalRevenue = round((float) ($summary?->total_revenue ?? 0), 2);
-                $totalActivations = (int) ($summary?->total_activations ?? 0);
+                $grantedValue = round((float) ($summary?->granted_value ?? 0), 2);
+                $totalActivations = (int) $this->baseQuery($request, $validated)->count();
                 $activeCustomers = (int) $this->licenseQuery($request)
                     ->whereEffectivelyActive()
                     ->whereNotNull('customer_id')
@@ -32,6 +35,7 @@ class ReportController extends BaseResellerController
 
                 return [
                     'total_revenue' => $totalRevenue,
+                    'granted_value' => $grantedValue,
                     'total_activations' => $totalActivations,
                     'total_customers' => $this->customerQuery($request)->count(),
                     'active_customers' => $activeCustomers,
@@ -51,9 +55,10 @@ class ReportController extends BaseResellerController
             'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
                 $periodExpression = $this->periodExpression($validated['period']);
 
-                return $this->baseQuery($request, $validated)
-                    ->whereNotNull('licenses.activated_at')
-                    ->selectRaw("{$periodExpression} as period, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue, MIN(licenses.activated_at) as sort_at")
+                return $this->revenueQuery($request, $validated)
+                    ->selectRaw("{$periodExpression} as period")
+                    ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+                    ->selectRaw('MIN(activity_logs.created_at) as sort_at')
                     ->groupByRaw($periodExpression)
                     ->orderBy('sort_at')
                     ->get()
@@ -74,7 +79,7 @@ class ReportController extends BaseResellerController
 
         return response()->json([
             'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
-                $periodExpression = $this->periodExpression($validated['period']);
+                $periodExpression = $this->periodExpression($validated['period'], 'licenses.activated_at');
 
                 return $this->baseQuery($request, $validated)
                     ->whereNotNull('licenses.activated_at')
@@ -99,19 +104,25 @@ class ReportController extends BaseResellerController
 
         return response()->json([
             'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
-                return $this->baseQuery($request, $validated)
-                    ->leftJoin('programs', 'programs.id', '=', 'licenses.program_id')
-                    ->selectRaw("COALESCE(programs.name, 'Unknown') as program, COUNT(*) as count, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue")
-                    ->groupBy('licenses.program_id', 'programs.name')
+                $rows = $this->revenueQuery($request, $validated)
+                    ->selectRaw(RevenueAnalytics::programIdExpression('activity_logs').' as program_id')
+                    ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'count'))
+                    ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+                    ->groupByRaw(RevenueAnalytics::programIdExpression('activity_logs'))
                     ->orderByDesc('revenue')
                     ->get()
-                    ->map(fn ($row): array => [
-                        'program' => (string) $row->program,
-                        'count' => (int) $row->count,
-                        'revenue' => round((float) $row->revenue, 2),
-                    ])
-                    ->values()
-                    ->all();
+                    ->filter(fn ($row): bool => (int) ($row->program_id ?? 0) > 0)
+                    ->values();
+
+                $programs = \App\Models\Program::query()
+                    ->whereIn('id', $rows->pluck('program_id')->all())
+                    ->pluck('name', 'id');
+
+                return $rows->map(fn ($row): array => [
+                    'program' => (string) ($programs->get((int) $row->program_id) ?? 'Unknown'),
+                    'count' => (int) $row->count,
+                    'revenue' => round((float) $row->revenue, 2),
+                ])->values()->all();
             }),
         ]);
     }
@@ -174,12 +185,17 @@ class ReportController extends BaseResellerController
             ->when(! empty($validated['to']), fn ($query) => $query->whereDate('activated_at', '<=', $validated['to']));
     }
 
-    private function periodExpression(string $period): string
+    private function revenueQuery(Request $request, array $validated)
+    {
+        return RevenueAnalytics::baseQuery($validated, $this->currentTenantId($request), null, $this->currentReseller($request)->id);
+    }
+
+    private function periodExpression(string $period, string $column = 'activity_logs.created_at'): string
     {
         return match ($period) {
-            'daily' => "DATE_FORMAT(licenses.activated_at, '%Y-%m-%d')",
-            'weekly' => "DATE_FORMAT(DATE_SUB(licenses.activated_at, INTERVAL WEEKDAY(licenses.activated_at) DAY), '%Y-%m-%d')",
-            default => "DATE_FORMAT(licenses.activated_at, '%Y-%m')",
+            'daily' => "DATE_FORMAT({$column}, '%Y-%m-%d')",
+            'weekly' => "DATE_FORMAT(DATE_SUB({$column}, INTERVAL WEEKDAY({$column}) DAY), '%Y-%m-%d')",
+            default => "DATE_FORMAT({$column}, '%Y-%m')",
         };
     }
 
@@ -258,6 +274,7 @@ class ReportController extends BaseResellerController
     {
         return [
             'Total Revenue' => $summary['total_revenue'],
+            'Granted Value' => $summary['granted_value'],
             'Total Customers' => $summary['total_customers'],
             'Active Customers' => $summary['active_customers'],
             'Total Activations' => $summary['total_activations'],

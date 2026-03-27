@@ -443,6 +443,7 @@ export function TeamManagementPage() {
           </Card>
 
           <DataTable
+            tableKey="manager_parent_team_management"
             columns={columns}
             data={list}
             rowKey={(row) => row.id}

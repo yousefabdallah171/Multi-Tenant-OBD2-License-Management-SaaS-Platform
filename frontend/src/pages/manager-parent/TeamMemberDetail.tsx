@@ -235,6 +235,7 @@ export function TeamMemberDetailPage() {
             </CardHeader>
             <CardContent>
               <DataTable
+                tableKey="manager_parent_team_member_history"
                 columns={historyColumns}
                 data={customerLicenseHistory}
                 rowKey={(row) => row.id}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, ShieldCheck, Users } from 'lucide-react'
+import { Banknote, Gift, ShieldCheck, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
@@ -8,6 +8,7 @@ import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { ExportButtons } from '@/components/shared/ExportButtons'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
@@ -17,6 +18,7 @@ import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
 import type { FinancialReportData } from '@/types/manager-parent.types'
+import type { UserRole } from '@/types/user.types'
 
 export function ReportsPage() {
   const { t } = useTranslation()
@@ -45,7 +47,19 @@ export function ReportsPage() {
   }))
   const columns = useMemo<Array<DataTableColumn<FinancialReportData['reseller_balances'][number]>>>(
     () => [
-      { key: 'reseller', label: t('managerParent.pages.financialReports.columns.reseller'), sortable: true, sortValue: (row) => row.reseller, render: (row) => row.reseller },
+      {
+        key: 'reseller',
+        label: t('managerParent.pages.financialReports.columns.reseller'),
+        sortable: true,
+        sortValue: (row) => row.reseller,
+        render: (row) => (
+          <RoleIdentity
+            name={row.reseller}
+            role={resolveUserRole(row.role)}
+            href={row.id ? routePaths.manager.teamMemberDetail(lang, row.id) : undefined}
+          />
+        ),
+      },
       { key: 'revenue', label: t('managerParent.pages.financialReports.columns.totalRevenue'), sortable: true, sortValue: (row) => row.total_revenue, render: (row) => formatCurrency(row.total_revenue, 'USD', locale) },
       { key: 'activations', label: t('common.activations'), sortable: true, sortValue: (row) => row.total_activations, render: (row) => row.total_activations },
       { key: 'avgPrice', label: t('managerParent.pages.financialReports.columns.avgPrice'), sortable: true, sortValue: (row) => row.avg_price, render: (row) => formatCurrency(row.avg_price, 'USD', locale) },
@@ -69,8 +83,9 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatsCard title={t('managerParent.pages.financialReports.totalTenantRevenue')} value={formatCurrency(report?.summary.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
+        <StatsCard title={t('managerParent.pages.financialReports.grantedValue', { defaultValue: 'Granted Value' })} value={formatCurrency(report?.summary.granted_value ?? 0, 'USD', locale)} icon={Gift} color="rose" />
         <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.manager.customers(lang))}>
           <StatsCard title={t('managerParent.pages.financialReports.totalCustomers')} value={report?.summary.total_customers ?? 0} icon={Users} color="sky" />
         </button>
@@ -132,11 +147,19 @@ export function ReportsPage() {
       <Card>
         <CardContent className="p-6">
           <h3 className="mb-4 text-lg font-semibold">{t('managerParent.pages.financialReports.resellerBalances')}</h3>
-          <DataTable columns={columns} data={report?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={reportQuery.isLoading} />
+          <DataTable tableKey="manager_reports_balances" columns={columns} data={report?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={reportQuery.isLoading} />
         </CardContent>
       </Card>
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }
 
 function resolvePresetRange(days: number): DateRangeValue {

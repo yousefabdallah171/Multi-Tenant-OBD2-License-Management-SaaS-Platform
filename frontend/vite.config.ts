@@ -11,6 +11,22 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg'],
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'OBD2SW License Platform',
         short_name: 'OBD2SW',

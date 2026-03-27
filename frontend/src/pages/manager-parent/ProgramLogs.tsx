@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
+import { RoleOptionPicker } from '@/components/shared/RoleOptionPicker'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -292,6 +293,79 @@ export function ProgramLogsPage() {
       render: (row) => row.price === null ? '-' : formatCurrency(row.price, 'USD', locale),
     },
   ], [lang, locale, t])
+  const loginColumns = useMemo<Array<DataTableColumn<ProgramLog>>>(() => [
+    {
+      key: 'username',
+      label: t('common.username'),
+      sortable: true,
+      sortValue: (row) => row.username,
+      render: (row) => row.customer_id ? (
+        <Link className="text-blue-600 hover:underline dark:text-blue-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
+          @{row.username}
+        </Link>
+      ) : (
+        <span>@{row.username}</span>
+      ),
+    },
+    { key: 'timestamp', label: t('common.timestamp'), sortable: true, sortValue: (row) => row.timestamp, render: (row) => row.timestamp },
+    { key: 'ip', label: t('managerParent.pages.ipAnalytics.ipAddress'), sortable: true, sortValue: (row) => row.ip ?? '', render: (row) => row.ip || '-' },
+    {
+      key: 'location',
+      label: t('ipAnalytics.columns.location'),
+      sortable: true,
+      sortValue: (row) => {
+        const ip = row.ip ?? ''
+        const meta = ipMetaCache[ip]
+        return isPrivateOrLocalIp(ip) ? t('programLogs.localLocation') : `${meta?.country ?? ''}${meta?.city ?? ''}`
+      },
+      render: (row) => {
+        const ip = row.ip ?? ''
+        const local = isPrivateOrLocalIp(ip)
+        const meta = ipMetaCache[ip]
+        return local
+          ? t('programLogs.localLocation')
+          : meta
+            ? <IpLocationCell country={meta.country} city={meta.city} countryCode={meta.country_code} />
+            : t('programLogs.loadingLocation')
+      },
+    },
+    {
+      key: 'isp',
+      label: t('managerParent.pages.ipAnalytics.isp'),
+      sortable: true,
+      sortValue: (row) => {
+        const ip = row.ip ?? ''
+        const meta = ipMetaCache[ip]
+        return isPrivateOrLocalIp(ip) ? t('programLogs.localNetwork') : (meta?.org ?? '')
+      },
+      render: (row) => {
+        const ip = row.ip ?? ''
+        const meta = ipMetaCache[ip]
+        return isPrivateOrLocalIp(ip) ? t('programLogs.localNetwork') : (meta?.org ?? '-')
+      },
+    },
+    {
+      key: 'vpn',
+      label: t('ipAnalytics.vpnProxy'),
+      sortable: true,
+      sortValue: (row) => {
+        const ip = row.ip ?? ''
+        const meta = ipMetaCache[ip]
+        return isPrivateOrLocalIp(ip) ? 0 : meta?.proxy || meta?.hosting ? 1 : 0
+      },
+      render: (row) => {
+        const ip = row.ip ?? ''
+        const meta = ipMetaCache[ip]
+        return isPrivateOrLocalIp(ip) ? '-' : meta?.proxy || meta?.hosting ? (
+          <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+            {t('ipAnalytics.vpnProxy')}
+          </span>
+        ) : (
+          '-'
+        )
+      },
+    },
+  ], [ipMetaCache, lang, t])
 
   return (
     <div className="space-y-6">
@@ -332,21 +406,16 @@ export function ProgramLogsPage() {
               </option>
             ))}
           </select>
-          <select
+          <RoleOptionPicker
             value={sellerId}
-            onChange={(event) => {
-              setSellerId(event.target.value ? Number(event.target.value) : '')
+            onChange={(value) => {
+              setSellerId(value)
               setPage(1)
             }}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-          >
-            <option value="">{t('programLogs.allUsers')}</option>
-            {userOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name} ({getRoleLabel(option.role, t)})
-              </option>
-            ))}
-          </select>
+            options={userOptions.map((option) => ({ id: option.id, name: option.name, role: normalizeRole(option.role) }))}
+            placeholder={t('programLogs.allUsers')}
+            emptyLabel={t('programLogs.allUsers')}
+          />
           <select
             value={action}
             onChange={(event) => {
@@ -397,6 +466,7 @@ export function ProgramLogsPage() {
 
         <TabsContent value="users">
           <DataTable
+            tableKey="manager_parent_program_logs_user_actions"
             columns={userColumns}
             data={userRows}
             rowKey={(row) => row.id}
@@ -422,60 +492,13 @@ export function ProgramLogsPage() {
               {loginRows.length === 0 ? (
                 <p className="text-sm text-slate-500 dark:text-slate-400">{t('programLogs.noLogs')}</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-start dark:border-slate-800">
-                        <th className="p-2">{t('common.username')}</th>
-                        <th className="p-2">{t('common.timestamp')}</th>
-                        <th className="p-2">{t('managerParent.pages.ipAnalytics.ipAddress')}</th>
-                        <th className="p-2">{t('ipAnalytics.columns.location')}</th>
-                        <th className="p-2">{t('managerParent.pages.ipAnalytics.isp')}</th>
-                        <th className="p-2">{t('ipAnalytics.vpnProxy')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loginRows.map((row, index) => {
-                        const ip = row.ip ?? ''
-                        const local = isPrivateOrLocalIp(ip)
-                        const meta = ipMetaCache[ip]
-
-                        return (
-                          <tr key={`${row.username}-${row.timestamp}-${index}`} className="border-b border-slate-100 dark:border-slate-900">
-                            <td className="p-2">
-                              {row.customer_id ? (
-                                <Link className="text-blue-600 hover:underline dark:text-blue-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>
-                                  @{row.username}
-                                </Link>
-                              ) : (
-                                <span>@{row.username}</span>
-                              )}
-                            </td>
-                            <td className="p-2">{row.timestamp}</td>
-                            <td className="p-2">{ip || '-'}</td>
-                            <td className="p-2">
-                              {local
-                                ? t('programLogs.localLocation')
-                                : meta
-                                  ? <IpLocationCell country={meta.country} city={meta.city} countryCode={meta.country_code} />
-                                  : t('programLogs.loadingLocation')}
-                            </td>
-                            <td className="p-2">{local ? t('programLogs.localNetwork') : (meta?.org ?? '-')}</td>
-                            <td className="p-2">
-                              {local ? '-' : meta?.proxy || meta?.hosting ? (
-                                <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
-                                  {t('ipAnalytics.vpnProxy')}
-                                </span>
-                              ) : (
-                                '-'
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  tableKey="manager_parent_program_logs_login_events"
+                  columns={loginColumns}
+                  data={loginRows}
+                  rowKey={(row) => `${row.username}-${row.timestamp}-${row.ip ?? 'no-ip'}`}
+                  emptyMessage={t('programLogs.noLogs')}
+                />
               )}
             </CardContent>
           </Card>
@@ -517,11 +540,6 @@ function normalizeRole(role: string | null | undefined): UserRole | null {
   return role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer' || role === 'super_admin'
     ? role
     : null
-}
-
-function getRoleLabel(role: string | null | undefined, t: (key: string, options?: Record<string, unknown>) => string) {
-  const normalized = normalizeRole(role)
-  return normalized ? t(`roles.${normalized}`) : (role ?? '-')
 }
 
 function getActionLabel(action: string, t: (key: string, options?: Record<string, unknown>) => string) {

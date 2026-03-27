@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
+import { formatActivityActionLabel, formatDate, formatLicenseDurationDays, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { superAdminBiosDetailsService } from '@/services/bios-details.service'
 
@@ -163,7 +163,7 @@ export function BiosDetailsPage() {
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                   <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.duration')}</p>
-                  <p className="font-medium">{latestLicense ? `${latestLicense.duration_days} ${t('common.days')}` : '-'}</p>
+                  <p className="font-medium">{formatLicenseDurationDays(latestLicense?.duration_days, t, latestLicense?.activated_at, latestLicense?.expires_at)}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                   <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.price')}</p>
@@ -199,7 +199,7 @@ export function BiosDetailsPage() {
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       {t('biosDetails.saleSummaryMeta', {
-                        days: latestLicense.duration_days,
+                        duration: formatLicenseDurationDays(latestLicense.duration_days, t, latestLicense.activated_at, latestLicense.expires_at),
                         price: `$${Number(latestLicense.price).toFixed(2)}`,
                         activatedAt: latestLicense.activated_at ? formatDate(latestLicense.activated_at, locale) : '-',
                       })}
@@ -210,13 +210,64 @@ export function BiosDetailsPage() {
             </Card>
           </TabsContent>
           <TabsContent value="licenses">
-            <Card><CardContent className="space-y-2 p-4">{(licensesQuery.data?.data ?? []).map((license) => <div key={license.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{license.program?.name ?? '-'}</p><div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400"><StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} /><span>{`$${Number(license.price).toFixed(2)}`}</span></div></div>)}</CardContent></Card>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                {(licensesQuery.data?.data ?? []).map((license) => (
+                  <div key={license.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium">{license.program?.name ?? '-'}</p>
+                      <StatusBadge status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} />
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-500 dark:text-slate-400">
+                      <span>{`$${Number(license.price).toFixed(2)}`}</span>
+                      {license.reseller ? (
+                        <ResellerWithRole name={license.reseller.name ?? '-'} role={license.reseller.role} t={t} />
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="resellers">
-            <Card><CardContent className="space-y-2 p-4">{(resellersQuery.data ?? []).map((reseller) => <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{reseller.name ?? '-'}</p><p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('common.activations')}: {reseller.activation_count}</p><p className="text-xs text-slate-500 dark:text-slate-400">{t('common.revenue')}: ${Number(reseller.total_revenue).toFixed(2)}</p></div>)}</CardContent></Card>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                {(resellersQuery.data ?? []).map((reseller) => (
+                  <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{reseller.name ?? '-'}</p>
+                      {reseller.role && ROLE_BADGE_MAP[reseller.role] ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_BADGE_MAP[reseller.role]}`}>{t(`roles.${reseller.role}`)}</span> : null}
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.activations')}: {reseller.activation_count}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.revenue')}: ${Number(reseller.total_revenue).toFixed(2)}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="ips">
-            <Card><CardContent className="space-y-2 p-4">{(ipsQuery.data ?? []).map((ip, index) => <div key={`${ip.ip_address}-${index}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">{ip.ip_address ?? '-'}</div>)}</CardContent></Card>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                {!ipsQuery.isLoading && !ipsQuery.isError && (ipsQuery.data ?? []).length === 0 ? (
+                  <EmptyState title={t('biosDetails.noSoftwareActivity')} description={t('biosDetails.noSoftwareActivityDesc')} />
+                ) : null}
+                {(ipsQuery.data ?? []).map((ip, index) => (
+                  <div key={`${ip.ip_address}-${index}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium">{ip.ip_address ?? '-'}</p>
+                      {ip.proxy ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">{t('ipAnalytics.vpnProxy')}</span> : null}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      {ip.country ? <span>{ip.city ? `${ip.city}, ` : ''}{ip.country}</span> : null}
+                      {ip.isp ? <span>{ip.isp}</span> : null}
+                      {ip.program_name ? <span>{ip.program_name}</span> : null}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{ip.timestamp ? formatDate(ip.timestamp, locale) : '-'}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="activity">
             <Card><CardContent className="space-y-2 p-4">{(activityQuery.data ?? []).map((item) => <div key={`${item.id}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="font-medium">{formatActivityActionLabel(item.action, t)}</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(item.description, locale)}</p></div>)}</CardContent></Card>
@@ -227,5 +278,22 @@ export function BiosDetailsPage() {
         </Tabs>
       ) : null}
     </div>
+  )
+}
+
+const ROLE_BADGE_MAP: Record<string, string> = {
+  reseller: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+  manager_parent: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+  manager: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
+  super_admin: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
+}
+
+function ResellerWithRole({ name, role, t }: { name: string; role?: string | null; t: (k: string) => string }) {
+  const cls = role ? ROLE_BADGE_MAP[role] : null
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      <span>{name}</span>
+      {cls ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{t(`roles.${role}`)}</span> : null}
+    </span>
   )
 }

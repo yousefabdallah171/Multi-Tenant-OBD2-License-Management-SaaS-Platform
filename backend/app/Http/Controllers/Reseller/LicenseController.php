@@ -197,6 +197,15 @@ class LicenseController extends BaseResellerController
     public function resume(Request $request, License $license): JsonResponse
     {
         $resolved = $this->resolveLicense($request, $license);
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role')
+            && $resolved->paused_by_role !== null
+            && $resolved->paused_by_role !== 'reseller') {
+            return response()->json([
+                'message' => 'This license was paused by a higher role and cannot be resumed by you.',
+            ], 403);
+        }
+
         $resumed = $this->licenseService->resume($resolved);
         LicenseCacheInvalidation::invalidateForLicense($resumed);
 
@@ -337,6 +346,7 @@ class LicenseController extends BaseResellerController
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'pause_reason' => $license->pause_reason,
+            'paused_by_role' => $license->paused_by_role,
             'status' => $license->effectiveStatus(),
         ];
     }
