@@ -46,6 +46,13 @@ export function useTablePreferences({
   onPerPageChange,
   pageSizeOptions = [10, 25, 50, 100],
 }: UseTablePreferencesOptions) {
+  const columnSchemaKey = useMemo(
+    () =>
+      columns
+        .map((column, index) => `${index}:${column.key}:${column.alwaysVisible ? '1' : '0'}:${column.defaultHidden ? '1' : '0'}`)
+        .join('|'),
+    [columns],
+  )
   const availableColumns = useMemo(() => columns.map((column) => column.key), [columns])
   const lockedColumns = useMemo(
     () => columns.filter((column, index) => column.alwaysVisible || index === 0 || column.key === 'actions').map((column) => column.key),
@@ -53,6 +60,7 @@ export function useTablePreferences({
   )
   const schemaKey = useMemo(() => `${tableKey ?? 'default'}|${availableColumns.join(',')}|${lockedColumns.join(',')}`, [availableColumns, lockedColumns, tableKey])
   const defaultVisibleColumns = useMemo(() => buildDefaultVisibleColumns(columns), [columns])
+  const defaultVisibleColumnsKey = useMemo(() => defaultVisibleColumns.join(','), [defaultVisibleColumns])
 
   // Load from localStorage for instant display
   const getCachedColumns = () => {
@@ -80,7 +88,7 @@ export function useTablePreferences({
     setHasHydrated(false)
     hasHydratedPerPageRef.current = false
     lastSavedPayloadRef.current = null
-  }, [defaultVisibleColumns, schemaKey, tableKey])
+  }, [columnSchemaKey, defaultVisibleColumnsKey, schemaKey, tableKey])
 
   const preferenceQuery = useQuery({
     queryKey: ['table-preferences', tableKey, availableColumns.join(','), lockedColumns.join(',')],
@@ -133,7 +141,7 @@ export function useTablePreferences({
     }
 
     hasHydratedPerPageRef.current = true
-  }, [availableColumns, columns, defaultVisibleColumns, hasHydrated, lockedColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey])
+  }, [availableColumns, columns, defaultVisibleColumnsKey, hasHydrated, lockedColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey])
 
   useEffect(() => {
     if (!tableKey || !hasHydrated) {
