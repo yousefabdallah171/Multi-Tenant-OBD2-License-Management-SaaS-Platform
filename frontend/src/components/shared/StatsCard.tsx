@@ -25,10 +25,10 @@ export function StatsCard({ title, value, icon: Icon, trend, color = 'sky' }: St
     <Card data-testid="stats-card" className="h-full hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-950/10">
       <CardContent className="flex items-start justify-between gap-3 p-4 sm:gap-4 sm:p-6">
         <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 sm:text-base">{title}</p>
-          <p className="text-2xl font-semibold text-slate-950 dark:text-white sm:text-3xl">{value}</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 sm:text-base lg:text-lg">{title}</p>
+          <p className="text-2xl font-semibold text-slate-950 dark:text-white sm:text-3xl lg:text-4xl">{value}</p>
           {hasTrend ? (
-            <div className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium', trend >= 0 ? accentStyles.emerald : accentStyles.rose)}>
+            <div className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium md:text-base', trend >= 0 ? accentStyles.emerald : accentStyles.rose)}>
               {trend >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
               <span>{Math.abs(trend)}%</span>
             </div>

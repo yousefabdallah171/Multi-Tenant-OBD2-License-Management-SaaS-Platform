@@ -47,16 +47,16 @@ export function StatusFilterCard({
     >
       <Card className="h-full cursor-pointer border-0 bg-transparent shadow-none hover:shadow-sm">
         <CardContent className="flex h-full flex-col gap-2 p-4 sm:p-6">
-          <p className={cn('text-sm font-medium sm:text-base', labelStyles[color])}>
+          <p className={cn('text-sm font-medium sm:text-base lg:text-lg', labelStyles[color])}>
             {label}
           </p>
           {count !== undefined ? (
-            <p className="text-2xl font-semibold text-slate-950 dark:text-white sm:text-3xl">
+            <p className="text-2xl font-semibold text-slate-950 dark:text-white sm:text-3xl lg:text-4xl">
               {count}
             </p>
           ) : null}
           {description ? (
-            <p className="text-sm leading-5 text-slate-600 dark:text-slate-300">
+            <p className="text-sm leading-5 text-slate-600 dark:text-slate-300 md:text-base">
               {description}
             </p>
           ) : null}
