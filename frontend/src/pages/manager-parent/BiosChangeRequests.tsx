@@ -249,5 +249,5 @@ function StatusPill({ status, t }: { status: ManagerParentBiosChangeRequest['sta
     rejected: t('biosChangeRequests.status.rejected'),
   }
 
-  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}>{labels[status]}</span>
+  return <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${styles[status]}`}>{labels[status]}</span>
 }

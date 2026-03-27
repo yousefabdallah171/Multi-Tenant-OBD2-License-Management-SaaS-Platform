@@ -67,7 +67,7 @@ export function RoleOptionPicker({
                 <span className="truncate">{option.name}</span>
                 {option.role ? <RoleBadge role={option.role} /> : null}
               </div>
-              {option.secondary ? <div className="text-xs text-slate-500 dark:text-slate-400">{option.secondary}</div> : null}
+              {option.secondary ? <div className="text-sm text-slate-500 dark:text-slate-400">{option.secondary}</div> : null}
             </div>
           </DropdownMenuItem>
         ))}

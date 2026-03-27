@@ -117,7 +117,7 @@ export function ReportsPage() {
             </span>
             <div>
               <p className="text-sm font-medium text-slate-950 dark:text-white">{t('reseller.pages.reports.avgPrice')}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('reseller.pages.reports.avgPriceHint', { defaultValue: 'Activation revenue divided by activation volume in the selected range.' })}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('reseller.pages.reports.avgPriceHint', { defaultValue: 'Activation revenue divided by activation volume in the selected range.' })}</p>
             </div>
           </div>
           <div className="text-end text-lg font-semibold text-slate-950 dark:text-white">{formatCurrency(summary?.avg_price ?? 0, 'USD', locale)}</div>

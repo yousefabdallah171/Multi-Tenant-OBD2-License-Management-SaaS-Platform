@@ -422,19 +422,19 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 />
               </Field>
               {usernameIsLocked && (
-                <div className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                <div className="mt-1 flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400">
                   <Lock className="size-3" />
                   <span>{t('activate.biosLockedHint', { defaultValue: 'Username is permanently linked to this BIOS ID and cannot be changed' })}</span>
                 </div>
               )}
               {usernameCheckLoading && !usernameIsLocked && (
-                <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                <div className="mt-2 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                   <Loader2 className="size-3 animate-spin" />
                   <span>{t('validate.checking', { defaultValue: 'Checking...' })}</span>
                 </div>
               )}
               {usernameCheckResult && !usernameCheckLoading && !usernameIsLocked && (
-                <div className={`mt-2 flex items-center gap-2 text-xs ${usernameCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                <div className={`mt-2 flex items-center gap-2 text-sm ${usernameCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                   {usernameCheckResult.available ? (
                     <>
                       <Check className="size-3" />
@@ -449,7 +449,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 </div>
               )}
               {biosLinkedUsername && (
-                <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                <div className="mt-2 text-sm text-amber-600 dark:text-amber-400">
                   {t('activate.biosLinkedUsername', { defaultValue: 'Username auto-filled from BIOS history' })}
                 </div>
               )}
@@ -482,14 +482,14 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 />
               </Field>
               {biosCheckLoading && (
-                <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                <div className="mt-2 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                   <Loader2 className="size-3 animate-spin" />
                   <span data-testid="bios-checking">{t('activate.biosChecking', { defaultValue: 'Checking BIOS availability...' })}</span>
                 </div>
               )}
               {biosCheckResult && !biosCheckLoading && (
                 <>
-                  <div className={`mt-2 flex items-center gap-2 text-xs ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : biosCheckResult.is_blacklisted ? 'text-red-600 dark:text-red-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : biosCheckResult.is_blacklisted ? 'text-red-600 dark:text-red-400' : 'text-rose-600 dark:text-rose-400'}`}>
                     {biosCheckResult.available ? (
                       <>
                         <Check className="size-3" />
@@ -508,7 +508,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                     )}
                   </div>
                   {biosLinkedUsername && (
-                    <div className="mt-2 text-xs text-amber-600 dark:text-amber-400" data-testid="bios-linked-hint">
+                    <div className="mt-2 text-sm text-amber-600 dark:text-amber-400" data-testid="bios-linked-hint">
                       {t('activate.biosLinkedUsername', { defaultValue: 'Username auto-filled from BIOS history' })}
                     </div>
                   )}
@@ -546,7 +546,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 {t('activate.createCustomerOnly', { defaultValue: 'Create customer only' })}
               </Button>
             </div>
-            <p className={`mt-3 rounded-2xl px-4 py-3 text-xs ${
+            <p className={`mt-3 rounded-2xl px-4 py-3 text-sm ${
               createLicenseNow
                 ? 'border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
                 : 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300'
@@ -561,7 +561,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
             <>
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
                     {t('activate.startingLabel', { defaultValue: 'Starting' })}
                   </p>
                   <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{startSummary}</p>
@@ -605,14 +605,14 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                         <option key={timezone.value} value={timezone.value}>{timezone.label}</option>
                       ))}
                     </select>
-                    {errors.scheduleAt ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
+                    {errors.scheduleAt ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
                   </div>
                 ) : null}
               </div>
 
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
                     {t('activate.endingLabel', { defaultValue: 'Ending' })}
                   </p>
                   <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{endSummary}</p>
@@ -633,7 +633,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                         </Button>
                       ))}
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
                       {selectedPreset
                         ? `${t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • ${t('activate.presetPriceSummary', { price: selectedPreset.price.toFixed(2), defaultValue: '$ {{price}}' })}`
                         : t('validation.required', { defaultValue: 'Field required' })}
@@ -674,7 +674,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                     )}
                   </>
                 )}
-                {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
+                {errors.duration ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
               </div>
 
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
@@ -694,7 +694,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                   onChange={(event) => setPriceInput(event.target.value.replace(/[^\d.]/g, ''))}
                   className={isReseller || priceMode === 'auto' ? 'cursor-not-allowed bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400' : ''}
                 />
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   {isReseller
                     ? t('activate.pricePresetLocked', { defaultValue: 'Price is controlled by the selected preset.' })
                     : priceMode === 'auto'
@@ -739,8 +739,8 @@ function Field({ label, children, hint, error }: { label: string; children: Reac
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
-      {hint ? <p className="text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
-      {error ? <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p> : null}
+      {hint ? <p className="text-sm text-slate-500 dark:text-slate-400">{hint}</p> : null}
+      {error ? <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p> : null}
     </div>
   )
 }
@@ -748,7 +748,7 @@ function Field({ label, children, hint, error }: { label: string; children: Reac
 function Summary({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
       <p className="mt-1 font-medium">{value}</p>
     </div>
   )

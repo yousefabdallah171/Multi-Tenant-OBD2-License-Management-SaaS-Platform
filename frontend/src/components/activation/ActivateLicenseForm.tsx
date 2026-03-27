@@ -523,8 +523,8 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
           onBlur={(event) => setForm((current) => ({ ...current, customer_name: formatUsername(event.target.value) }))}
           placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })}
         />
-        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.usernameHint', { defaultValue: 'API username — auto-formatted (no spaces)' })}</p>
-        {errors.customer_name ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.customer_name}</p> : null}
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('activate.usernameHint', { defaultValue: 'API username — auto-formatted (no spaces)' })}</p>
+        {errors.customer_name ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.customer_name}</p> : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="activate-client-name">{t('activate.clientName')}</Label>
@@ -534,13 +534,13 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
           onChange={(event) => setForm((current) => ({ ...current, client_name: event.target.value }))}
           placeholder={t('activate.clientNamePlaceholder', { defaultValue: 'Full client name (optional)' })}
         />
-        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.clientNameHint', { defaultValue: 'Human-readable name for display in your dashboard' })}</p>
-        {errors.client_name ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.client_name}</p> : null}
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('activate.clientNameHint', { defaultValue: 'Human-readable name for display in your dashboard' })}</p>
+        {errors.client_name ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.client_name}</p> : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="activate-customer-email">{t('activate.customerEmail')}</Label>
         <Input id="activate-customer-email" type="email" value={form.customer_email} onChange={(event) => setForm((current) => ({ ...current, customer_email: event.target.value }))} />
-        {errors.customer_email ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.customer_email}</p> : null}
+        {errors.customer_email ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.customer_email}</p> : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="activate-customer-phone">{t('common.phone')}</Label>
@@ -551,20 +551,20 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
           value={form.customer_phone}
           onChange={(event) => setForm((current) => ({ ...current, customer_phone: normalizePhoneInput(event.target.value) }))}
         />
-        {errors.customer_phone ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.customer_phone}</p> : null}
+        {errors.customer_phone ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.customer_phone}</p> : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="activate-bios-id">{t('activate.biosId')}</Label>
         <Input id="activate-bios-id" value={form.bios_id} onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))} data-testid="bios-id" />
-        <p className="text-xs text-slate-500 dark:text-slate-400">{t('activate.biosIdHint')}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('activate.biosIdHint')}</p>
         {biosCheckLoading && (
-          <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <Loader2 className="size-3 animate-spin" />
             <span data-testid="bios-checking">{t('activate.biosChecking', { defaultValue: 'Checking BIOS availability...' })}</span>
           </div>
         )}
         {biosCheckResult && !biosCheckLoading && (
-          <div className={`flex items-center gap-2 text-xs ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : biosCheckResult.is_blacklisted ? 'text-red-600 dark:text-red-400' : 'text-rose-600 dark:text-rose-400'}`}>
+          <div className={`flex items-center gap-2 text-sm ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : biosCheckResult.is_blacklisted ? 'text-red-600 dark:text-red-400' : 'text-rose-600 dark:text-rose-400'}`}>
             {biosCheckResult.available ? (
               <>
                 <Check className="size-3" />
@@ -583,11 +583,11 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
             )}
           </div>
         )}
-        {errors.bios_id ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.bios_id}</p> : null}
+        {errors.bios_id ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.bios_id}</p> : null}
       </div>
       <div className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
             {t('activate.startingLabel', { defaultValue: 'Starting' })}
           </p>
           <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{startSummary}</p>
@@ -691,9 +691,9 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
                 ))}
               </select>
             </div>
-            {errors.scheduled_date_time ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.scheduled_date_time}</p> : null}
+            {errors.scheduled_date_time ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.scheduled_date_time}</p> : null}
             {schedulePreview ? (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 {t('activate.preview', { dateTime: schedulePreview })}
               </p>
             ) : null}
@@ -702,7 +702,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
       </div>
       <div className="space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
             {t('activate.endingLabel', { defaultValue: 'Ending' })}
           </p>
           <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{endSummary}</p>
@@ -723,7 +723,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
                   }`}
                 >
                   <div className="text-sm font-semibold">{preset.label}</div>
-                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {t('activate.presetDurationSummary', {
                       defaultValue: '{{days}} days',
                       days: preset.duration_days,
@@ -738,7 +738,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
                 </button>
               ))}
             </div>
-            {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
+            {errors.duration ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
           </>
         ) : form.mode === 'duration' ? (
           <>
@@ -760,7 +760,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
                 <option value="days">{t('activate.days')}</option>
               </select>
             </div>
-            {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
+            {errors.duration ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
             <div className="flex flex-wrap gap-2">
               {durationPresets.map((quick) => (
                 <Button
@@ -778,7 +778,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         ) : (
           <>
             <Input type="datetime-local" value={form.end_date} onChange={(event) => setForm((current) => ({ ...current, end_date: event.target.value }))} />
-            {errors.end_date ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.end_date}</p> : null}
+            {errors.end_date ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.end_date}</p> : null}
           </>
         )}
       </div>
@@ -809,14 +809,14 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
               }
             }}
           />
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {isReseller
               ? t('activate.pricePresetLocked', { defaultValue: 'Price is controlled by the selected preset.' })
               : priceMode === 'auto'
                 ? t('activate.priceAuto')
                 : t('activate.priceManualHint')}
           </p>
-          {errors.price ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.price}</p> : null}
+          {errors.price ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.price}</p> : null}
         </div>
       ) : null}
 

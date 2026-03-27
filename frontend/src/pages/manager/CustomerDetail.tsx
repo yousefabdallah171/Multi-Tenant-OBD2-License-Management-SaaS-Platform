@@ -149,7 +149,7 @@ export function CustomerDetailPage() {
                     href={reseller.reseller_id ? routePaths.manager.teamMemberDetail(lang, reseller.reseller_id) : undefined}
                   />
                   <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.reseller_email ?? '-'}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{reseller.activations_count} activations</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.activations_count} activations</p>
                 </div>
               ))}
             </CardContent>
@@ -165,7 +165,7 @@ export function CustomerDetailPage() {
                   <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
                     <p className="font-medium">{log.ip_address}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
                   </div>
                 ))
               )}
@@ -182,7 +182,7 @@ export function CustomerDetailPage() {
                   <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
                     <p className="font-medium">{formatActivityActionLabel(entry.action, t)}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
                   </div>
                 ))
               )}
@@ -207,12 +207,12 @@ export function CustomerDetailPage() {
                         {item.status === 'approved' && <CheckCircle className="h-4 w-4 text-emerald-500" />}
                         {item.status === 'pending' && <Clock className="h-4 w-4 text-amber-500" />}
                         {item.status === 'rejected' && <XCircle className="h-4 w-4 text-rose-500" />}
-                        <span className={`text-xs font-semibold uppercase tracking-wide ${item.status === 'approved' ? 'text-emerald-600' : item.status === 'pending' ? 'text-amber-600' : 'text-rose-600'}`}>
+                        <span className={`text-sm font-semibold uppercase tracking-wide ${item.status === 'approved' ? 'text-emerald-600' : item.status === 'pending' ? 'text-amber-600' : 'text-rose-600'}`}>
                           {item.status}
                         </span>
                       </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
                       {item.reason && <span>{t('biosChangeRequests.reason')}: {item.reason}</span>}
                       {item.requested_by && <span>{t('common.reseller')}: {item.requested_by}</span>}
                       <span>{formatDate(item.created_at ?? '', locale)}</span>
@@ -318,7 +318,7 @@ function Info({
       title={isLocked ? lockTooltip : undefined}
     >
       <div className="flex items-center gap-1">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
         {isLocked && <Lock className="h-3 w-3 text-amber-600" />}
       </div>
       <div className={`mt-1 whitespace-pre-line font-medium ${isLocked ? 'text-slate-400 dark:text-slate-600' : ''}`}>

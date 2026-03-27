@@ -11,7 +11,7 @@ Audited: 163 .tsx files across all roles and screens
 |---|---|---|---|
 | `text-[9px]` | 9px — unreadable on any screen | 3 | 🔴 Critical |
 | `text-[10px]` | 10px — very hard to read | 8 | 🔴 Critical |
-| `text-[11px]` | 11px — hard to read on small screens | 2 | 🟠 High |
+| `txext-[11px]` | 11px — hard to read on small screens | 2 | 🟠 High |
 | `text-xs` | 12px — readable on desktop, too small on tablet | ~244 | 🟡 Medium |
 
 **Tailwind reference:**

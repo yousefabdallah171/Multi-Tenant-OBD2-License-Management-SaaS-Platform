@@ -186,7 +186,7 @@ export function DataTable<T>({
                     key={column.key}
                     scope="col"
                     aria-sort={column.sortable && isActive ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    className={cn('px-4 py-3 text-start text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400', column.className)}
+                    className={cn('px-4 py-3 text-start text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400', column.className)}
                   >
                     <button
                       type="button"

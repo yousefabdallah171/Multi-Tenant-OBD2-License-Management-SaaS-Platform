@@ -90,7 +90,7 @@ export function TableScreenOptions({
           className="z-[9999] w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-800 dark:bg-slate-950"
         >
           <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               {t('common.columns', { defaultValue: 'Columns' })}
             </p>
             <div className="space-y-1">
@@ -127,7 +127,7 @@ export function TableScreenOptions({
                       className="pointer-events-none h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950"
                     />
                     {column.locked ? (
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                      <span className="text-sm font-semibold uppercase tracking-wide text-slate-400">
                         {t('common.locked', { defaultValue: 'Locked' })}
                       </span>
                     ) : null}
@@ -141,7 +141,7 @@ export function TableScreenOptions({
             <>
               <div className="my-3 h-px bg-slate-200 dark:bg-slate-800" />
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   {t('common.pagination', { defaultValue: 'Pagination' })}
                 </p>
                 <div className="grid grid-cols-4 gap-2">

@@ -610,19 +610,19 @@ export function CustomersPage() {
             <div className="relative inline-flex">
               <LicenseStatusBadges status={getLicenseDisplayStatus(row)} isBlocked={Boolean(row.is_blacklisted)} />
               {isPlainPendingLicense(row) ? (
-                <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
+                <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-sm font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
                   {t('common.new', { defaultValue: lang === 'ar' ? 'جديد' : 'New' })}
                 </span>
               ) : null}
             </div>
             {row.bios_active_elsewhere ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-[10px] font-semibold leading-none text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300">
+              <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-sm font-semibold leading-none text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300">
                 <ShieldOff className="h-2.5 w-2.5" />
                 {t('customers.activeElsewhere', { defaultValue: lang === 'ar' ? 'نشط مع موزع آخر' : 'Active w/ other reseller' })}
               </span>
             ) : null}
             {isPausedPendingLicense(row) && row.paused_by_role != null && row.paused_by_role !== 'reseller' ? (
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-sm font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
                 {t('customers.pausedByAdmin')}
               </span>
             ) : null}
@@ -934,7 +934,7 @@ export function CustomersPage() {
                 key={label}
                 className={`rounded-2xl border px-4 py-3 text-sm ${index === activationStep ? 'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-400 dark:bg-sky-950/30 dark:text-sky-300' : 'border-slate-200 text-slate-500 dark:border-slate-800 dark:text-slate-400'}`}
               >
-                <div className="text-xs uppercase tracking-wide">{text.activationDialog.stepLabel} {index + 1}</div>
+                <div className="text-sm uppercase tracking-wide">{text.activationDialog.stepLabel} {index + 1}</div>
                 <div className="mt-1 flex items-center gap-2 font-semibold">
                   {index === 0 ? <UserRound className="h-4 w-4" /> : null}
                   {index === 1 ? <Cpu className="h-4 w-4" /> : null}
@@ -952,7 +952,7 @@ export function CustomersPage() {
                 style={{ width: `${((activationStep + 1) / activationSteps.length) * 100}%` }}
               />
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(((activationStep + 1) / activationSteps.length) * 100)}%</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{Math.round(((activationStep + 1) / activationSteps.length) * 100)}%</p>
           </div>
 
           <div className="space-y-4">
@@ -1074,7 +1074,7 @@ export function CustomersPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-xs text-slate-600 dark:text-slate-400">{t('activate.quickPresets', { defaultValue: 'Quick Presets' })}</Label>
+                        <Label className="text-sm text-slate-600 dark:text-slate-400">{t('activate.quickPresets', { defaultValue: 'Quick Presets' })}</Label>
                         <div className="grid grid-cols-4 gap-2">
                           {durationPresets.map((preset) => (
                             <Button
@@ -1082,7 +1082,7 @@ export function CustomersPage() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="text-xs"
+                              className="text-sm"
                               onClick={() =>
                                 setActivationForm((current) => ({
                                   ...current,
@@ -1249,7 +1249,7 @@ export function CustomersPage() {
                       readOnly={priceMode === 'auto'}
                       className={priceMode === 'auto' ? 'bg-slate-100 dark:bg-slate-900' : ''}
                     />
-                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                       {priceMode === 'auto'
                         ? t('activate.priceAuto')
                         : t('activate.priceManualEntry', { defaultValue: 'Enter custom price' })}
@@ -1276,7 +1276,7 @@ export function CustomersPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="rounded-2xl border border-sky-200 bg-sky-50/80 p-4 dark:border-sky-900/40 dark:bg-sky-950/20">
-                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">{text.activationDialog.customer}</p>
+                      <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">{text.activationDialog.customer}</p>
                       <div className="grid gap-4 md:grid-cols-2">
                         <InfoPair label={text.activationDialog.customer} value={activationForm.customer_name || '-'} />
                         <InfoPair label={text.activationDialog.email} value={activationForm.customer_email || '-'} />
@@ -1285,7 +1285,7 @@ export function CustomersPage() {
                       </div>
                     </div>
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{text.activationDialog.program}</p>
+                      <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">{text.activationDialog.program}</p>
                       <div className="grid gap-4 md:grid-cols-2">
                         <InfoPair label={text.activationDialog.program} value={selectedProgram?.name ?? '-'} />
                         <InfoPair label={text.activationDialog.duration} value={`${durationDays.toFixed(2)} ${text.units.days}`} />
@@ -1421,7 +1421,7 @@ function FormField({ label, htmlFor, children }: { label: string; htmlFor: strin
 function InfoPair({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
       <div className="mt-1 font-semibold text-slate-950 dark:text-white">{value}</div>
     </div>
   )

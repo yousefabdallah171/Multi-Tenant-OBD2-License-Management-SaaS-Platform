@@ -125,7 +125,7 @@ export function SoftwareManagementPage() {
           )}
           <div>
             <p className="font-medium text-slate-950 dark:text-white">{row.name}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.version')} {row.version}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.version')} {row.version}</p>
           </div>
         </div>
       ),
@@ -303,15 +303,15 @@ export function SoftwareManagementPage() {
                 <p className="min-h-12 text-sm text-slate-600 dark:text-slate-300">{program.description || t('managerParent.pages.softwareManagement.noDescription')}</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.basePrice')}</p>
+                    <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.basePrice')}</p>
                     <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalSoftwareId')}</p>
+                    <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalSoftwareId')}</p>
                     <p className="mt-1 font-semibold">{program.external_software_id ?? '-'}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalApiKey')}</p>
+                    <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalApiKey')}</p>
                     <p className={`mt-1 font-semibold ${program.has_external_api ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}`}>
                       {program.has_external_api ? t('software.apiConfigured') : t('software.apiNotConfigured')}
                     </p>
@@ -407,7 +407,7 @@ export function SoftwareManagementPage() {
                 placeholder="e.g. 8"
                 onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))}
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="program-api-key">{t('software.externalApiKey')}</Label>
@@ -424,10 +424,10 @@ export function SoftwareManagementPage() {
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyHint')}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyUrlHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.apiKeyHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.apiKeyUrlHint')}</p>
               {editingProgram?.has_external_api ? (
-                <p className="text-xs text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p>
+                <p className="text-sm text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p>
               ) : null}
             </div>
             <div className="space-y-2">

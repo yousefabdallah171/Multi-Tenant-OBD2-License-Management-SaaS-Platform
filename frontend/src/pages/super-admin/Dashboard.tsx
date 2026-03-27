@@ -162,9 +162,9 @@ export function DashboardPage() {
                   <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(item.action, t)}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(item.description, locale)}</p>
                 </div>
-                <span className="text-xs text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</span>
+                <span className="text-sm text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</span>
               </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{[item.user, item.tenant].filter(Boolean).join(' - ')}</p>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{[item.user, item.tenant].filter(Boolean).join(' - ')}</p>
             </button>
           ))}
         </CardContent>

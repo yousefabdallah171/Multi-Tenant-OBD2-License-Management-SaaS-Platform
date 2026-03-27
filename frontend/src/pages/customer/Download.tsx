@@ -81,19 +81,19 @@ export function DownloadPage() {
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.lastDownloaded')}</p>
+                      <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.lastDownloaded')}</p>
                       <p className="mt-1 text-sm font-medium">{item.last_downloaded_at ? formatDate(item.last_downloaded_at, locale) : t('customerPortal.download.notAvailable')}</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.fileSize')}</p>
+                      <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.fileSize')}</p>
                       <p className="mt-1 text-sm font-medium">{item.file_size ?? t('customerPortal.download.notProvided')}</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.systemRequirements')}</p>
+                      <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.systemRequirements')}</p>
                       <p className="mt-1 text-sm font-medium">{item.system_requirements ?? t('customerPortal.download.notProvided')}</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.daysRemaining')}</p>
+                      <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.download.daysRemaining')}</p>
                       <p className="mt-1 text-sm font-medium">{item.days_remaining}</p>
                     </div>
                   </div>

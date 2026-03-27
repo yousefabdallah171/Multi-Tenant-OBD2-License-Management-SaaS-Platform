@@ -183,7 +183,7 @@ export function ProgramFormPage() {
             <Field label={t('manager.pages.softwareManagement.basePrice', { defaultValue: t('manager.pages.softwareManagement.price') })} hint={t('software.fieldHints.basePrice', { defaultValue: 'Default sale price used when a reseller does not override it manually.' })}><Input type="number" min={0} step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} /></Field>
             <Field label={t('software.externalSoftwareId')} hint={t('software.fieldHints.externalSoftwareId', { defaultValue: 'Numeric software ID used by the external API for user add/remove and logs.' })}>
               <Input type="number" min={1} placeholder={t('software.externalSoftwareIdPlaceholder')} value={form.external_software_id} onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))} />
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
             </Field>
             <Field label={t('software.externalApiBaseUrl')} hint={t('software.fieldHints.externalApiBaseUrl', { defaultValue: 'Base host for the software API. Enter only the main host, without endpoint paths.' })}>
               <Input
@@ -192,7 +192,7 @@ export function ProgramFormPage() {
                 value={form.external_api_base_url}
                 onChange={(event) => setForm((current) => ({ ...current, external_api_base_url: event.target.value }))}
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiBaseUrlHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.apiBaseUrlHint')}</p>
             </Field>
             <Field label={t('software.externalLogsEndpoint')} hint={t('software.fieldHints.externalLogsEndpoint', { defaultValue: 'Path used to read external activity logs for this software, for example apilogs.' })}>
               <Input
@@ -200,7 +200,7 @@ export function ProgramFormPage() {
                 value={form.external_logs_endpoint}
                 onChange={(event) => setForm((current) => ({ ...current, external_logs_endpoint: event.target.value }))}
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.logsEndpointHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.logsEndpointHint')}</p>
             </Field>
             <Field label={t('software.externalApiKey')} hint={t('software.fieldHints.externalApiKey', { defaultValue: 'Secret API key used for external add-user and delete-user requests.' })}>
               <div className="flex gap-2">
@@ -209,10 +209,10 @@ export function ProgramFormPage() {
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyHint')}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyUrlHint')}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.addUserUrlExample')}</p>
-              {editingId && hasConfiguredApi ? <p className="text-xs text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p> : null}
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.apiKeyHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.apiKeyUrlHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.addUserUrlExample')}</p>
+              {editingId && hasConfiguredApi ? <p className="text-sm text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p> : null}
             </Field>
             </div>
           </div>
@@ -250,7 +250,7 @@ function Field({ label, hint, children }: { label: string; hint?: React.ReactNod
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
-      {hint ? <p className="text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
+      {hint ? <p className="text-sm text-slate-500 dark:text-slate-400">{hint}</p> : null}
     </div>
   )
 }

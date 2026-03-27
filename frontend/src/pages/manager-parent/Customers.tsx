@@ -409,12 +409,12 @@ export function CustomersPage() {
         <div className="relative inline-flex flex-col gap-1">
           <LicenseStatusBadges status={getLicenseDisplayStatus(row)} isBlocked={Boolean(row.is_blacklisted)} />
           {isPlainPendingLicense(row) ? (
-            <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
+            <span className="absolute -right-2 -top-2 inline-flex items-center rounded-full border border-fuchsia-200 bg-fuchsia-100 px-1.5 py-0.5 text-sm font-semibold leading-none text-fuchsia-700 shadow-sm dark:border-fuchsia-900/60 dark:bg-fuchsia-950/50 dark:text-fuchsia-300">
               {t('common.new', { defaultValue: lang === 'ar' ? 'جديد' : 'New' })}
             </span>
           ) : null}
           {row.bios_active_elsewhere ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300">
+            <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-sm font-semibold leading-none text-orange-700 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300">
               <ShieldOff className="h-2.5 w-2.5" />
               {t('customers.biosActiveElsewhere', { defaultValue: 'Active w/ other reseller' })}
             </span>
@@ -696,7 +696,7 @@ export function CustomersPage() {
           <div className="grid gap-3 md:grid-cols-4">
             {activationSteps.map((label, index) => (
               <div key={label} className={`rounded-2xl border px-4 py-3 text-sm ${index === activationStep ? 'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-400 dark:bg-sky-950/30 dark:text-sky-300' : 'border-slate-200 text-slate-500 dark:border-slate-800 dark:text-slate-400'}`}>
-                <div className="text-xs uppercase tracking-wide">{t('reseller.pages.customers.activationDialog.stepLabel')} {index + 1}</div>
+                <div className="text-sm uppercase tracking-wide">{t('reseller.pages.customers.activationDialog.stepLabel')} {index + 1}</div>
                 <div className="mt-1 flex items-center gap-2 font-semibold">
                   {index === 0 ? <UserRound className="h-4 w-4" /> : null}
                   {index === 1 ? <Cpu className="h-4 w-4" /> : null}
@@ -711,7 +711,7 @@ export function CustomersPage() {
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
               <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all duration-300" style={{ width: `${((activationStep + 1) / activationSteps.length) * 100}%` }} />
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(((activationStep + 1) / activationSteps.length) * 100)}%</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{Math.round(((activationStep + 1) / activationSteps.length) * 100)}%</p>
           </div>
           {activationStep === 0 ? (
             <div className="grid gap-3 md:grid-cols-2">
@@ -727,7 +727,7 @@ export function CustomersPage() {
               <FormField label={t('common.phone')} htmlFor="mp-customer-phone">
                 <Input id="mp-customer-phone" value={activationForm.customer_phone} onChange={(event) => setActivationForm((current) => ({ ...current, customer_phone: event.target.value.replace(/\D+/g, '') }))} />
               </FormField>
-              <p className="md:col-span-2 text-xs text-slate-500 dark:text-slate-400">{t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })}</p>
+              <p className="md:col-span-2 text-sm text-slate-500 dark:text-slate-400">{t('activate.usernameHint', { defaultValue: 'letters, numbers, underscore only' })}</p>
             </div>
           ) : null}
           {activationStep === 1 ? (

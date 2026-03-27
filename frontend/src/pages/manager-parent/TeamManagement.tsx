@@ -604,7 +604,7 @@ export function TeamManagementPage() {
             />
             <span className="space-y-1">
               <span className="block font-medium text-slate-950 dark:text-white">{t('common.revokeSessionsOnPasswordReset')}</span>
-              <span className="block text-xs text-slate-500 dark:text-slate-400">{t('common.revokeSessionsOnPasswordResetHelp')}</span>
+              <span className="block text-sm text-slate-500 dark:text-slate-400">{t('common.revokeSessionsOnPasswordResetHelp')}</span>
             </span>
           </label>
           <DialogFooter>

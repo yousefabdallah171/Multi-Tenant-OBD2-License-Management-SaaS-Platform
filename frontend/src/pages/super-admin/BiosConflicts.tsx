@@ -18,7 +18,7 @@ import { biosService, type BiosConflictParams } from '@/services/bios.service'
 import type { BiosConflictItem } from '@/types/super-admin.types'
 
 function StatusPill({ status, label }: { status: BiosConflictItem['status']; label: string }) {
-  const base = 'inline-flex rounded-full px-3 py-1 text-xs font-semibold'
+  const base = 'inline-flex rounded-full px-3 py-1 text-sm font-semibold'
   const className = status === 'resolved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
 
   return <span className={`${base} ${className}`}>{label}</span>

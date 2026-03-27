@@ -161,7 +161,7 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
                 value={profileForm.phone ?? ''}
                 onChange={(event) => updateProfileField('phone', normalizeStrictPhoneInput(event.target.value))}
               />
-              {profilePhoneError ? <p className="text-xs text-rose-600 dark:text-rose-400">{profilePhoneError}</p> : null}
+              {profilePhoneError ? <p className="text-sm text-rose-600 dark:text-rose-400">{profilePhoneError}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="profile-timezone">{t('common.timezone', { defaultValue: 'Timezone' })}</Label>
@@ -180,13 +180,13 @@ export function ProfileWorkspace({ eyebrow, description, translationPrefix }: Pr
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 {t('common.timezoneHint', { defaultValue: 'Used for date display and schedule defaults.' })}
               </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="profile-color">{t('common.personalColor', { defaultValue: 'Personal Dashboard Color' })}</Label>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 {t('common.personalColorHint', { defaultValue: 'Customize your dashboard theme color. Leave empty to use role default.' })}
               </p>
               <div className="flex items-center gap-2">

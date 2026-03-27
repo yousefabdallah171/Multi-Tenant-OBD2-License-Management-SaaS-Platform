@@ -183,7 +183,7 @@ export function BiosBlacklistPage() {
             <div className="space-y-2">
               <Label htmlFor="blacklist-bios-id">{t('managerParent.pages.biosBlacklist.biosId')}</Label>
               <Input id="blacklist-bios-id" value={form.bios_id} onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))} />
-              {formErrors.bios_id ? <p className="text-xs text-rose-600 dark:text-rose-400">{formErrors.bios_id}</p> : null}
+              {formErrors.bios_id ? <p className="text-sm text-rose-600 dark:text-rose-400">{formErrors.bios_id}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="blacklist-reason">{t('common.reason')}</Label>

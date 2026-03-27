@@ -401,7 +401,7 @@ export function CreateCustomerPage() {
                 {t('activate.createCustomerOnly', { defaultValue: 'Create customer only' })}
               </Button>
             </div>
-            <p className={`mt-3 rounded-2xl px-4 py-3 text-xs ${
+            <p className={`mt-3 rounded-2xl px-4 py-3 text-sm ${
               createLicenseNow
                 ? 'border border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
                 : 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300'
@@ -416,7 +416,7 @@ export function CreateCustomerPage() {
             <>
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
                     {t('activate.startingLabel', { defaultValue: 'Starting' })}
                   </p>
                   <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{startSummary}</p>
@@ -460,14 +460,14 @@ export function CreateCustomerPage() {
                         <option key={timezone.value} value={timezone.value}>{timezone.label}</option>
                       ))}
                     </select>
-                    {errors.scheduleAt ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
+                    {errors.scheduleAt ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
                   </div>
                 ) : null}
               </div>
 
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
                     {t('activate.endingLabel', { defaultValue: 'Ending' })}
                   </p>
                   <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{endSummary}</p>
@@ -492,7 +492,7 @@ export function CreateCustomerPage() {
                         ))}
                       </div>
                     </div>
-                    {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
+                    {errors.duration ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
                   </>
                 ) : (
                   <Field label={t('activate.endDateTime', { defaultValue: 'End Date & Time' })} error={errors.duration}>
@@ -510,7 +510,7 @@ export function CreateCustomerPage() {
                   </div>
                 </div>
                 <Input value={priceInput} readOnly={priceMode === 'auto'} onChange={(event) => setPriceInput(event.target.value.replace(/[^\d.]/g, ''))} />
-                <p className="text-xs text-slate-500 dark:text-slate-400">{priceMode === 'auto' ? t('activate.priceAuto', { defaultValue: 'Auto-calculated' }) : t('activate.priceManualHint', { defaultValue: 'Enter custom price' })}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{priceMode === 'auto' ? t('activate.priceAuto', { defaultValue: 'Auto-calculated' }) : t('activate.priceManualHint', { defaultValue: 'Enter custom price' })}</p>
                 <div className="grid gap-3 md:grid-cols-3">
                   <Summary label={t('activate.durationDays', { defaultValue: 'Duration in Days' })} value={durationDays > 0 ? durationDays.toFixed(3) : '0'} />
                   <Summary label={t('activate.expiryPreview', { defaultValue: 'Expiry Preview' })} value={expiryPreview ? formatDate(expiryPreview, locale, mode === 'end_date' ? displayTimezone : scheduleEnabled ? scheduleTimezone : displayTimezone) : '-'} />
@@ -557,8 +557,8 @@ function Field({ label, children, hint, error }: { label: string; children: Reac
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
-      {hint ? <p className="text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
-      {error ? <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p> : null}
+      {hint ? <p className="text-sm text-slate-500 dark:text-slate-400">{hint}</p> : null}
+      {error ? <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p> : null}
     </div>
   )
 }
@@ -566,7 +566,7 @@ function Field({ label, children, hint, error }: { label: string; children: Reac
 function Summary({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
       <p className="mt-1 font-medium">{value}</p>
     </div>
   )

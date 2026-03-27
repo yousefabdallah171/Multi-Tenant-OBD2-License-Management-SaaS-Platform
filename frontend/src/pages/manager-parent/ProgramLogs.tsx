@@ -357,7 +357,7 @@ export function ProgramLogsPage() {
         const ip = row.ip ?? ''
         const meta = ipMetaCache[ip]
         return isPrivateOrLocalIp(ip) ? '-' : meta?.proxy || meta?.hosting ? (
-          <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+          <span className="rounded-full bg-rose-100 px-2 py-1 text-sm font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
             {t('ipAnalytics.vpnProxy')}
           </span>
         ) : (
@@ -512,7 +512,7 @@ function MetricCard({ label, value }: { label: string; value: React.ReactNode })
   return (
     <Card>
       <CardContent className="p-4">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
         <div className="mt-2 font-semibold text-slate-950 dark:text-white">{value}</div>
       </CardContent>
     </Card>
@@ -533,7 +533,7 @@ function ActionPill({ label, action }: { label: string; action: string }) {
     'license.delete': 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
   }
 
-  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${styles[action] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>{label}</span>
+  return <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${styles[action] ?? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>{label}</span>
 }
 
 function normalizeRole(role: string | null | undefined): UserRole | null {

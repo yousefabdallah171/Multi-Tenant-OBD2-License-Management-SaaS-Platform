@@ -14,7 +14,7 @@ import { routePaths } from '@/router/routes'
 import type { BiosConflictFilters, BiosConflictItem } from '@/types/manager-parent.types'
 
 function StatusPill({ status, label }: { status: BiosConflictItem['status']; label: string }) {
-  const base = 'inline-flex rounded-full px-3 py-1 text-xs font-semibold'
+  const base = 'inline-flex rounded-full px-3 py-1 text-sm font-semibold'
   const className = status === 'resolved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
 
   return <span className={`${base} ${className}`}>{label}</span>
@@ -58,7 +58,7 @@ export function BiosConflictsPage() {
           <button type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.managerParent.biosDetail(lang, row.bios_id))}>
             <code>{row.bios_id}</code>
           </button>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             @{row.affected_customers[0]?.username ?? '-'}
           </p>
         </div>

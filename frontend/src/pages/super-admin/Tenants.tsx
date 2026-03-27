@@ -203,7 +203,7 @@ export function TenantsPage() {
         render: (row) => (
           <div>
             <div className="font-medium text-slate-950 dark:text-white">{row.name}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">{row.slug}</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">{row.slug}</div>
           </div>
         ),
       },
@@ -559,7 +559,7 @@ export function TenantsPage() {
 
           {/* Import section */}
           <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('superAdmin.pages.tenants.importBackupFile', { defaultValue: 'Import backup file' })}</p>
+            <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('superAdmin.pages.tenants.importBackupFile', { defaultValue: 'Import backup file' })}</p>
             <div className="flex items-center gap-2">
               <Input
                 placeholder={t('superAdmin.pages.tenants.labelOptional', { defaultValue: 'Label (optional)' })}
@@ -585,7 +585,7 @@ export function TenantsPage() {
                 {importMutation.isPending ? t('superAdmin.pages.tenants.importing', { defaultValue: 'Importing...' }) : t('superAdmin.pages.tenants.chooseFile', { defaultValue: 'Choose file' })}
               </Button>
             </div>
-            <p className="mt-1.5 text-xs text-slate-400">{t('superAdmin.pages.tenants.importBackupHint', { defaultValue: 'Accepts .json exported from this or another server. Backup is stored without restoring - use Restore to apply it.' })}</p>
+            <p className="mt-1.5 text-sm text-slate-400">{t('superAdmin.pages.tenants.importBackupHint', { defaultValue: 'Accepts .json exported from this or another server. Backup is stored without restoring - use Restore to apply it.' })}</p>
           </div>
 
           {backupsQuery.isLoading ? (
@@ -605,10 +605,10 @@ export function TenantsPage() {
                         {backup.label ?? formatDate(backup.created_at ?? new Date(), locale)}
                       </p>
                       {backup.label ? (
-                        <span className="text-xs text-slate-400">{formatDate(backup.created_at ?? new Date(), locale)}</span>
+                        <span className="text-sm text-slate-400">{formatDate(backup.created_at ?? new Date(), locale)}</span>
                       ) : null}
                     </div>
-                    <p className="mt-0.5 text-xs text-slate-500">
+                    <p className="mt-0.5 text-sm text-slate-500">
                       {t('common.addedBy')} {backup.created_by?.name ?? t('common.unknown')} •{' '}
                       {backup.stats.customers} customers, {backup.stats.licenses} licenses
                     </p>
@@ -618,7 +618,7 @@ export function TenantsPage() {
                         .map(([k, v]) => (
                           <span
                             key={k}
-                            className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                            className="rounded bg-slate-100 px-1.5 py-0.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                           >
                             {k.replace(/_/g, ' ')}: {v}
                           </span>
@@ -697,7 +697,7 @@ export function TenantsPage() {
                   {Object.entries(restoreTarget.stats)
                     .filter(([, v]) => v > 0)
                     .map(([k, v]) => (
-                      <span key={k} className="rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">
+                      <span key={k} className="rounded bg-sky-100 px-1.5 py-0.5 text-sm text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">
                         {k.replace(/_/g, ' ')}: {v}
                       </span>
                     ))}

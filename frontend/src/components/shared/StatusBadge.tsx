@@ -47,7 +47,7 @@ export function StatusBadge({ status }: { status: Status }) {
   return (
     <span
       title={meaning ? `${labels[status]}: ${meaning}` : labels[status]}
-      className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', statusStyles[status])}
+      className={cn('inline-flex rounded-full px-3 py-1 text-sm font-semibold', statusStyles[status])}
     >
       {labels[status]}
     </span>

@@ -136,7 +136,7 @@ export function ProfilePage() {
                 value={profileForm.phone ?? ''}
                 onChange={(event) => updateProfileField('phone', normalizeStrictPhoneInput(event.target.value))}
               />
-              {profilePhoneError ? <p className="text-xs text-rose-600 dark:text-rose-400">{profilePhoneError}</p> : null}
+              {profilePhoneError ? <p className="text-sm text-rose-600 dark:text-rose-400">{profilePhoneError}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="profile-timezone">{t('common.timezone', { defaultValue: 'Timezone' })}</Label>

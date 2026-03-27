@@ -79,9 +79,9 @@ export function DashboardPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.dashboard.progressLabel')}</p>
+                    <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('customerPortal.dashboard.progressLabel')}</p>
                     <Progress value={license.percentage_remaining} />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('customerPortal.dashboard.daysRemaining', { count: Math.max(0, license.days_remaining) })}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('customerPortal.dashboard.daysRemaining', { count: Math.max(0, license.days_remaining) })}</p>
                   </div>
                   <dl className="grid gap-2 text-sm">
                     <div className="flex items-center justify-between gap-3">

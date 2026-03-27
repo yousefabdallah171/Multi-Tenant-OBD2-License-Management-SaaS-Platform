@@ -192,14 +192,14 @@ export function BiosDetailsPage() {
                   <div key={`${ip.ip_address}-${index}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="font-medium">{ip.ip_address ?? '-'}</p>
-                      {ip.proxy ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">{t('ipAnalytics.vpnProxy')}</span> : null}
+                      {ip.proxy ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-sm font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">{t('ipAnalytics.vpnProxy')}</span> : null}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-slate-500 dark:text-slate-400">
                       {ip.country ? <span>{ip.city ? `${ip.city}, ` : ''}{ip.country}</span> : null}
                       {ip.isp ? <span>{ip.isp}</span> : null}
                       {ip.program_name ? <span>{ip.program_name}</span> : null}
                     </div>
-                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{ip.timestamp ? formatDate(ip.timestamp, locale) : '-'}</p>
+                    <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">{ip.timestamp ? formatDate(ip.timestamp, locale) : '-'}</p>
                   </div>
                 ))}
               </CardContent>
@@ -213,7 +213,7 @@ export function BiosDetailsPage() {
                   <div key={`${item.id}`} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.badgeClassName}`}>{item.label.startsWith('biosDetails.') ? t(item.label) : item.label}</span>
+                        <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${item.badgeClassName}`}>{item.label.startsWith('biosDetails.') ? t(item.label) : item.label}</span>
                         <p className="text-sm text-slate-500 dark:text-slate-400">{item.reseller_name ?? '-'}</p>
                       </div>
                       <p className="text-sm text-slate-500 dark:text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</p>
@@ -263,11 +263,11 @@ function SectionCard({ title, children }: { title: string; children: React.React
 }
 
 function InfoGrid({ items }: { items: Array<[string, React.ReactNode]> }) {
-  return <div className="grid gap-3 md:grid-cols-2">{items.map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><div className="font-medium">{value}</div></div>)}</div>
+  return <div className="grid gap-3 md:grid-cols-2">{items.map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40"><p className="text-sm text-slate-500 dark:text-slate-400">{label}</p><div className="font-medium">{value}</div></div>)}</div>
 }
 
 function MiniInfo({ label, value }: { label: string; value: React.ReactNode }) {
-  return <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40"><p className="text-xs text-slate-500 dark:text-slate-400">{label}</p><div className="font-medium">{value}</div></div>
+  return <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40"><p className="text-sm text-slate-500 dark:text-slate-400">{label}</p><div className="font-medium">{value}</div></div>
 }
 
 function ResellerWithRole({ name, role, t }: { name: string; role?: string | null; t: (k: string) => string }) {
@@ -275,7 +275,7 @@ function ResellerWithRole({ name, role, t }: { name: string; role?: string | nul
   return (
     <span className="flex flex-wrap items-center gap-1">
       <span>{name}</span>
-      {badge ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}>{badge.label}</span> : null}
+      {badge ? <span className={`inline-flex rounded-full px-2 py-0.5 text-sm font-medium ${badge.className}`}>{badge.label}</span> : null}
     </span>
   )
 }
@@ -299,7 +299,7 @@ function ResellerCard({ reseller, locale, lang, t }: { reseller: BiosReseller; l
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           {reseller.id ? <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.teamMemberDetail(lang, reseller.id)}>{reseller.name ?? '-'}</Link> : <p className="font-medium">{reseller.name ?? '-'}</p>}
-          {(() => { const b = resolveRoleBadge(reseller.role, t); return b ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${b.className}`}>{b.label}</span> : null })()}
+          {(() => { const b = resolveRoleBadge(reseller.role, t); return b ? <span className={`inline-flex rounded-full px-2 py-0.5 text-sm font-medium ${b.className}`}>{b.label}</span> : null })()}
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p>
       </div>

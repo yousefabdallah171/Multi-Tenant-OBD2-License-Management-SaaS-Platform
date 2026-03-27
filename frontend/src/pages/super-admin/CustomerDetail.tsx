@@ -137,7 +137,7 @@ export function CustomerDetailPage() {
                       <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
                         <p className="font-medium">{log.ip_address}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
                       </div>
                     ))
                   )}
@@ -156,7 +156,7 @@ export function CustomerDetailPage() {
                       <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
                         <p className="font-medium">{formatActivityActionLabel(entry.action, t)}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
                       </div>
                     ))
                   )}
@@ -217,7 +217,7 @@ function Info({
       title={isLocked ? lockTooltip : undefined}
     >
       <div className="flex items-center gap-1">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
         {isLocked && <Lock className="h-3 w-3 text-amber-600" />}
       </div>
       <div className={`mt-1 whitespace-pre-line font-medium ${isLocked ? 'text-slate-400 dark:text-slate-600' : ''}`}>

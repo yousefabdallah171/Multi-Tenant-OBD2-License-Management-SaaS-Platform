@@ -13,5 +13,5 @@ const roleStyles: Record<UserRole, string> = {
 export function RoleBadge({ role }: { role: UserRole }) {
   const { t } = useTranslation()
 
-  return <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', roleStyles[role])}>{t(`roles.${role}`)}</span>
+  return <span className={cn('inline-flex rounded-full px-3 py-1 text-sm font-semibold', roleStyles[role])}>{t(`roles.${role}`)}</span>
 }

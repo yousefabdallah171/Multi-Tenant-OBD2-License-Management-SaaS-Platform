@@ -259,12 +259,12 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>{t('managerParent.pages.settings.logo')}</Label>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t('managerParent.pages.settings.logoHint')}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.settings.logoHint')}</p>
                 {form.branding.logo ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/40">
                       <img src={form.branding.logo} alt="Logo preview" className="h-8 w-auto object-contain" />
-                      <span className="text-xs text-slate-600 dark:text-slate-300">{t('managerParent.pages.settings.logoPreview')}</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-300">{t('managerParent.pages.settings.logoPreview')}</span>
                       <button
                         type="button"
                         onClick={handleRemoveLogo}
@@ -299,7 +299,7 @@ function SettingsFormShell({ settings, onSaved }: { settings: TenantSettings; on
 
               <div className="space-y-2">
                 <Label htmlFor="settings-primary-color">{t('managerParent.pages.settings.primaryColor')}</Label>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{t('managerParent.pages.settings.primaryColorHint')}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.settings.primaryColorHint')}</p>
                 <div className="flex items-center gap-2">
                   <input
                     id="settings-primary-color"

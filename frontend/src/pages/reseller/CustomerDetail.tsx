@@ -132,7 +132,7 @@ export function CustomerDetailPage() {
                         {item.status === 'approved' && <CheckCircle className="h-4 w-4 text-emerald-500" />}
                         {item.status === 'pending' && <Clock className="h-4 w-4 text-amber-500" />}
                         {item.status === 'rejected' && <XCircle className="h-4 w-4 text-rose-500" />}
-                        <span className={`text-xs font-semibold uppercase tracking-wide ${
+                        <span className={`text-sm font-semibold uppercase tracking-wide ${
                           item.status === 'approved' ? 'text-emerald-600' :
                           item.status === 'pending' ? 'text-amber-600' : 'text-rose-600'
                         }`}>
@@ -140,7 +140,7 @@ export function CustomerDetailPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
                       {item.reason && <span>{t('biosChangeRequests.reason')}: {item.reason}</span>}
                       {item.reviewer_notes && <span>{t('biosChangeRequests.reviewerNotes')}: {item.reviewer_notes}</span>}
                       <span>{formatDate(item.created_at ?? '', locale)}</span>
@@ -190,7 +190,7 @@ function Info({
       title={isLocked ? lockTooltip : undefined}
     >
       <div className="flex items-center gap-1">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
         {isLocked && <Lock className="h-3 w-3 text-amber-600" />}
       </div>
       <div className={`mt-1 whitespace-pre-line font-medium ${isLocked ? 'text-slate-400 dark:text-slate-600' : ''}`}>

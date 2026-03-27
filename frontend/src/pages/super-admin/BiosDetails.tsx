@@ -133,13 +133,13 @@ export function BiosDetailsPage() {
                 ) : null}
                 {overviewRows.map(([label, value]) => (
                   <div key={label} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
                     <div className="font-medium">{value}</div>
                   </div>
                 ))}
                 {latestCustomer ? (
                   <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.customer')}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosDetails.customer')}</p>
                     <p className="font-medium">
                       {latestCustomer.id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.customerDetail(lang, latestCustomer.id)}>{latestCustomer.name}</Link> : latestCustomer.name}
                     </p>
@@ -149,7 +149,7 @@ export function BiosDetailsPage() {
                 ) : null}
                 {latestReseller ? (
                   <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.resellers')}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosDetails.resellers')}</p>
                     <p className="font-medium">
                       {latestReseller.id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.userDetail(lang, latestReseller.id)}>{latestReseller.name}</Link> : latestReseller.name}
                     </p>
@@ -158,38 +158,38 @@ export function BiosDetailsPage() {
                   </div>
                 ) : null}
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.program')}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.program')}</p>
                   <p className="font-medium">{latestLicense?.program?.name ?? '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.duration')}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.duration')}</p>
                   <p className="font-medium">{formatLicenseDurationDays(latestLicense?.duration_days, t, latestLicense?.activated_at, latestLicense?.expires_at)}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.price')}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.price')}</p>
                   <p className="font-medium">{latestLicense ? `$${Number(latestLicense.price).toFixed(2)}` : '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.activate')}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.activate')}</p>
                   <p className="font-medium">{latestLicense?.activated_at ? formatDate(latestLicense.activated_at, locale) : '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.expiry')}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.expiry')}</p>
                   <p className="font-medium">{latestLicense?.expires_at ? formatDate(latestLicense.expires_at, locale) : '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.username')}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.username')}</p>
                   <p className="font-medium">{latestLicense?.external_username ?? '-'}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.status')}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.status')}</p>
                   <div className="font-medium">
                     {latestLicense?.status ? <StatusBadge status={latestLicense.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} /> : '-'}
                   </div>
                 </div>
                 {latestCustomer && latestLicense ? (
                   <div className="rounded-xl bg-slate-50 p-3 md:col-span-2 dark:bg-slate-900/40">
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('biosDetails.overviewSections.saleSummary')}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosDetails.overviewSections.saleSummary')}</p>
                     <p className="font-medium">
                       {t('biosDetails.saleSummarySentence', {
                         reseller: latestReseller?.name ?? '-',
@@ -236,11 +236,11 @@ export function BiosDetailsPage() {
                   <div key={`${reseller.id}-${reseller.email}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium">{reseller.name ?? '-'}</p>
-                      {reseller.role && ROLE_BADGE_MAP[reseller.role] ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_BADGE_MAP[reseller.role]}`}>{t(`roles.${reseller.role}`)}</span> : null}
+                      {reseller.role && ROLE_BADGE_MAP[reseller.role] ? <span className={`inline-flex rounded-full px-2 py-0.5 text-sm font-medium ${ROLE_BADGE_MAP[reseller.role]}`}>{t(`roles.${reseller.role}`)}</span> : null}
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{reseller.email ?? '-'}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.activations')}: {reseller.activation_count}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('common.revenue')}: ${Number(reseller.total_revenue).toFixed(2)}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.activations')}: {reseller.activation_count}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.revenue')}: ${Number(reseller.total_revenue).toFixed(2)}</p>
                   </div>
                 ))}
               </CardContent>
@@ -256,14 +256,14 @@ export function BiosDetailsPage() {
                   <div key={`${ip.ip_address}-${index}`} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="font-medium">{ip.ip_address ?? '-'}</p>
-                      {ip.proxy ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">{t('ipAnalytics.vpnProxy')}</span> : null}
+                      {ip.proxy ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-sm font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">{t('ipAnalytics.vpnProxy')}</span> : null}
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-slate-500 dark:text-slate-400">
                       {ip.country ? <span>{ip.city ? `${ip.city}, ` : ''}{ip.country}</span> : null}
                       {ip.isp ? <span>{ip.isp}</span> : null}
                       {ip.program_name ? <span>{ip.program_name}</span> : null}
                     </div>
-                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{ip.timestamp ? formatDate(ip.timestamp, locale) : '-'}</p>
+                    <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">{ip.timestamp ? formatDate(ip.timestamp, locale) : '-'}</p>
                   </div>
                 ))}
               </CardContent>
@@ -293,7 +293,7 @@ function ResellerWithRole({ name, role, t }: { name: string; role?: string | nul
   return (
     <span className="flex flex-wrap items-center gap-1">
       <span>{name}</span>
-      {cls ? <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{t(`roles.${role}`)}</span> : null}
+      {cls ? <span className={`inline-flex rounded-full px-2 py-0.5 text-sm font-medium ${cls}`}>{t(`roles.${role}`)}</span> : null}
     </span>
   )
 }

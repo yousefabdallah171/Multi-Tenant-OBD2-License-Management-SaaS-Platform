@@ -119,7 +119,7 @@ export function DashboardPage() {
                     <p className="text-sm text-slate-600 dark:text-slate-300">{formatActivityActionLabel(entry.action, t)}</p>
                     {entry.description ? <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description}</p> : null}
                   </div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
                 </div>
               </div>
             ))}

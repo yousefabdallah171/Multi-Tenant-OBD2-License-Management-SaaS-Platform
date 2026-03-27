@@ -325,7 +325,7 @@ export function RenewLicenseForm({
     <div className="space-y-4">
       <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
             {t('activate.startingLabel', { defaultValue: 'Starting' })}
           </p>
           <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{startSummary}</p>
@@ -381,14 +381,14 @@ export function RenewLicenseForm({
                 <option key={item.value} value={item.value}>{item.label}</option>
               ))}
             </select>
-            {errors.scheduleAt ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
+            {errors.scheduleAt ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.scheduleAt}</p> : null}
           </div>
         ) : null}
       </div>
 
       <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
             {t('activate.endingLabel', { defaultValue: 'Ending' })}
           </p>
           <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{endSummary}</p>
@@ -423,7 +423,7 @@ export function RenewLicenseForm({
                     }`}
                   >
                     <div className="text-sm font-semibold">{preset.label}</div>
-                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       {t('activate.presetDurationSummary', {
                         defaultValue: '{{days}} days',
                         days: preset.duration_days,
@@ -437,7 +437,7 @@ export function RenewLicenseForm({
                 {t('common.noData', { defaultValue: 'No data available' })}
               </p>
             )}
-            {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
+            {errors.duration ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
           </>
         ) : mode === 'duration' ? (
           <>
@@ -456,7 +456,7 @@ export function RenewLicenseForm({
                 ))}
               </div>
             </div>
-            {errors.duration ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
+            {errors.duration ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.duration}</p> : null}
           </>
         ) : (
           <Field label={t('activate.endDateTime', { defaultValue: 'End Date & Time' })} error={errors.endDate}>
@@ -480,14 +480,14 @@ export function RenewLicenseForm({
           ) : null}
         </div>
         <Input value={priceInput} readOnly={presetOnly || priceMode === 'auto'} disabled={presetOnly} onChange={(event) => setPriceInput(event.target.value.replace(/[^\d.]/g, ''))} />
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           {presetOnly
             ? t('activate.pricePresetLocked', { defaultValue: 'Price is controlled by the selected preset.' })
             : priceMode === 'auto'
               ? t('activate.priceAuto', { defaultValue: 'Auto-calculated' })
               : t('activate.priceManualHint', { defaultValue: 'Enter custom price' })}
         </p>
-        {errors.price ? <p className="text-xs text-rose-600 dark:text-rose-400">{errors.price}</p> : null}
+        {errors.price ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.price}</p> : null}
       </div>
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -518,7 +518,7 @@ function Field({ label, children, error }: { label: string; children: React.Reac
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
-      {error ? <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p> : null}
+      {error ? <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p> : null}
     </div>
   )
 }

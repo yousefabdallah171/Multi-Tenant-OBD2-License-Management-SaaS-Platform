@@ -208,7 +208,7 @@ export function CustomerDetailPage() {
                       <div key={log.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
                         <p className="font-medium">{log.ip_address}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400"><IpLocationCell country={log.country ?? 'Unknown'} city={log.city ?? ''} countryCode={log.country_code ?? ''} /></p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{log.created_at ? formatDate(log.created_at, locale) : '-'}</p>
                       </div>
                     ))
                   )}
@@ -231,7 +231,7 @@ export function CustomerDetailPage() {
                             <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
                           </div>
                           <div className="text-start">
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
                           </div>
                         </div>
                       </div>
@@ -251,18 +251,18 @@ export function CustomerDetailPage() {
                         <div className="flex-1 space-y-1">
                           <p className="font-medium">{change.old_bios_id} → {change.new_bios_id}</p>
                           <p className="text-sm text-slate-500 dark:text-slate-400">{change.reason || '-'}</p>
-                          {change.requested_by ? <p className="text-xs text-slate-600 dark:text-slate-300">{t('customerDetail.requestedBy', { defaultValue: 'Requested by' })}: {change.requested_by}</p> : null}
-                          {change.reviewed_by ? <p className="text-xs text-slate-600 dark:text-slate-300">{t('customerDetail.approvedBy', { defaultValue: 'Approved by' })}: {change.reviewed_by}</p> : null}
+                          {change.requested_by ? <p className="text-sm text-slate-600 dark:text-slate-300">{t('customerDetail.requestedBy', { defaultValue: 'Requested by' })}: {change.requested_by}</p> : null}
+                          {change.reviewed_by ? <p className="text-sm text-slate-600 dark:text-slate-300">{t('customerDetail.approvedBy', { defaultValue: 'Approved by' })}: {change.reviewed_by}</p> : null}
                         </div>
                         <div className="text-start">
-                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                          <span className={`inline-flex rounded-full px-2 py-1 text-sm font-semibold ${
                             change.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
                             : change.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
                             : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
                           }`}>
                             {change.status}
                           </span>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{change.created_at ? formatDate(change.created_at, locale) : '-'}</p>
+                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{change.created_at ? formatDate(change.created_at, locale) : '-'}</p>
                         </div>
                       </div>
                     </div>
@@ -303,11 +303,11 @@ export function CustomerDetailPage() {
               />
               {biosCheckResult && (
                 <div className="space-y-1">
-                  <p className={`text-xs ${biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  <p className={`text-sm ${biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'text-rose-600' : 'text-emerald-600'}`}>
                     {biosCheckResult.is_blacklisted || !biosCheckResult.available ? '✗ ' : '✓ '}{biosCheckResult.message}
                   </p>
                   {biosCheckResult.linked_username && biosCheckResult.linked_username.trim().toLowerCase() !== customerUsername ? (
-                    <p className="text-xs text-rose-600">
+                    <p className="text-sm text-rose-600">
                       {lang === 'ar'
                         ? `هذا الـ BIOS مرتبط باسم المستخدم ${biosCheckResult.linked_username} وليس بهذا العميل.`
                         : `This BIOS ID is linked to username "${biosCheckResult.linked_username}" and not this customer.`}
@@ -446,7 +446,7 @@ function Info({
       title={isLocked ? lockTooltip : undefined}
     >
       <div className="flex items-center gap-1">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
         {isLocked && <Lock className="h-3 w-3 text-amber-600" />}
       </div>
       <div className={`mt-1 whitespace-pre-line font-medium ${isLocked ? 'text-slate-400 dark:text-slate-600' : ''}`}>

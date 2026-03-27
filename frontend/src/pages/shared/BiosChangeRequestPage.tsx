@@ -142,7 +142,7 @@ export function BiosChangeRequestPage({ eyebrow, backPath, getCustomer, submitRe
                   maxLength={10}
                 />
                 {biosCheckResult && (
-                  <p className={`text-xs ${biosCheckResult.is_blacklisted || !biosCheckResult.available || usernameMismatch ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  <p className={`text-sm ${biosCheckResult.is_blacklisted || !biosCheckResult.available || usernameMismatch ? 'text-rose-600' : 'text-emerald-600'}`}>
                     {biosCheckResult.is_blacklisted || !biosCheckResult.available || usernameMismatch ? '✗ ' : '✓ '}
                     {usernameMismatch
                       ? `This BIOS ID is linked to username "${biosCheckResult.linked_username}" — not this customer`

@@ -95,7 +95,7 @@ export function IpAnalyticsPage() {
       sortable: true,
       sortValue: (row) => (row.proxy || row.hosting ? 'proxy' : 'safe'),
       render: (row) => row.proxy || row.hosting ? (
-        <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+        <span className="rounded-full bg-rose-100 px-2 py-1 text-sm font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
           {t('ipAnalytics.vpnProxy')}
         </span>
       ) : '-',

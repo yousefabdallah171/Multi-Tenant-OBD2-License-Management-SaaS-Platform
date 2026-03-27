@@ -626,14 +626,14 @@ export function Sidebar() {
             <div className="relative shrink-0">
               <Icon className="h-4 w-4" />
               {bcrBadge ? (
-                <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white">
                   {pendingBcrCount > 9 ? '9+' : pendingBcrCount}
                 </span>
               ) : null}
             </div>
             <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
             {bcrBadge && !collapsed ? (
-              <span className="ms-auto rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white lg:inline">
+              <span className="ms-auto rounded-full bg-rose-500 px-1.5 py-0.5 text-xs font-bold text-white lg:inline">
                 {pendingBcrCount > 99 ? '99+' : pendingBcrCount}
               </span>
             ) : null}

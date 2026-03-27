@@ -198,7 +198,7 @@ export function TeamMemberDetailPage() {
                     <p className="font-medium text-slate-950 dark:text-white">{license.customer?.name ?? '-'}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{license.customer?.email ?? '-'}</p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">{license.program ?? '-'}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
                       {t('activate.biosId')}{' '}
                       <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, license.bios_id)}>
                         {license.bios_id}
@@ -222,7 +222,7 @@ export function TeamMemberDetailPage() {
                   <div key={entry.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
                     <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(entry.action, t)}</p>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
                   </div>
                 ))
               )}
@@ -316,7 +316,7 @@ function MetricCard({ label, value }: { label: string; value: React.ReactNode })
   return (
     <Card>
       <CardContent className="p-4">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
         <div className="mt-2 font-semibold text-slate-950 dark:text-white">{value}</div>
       </CardContent>
     </Card>

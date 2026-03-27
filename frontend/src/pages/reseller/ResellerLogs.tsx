@@ -260,14 +260,14 @@ function ActionPill({ label, action }: { label: string; action: string }) {
         ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
         : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
 
-  return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${palette}`}>{label}</span>
+  return <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${palette}`}>{label}</span>
 }
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <Card className="border-slate-200/80 dark:border-slate-800">
       <CardContent className="space-y-1 p-4">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
         <p className="text-xl font-semibold text-slate-950 dark:text-white">{value}</p>
       </CardContent>
     </Card>

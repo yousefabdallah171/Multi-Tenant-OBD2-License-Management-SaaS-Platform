@@ -36,7 +36,7 @@ export function RoleIdentity({ name, role, href, onClick, secondary, className, 
         {nameNode}
         {role ? <RoleBadge role={role} /> : null}
       </div>
-      {secondary ? <div className="text-xs text-slate-500 dark:text-slate-400">{secondary}</div> : null}
+      {secondary ? <div className="text-sm text-slate-500 dark:text-slate-400">{secondary}</div> : null}
     </div>
   )
 }

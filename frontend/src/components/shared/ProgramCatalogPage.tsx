@@ -97,7 +97,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                   <div className={`grid gap-3 ${(showBasePrice || effectiveShowLicensesSold) && showBasePrice !== effectiveShowLicensesSold ? 'sm:grid-cols-1' : showBasePrice && effectiveShowLicensesSold ? 'sm:grid-cols-2' : ''}`}>
                     {showBasePrice ? (
                       <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                        <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <p className="inline-flex items-center gap-1 text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           <BadgeDollarSign className="h-3.5 w-3.5 rounded-full bg-sky-200/60 p-0.5 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" />
                           {t(`${translationPrefix}.basePrice`)}
                         </p>
@@ -106,7 +106,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                     ) : null}
                     {effectiveShowLicensesSold ? (
                       <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
-                        <p className="inline-flex items-center gap-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <p className="inline-flex items-center gap-1 text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           <Activity className="h-3.5 w-3.5 rounded-full bg-blue-200/60 p-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" />
                           {t(`${translationPrefix}.licensesSold`)}
                         </p>
@@ -138,7 +138,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                       </Button>
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs">
+                  <div className="flex flex-wrap gap-2 text-sm">
                     <span className={`rounded-full px-2 py-1 ${program.has_external_api ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'}`}>
                       {program.has_external_api ? t('software.apiConfigured') : t('software.apiNotConfigured')}
                     </span>

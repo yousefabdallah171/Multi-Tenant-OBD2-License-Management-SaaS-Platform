@@ -70,7 +70,7 @@ export function BiosHistoryPage() {
             <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, row.bios_id)}>
               <code>{row.bios_id}</code>
             </Link>
-            <p className="text-xs text-slate-500 dark:text-slate-400">@{row.external_username ?? '-'}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">@{row.external_username ?? '-'}</p>
           </div>
         ),
       },
@@ -167,13 +167,13 @@ export function BiosHistoryPage() {
                 <div>
                   <p className="font-semibold text-slate-950 dark:text-white">{formatActivityActionLabel(entry.action, t)}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {t('managerParent.pages.biosHistory.timelineMeta', { customer: entry.customer ?? '-', reseller: entry.reseller ?? '-' })}
                   </p>
                 </div>
                 <div className="text-end">
                   <StatusBadge status={entry.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} />
-                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{entry.occurred_at ? formatDate(entry.occurred_at, locale) : '-'}</p>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{entry.occurred_at ? formatDate(entry.occurred_at, locale) : '-'}</p>
                 </div>
               </div>
             </div>
