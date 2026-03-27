@@ -88,14 +88,7 @@ export function DataTable<T>({
     pageSizeOptions,
   })
 
-  const handlePageSizeChange = (nextPageSize: number) => {
-    console.debug('[DataTable] page size change requested', {
-      tableKey: tableKey ?? 'no-table-key',
-      nextPageSize,
-      currentPerPage: pagination?.perPage ?? null,
-    })
-    onPageSizeChange?.(nextPageSize)
-  }
+  const handlePageSizeChange = (nextPageSize: number) => onPageSizeChange?.(nextPageSize)
 
   const visibleColumns = useMemo(() => columns.filter((column) => visibleColumnSet.has(column.key)), [columns, visibleColumnSet])
 
@@ -170,7 +163,6 @@ export function DataTable<T>({
       {tableKey ? (
         <div className="flex justify-end border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <TableScreenOptions
-            tableKey={tableKey}
             columns={screenOptionColumns.map((column) => ({
               key: column.key,
               label: column.label,

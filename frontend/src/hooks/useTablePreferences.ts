@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { tablePreferenceService } from '@/services/table-preference.service'
 
 interface TablePreferenceColumn {
@@ -15,6 +17,11 @@ interface UseTablePreferencesOptions {
   perPage?: number
   onPerPageChange?: (pageSize: number) => void
   pageSizeOptions?: number[]
+}
+
+interface CachedTablePreference {
+  visible_columns?: string[]
+  per_page?: number | null
 }
 
 function sanitizeVisibleColumns(columns: TablePreferenceColumn[], visibleColumns: string[]) {
@@ -39,6 +46,35 @@ function buildDefaultVisibleColumns(columns: TablePreferenceColumn[]) {
   return visible.length > 0 ? visible : columns.map((column) => column.key)
 }
 
+function readCachedPreference(tableKey?: string): CachedTablePreference | null {
+  if (!tableKey || typeof window === 'undefined') {
+    return null
+  }
+
+  try {
+    const cached = window.localStorage.getItem(`table-prefs-${tableKey}`)
+    return cached ? (JSON.parse(cached) as CachedTablePreference) : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedPreference(tableKey: string, payload: CachedTablePreference) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(`table-prefs-${tableKey}`, JSON.stringify(payload))
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+function sanitizePerPage(perPage: number | null | undefined, pageSizeOptions: number[]) {
+  return typeof perPage === 'number' && pageSizeOptions.includes(perPage) ? perPage : null
+}
+
 export function useTablePreferences({
   tableKey,
   columns,
@@ -46,6 +82,7 @@ export function useTablePreferences({
   onPerPageChange,
   pageSizeOptions = [10, 25, 50, 100],
 }: UseTablePreferencesOptions) {
+  const queryClient = useQueryClient()
   const columnSchemaKey = useMemo(
     () =>
       columns
@@ -61,37 +98,46 @@ export function useTablePreferences({
   const schemaKey = useMemo(() => `${tableKey ?? 'default'}|${availableColumns.join(',')}|${lockedColumns.join(',')}`, [availableColumns, lockedColumns, tableKey])
   const defaultVisibleColumns = useMemo(() => buildDefaultVisibleColumns(columns), [columns])
   const defaultVisibleColumnsKey = useMemo(() => defaultVisibleColumns.join(','), [defaultVisibleColumns])
+  const preferenceQueryKey = useMemo(
+    () => ['table-preferences', tableKey, availableColumns.join(','), lockedColumns.join(',')] as const,
+    [availableColumns, lockedColumns, tableKey],
+  )
+  const hasExplicitPerPageInUrl = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('per_page')
 
   // Load from localStorage for instant display
   const getCachedColumns = () => {
-    if (!tableKey) return defaultVisibleColumns
-    try {
-      const cached = localStorage.getItem(`table-prefs-${tableKey}`)
-      if (cached) {
-        const parsed = JSON.parse(cached)
-        return sanitizeVisibleColumns(columns, parsed.visible_columns || defaultVisibleColumns)
-      }
-    } catch {
-      // Ignore localStorage errors
+    const cached = readCachedPreference(tableKey)
+
+    if (cached?.visible_columns) {
+      return sanitizeVisibleColumns(columns, cached.visible_columns)
     }
+
     return defaultVisibleColumns
   }
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(getCachedColumns())
   const [hasHydrated, setHasHydrated] = useState(false)
+  const initialPerPageRef = useRef<number | null>(typeof perPage === 'number' ? perPage : null)
+  const hasAppliedCachedPerPageRef = useRef(false)
   const hasHydratedPerPageRef = useRef(false)
-  const lastSavedPayloadRef = useRef<string | null>(null)
+  const lastCommittedPayloadRef = useRef<string | null>(null)
+  const inFlightPayloadRef = useRef<string | null>(null)
+  const pendingPerPageRef = useRef<number | null>(null)
   const isInitialHydrationRef = useRef(true)
 
   useEffect(() => {
     setVisibleColumns(getCachedColumns())
     setHasHydrated(false)
+    initialPerPageRef.current = typeof perPage === 'number' ? perPage : null
+    hasAppliedCachedPerPageRef.current = false
     hasHydratedPerPageRef.current = false
-    lastSavedPayloadRef.current = null
+    lastCommittedPayloadRef.current = null
+    inFlightPayloadRef.current = null
+    pendingPerPageRef.current = null
   }, [columnSchemaKey, defaultVisibleColumnsKey, schemaKey, tableKey])
 
   const preferenceQuery = useQuery({
-    queryKey: ['table-preferences', tableKey, availableColumns.join(','), lockedColumns.join(',')],
+    queryKey: preferenceQueryKey,
     queryFn: () => tablePreferenceService.get(tableKey!, availableColumns, lockedColumns),
     enabled: Boolean(tableKey),
     staleTime: 30 * 60 * 1000, // 30 minutes - reasonable cache for user preferences
@@ -110,6 +156,19 @@ export function useTablePreferences({
   })
 
   useEffect(() => {
+    if (!tableKey || !onPerPageChange || hasExplicitPerPageInUrl || hasAppliedCachedPerPageRef.current || hasHydratedPerPageRef.current) {
+      return
+    }
+
+    const cachedPerPage = sanitizePerPage(readCachedPreference(tableKey)?.per_page, pageSizeOptions)
+    hasAppliedCachedPerPageRef.current = true
+
+    if (cachedPerPage !== null && cachedPerPage !== perPage) {
+      onPerPageChange(cachedPerPage)
+    }
+  }, [hasExplicitPerPageInUrl, onPerPageChange, pageSizeOptions, perPage, tableKey])
+
+  useEffect(() => {
     if (!tableKey) {
       setVisibleColumns(defaultVisibleColumns)
       setHasHydrated(true)
@@ -124,24 +183,31 @@ export function useTablePreferences({
       return
     }
 
-    const nextVisibleColumns = sanitizeVisibleColumns(columns, preferenceQuery.data?.visible_columns?.length ? preferenceQuery.data.visible_columns : defaultVisibleColumns)
+    const nextVisibleColumns = sanitizeVisibleColumns(
+      columns,
+      preferenceQuery.data?.visible_columns?.length ? preferenceQuery.data.visible_columns : defaultVisibleColumns,
+    )
+    const serverPerPage = sanitizePerPage(preferenceQuery.data?.per_page, pageSizeOptions)
     isInitialHydrationRef.current = true
     setVisibleColumns(nextVisibleColumns)
     setHasHydrated(true)
 
-    if (!hasHydratedPerPageRef.current && onPerPageChange && preferenceQuery.data?.per_page && pageSizeOptions.includes(preferenceQuery.data.per_page) && preferenceQuery.data.per_page !== perPage) {
-      hasHydratedPerPageRef.current = true
-      console.debug('[useTablePreferences] hydrating per-page preference', {
-        tableKey,
-        serverPerPage: preferenceQuery.data.per_page,
-        currentPerPage: perPage ?? null,
-      })
-      onPerPageChange(preferenceQuery.data.per_page)
-      return
+    if (!hasHydratedPerPageRef.current && onPerPageChange && !hasExplicitPerPageInUrl && pendingPerPageRef.current === null) {
+      if (serverPerPage !== null && serverPerPage !== perPage) {
+        hasHydratedPerPageRef.current = true
+        onPerPageChange(serverPerPage)
+        return
+      }
+
+      if (serverPerPage === null && initialPerPageRef.current !== null && perPage !== initialPerPageRef.current) {
+        hasHydratedPerPageRef.current = true
+        onPerPageChange(initialPerPageRef.current)
+        return
+      }
     }
 
     hasHydratedPerPageRef.current = true
-  }, [availableColumns, columns, defaultVisibleColumnsKey, hasHydrated, lockedColumns, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey])
+  }, [columns, defaultVisibleColumns, hasExplicitPerPageInUrl, hasHydrated, onPerPageChange, pageSizeOptions, perPage, preferenceQuery.data, preferenceQuery.isLoading, tableKey])
 
   useEffect(() => {
     if (!tableKey || !hasHydrated) {
@@ -159,7 +225,7 @@ export function useTablePreferences({
         visible_columns: sanitizedVisibleColumns,
         per_page: typeof perPage === 'number' ? perPage : null,
       })
-      lastSavedPayloadRef.current = initialPayload
+      lastCommittedPayloadRef.current = initialPayload
       return
     }
 
@@ -169,30 +235,48 @@ export function useTablePreferences({
       per_page: typeof perPage === 'number' ? perPage : null,
     })
 
-    if (payload === lastSavedPayloadRef.current) {
+    if (payload === lastCommittedPayloadRef.current || payload === inFlightPayloadRef.current) {
       return
     }
 
-    lastSavedPayloadRef.current = payload
-    console.debug('[useTablePreferences] saving table preferences', {
-      tableKey,
-      perPage: typeof perPage === 'number' ? perPage : null,
-      visibleColumns: sanitizedVisibleColumns,
-    })
-    // Cache to localStorage for instant load next time
-    try {
-      localStorage.setItem(`table-prefs-${tableKey}`, JSON.stringify({
+    inFlightPayloadRef.current = payload
+    pendingPerPageRef.current = typeof perPage === 'number' ? perPage : null
+
+    void saveMutation
+      .mutateAsync({
         visible_columns: sanitizedVisibleColumns,
         per_page: typeof perPage === 'number' ? perPage : null,
-      }))
-    } catch {
-      // Ignore localStorage errors
-    }
-    saveMutation.mutate({
-      visible_columns: sanitizedVisibleColumns,
-      per_page: typeof perPage === 'number' ? perPage : null,
-    })
-  }, [columns, hasHydrated, perPage, saveMutation, tableKey, onPerPageChange])
+      })
+      .then((response) => {
+        const confirmed = {
+          table_key: response.data.table_key,
+          visible_columns: sanitizeVisibleColumns(columns, response.data.visible_columns),
+          per_page: sanitizePerPage(response.data.per_page, pageSizeOptions),
+        }
+        const confirmedPayload = JSON.stringify({
+          visible_columns: confirmed.visible_columns,
+          per_page: confirmed.per_page,
+        })
+
+        lastCommittedPayloadRef.current = confirmedPayload
+        inFlightPayloadRef.current = null
+        pendingPerPageRef.current = null
+        hasHydratedPerPageRef.current = true
+
+        writeCachedPreference(tableKey, confirmed)
+        queryClient.setQueryData(preferenceQueryKey, confirmed)
+
+        if (confirmed.per_page !== null && onPerPageChange && confirmed.per_page !== perPage) {
+          onPerPageChange(confirmed.per_page)
+        }
+      })
+      .catch((error: unknown) => {
+        inFlightPayloadRef.current = null
+        pendingPerPageRef.current = null
+        toast.error(resolveApiErrorMessage(error, 'Failed to save table preferences.'))
+        void queryClient.invalidateQueries({ queryKey: preferenceQueryKey })
+      })
+  }, [columns, hasHydrated, onPerPageChange, pageSizeOptions, perPage, preferenceQueryKey, queryClient, saveMutation, tableKey, visibleColumns])
 
   const visibleColumnSet = useMemo(() => new Set(sanitizeVisibleColumns(columns, visibleColumns)), [columns, visibleColumns])
 
