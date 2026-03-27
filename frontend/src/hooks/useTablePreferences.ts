@@ -123,6 +123,11 @@ export function useTablePreferences({
 
     if (!hasHydratedPerPageRef.current && onPerPageChange && preferenceQuery.data?.per_page && pageSizeOptions.includes(preferenceQuery.data.per_page) && preferenceQuery.data.per_page !== perPage) {
       hasHydratedPerPageRef.current = true
+      console.debug('[useTablePreferences] hydrating per-page preference', {
+        tableKey,
+        serverPerPage: preferenceQuery.data.per_page,
+        currentPerPage: perPage ?? null,
+      })
       onPerPageChange(preferenceQuery.data.per_page)
       return
     }
@@ -161,6 +166,11 @@ export function useTablePreferences({
     }
 
     lastSavedPayloadRef.current = payload
+    console.debug('[useTablePreferences] saving table preferences', {
+      tableKey,
+      perPage: typeof perPage === 'number' ? perPage : null,
+      visibleColumns: sanitizedVisibleColumns,
+    })
     // Cache to localStorage for instant load next time
     try {
       localStorage.setItem(`table-prefs-${tableKey}`, JSON.stringify({

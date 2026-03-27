@@ -88,6 +88,15 @@ export function DataTable<T>({
     pageSizeOptions,
   })
 
+  const handlePageSizeChange = (nextPageSize: number) => {
+    console.debug('[DataTable] page size change requested', {
+      tableKey: tableKey ?? 'no-table-key',
+      nextPageSize,
+      currentPerPage: pagination?.perPage ?? null,
+    })
+    onPageSizeChange?.(nextPageSize)
+  }
+
   const visibleColumns = useMemo(() => columns.filter((column) => visibleColumnSet.has(column.key)), [columns, visibleColumnSet])
 
   const filteredData = useMemo(() => {
@@ -161,6 +170,7 @@ export function DataTable<T>({
       {tableKey ? (
         <div className="flex justify-end border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <TableScreenOptions
+            tableKey={tableKey}
             columns={screenOptionColumns.map((column) => ({
               key: column.key,
               label: column.label,
@@ -170,7 +180,7 @@ export function DataTable<T>({
             pageSize={pagination?.perPage ?? null}
             pageSizeOptions={pageSizeOptions}
             onToggleColumn={toggleColumn}
-            onPageSizeChange={onPageSizeChange}
+            onPageSizeChange={handlePageSizeChange}
             isLoading={preferencesLoading}
           />
         </div>
@@ -251,7 +261,7 @@ export function DataTable<T>({
                   aria-label={t('common.rowsPerPage')}
                   className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 md:h-10 md:text-base lg:h-11 lg:text-lg"
                   value={pagination.perPage ?? pageSizeOptions[0]}
-                  onChange={(event) => onPageSizeChange(Number(event.target.value))}
+                  onChange={(event) => handlePageSizeChange(Number(event.target.value))}
                 >
                   {pageSizeOptions.map((option) => (
                     <option key={option} value={option}>

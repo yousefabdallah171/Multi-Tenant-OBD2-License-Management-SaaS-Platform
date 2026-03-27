@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 interface TableScreenOptionsProps {
+  tableKey?: string
   columns: Array<{
     key: string
     label: string
@@ -20,6 +21,7 @@ interface TableScreenOptionsProps {
 }
 
 export function TableScreenOptions({
+  tableKey,
   columns,
   pageSize,
   pageSizeOptions = [10, 25, 50, 100],
@@ -154,7 +156,13 @@ export function TableScreenOptions({
                       className="h-10 rounded-lg px-3 text-sm md:h-11 md:px-4 md:text-base"
                       onClick={(e) => {
                         e.stopPropagation()
+                        console.debug('[TableScreenOptions] page size click', {
+                          tableKey: tableKey ?? 'no-table-key',
+                          selectedPageSize: option,
+                          currentPageSize: pageSize,
+                        })
                         onPageSizeChange(option)
+                        setIsOpen(false)
                       }}
                     >
                       {option}
