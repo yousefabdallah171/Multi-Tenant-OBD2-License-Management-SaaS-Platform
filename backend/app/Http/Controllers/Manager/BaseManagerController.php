@@ -49,7 +49,8 @@ abstract class BaseManagerController extends Controller
     {
         return User::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('role', UserRole::RESELLER->value);
+            ->where('role', UserRole::RESELLER->value)
+            ->where('created_by', $this->currentManager($request)->id);
     }
 
     protected function teamCustomersQuery(Request $request)
