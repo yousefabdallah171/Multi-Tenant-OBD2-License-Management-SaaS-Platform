@@ -1,0 +1,19 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 6
+    paths:
+        - app
+        - routes
+        - tests
+    excludePaths:
+        analyse:
+            - bootstrap/cache/*
+            - storage/*
+            - vendor/*
+    tmpDir: storage/phpstan
+    treatPhpDocTypesAsCertain: false
+    parallel:
+        maximumNumberOfProcesses: 1

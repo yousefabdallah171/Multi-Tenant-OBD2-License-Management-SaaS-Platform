@@ -90,7 +90,7 @@ export function TableScreenOptions({
           className="z-[9999] w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-800 dark:bg-slate-950"
         >
           <div className="space-y-1">
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 md:text-base">
+            <p className="dashboard-text-label text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 md:text-base">
               {t('common.columns', { defaultValue: 'Columns' })}
             </p>
             <div className="space-y-1">
@@ -102,7 +102,7 @@ export function TableScreenOptions({
                   aria-pressed={column.visible}
                   aria-label={column.label}
                   className={cn(
-                    'flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900/60 md:text-base',
+                    'dashboard-text-body flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900/60 md:text-base',
                     column.locked && 'cursor-not-allowed opacity-70',
                   )}
                   onClick={(e) => {
@@ -127,7 +127,7 @@ export function TableScreenOptions({
                       className="pointer-events-none h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950"
                     />
                     {column.locked ? (
-                      <span className="text-sm font-semibold uppercase tracking-wide text-slate-400 md:text-base">
+                      <span className="dashboard-text-label text-sm font-semibold uppercase tracking-wide text-slate-400 md:text-base">
                         {t('common.locked', { defaultValue: 'Locked' })}
                       </span>
                     ) : null}
@@ -141,7 +141,7 @@ export function TableScreenOptions({
             <>
               <div className="my-3 h-px bg-slate-200 dark:bg-slate-800" />
               <div className="space-y-2">
-                <p className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 md:text-base">
+                <p className="dashboard-text-label text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 md:text-base">
                   {t('common.pagination', { defaultValue: 'Pagination' })}
                 </p>
                 <div className="grid grid-cols-4 gap-2">

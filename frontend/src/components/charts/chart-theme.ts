@@ -1,6 +1,8 @@
+import { useDashboardAppearance } from '@/hooks/useDashboardAppearance'
 import { useBranding } from '@/hooks/useBranding'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useTheme } from '@/hooks/useTheme'
+import { resolveDashboardChartColors } from '@/lib/dashboard-appearance'
 import { generateColorRamp } from '@/lib/role-branding'
 import { NEUTRAL_COLORS, SEMANTIC_COLORS } from '@/lib/colors'
 
@@ -39,6 +41,7 @@ const DARK_NEUTRAL = {
 export function useChartTheme() {
   const { isDark } = useTheme()
   const { primaryColor } = useBranding()
+  const { appearance } = useDashboardAppearance()
   const { lang, isRtl } = useLanguage()
 
   const ramp = generateColorRamp(primaryColor)
@@ -49,22 +52,24 @@ export function useChartTheme() {
 
   const themeNeutral = isDark ? DARK_NEUTRAL : LIGHT_NEUTRAL
 
+  const seriesColors = resolveDashboardChartColors([
+    isDark ? brandLight : brandPrimary,
+    isDark ? brandSecondary : brandTertiary,
+    themeNeutral.secondary,
+    themeNeutral.tertiary,
+    themeNeutral.quaternary,
+    themeNeutral.negative,
+    themeNeutral.positive,
+  ], appearance)
+
   return {
     locale: lang === 'ar' ? 'ar-EG' : 'en-US',
     isRtl,
     palette: {
       ...themeNeutral,
-      primary: isDark ? brandLight : brandPrimary,
+      primary: seriesColors[0],
     },
-    seriesColors: [
-      isDark ? brandLight : brandPrimary,
-      isDark ? brandSecondary : brandTertiary,
-      themeNeutral.secondary,
-      themeNeutral.tertiary,
-      themeNeutral.quaternary,
-      themeNeutral.negative,
-      themeNeutral.positive,
-    ],
+    seriesColors,
   }
 }
 

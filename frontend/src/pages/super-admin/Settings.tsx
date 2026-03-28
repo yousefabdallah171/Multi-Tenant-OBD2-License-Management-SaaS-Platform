@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { DashboardAppearanceSettingsPanel } from '@/components/settings/DashboardAppearanceSettingsPanel'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
+import { DASHBOARD_APPEARANCE_DEFAULTS, normalizeDashboardAppearance, writeCachedDashboardAppearance } from '@/lib/dashboard-appearance'
 import { isStrictPhoneCharacters, isValidStrictPhone, normalizeStrictPhoneInput } from '@/lib/phone'
 import { BROWSER_DEFAULT_TIMEZONE_VALUE, COMMON_TIMEZONES, getBrowserDefaultTimezoneOption, normalizeTimezoneOptionValue, persistServerTimezone } from '@/lib/timezones'
 import { profileService } from '@/services/profile.service'
@@ -72,13 +74,28 @@ export function SettingsPage() {
 
   const saveMutation = useMutation({
     mutationFn: () => settingsService.update(form as SystemSettings),
-    onSuccess: () => {
-      if (form) {
-        persistServerTimezone(form.general.server_timezone)
+    onSuccess: (response) => {
+      const normalizedSettings: SystemSettings = {
+        ...response.data,
+        general: {
+          ...response.data.general,
+          server_timezone: normalizeTimezoneOptionValue(response.data.general.server_timezone),
+        },
+        appearance: {
+          dashboard: normalizeDashboardAppearance(response.data.appearance?.dashboard),
+        },
       }
+      const normalizedAppearance = normalizedSettings.appearance.dashboard
+
+      persistServerTimezone(normalizedSettings.general.server_timezone)
+      writeCachedDashboardAppearance(normalizedAppearance)
+      setDraft(null)
+      queryClient.setQueryData(['super-admin', 'settings'], { ...response, data: normalizedSettings })
+      queryClient.setQueryData(['settings', 'dashboard-appearance'], { data: normalizedAppearance })
       toast.success(t('superAdmin.pages.settings.saveSuccess'))
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'settings'] })
       void queryClient.invalidateQueries({ queryKey: ['settings', 'online-widget'] })
+      void queryClient.invalidateQueries({ queryKey: ['settings', 'dashboard-appearance'] })
     },
   })
 
@@ -141,6 +158,7 @@ export function SettingsPage() {
           <TabsTrigger value="api">{t('superAdmin.pages.settings.api')}</TabsTrigger>
           <TabsTrigger value="notifications">{t('superAdmin.pages.settings.notifications')}</TabsTrigger>
           <TabsTrigger value="security">{t('superAdmin.pages.settings.security')}</TabsTrigger>
+          <TabsTrigger value="appearance">{t('superAdmin.pages.settings.appearance', { defaultValue: 'Appearance' })}</TabsTrigger>
           <TabsTrigger value="profile">{t('superAdmin.pages.settings.profileTab')}</TabsTrigger>
         </TabsList>
 
@@ -275,6 +293,26 @@ export function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="appearance">
+          <DashboardAppearanceSettingsPanel
+            value={form.appearance.dashboard}
+            onChange={(nextAppearance) => setDraft((current) => ({
+              ...(current ?? form),
+              appearance: {
+                ...(current ?? form).appearance,
+                dashboard: nextAppearance,
+              },
+            }))}
+            onReset={() => setDraft((current) => ({
+              ...(current ?? form),
+              appearance: {
+                ...(current ?? form).appearance,
+                dashboard: DASHBOARD_APPEARANCE_DEFAULTS,
+              },
+            }))}
+          />
         </TabsContent>
 
         <TabsContent value="profile">

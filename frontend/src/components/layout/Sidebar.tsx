@@ -310,7 +310,7 @@ export function Sidebar() {
         collapsed ? 'justify-center px-1' : 'justify-between px-3',
       )}>
         {!collapsed && (
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+          <p className="dashboard-text-helper font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
             {t('common.navigation', { defaultValue: 'Navigation' })}
           </p>
         )}
@@ -656,7 +656,7 @@ export function Sidebar() {
             </div>
             <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
             {bcrBadge && !collapsed ? (
-              <span className="ms-auto rounded-md bg-rose-100 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 lg:inline">
+              <span className="dashboard-text-helper ms-auto rounded-md bg-rose-100 px-1.5 py-0.5 font-semibold tabular-nums text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 lg:inline">
                 {pendingBcrCount > 99 ? '99+' : pendingBcrCount}
               </span>
             ) : null}

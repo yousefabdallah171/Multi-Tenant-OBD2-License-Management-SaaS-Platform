@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\ActivityLog;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class RevenueAnalytics
 {
@@ -43,16 +44,28 @@ class RevenueAnalytics
 
     public static function priceExpression(string $table = 'activity_logs'): string
     {
+        if (self::isSqlite()) {
+            return "CAST(json_extract({$table}.metadata, '$.price') AS REAL)";
+        }
+
         return "CAST(JSON_UNQUOTE(JSON_EXTRACT({$table}.metadata, '$.price')) AS DECIMAL(12,2))";
     }
 
     public static function programIdExpression(string $table = 'activity_logs'): string
     {
+        if (self::isSqlite()) {
+            return "CAST(json_extract({$table}.metadata, '$.program_id') AS INTEGER)";
+        }
+
         return "CAST(JSON_UNQUOTE(JSON_EXTRACT({$table}.metadata, '$.program_id')) AS UNSIGNED)";
     }
 
     public static function attributionTypeExpression(string $table = 'activity_logs'): string
     {
+        if (self::isSqlite()) {
+            return "COALESCE(json_extract({$table}.metadata, '$.attribution_type'), 'earned')";
+        }
+
         return "COALESCE(JSON_UNQUOTE(JSON_EXTRACT({$table}.metadata, '$.attribution_type')), 'earned')";
     }
 
@@ -82,5 +95,10 @@ class RevenueAnalytics
             : self::earnedCondition($table);
 
         return "SUM(CASE WHEN {$condition} THEN 1 ELSE 0 END) as {$alias}";
+    }
+
+    private static function isSqlite(): bool
+    {
+        return DB::connection()->getDriverName() === 'sqlite';
     }
 }

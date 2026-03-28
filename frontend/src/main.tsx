@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { initI18n, resolveInitialLanguage } from './i18n'
+import { primeDashboardAppearanceFromStorage } from './lib/dashboard-appearance'
 
 ;(globalThis as { __VITE_API_URL__?: string }).__VITE_API_URL__ = import.meta.env.VITE_API_URL
 ;(globalThis as { __VITE_DEFAULT_LOCALE__?: string }).__VITE_DEFAULT_LOCALE__ = import.meta.env.VITE_DEFAULT_LOCALE
@@ -28,6 +29,10 @@ function installChunkRecovery() {
 }
 
 installChunkRecovery()
+
+if (typeof document !== 'undefined') {
+  primeDashboardAppearanceFromStorage(document.documentElement)
+}
 
 async function bootstrap() {
   const lang = resolveInitialLanguage()

@@ -1,28 +1,50 @@
 import { useTranslation } from 'react-i18next'
+import { useDashboardAppearance } from '@/hooks/useDashboardAppearance'
+import { useBranding } from '@/hooks/useBranding'
+import { useTheme } from '@/hooks/useTheme'
+import { resolveDashboardSurfacePalette } from '@/lib/dashboard-appearance'
 import { cn, getStatusMeaning } from '@/lib/utils'
 
-type Status = 'active' | 'suspended' | 'cancelled' | 'deactive' | 'inactive' | 'expired' | 'pending' | 'scheduled' | 'scheduled_failed' | 'removed' | 'online' | 'offline' | 'degraded' | 'unknown' | 'no_license'
+type Status =
+  | 'active'
+  | 'suspended'
+  | 'cancelled'
+  | 'deactive'
+  | 'inactive'
+  | 'expired'
+  | 'pending'
+  | 'scheduled'
+  | 'scheduled_failed'
+  | 'removed'
+  | 'online'
+  | 'offline'
+  | 'degraded'
+  | 'unknown'
+  | 'no_license'
 
-const statusStyles: Record<Status, string> = {
-  active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
-  suspended: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
-  cancelled: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-  deactive: 'bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400',
-  inactive: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-  expired: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
-  pending: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
-  scheduled: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
-  scheduled_failed: 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300',
-  removed: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-  online: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
-  offline: 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
-  degraded: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
-  unknown: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-  no_license: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+const statusColors: Record<Status, string> = {
+  active: '#059669',
+  suspended: '#d97706',
+  cancelled: '#64748b',
+  deactive: '#e11d48',
+  inactive: '#64748b',
+  expired: '#e11d48',
+  pending: '#4338ca',
+  scheduled: '#7c3aed',
+  scheduled_failed: '#ea580c',
+  removed: '#64748b',
+  online: '#059669',
+  offline: '#e11d48',
+  degraded: '#d97706',
+  unknown: '#64748b',
+  no_license: '#4338ca',
 }
 
 export function StatusBadge({ status }: { status: Status }) {
   const { t } = useTranslation()
+  const { appearance } = useDashboardAppearance()
+  const { primaryColor } = useBranding()
+  const { isDark } = useTheme()
 
   const labels: Record<Status, string> = {
     active: t('common.active'),
@@ -43,11 +65,22 @@ export function StatusBadge({ status }: { status: Status }) {
   }
 
   const meaning = getStatusMeaning(status, t)
+  const palette = resolveDashboardSurfacePalette(
+    status === 'pending' || status === 'no_license' ? primaryColor : statusColors[status],
+    'badges',
+    appearance,
+    isDark,
+  )
 
   return (
     <span
       title={meaning ? `${labels[status]}: ${meaning}` : labels[status]}
-      className={cn('inline-flex rounded-full px-3 py-1 text-sm font-semibold', statusStyles[status])}
+      className={cn('dashboard-text-body inline-flex rounded-full border px-3 py-1 font-semibold')}
+      style={{
+        backgroundColor: palette.backgroundColor,
+        borderColor: palette.borderColor,
+        color: palette.color,
+      }}
     >
       {labels[status]}
     </span>

@@ -1254,62 +1254,82 @@ class LicenseService
 
     private function resolveReseller(User $actor, ?User $relatedReseller = null): User
     {
-        if ($relatedReseller) {
-            $actorRole = $actor->role?->value ?? (string) $actor->role;
+        $actorRole = $actor->role?->value ?? (string) $actor->role;
 
-            // For non-super-admin actors, verify the related reseller belongs to the same tenant
-            // Skip role check if the actor IS the related reseller (manager/manager_parent operating on their own licenses)
-            if ($actorRole !== UserRole::SUPER_ADMIN->value && $relatedReseller->id !== $actor->id) {
-                if ($relatedReseller->tenant_id !== $actor->tenant_id) {
-                    throw ValidationException::withMessages([
-                        'seller_id' => ['Reseller does not belong to your organization.'],
-                    ]);
-                }
-                $relatedResellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
-                if ($relatedResellerRole !== UserRole::RESELLER->value) {
-                    throw ValidationException::withMessages([
-                        'seller_id' => ['The specified user is not a reseller.'],
-                    ]);
-                }
+        if ($relatedReseller) {
+            if ($actorRole === UserRole::SUPER_ADMIN->value) {
+                return $this->resolveSuperAdminSeller($relatedReseller);
+            }
+
+            if ($relatedReseller->id === $actor->id) {
+                return $relatedReseller;
+            }
+
+            if ($relatedReseller->tenant_id !== $actor->tenant_id) {
+                throw ValidationException::withMessages([
+                    'seller_id' => ['Reseller does not belong to your organization.'],
+                ]);
+            }
+
+            $relatedResellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
+            if ($relatedResellerRole !== UserRole::RESELLER->value) {
+                throw ValidationException::withMessages([
+                    'seller_id' => ['The specified user is not a reseller.'],
+                ]);
+            }
+
+            if ($actorRole === UserRole::RESELLER->value) {
+                throw ValidationException::withMessages([
+                    'seller_id' => ['Resellers can only activate licenses for their own account.'],
+                ]);
+            }
+
+            if ($actorRole === UserRole::MANAGER->value && (int) $relatedReseller->created_by !== (int) $actor->id) {
+                throw ValidationException::withMessages([
+                    'seller_id' => ['The selected reseller is outside your managed team.'],
+                ]);
             }
 
             return $relatedReseller;
         }
 
-        $role = $actor->role?->value ?? (string) $actor->role;
-
-        if ($role === UserRole::RESELLER->value) {
+        if ($actorRole === UserRole::RESELLER->value) {
             return $actor;
         }
 
-        if ($role === UserRole::MANAGER->value) {
+        if ($actorRole === UserRole::MANAGER->value) {
             return $actor;
         }
 
-        if ($role === UserRole::MANAGER_PARENT->value) {
+        if ($actorRole === UserRole::MANAGER_PARENT->value) {
             return $actor;
         }
 
-        if ($role === UserRole::SUPER_ADMIN->value) {
+        if ($actorRole === UserRole::SUPER_ADMIN->value) {
             if (! $relatedReseller) {
                 throw ValidationException::withMessages([
                     'seller_id' => 'A seller is required for super admin activations.',
                 ]);
             }
 
-            $sellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
-            if (! in_array($sellerRole, [UserRole::RESELLER->value, UserRole::MANAGER->value, UserRole::MANAGER_PARENT->value], true)) {
-                throw ValidationException::withMessages([
-                    'seller_id' => 'The selected seller is not allowed to activate licenses.',
-                ]);
-            }
-
-            return $relatedReseller;
+            return $this->resolveSuperAdminSeller($relatedReseller);
         }
 
         throw ValidationException::withMessages([
             'auth' => 'No active seller account is available for activation.',
         ]);
+    }
+
+    private function resolveSuperAdminSeller(User $relatedReseller): User
+    {
+        $sellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
+        if (! in_array($sellerRole, [UserRole::RESELLER->value, UserRole::MANAGER->value, UserRole::MANAGER_PARENT->value], true)) {
+            throw ValidationException::withMessages([
+                'seller_id' => 'The selected seller is not allowed to activate licenses.',
+            ]);
+        }
+
+        return $relatedReseller;
     }
 
     private function extractExternalMessage(array $response, string $fallback): string

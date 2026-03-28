@@ -122,7 +122,7 @@ export function Navbar() {
               )
             ) : (
               <span
-                className="shrink-0 text-xs font-bold uppercase tracking-widest"
+                className="dashboard-text-helper shrink-0 text-xs font-bold uppercase tracking-widest"
                 style={{ color: primaryColor }}
               >
                 {eyebrow}
@@ -130,8 +130,8 @@ export function Navbar() {
             )}
 
             <div className="hidden min-w-0 sm:block">
-              <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 dark:text-white">{title}</p>
-              <p className="truncate text-[11px] leading-tight text-slate-400 dark:text-slate-500">{formatTimezoneLabel(activeTimezone)}</p>
+              <p className="dashboard-text-label truncate font-semibold leading-tight text-slate-900 dark:text-white">{title}</p>
+              <p className="dashboard-text-helper truncate leading-tight text-slate-400 dark:text-slate-500">{formatTimezoneLabel(activeTimezone)}</p>
             </div>
           </div>
         </div>
@@ -158,22 +158,22 @@ export function Navbar() {
                 <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-1rem)] p-0 sm:w-96">
                   <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      <p className="dashboard-text-body text-sm font-semibold text-slate-900 dark:text-white">
                         {t('biosChangeRequests.title')}
                       </p>
                       {pendingBcrCount > 0 ? (
-                        <p className="mt-0.5 text-xs text-rose-600 dark:text-rose-400">
+                        <p className="dashboard-text-helper mt-0.5 text-xs text-rose-600 dark:text-rose-400">
                           {t('biosChangeRequests.pendingCount', { count: pendingBcrCount })}
                         </p>
                       ) : (
-                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        <p className="dashboard-text-helper mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                           {t('biosChangeRequests.noPending')}
                         </p>
                       )}
                     </div>
                   </div>
                   {recentRequests.length === 0 ? (
-                    <div className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                    <div className="dashboard-text-body px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
                       {t('biosChangeRequests.noPending')}
                     </div>
                   ) : (
@@ -185,20 +185,20 @@ export function Navbar() {
                           onClick={() => navigate(bcrPath)}
                         >
                           <div className="flex w-full items-center justify-between gap-2">
-                            <p className="truncate text-sm font-medium text-slate-900 dark:text-white">
+                            <p className="dashboard-text-body truncate text-sm font-medium text-slate-900 dark:text-white">
                               {req.customer_name ?? '-'}
                             </p>
-                            <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                            <span className="dashboard-text-helper shrink-0 text-xs text-slate-400 dark:text-slate-500">
                               {req.created_at ? formatDate(req.created_at, locale) : ''}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="dashboard-text-helper text-xs text-slate-500 dark:text-slate-400">
                             <span className="font-mono">{req.old_bios_id}</span>
                             {' → '}
                             <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{req.new_bios_id}</span>
                           </p>
                           {req.reseller_name ? (
-                            <p className="text-xs text-slate-400 dark:text-slate-500">{req.reseller_name}</p>
+                            <p className="dashboard-text-helper text-xs text-slate-400 dark:text-slate-500">{req.reseller_name}</p>
                           ) : null}
                         </DropdownMenuItem>
                       ))}
@@ -207,7 +207,7 @@ export function Navbar() {
                   <div className="border-t border-slate-200 px-4 py-2.5 dark:border-slate-800">
                     <Link
                       to={bcrPath}
-                      className="block text-center text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                      className="dashboard-text-helper block text-center text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                     >
                       {t('biosChangeRequests.viewAll')}
                     </Link>
@@ -260,7 +260,7 @@ export function Navbar() {
                 >
                   {/* Avatar */}
                   <span
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white"
+                    className="dashboard-text-helper inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-bold text-white"
                     style={{ backgroundColor: primaryColor }}
                   >
                     {initials}
@@ -268,8 +268,8 @@ export function Navbar() {
 
                   {/* Name + role */}
                   <div className="hidden min-w-0 text-start sm:block">
-                    <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 dark:text-white">{user.name}</p>
-                    <p className="truncate text-[11px] leading-tight text-slate-500 dark:text-slate-400">{user.email}</p>
+                    <p className="dashboard-text-label truncate font-semibold leading-tight text-slate-900 dark:text-white">{user.name}</p>
+                    <p className="dashboard-text-helper truncate leading-tight text-slate-500 dark:text-slate-400">{user.email}</p>
                   </div>
 
                   <div className="hidden sm:block">
@@ -279,15 +279,15 @@ export function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 max-w-[calc(100vw-1rem)] p-0 sm:w-64">
                 <div className="px-4 py-3.5">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{user.name}</p>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                  <p className="dashboard-text-body text-sm font-semibold text-slate-900 dark:text-white">{user.name}</p>
+                  <p className="dashboard-text-helper mt-0.5 text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
                   <div className="mt-2">
                     <RoleBadge role={user.role} />
                   </div>
                 </div>
                 <div className="border-t border-slate-100 p-1 dark:border-slate-800">
                   <DropdownMenuItem className="p-0 focus:bg-transparent dark:focus:bg-transparent">
-                    <Button type="button" variant="ghost" className="h-9 w-full justify-start text-sm" onClick={() => void logout()}>
+                    <Button type="button" variant="ghost" className="dashboard-text-body h-9 w-full justify-start text-sm" onClick={() => void logout()}>
                       <LogOut className="me-2 h-4 w-4" />
                       {t('auth.logout')}
                     </Button>

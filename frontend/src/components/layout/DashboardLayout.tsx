@@ -102,7 +102,7 @@ export function DashboardLayout() {
   }, [isAuthenticated, refreshCurrentUser])
 
   return (
-    <div className="min-h-screen bg-surface-100 text-slate-950 dark:bg-surface-950 dark:text-white">
+    <div className="dashboard-app min-h-screen bg-surface-100 text-slate-950 dark:bg-surface-950 dark:text-white">
       <SkipToContent targetId="dashboard-main-content" />
       <Navbar />
       <div className="flex min-h-[calc(100vh-3.5rem)]">

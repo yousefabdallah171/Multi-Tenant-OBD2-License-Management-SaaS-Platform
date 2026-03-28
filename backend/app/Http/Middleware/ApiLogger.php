@@ -6,10 +6,14 @@ use App\Models\ApiLog;
 use Closure;
 use Illuminate\Http\Request;
 use Throwable;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ApiLogger
 {
+    private const MAX_LOGGED_RESPONSE_BYTES = 65536;
+
     /**
      * @var list<string>
      */
@@ -53,10 +57,20 @@ class ApiLogger
      */
     private function extractResponseBody(Response $response): ?array
     {
+        if (! $this->shouldLogResponseBody($response)) {
+            return null;
+        }
+
         $content = $response->getContent();
 
         if (! is_string($content) || $content === '') {
             return null;
+        }
+
+        if (strlen($content) > self::MAX_LOGGED_RESPONSE_BYTES) {
+            return [
+                'omitted' => 'response body exceeded logging size threshold',
+            ];
         }
 
         $decoded = json_decode($content, true);
@@ -89,9 +103,33 @@ class ApiLogger
                 continue;
             }
 
+            if (is_object($value)) {
+                $sanitized[$key] = sprintf('[OBJECT:%s]', $value::class);
+                continue;
+            }
+
             $sanitized[$key] = $value;
         }
 
         return $sanitized;
+    }
+
+    private function shouldLogResponseBody(Response $response): bool
+    {
+        if ($response instanceof BinaryFileResponse || $response instanceof StreamedResponse) {
+            return false;
+        }
+
+        $contentDisposition = strtolower((string) $response->headers->get('Content-Disposition', ''));
+        if (str_contains($contentDisposition, 'attachment')) {
+            return false;
+        }
+
+        $contentType = strtolower((string) $response->headers->get('Content-Type', 'application/json'));
+        if (! str_contains($contentType, 'json')) {
+            return false;
+        }
+
+        return true;
     }
 }

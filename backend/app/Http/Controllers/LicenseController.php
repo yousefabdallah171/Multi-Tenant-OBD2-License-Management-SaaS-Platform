@@ -375,6 +375,7 @@ class LicenseController extends Controller
             $resellerIds = User::query()
                 ->where('tenant_id', $actor->tenant_id)
                 ->where('role', UserRole::RESELLER->value)
+                ->where('created_by', $actor->id)
                 ->pluck('id')
                 ->all();
 

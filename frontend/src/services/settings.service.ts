@@ -1,5 +1,6 @@
 import { api } from '@/services/api'
-import type { SystemSettings } from '@/types/super-admin.types'
+import { DASHBOARD_APPEARANCE_DEFAULTS, normalizeDashboardAppearance } from '@/lib/dashboard-appearance'
+import type { DashboardAppearanceSettings, SystemSettings } from '@/types/super-admin.types'
 
 const defaultSettings: SystemSettings = {
   general: {
@@ -25,6 +26,9 @@ const defaultSettings: SystemSettings = {
   widgets: {
     show_online_widget_to_resellers: true,
   },
+  appearance: {
+    dashboard: DASHBOARD_APPEARANCE_DEFAULTS,
+  },
 }
 
 function normalizeSettings(payload?: Partial<SystemSettings> | null): SystemSettings {
@@ -34,6 +38,9 @@ function normalizeSettings(payload?: Partial<SystemSettings> | null): SystemSett
     notifications: { ...defaultSettings.notifications, ...(payload?.notifications ?? {}) },
     security: { ...defaultSettings.security, ...(payload?.security ?? {}) },
     widgets: { ...defaultSettings.widgets, ...(payload?.widgets ?? {}) },
+    appearance: {
+      dashboard: normalizeDashboardAppearance(payload?.appearance?.dashboard),
+    },
   }
 }
 
@@ -52,5 +59,12 @@ export const settingsService = {
   async getOnlineWidgetSettings() {
     const { data } = await api.get<{ data: { show_online_widget_to_resellers: boolean; server_timezone: string } }>('/online-widget/settings')
     return data
+  },
+  async getDashboardAppearance() {
+    const { data } = await api.get<{ data: Partial<DashboardAppearanceSettings> | null }>('/dashboard-appearance/settings')
+    return {
+      ...data,
+      data: normalizeDashboardAppearance(data?.data),
+    }
   },
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\BiosConflictController;
 // use App\Http\Controllers\Customer\DownloadController as CustomerDownloadController;
 // use App\Http\Controllers\Customer\SoftwareController as CustomerSoftwareController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardAppearanceController;
 use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\Manager\ActivityController as ManagerActivityController;
 use App\Http\Controllers\Manager\BiosChangeRequestController as ManagerBiosChangeRequestController;
@@ -119,6 +120,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
     Route::post('/balances/{user}/adjust', [BalanceController::class, 'adjust'])->middleware('role:super_admin,manager_parent');
     Route::post('/licenses/activate', [LicenseController::class, 'activateLicense'])->middleware('role:super_admin,reseller,manager,manager_parent');
     Route::get('/online-widget/settings', [OnlineUsersController::class, 'widgetSettings'])->middleware('role:super_admin,manager_parent,manager,reseller');
+    Route::get('/dashboard-appearance/settings', [DashboardAppearanceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::get('/table-preferences', [TablePreferenceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::put('/table-preferences/{tableKey}', [TablePreferenceController::class, 'update'])->middleware('role:super_admin,manager_parent,manager,reseller');
 

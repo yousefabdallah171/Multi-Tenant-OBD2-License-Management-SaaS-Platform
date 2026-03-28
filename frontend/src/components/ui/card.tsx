@@ -22,11 +22,11 @@ interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
 }
 
 export function CardTitle({ className, as: Tag = 'h2', ...props }: CardTitleProps) {
-  return <Tag className={cn('text-xl font-semibold tracking-tight text-slate-950 dark:text-white', className)} {...props} />
+  return <Tag className={cn('dashboard-text-heading text-xl font-semibold tracking-tight text-slate-950 dark:text-white', className)} {...props} />
 }
 
 export function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn('text-sm text-slate-500 dark:text-slate-400', className)} {...props} />
+  return <p className={cn('dashboard-text-body text-sm text-slate-500 dark:text-slate-400', className)} {...props} />
 }
 
 export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

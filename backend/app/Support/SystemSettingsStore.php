@@ -6,6 +6,46 @@ use Illuminate\Support\Facades\File;
 
 class SystemSettingsStore
 {
+    /**
+     * @return array<string, mixed>
+     */
+    public static function defaultDashboardAppearance(): array
+    {
+        return [
+            'font_family' => "'Cairo', ui-sans-serif, system-ui, -apple-system, sans-serif",
+            'font_sizes' => [
+                'display_px' => 28,
+                'heading_px' => 18,
+                'body_px' => 14,
+                'label_px' => 13,
+                'table_header_px' => 14,
+                'table_cell_px' => 14,
+                'helper_px' => 12,
+            ],
+            'font_weights' => [
+                'display' => 800,
+                'heading' => 700,
+                'body' => 500,
+                'label' => 600,
+                'table_header' => 700,
+            ],
+            'surfaces' => [
+                'cards' => [
+                    'opacity_percent' => 100,
+                    'brightness_percent' => 100,
+                ],
+                'charts' => [
+                    'opacity_percent' => 100,
+                    'brightness_percent' => 100,
+                ],
+                'badges' => [
+                    'opacity_percent' => 100,
+                    'brightness_percent' => 100,
+                ],
+            ],
+        ];
+    }
+
     private string $path;
 
     public function __construct()
@@ -50,6 +90,18 @@ class SystemSettingsStore
     /**
      * @return array<string, mixed>
      */
+    public function dashboardAppearance(): array
+    {
+        $settings = $this->all();
+
+        return is_array($settings['appearance']['dashboard'] ?? null)
+            ? $settings['appearance']['dashboard']
+            : self::defaultDashboardAppearance();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     private function defaults(): array
     {
         return [
@@ -75,6 +127,9 @@ class SystemSettingsStore
             ],
             'widgets' => [
                 'show_online_widget_to_resellers' => true,
+            ],
+            'appearance' => [
+                'dashboard' => self::defaultDashboardAppearance(),
             ],
         ];
     }

@@ -93,7 +93,8 @@ abstract class BaseManagerController extends Controller
     {
         abort_unless(
             $user->tenant_id === $this->currentTenantId($request)
-                && ($user->role?->value ?? (string) $user->role) === UserRole::RESELLER->value,
+                && ($user->role?->value ?? (string) $user->role) === UserRole::RESELLER->value
+                && (int) $user->created_by === $this->currentManager($request)->id,
             404,
         );
 

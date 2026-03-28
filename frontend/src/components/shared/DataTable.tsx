@@ -188,7 +188,7 @@ export function DataTable<T>({
                     key={column.key}
                     scope="col"
                     aria-sort={column.sortable && isActive ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    className={cn('px-4 py-3 text-start text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500', column.className)}
+                    className={cn('dashboard-text-table-header px-4 py-3 text-start text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500', column.className)}
                   >
                     <button
                       type="button"
@@ -232,7 +232,7 @@ export function DataTable<T>({
                     onClick={() => onRowClick?.(row)}
                   >
                     {visibleColumns.map((column) => (
-                      <td key={`${rowKey(row)}-${column.key}`} className={cn('px-4 py-3.5 align-top text-sm text-slate-700 dark:text-slate-200', column.className)}>
+                      <td key={`${rowKey(row)}-${column.key}`} className={cn('dashboard-text-table-cell px-4 py-3.5 align-top text-sm text-slate-700 dark:text-slate-200', column.className)}>
                         {column.render(row)}
                       </td>
                     ))}
@@ -243,7 +243,7 @@ export function DataTable<T>({
         </table>
       </div>
       {pagination && onPageChange ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <div className="dashboard-text-body flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
           <span>{t('common.totalCount', { count: pagination.total })}</span>
           <div className="flex flex-wrap items-center gap-3">
             {onPageSizeChange && !hidePageSizeSelector && !tableKey ? (

@@ -12,6 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE bios_access_logs MODIFY COLUMN action ENUM('activate', 'deactivate', 'renew', 'check', 'blacklist', 'conflict', 'pause', 'resume', 'reactivate')");
     }
 
@@ -20,6 +24,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE bios_access_logs MODIFY COLUMN action ENUM('activate', 'deactivate', 'renew', 'check', 'blacklist', 'conflict')");
     }
 };

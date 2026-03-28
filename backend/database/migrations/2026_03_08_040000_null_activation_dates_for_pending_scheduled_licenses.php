@@ -1,13 +1,17 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('ALTER TABLE licenses MODIFY activated_at TIMESTAMP NULL DEFAULT NULL');
+        Schema::table('licenses', function (Blueprint $table): void {
+            $table->timestamp('activated_at')->nullable()->change();
+        });
 
         DB::table('licenses')
             ->where('status', 'pending')
@@ -26,6 +30,8 @@ return new class extends Migration
                 'activated_at' => DB::raw('COALESCE(scheduled_at, expires_at, CURRENT_TIMESTAMP)'),
             ]);
 
-        DB::statement('ALTER TABLE licenses MODIFY activated_at TIMESTAMP NOT NULL');
+        Schema::table('licenses', function (Blueprint $table): void {
+            $table->timestamp('activated_at')->nullable(false)->change();
+        });
     }
 };

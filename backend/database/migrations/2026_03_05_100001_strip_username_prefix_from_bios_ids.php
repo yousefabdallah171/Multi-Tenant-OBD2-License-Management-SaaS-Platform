@@ -2,20 +2,33 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Strip the `{external_username}-` prefix from bios_id for licenses
-        // where bios_id starts with external_username + '-'
-        DB::statement("
-            UPDATE licenses
-            SET bios_id = SUBSTRING(bios_id, LENGTH(external_username) + 2)
-            WHERE external_username IS NOT NULL
-              AND external_username != ''
-              AND bios_id LIKE CONCAT(external_username, '-%')
-        ");
+        DB::table('licenses')
+            ->select(['id', 'bios_id', 'external_username'])
+            ->whereNotNull('external_username')
+            ->where('external_username', '!=', '')
+            ->orderBy('id')
+            ->chunkById(200, function ($licenses): void {
+                foreach ($licenses as $license) {
+                    $prefix = (string) $license->external_username.'-';
+                    $biosId = (string) ($license->bios_id ?? '');
+
+                    if (! Str::startsWith($biosId, $prefix)) {
+                        continue;
+                    }
+
+                    DB::table('licenses')
+                        ->where('id', $license->id)
+                        ->update([
+                            'bios_id' => Str::after($biosId, $prefix),
+                        ]);
+                }
+            });
     }
 
     public function down(): void

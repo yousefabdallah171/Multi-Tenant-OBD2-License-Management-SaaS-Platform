@@ -29,7 +29,14 @@ export function useAuth() {
   }, [clearSession])
 
   const syncCurrentUser = useCallback(async () => {
+    const startingUser = useAuthStore.getState().user
     const result = await authService.getMe()
+
+    const currentUser = useAuthStore.getState().user
+    if (!currentUser || currentUser.id !== startingUser?.id) {
+      return currentUser
+    }
+
     setUser(result.user)
     return result.user
   }, [setUser])

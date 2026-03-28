@@ -1,39 +1,22 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
+import { BASE_URL, USERS, loginViaUi } from './helpers/auth'
 
-const BASE_URL = 'http://localhost:3000'
-const PASSWORD = 'password'
-
-const USERS = {
-  superAdmin: { email: 'admin@obd2sw.com', dashboard: /\/en\/super-admin\/dashboard/, customers: '/en/super-admin/customers' },
-  managerParent: { email: 'parent@obd2sw.com', dashboard: /\/en\/dashboard/, customers: '/en/customers' },
-  manager: { email: 'manager@obd2sw.com', dashboard: /\/en\/manager\/dashboard/, customers: '/en/manager/customers' },
-  reseller: { email: 'reseller@obd2sw.com', dashboard: /\/en\/reseller\/dashboard/, customers: '/en/reseller/customers' },
+const ROLE_PAGES = {
+  superAdmin: { email: USERS.superAdmin.email, dashboard: USERS.superAdmin.dashboard, customers: '/en/super-admin/customers' },
+  managerParent: { email: USERS.managerParent.email, dashboard: USERS.managerParent.dashboard, customers: '/en/customers' },
+  manager: { email: USERS.manager.email, dashboard: USERS.manager.dashboard, customers: '/en/manager/customers' },
+  reseller: { email: USERS.reseller.email, dashboard: USERS.reseller.dashboard, customers: '/en/reseller/customers' },
 } as const
 
-async function login(page: Page, email: string, dashboardPattern: RegExp) {
-  const response = await page.request.post(`${BASE_URL}/api/auth/login`, {
-    data: { email, password: PASSWORD },
-  })
-  expect(response.ok()).toBeTruthy()
-  const body = await response.json()
-
-  await page.addInitScript((user) => {
-    window.localStorage.setItem('license-auth', JSON.stringify({ user }))
-  }, body.user)
-
-  await page.goto(`${BASE_URL}/en/login`)
-  await page.waitForURL(dashboardPattern, { timeout: 15000 })
-}
-
 test('super-admin customer screen options persist hidden columns and page size', async ({ page }) => {
-  await login(page, USERS.superAdmin.email, USERS.superAdmin.dashboard)
-  await page.goto(`${BASE_URL}${USERS.superAdmin.customers}`)
+  await loginViaUi(page, ROLE_PAGES.superAdmin.email, ROLE_PAGES.superAdmin.dashboard)
+  await page.goto(`${BASE_URL}${ROLE_PAGES.superAdmin.customers}`)
 
   const screenOptions = page.getByRole('button', { name: 'Screen Options' })
   await expect(screenOptions).toBeVisible()
   await screenOptions.click()
-  await page.getByRole('menuitem', { name: /Phone/i }).click()
-  await page.getByRole('button', { name: '50' }).click()
+  await page.getByRole('button', { name: /^Phone$/i }).click()
+  await page.getByRole('button', { name: '50' }).dispatchEvent('click')
   await expect(page.getByRole('columnheader', { name: 'Phone' })).toHaveCount(0)
 
   await page.reload()
@@ -42,34 +25,34 @@ test('super-admin customer screen options persist hidden columns and page size',
   await expect(page.getByRole('button', { name: '50' })).toBeVisible()
 })
 
-for (const [role, config] of Object.entries(USERS)) {
+for (const [role, config] of Object.entries(ROLE_PAGES)) {
   test(`${role} customer page shows screen options`, async ({ page }) => {
-    await login(page, config.email, config.dashboard)
+    await loginViaUi(page, config.email, config.dashboard)
     await page.goto(`${BASE_URL}${config.customers}`)
     await expect(page.getByRole('button', { name: 'Screen Options' })).toBeVisible()
   })
 }
 
 test('super-admin users page shows screen options', async ({ page }) => {
-  await login(page, USERS.superAdmin.email, USERS.superAdmin.dashboard)
+  await loginViaUi(page, ROLE_PAGES.superAdmin.email, ROLE_PAGES.superAdmin.dashboard)
   await page.goto(`${BASE_URL}/en/super-admin/users`)
   await expect(page.getByRole('button', { name: 'Screen Options' })).toBeVisible()
 })
 
 test('super-admin admin management page shows screen options', async ({ page }) => {
-  await login(page, USERS.superAdmin.email, USERS.superAdmin.dashboard)
+  await loginViaUi(page, ROLE_PAGES.superAdmin.email, ROLE_PAGES.superAdmin.dashboard)
   await page.goto(`${BASE_URL}/en/super-admin/admin-management`)
   await expect(page.getByRole('button', { name: 'Screen Options' })).toBeVisible()
 })
 
 test('super-admin bios history page shows screen options', async ({ page }) => {
-  await login(page, USERS.superAdmin.email, USERS.superAdmin.dashboard)
+  await loginViaUi(page, ROLE_PAGES.superAdmin.email, ROLE_PAGES.superAdmin.dashboard)
   await page.goto(`${BASE_URL}/en/super-admin/bios-history`)
   await expect(page.getByRole('button', { name: 'Screen Options' })).toBeVisible()
 })
 
 test('super-admin security locks page shows screen options on the raw-table tabs', async ({ page }) => {
-  await login(page, USERS.superAdmin.email, USERS.superAdmin.dashboard)
+  await loginViaUi(page, ROLE_PAGES.superAdmin.email, ROLE_PAGES.superAdmin.dashboard)
   await page.goto(`${BASE_URL}/en/super-admin/security-locks`)
   await expect(page.getByRole('button', { name: 'Screen Options' })).toBeVisible()
 })

@@ -348,6 +348,39 @@ export interface SystemSettings {
   widgets: {
     show_online_widget_to_resellers: boolean
   }
+  appearance: {
+    dashboard: DashboardAppearanceSettings
+  }
+}
+
+export interface DashboardAppearanceSurfaceSettings {
+  opacity_percent: number
+  brightness_percent: number
+}
+
+export interface DashboardAppearanceSettings {
+  font_family: string
+  font_sizes: {
+    display_px: number
+    heading_px: number
+    body_px: number
+    label_px: number
+    table_header_px: number
+    table_cell_px: number
+    helper_px: number
+  }
+  font_weights: {
+    display: 400 | 500 | 600 | 700 | 800 | 900
+    heading: 400 | 500 | 600 | 700 | 800 | 900
+    body: 400 | 500 | 600 | 700 | 800 | 900
+    label: 400 | 500 | 600 | 700 | 800 | 900
+    table_header: 400 | 500 | 600 | 700 | 800 | 900
+  }
+  surfaces: {
+    cards: DashboardAppearanceSurfaceSettings
+    charts: DashboardAppearanceSurfaceSettings
+    badges: DashboardAppearanceSurfaceSettings
+  }
 }
 
 export interface LockedAccount {

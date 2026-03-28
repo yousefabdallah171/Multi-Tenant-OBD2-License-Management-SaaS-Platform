@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -16,17 +17,30 @@ return new class extends Migration
             $table->index(['status', 'paused_at'], 'licenses_pause_state_idx');
         });
 
-        DB::statement("
-            UPDATE licenses
-            SET
-                paused_at = COALESCE(updated_at, created_at),
-                pause_remaining_minutes = GREATEST(TIMESTAMPDIFF(MINUTE, COALESCE(updated_at, created_at), expires_at), 1)
-            WHERE status = 'pending'
-              AND (is_scheduled = 0 OR is_scheduled IS NULL)
-              AND paused_at IS NULL
-              AND external_deletion_response LIKE 'Paused locally.%'
-              AND expires_at IS NOT NULL
-        ");
+        DB::table('licenses')
+            ->select(['id', 'updated_at', 'created_at', 'expires_at'])
+            ->where('status', 'pending')
+            ->where(function ($query): void {
+                $query->where('is_scheduled', 0)->orWhereNull('is_scheduled');
+            })
+            ->whereNull('paused_at')
+            ->where('external_deletion_response', 'like', 'Paused locally.%')
+            ->whereNotNull('expires_at')
+            ->orderBy('id')
+            ->chunkById(200, function ($licenses): void {
+                foreach ($licenses as $license) {
+                    $anchor = Carbon::parse($license->updated_at ?? $license->created_at);
+                    $expiresAt = Carbon::parse($license->expires_at);
+                    $remainingMinutes = max($anchor->diffInMinutes($expiresAt, false), 1);
+
+                    DB::table('licenses')
+                        ->where('id', $license->id)
+                        ->update([
+                            'paused_at' => $anchor,
+                            'pause_remaining_minutes' => $remainingMinutes,
+                        ]);
+                }
+            });
     }
 
     public function down(): void
