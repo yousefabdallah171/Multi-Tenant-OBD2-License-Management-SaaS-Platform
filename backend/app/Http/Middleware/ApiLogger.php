@@ -16,6 +16,7 @@ class ApiLogger
     private array $sensitiveKeys = [
         'password',
         'password_confirmation',
+        'temporary_password',
         'token',
         'api_key',
         'external_api_key',

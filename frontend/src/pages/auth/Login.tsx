@@ -241,13 +241,13 @@ export function LoginPage() {
                         setPassword(event.target.value)
                         clearFeedback()
                       }}
-                      className={isRtl ? 'ps-12' : 'pe-12'}
+                      className="pe-12"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((value) => !value)}
                       disabled={isSubmitting || isLocked}
-                      className="absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 [dir=ltr]:right-1 [dir=rtl]:left-1"
+                      className="absolute end-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500"
                       aria-label={showPassword ? t('common.hide') : t('common.show')}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

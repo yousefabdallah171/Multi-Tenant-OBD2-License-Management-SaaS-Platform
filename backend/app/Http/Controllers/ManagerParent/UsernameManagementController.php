@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class UsernameManagementController extends BaseManagerParentController
@@ -55,6 +56,12 @@ class UsernameManagementController extends BaseManagerParentController
     public function unlock(Request $request, User $user): JsonResponse
     {
         $user = $this->resolveTenantUser($request, $user);
+
+        abort_unless(
+            in_array($user->role?->value ?? (string) $user->role, [UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
+            403,
+        );
+
         $validated = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
         $this->assertUsernameCanBeManaged($user);
         $user->update(['username_locked' => false]);
@@ -70,6 +77,12 @@ class UsernameManagementController extends BaseManagerParentController
     public function changeUsername(Request $request, User $user): JsonResponse
     {
         $user = $this->resolveTenantUser($request, $user);
+
+        abort_unless(
+            in_array($user->role?->value ?? (string) $user->role, [UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
+            403,
+        );
+
         $this->assertUsernameCanBeManaged($user);
 
         $validated = $request->validate([
@@ -95,12 +108,17 @@ class UsernameManagementController extends BaseManagerParentController
     {
         $user = $this->resolveTenantUser($request, $user);
 
+        abort_unless(
+            in_array($user->role?->value ?? (string) $user->role, [UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
+            403,
+        );
+
         $validated = $request->validate([
             'password' => ['nullable', 'string', 'min:8'],
             'revoke_tokens' => ['nullable', 'boolean'],
         ]);
 
-        $password = $validated['password'] ?? 'password1234';
+        $password = $validated['password'] ?? Str::password(12, symbols: false);
         $user->update(['password' => Hash::make($password)]);
 
         if (($validated['revoke_tokens'] ?? false) === true) {

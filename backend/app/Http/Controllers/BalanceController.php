@@ -22,6 +22,11 @@ class BalanceController extends Controller
 
     public function adjust(Request $request, User $user): JsonResponse
     {
+        abort_unless(
+            (int) $user->tenant_id === (int) $request->user()?->tenant_id,
+            403,
+        );
+
         $validated = $request->validate([
             'amount' => ['required', 'numeric'],
         ]);

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class UsernameManagementController extends BaseManagerController
@@ -95,7 +96,7 @@ class UsernameManagementController extends BaseManagerController
             'revoke_tokens' => ['nullable', 'boolean'],
         ]);
 
-        $password = $validated['password'] ?? 'password1234';
+        $password = $validated['password'] ?? Str::password(12, symbols: false);
         $target->update(['password' => Hash::make($password)]);
 
         if (($validated['revoke_tokens'] ?? false) === true) {
