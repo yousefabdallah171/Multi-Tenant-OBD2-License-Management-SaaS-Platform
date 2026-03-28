@@ -308,10 +308,7 @@ class ResellerPaymentController extends BaseManagerParentController
         $payment->loadMissing('commission', 'reseller');
 
         abort_unless(
-            (
-                $payment->commission === null
-                || (int) $payment->commission->tenant_id === $this->currentTenantId($request)
-            )
+            (int) $payment->reseller?->tenant_id === $this->currentTenantId($request)
                 && ($payment->reseller?->role?->value ?? (string) $payment->reseller?->role) === UserRole::RESELLER->value,
             404,
         );
