@@ -339,7 +339,7 @@ export function CustomersPage() {
       sortable: true,
       sortValue: (row) => row.name,
       render: (row) => (
-        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.id)}>
+        <Link className="text-brand-600 hover:underline dark:text-brand-400" to={routePaths.manager.customerDetail(lang, row.id)}>
           {isLikelyBios(row.name) ? '' : row.name}
         </Link>
       ),
@@ -350,7 +350,7 @@ export function CustomersPage() {
       sortable: true,
       sortValue: (row) => resolveCustomerApiUsername(row),
       render: (row) => (
-        <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.customerDetail(lang, row.id)}>
+        <Link className="font-medium text-brand-600 hover:underline dark:text-brand-400" to={routePaths.manager.customerDetail(lang, row.id)}>
           {resolveCustomerApiUsername(row)}
         </Link>
       ),
@@ -369,7 +369,7 @@ export function CustomersPage() {
       sortable: true,
       sortValue: (row) => row.bios_id ?? '',
       render: (row) => row.bios_id ? (
-        <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.manager.biosDetail(lang, row.bios_id)}>
+        <Link className="text-brand-600 hover:underline dark:text-brand-400" to={routePaths.manager.biosDetail(lang, row.bios_id)}>
           {row.bios_id}
         </Link>
       ) : '-',
@@ -543,7 +543,7 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-6">
+      <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -613,21 +613,21 @@ export function CustomersPage() {
 
       <div className="space-y-4">
             <Card>
-              <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_220px_220px_220px]">
-                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('manager.pages.customers.searchPlaceholder')} />
-                <select value={managerId} onChange={(event) => { setManagerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+              <CardContent className="grid gap-2 p-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_180px]">
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('manager.pages.customers.searchPlaceholder')} className="h-9 text-sm" />
+                <select value={managerId} onChange={(event) => { setManagerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                   <option value="">{t('customers.filterByManager', { defaultValue: 'Filter by Manager' })}</option>
                   {managerOptions.map((manager) => (
                     <option key={manager.id} value={manager.id}>{manager.name}</option>
                   ))}
                 </select>
-                <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                   <option value="">{t('manager.pages.customers.allResellers')}</option>
                   {(resellerQuery.data?.data ?? []).map((reseller) => (
                   <option key={reseller.id} value={reseller.id}>{reseller.name}</option>
                 ))}
               </select>
-                <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                 <option value="">{t('manager.pages.customers.allPrograms')}</option>
                 {(programsQuery.data?.data ?? []).map((program) => (
                   <option key={program.id} value={program.id}>{program.name}</option>

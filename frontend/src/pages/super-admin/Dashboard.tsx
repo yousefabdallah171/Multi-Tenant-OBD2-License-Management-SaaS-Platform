@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, Building2, Globe2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { AreaChartWidget } from '@/components/charts/AreaChartWidget'
@@ -13,6 +12,7 @@ import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel, truncateChartLabel } from '@/lib/chart-labels'
+import { cn } from '@/lib/utils'
 import { formatActivityActionLabel, formatCurrency, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { reportService } from '@/services/report.service'
@@ -63,39 +63,41 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <p className="text-sm uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400">{t('superAdmin.pages.dashboard.eyebrow')}</p>
-        <h2 className="text-3xl font-semibold">{t('superAdmin.pages.dashboard.title')}</h2>
+        <p className="text-sm uppercase tracking-[0.24em] text-brand-600 dark:text-brand-400">{t('superAdmin.pages.dashboard.eyebrow')}</p>
+        <h2 className="text-3xl font-bold tracking-tight">{t('superAdmin.pages.dashboard.title')}</h2>
         <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.dashboard.description')}</p>
       </div>
 
-      <StaggerGroup className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+      <StaggerGroup className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {statsLoading ? (
-          Array.from({ length: 5 }).map((_, index) => <SkeletonCard key={index} className="h-full" lines={2} />)
+          Array.from({ length: 5 }).map((_, index) => (
+            <SkeletonCard key={index} className={cn('h-full', index === 1 ? 'xl:col-span-2' : '')} lines={2} />
+          ))
         ) : (
           <>
-            <StaggerItem>
-              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/tenants`)}>
-                <StatsCard title={t('superAdmin.cards.totalTenants')} value={stats?.total_tenants ?? 0} icon={Building2} color="sky" />
+            <StaggerItem className="h-full">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/tenants`)}>
+                <StatsCard title={t('superAdmin.cards.totalTenants')} value={stats?.total_tenants ?? 0} color="sky" />
               </button>
             </StaggerItem>
-            <StaggerItem>
-              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/reports`)}>
-                <StatsCard title={t('superAdmin.cards.totalRevenue')} value={formatCurrency(stats?.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
+            <StaggerItem className="col-span-2 h-full xl:col-span-2">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/reports`)}>
+                <StatsCard title={t('superAdmin.cards.totalRevenue')} value={formatCurrency(stats?.total_revenue ?? 0, 'USD', locale)} color="emerald" />
               </button>
             </StaggerItem>
-            <StaggerItem>
-              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/customers?status=active`)}>
-                <StatsCard title={t('superAdmin.cards.activeCustomers')} value={stats?.active_licenses ?? 0} icon={Globe2} color="amber" />
+            <StaggerItem className="h-full">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/customers?status=active`)}>
+                <StatsCard title={t('superAdmin.cards.activeCustomers')} value={stats?.active_licenses ?? 0} color="amber" />
               </button>
             </StaggerItem>
-            <StaggerItem>
-              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/users`)}>
-                <StatsCard title={t('superAdmin.cards.totalUsers')} value={stats?.total_users ?? 0} icon={Users} color="rose" />
+            <StaggerItem className="h-full">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/users`)}>
+                <StatsCard title={t('superAdmin.cards.totalUsers')} value={stats?.total_users ?? 0} color="rose" />
               </button>
             </StaggerItem>
-            <StaggerItem>
-              <button type="button" className="w-full text-start" onClick={() => navigate(`/${lang}/super-admin/reports`)}>
-                <StatsCard title={t('superAdmin.cards.countryCoverage')} value={countryData.length} icon={Globe2} color="sky" />
+            <StaggerItem className="h-full">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/reports`)}>
+                <StatsCard title={t('superAdmin.cards.countryCoverage')} value={countryData.length} color="sky" />
               </button>
             </StaggerItem>
           </>

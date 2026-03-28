@@ -18,13 +18,13 @@ export function RoleIdentity({ name, role, href, onClick, secondary, className, 
   const label = name ?? '-'
   const nameNode = href
     ? (
-        <Link className={cn('font-medium text-sky-600 hover:underline dark:text-sky-300', nameClassName)} to={href}>
+        <Link className={cn('font-medium text-brand-600 hover:underline dark:text-brand-400', nameClassName)} to={href}>
           {label}
         </Link>
       )
     : onClick
       ? (
-          <button type="button" className={cn('text-start font-medium text-sky-600 hover:underline dark:text-sky-300', nameClassName)} onClick={onClick}>
+          <button type="button" className={cn('text-start font-medium text-brand-600 hover:underline dark:text-brand-400', nameClassName)} onClick={onClick}>
             {label}
           </button>
         )

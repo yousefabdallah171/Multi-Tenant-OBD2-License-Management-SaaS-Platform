@@ -5,17 +5,24 @@
 @layer base {
   :root {
     color-scheme: light;
-    --brand-50: #f0f9ff;
-    --brand-100: #e0f2fe;
-    --brand-200: #bae6fd;
-    --brand-300: #7dd3fc;
-    --brand-400: #38bdf8;
-    --brand-500: #0ea5e9;
-    --brand-600: #0284c7;
-    --brand-700: #0369a1;
-    --brand-800: #075985;
-    --brand-900: #0c4a6e;
-    --brand-950: #082f49;
+    /* Default brand: deep indigo — professional, B2B, non-AI-cyan */
+    --brand-50: #eef2ff;
+    --brand-100: #e0e7ff;
+    --brand-200: #c7d2fe;
+    --brand-300: #a5b4fc;
+    --brand-400: #818cf8;
+    --brand-500: #6366f1;
+    --brand-600: #4f46e5;
+    --brand-700: #4338ca;
+    --brand-800: #3730a3;
+    --brand-900: #312e81;
+    --brand-950: #1e1b4b;
+
+    /* Surfaces: slightly warm-tinted slate — less sterile than pure cool */
+    --surface-50: #f8f8fb;
+    --surface-100: #f1f1f7;
+    --surface-900: #13111e;
+    --surface-950: #09080f;
   }
 
   .dark {
@@ -31,6 +38,11 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #f8fafc;
+  /* Plus Jakarta Sans loads as the primary UI font.
+     The fallback stack uses metric-compatible system fonts to minimise
+     layout shift while the web font loads (font-display: swap). */
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background: var(--surface-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

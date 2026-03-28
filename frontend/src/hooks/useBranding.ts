@@ -9,16 +9,16 @@ export function useBranding() {
     if (!user) {
       return {
         logo: null,
-        primaryColor: '#0284c7',
+        primaryColor: '#4338ca',
         isCustomLogo: false,
       }
     }
 
-    // Color hierarchy: User > Tenant > Role Default > Sky
+    // Color hierarchy: User > Tenant > Role Default > Indigo
     const userColor = user.branding?.primary_color
     const tenantColor = user.tenant?.settings?.branding?.primary_color
     const roleDefaultColor = ROLE_DEFAULT_COLORS[user.role]
-    const primaryColor = userColor ?? tenantColor ?? roleDefaultColor ?? '#0284c7'
+    const primaryColor = userColor ?? tenantColor ?? roleDefaultColor ?? '#4338ca'
 
     // Logo hierarchy: Tenant Custom > Role SVG > None
     const customLogo = user.tenant?.settings?.branding?.logo

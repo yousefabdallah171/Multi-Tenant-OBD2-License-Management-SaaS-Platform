@@ -102,13 +102,13 @@ export function DashboardLayout() {
   }, [isAuthenticated, refreshCurrentUser])
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-950 dark:bg-slate-950 dark:text-white">
+    <div className="min-h-screen bg-surface-100 text-slate-950 dark:bg-surface-950 dark:text-white">
       <SkipToContent targetId="dashboard-main-content" />
       <Navbar />
-      <div className="flex min-h-[calc(100vh-4rem)]">
+      <div className="flex min-h-[calc(100vh-3.5rem)]">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
-          <main id="dashboard-main-content" tabIndex={-1} className="flex-1 px-4 py-6 focus:outline-none md:px-6">
+          <main id="dashboard-main-content" tabIndex={-1} className="flex-1 px-4 py-5 focus:outline-none md:px-6 md:py-6">
             <RouteErrorBoundary dashboardHref={getDashboardPath(user?.role ?? 'super_admin', lang)} resetKey={location.pathname}>
               <PageTransition transitionKey={location.pathname}>
                 <Outlet />

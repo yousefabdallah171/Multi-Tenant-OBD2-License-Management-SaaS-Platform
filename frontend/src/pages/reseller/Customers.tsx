@@ -549,7 +549,7 @@ export function CustomersPage() {
             <p className="font-medium text-slate-950 dark:text-white">
               <span className={`me-2 inline-block h-2.5 w-2.5 rounded-full ${row.status === 'active' ? 'bg-emerald-500' : row.status === 'pending' ? 'bg-amber-500' : row.status === 'cancelled' ? 'bg-rose-500' : row.status === 'expired' ? 'bg-rose-400' : 'bg-slate-400'}`} />
               <Link
-                className="text-start text-sky-600 hover:underline dark:text-sky-300"
+                className="text-start text-brand-600 hover:underline dark:text-brand-400"
                 to={routePaths.reseller.customerDetail(lang, row.id)}
               >
                 {resolveResellerCustomerLabel(row)}
@@ -564,7 +564,7 @@ export function CustomersPage() {
         sortable: true,
         sortValue: (row) => resolveResellerCustomerUsername(row),
         render: (row) => (
-          <Link className="font-medium text-sky-600 hover:underline dark:text-sky-300" to={routePaths.reseller.customerDetail(lang, row.id)}>
+          <Link className="font-medium text-brand-600 hover:underline dark:text-brand-400" to={routePaths.reseller.customerDetail(lang, row.id)}>
             {resolveResellerCustomerUsername(row)}
           </Link>
         ),
@@ -576,7 +576,7 @@ export function CustomersPage() {
         sortValue: (row) => row.bios_id ?? '',
         render: (row) => row.bios_id ? (
           <Link
-            className="text-sky-600 hover:underline dark:text-sky-300"
+            className="text-brand-600 hover:underline dark:text-brand-400"
             to={routePaths.reseller.customerDetail(lang, row.id)}
           >
             {rawBiosId(row.bios_id, row.external_username)}
@@ -785,7 +785,7 @@ export function CustomersPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-6">
+      <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
         <StatusFilterCard
           label={text.statusOptions.all}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -855,7 +855,7 @@ export function CustomersPage() {
 
       <div className="space-y-4">
           <Card>
-            <CardContent className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_200px]">
+            <CardContent className="grid gap-2 p-3 md:grid-cols-[minmax(0,1fr)_180px]">
               <Input
                 value={search}
                 onChange={(event) => {
@@ -863,6 +863,7 @@ export function CustomersPage() {
                   setPage(1)
                 }}
                 placeholder={text.searchPlaceholder}
+                className="h-9 text-sm"
               />
               <select
                 value={programFilter}
@@ -870,7 +871,7 @@ export function CustomersPage() {
                   setProgramFilter(event.target.value ? Number(event.target.value) : '')
                   setPage(1)
                 }}
-                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 <option value="">{lang === 'ar' ? 'كل البرامج' : 'All Programs'}</option>
                 {(programsQuery.data?.data ?? []).map((program) => (
@@ -881,7 +882,7 @@ export function CustomersPage() {
           </Card>
 
           {selectedLicenseIds.length > 0 ? (
-            <Card className="border-sky-200 bg-sky-50/70 dark:border-sky-900/40 dark:bg-sky-950/20">
+            <Card className="border-brand-200/60 bg-brand-50/40 dark:border-brand-900/40 dark:bg-brand-950/20">
               <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
                 <span className="text-sm text-slate-600 dark:text-slate-300">{selectedLicenseIds.length} {t('common.selected', { defaultValue: 'selected' })}</span>
                 <div className="flex flex-wrap gap-2">

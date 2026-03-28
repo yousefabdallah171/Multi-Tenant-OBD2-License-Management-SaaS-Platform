@@ -124,7 +124,7 @@ export function TableScreenOptions({
                       disabled={column.locked}
                       tabIndex={-1}
                       aria-hidden="true"
-                      className="pointer-events-none h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950"
+                      className="pointer-events-none h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-950"
                     />
                     {column.locked ? (
                       <span className="text-sm font-semibold uppercase tracking-wide text-slate-400 md:text-base">
@@ -180,7 +180,7 @@ export function TableScreenOptions({
         aria-controls={isOpen ? panelId : undefined}
         aria-haspopup="dialog"
         className={cn(
-          'rounded-xl border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200 dark:hover:bg-sky-950/70 md:text-base',
+          'rounded-xl md:text-base',
           isLoading && 'opacity-100',
         )}
         onClick={handleToggle}

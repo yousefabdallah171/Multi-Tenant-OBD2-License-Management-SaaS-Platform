@@ -68,7 +68,7 @@
     "status": "الحالة",
     "accountStatus": "حالة الحساب",
     "loginLock": "قفل تسجيل الدخول",
-    "locked": "مقفل",
+    "locked": "مثبت",
     "unlocked": "غير مقفل",
     "revenue": "الإيراد",
     "users": "المستخدمون",
@@ -173,7 +173,6 @@
     "licenseRenewedSuccess": "تم تجديد الترخيص بنجاح.",
     "rowsPerPage": "عدد الصفوف",
     "screenOptions": "خيارات الشاشة",
-    "locked": "مثبت",
     "pagination": "الترقيم",
     "totalCount": "الإجمالي {{count}}",
     "selectAllVisible": "تحديد الظاهر",
@@ -1440,7 +1439,8 @@
     "ipBlockedPermanent": "تم حظر عنوان IP بشكل دائم",
     "ipBlockedMessage": "تم حظر عنوان IP هذا دائمًا بعد محاولات دخول فاشلة متكررة.",
     "contactSupport": "تواصل مع الدعم:",
-    "supportEmail": "support@obd2sw.com"
+    "supportEmail": "support@obd2sw.com",
+    "rememberMe": "البقاء مسجل الدخول"
   },
   "security": {
     "lockedAccounts": "الحسابات المقفلة",
@@ -1558,7 +1558,7 @@
     "successMessage": "مفتاح الترخيص: {{key}}",
     "errorTitle": "فشل التفعيل",
     "biosAlreadyActive": "معرف BIOS هذا لديه ترخيص نشط بالفعل لهذا البرنامج.",
-    "biosBlacklisted": "معرف BIOS هذا محظور ولا يمكن تفعيله.",
+    "biosBlacklisted": "معرف BIOS هذا مدرج في القائمة السوداء ولا يمكن استخدامه",
     "customerNameHint": "سيُستخدم كاسم مستخدم خارجي على خادم الترخيص.",
     "scheduleToggle": "جدولة التفعيل لوقت لاحق",
     "scheduleModeRelative": "وضع المدة",
@@ -1599,7 +1599,6 @@
     "biosConflict": "معرف BIOS يعمل بالفعل مع موزع آخر",
     "biosAvailable": "معرف BIOS متاح",
     "biosChecking": "جارٍ التحقق من توفر BIOS...",
-    "biosBlacklisted": "معرف BIOS هذا مدرج في القائمة السوداء ولا يمكن استخدامه",
     "biosLinkedUsername": "تم ملء اسم المستخدم تلقائياً من سجل BIOS",
     "usernameTaken": "اسم المستخدم نشط بالفعل مع عميل آخر",
     "usernameAvailable": "اسم المستخدم متاح",
@@ -1795,7 +1794,11 @@
     "history": "سجل تغيير BIOS",
     "reason": "السبب",
     "reviewerNotes": "ملاحظات المراجع",
-    "reviewedAt": "تاريخ المراجعة"
+    "reviewedAt": "تاريخ المراجعة",
+    "pendingCount": "{{count}} طلب معلق",
+    "noPending": "لا توجد طلبات معلقة",
+    "viewAll": "عرض جميع الطلبات",
+    "bellLabel": "طلبات تغيير BIOS المعلقة"
   },
   "payments": {
     "title": "مدفوعات الموزعين",
@@ -1808,13 +1811,13 @@
       "commissionRate": "نسبة العمولة",
       "totalOwed": "إجمالي المستحق",
       "totalPaid": "إجمالي المدفوع",
-        "outstanding": "الرصيد المستحق",
-        "totalPaidToManager": "المبلغ الذي دفعته للمدير",
-        "remainingToPay": "المتبقي غير المدفوع",
-        "creditToReceive": "مبلغ يجب أن تستلمه",
-        "creditHelpText": "لقد دفعت أكثر من المبلغ المستحق. يجب إعادة هذا الرصيد إليك أو احتسابه لصالحك.",
-        "helpText": "تعرض هذه الصفحة حجم مبيعاتك، وما دفعته بالفعل إلى مديرك، وما تبقى عليك سداده."
-      },
+      "outstanding": "الرصيد المستحق",
+      "totalPaidToManager": "المبلغ الذي دفعته للمدير",
+      "remainingToPay": "المتبقي غير المدفوع",
+      "creditToReceive": "مبلغ يجب أن تستلمه",
+      "creditHelpText": "لقد دفعت أكثر من المبلغ المستحق. يجب إعادة هذا الرصيد إليك أو احتسابه لصالحك.",
+      "helpText": "تعرض هذه الصفحة حجم مبيعاتك، وما دفعته بالفعل إلى مديرك، وما تبقى عليك سداده."
+    },
     "filters": {
       "period": "الفترة"
     },

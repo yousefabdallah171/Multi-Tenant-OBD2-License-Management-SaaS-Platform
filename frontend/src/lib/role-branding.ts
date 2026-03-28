@@ -6,7 +6,7 @@ import type { UserRole } from '@/types/user.types'
  */
 export const ROLE_DEFAULT_COLORS: Record<UserRole, string> = {
   super_admin: '#dc2626',    // rose-600
-  manager_parent: '#0284c7', // sky-600
+  manager_parent: '#4338ca', // indigo-700
   manager: '#7c3aed',        // violet-600
   reseller: '#059669',       // emerald-600
   customer: '#64748b',       // slate-500
@@ -24,15 +24,15 @@ export const ROLE_LOGOS: Record<UserRole, string> = {
   </svg>`,
 
   manager_parent: `<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-    <rect width="36" height="36" rx="8" fill="#e0f2fe"/>
-    <rect x="9" y="10" width="4" height="8" fill="#0284c7"/>
-    <rect x="15" y="8" width="4" height="10" fill="#0284c7"/>
-    <rect x="21" y="10" width="4" height="8" fill="#0284c7"/>
-    <rect x="8" y="18" width="20" height="10" fill="#0284c7" opacity="0.7"/>
-    <rect x="10" y="20" width="2" height="6" fill="#e0f2fe"/>
-    <rect x="14" y="20" width="2" height="6" fill="#e0f2fe"/>
-    <rect x="18" y="20" width="2" height="6" fill="#e0f2fe"/>
-    <rect x="22" y="20" width="2" height="6" fill="#e0f2fe"/>
+    <rect width="36" height="36" rx="8" fill="#e0e7ff"/>
+    <rect x="9" y="10" width="4" height="8" fill="#4338ca"/>
+    <rect x="15" y="8" width="4" height="10" fill="#4338ca"/>
+    <rect x="21" y="10" width="4" height="8" fill="#4338ca"/>
+    <rect x="8" y="18" width="20" height="10" fill="#4338ca" opacity="0.7"/>
+    <rect x="10" y="20" width="2" height="6" fill="#e0e7ff"/>
+    <rect x="14" y="20" width="2" height="6" fill="#e0e7ff"/>
+    <rect x="18" y="20" width="2" height="6" fill="#e0e7ff"/>
+    <rect x="22" y="20" width="2" height="6" fill="#e0e7ff"/>
   </svg>`,
 
   manager: `<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">

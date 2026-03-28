@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ClipboardList, Download, FileText, History, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -89,7 +89,7 @@ const customerItems: NavItem[] = [
 export function Sidebar() {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const { primaryColor } = useBranding()
+  useBranding() // applies CSS custom properties to :root
   const { lang, isRtl } = useLanguage()
   const { canInstall, isInstalled, promptInstall } = usePwaInstall()
   const location = useLocation()
@@ -298,8 +298,33 @@ export function Sidebar() {
   const showInstallSection = !isInstalled
   const showIosHint = isIos && !canInstall
 
+  const CollapseIcon = isRtl
+    ? (collapsed ? ChevronLeft : ChevronRight)
+    : (collapsed ? ChevronRight : ChevronLeft)
+
   const navContent = (
-    <nav className="space-y-2">
+    <div className="flex h-full flex-col">
+      {/* Navigation header with collapse toggle — desktop only */}
+      <div className={cn(
+        'mb-2 flex items-center border-b border-slate-100 pb-2 pt-0.5 dark:border-slate-800/60',
+        collapsed ? 'justify-center px-1' : 'justify-between px-3',
+      )}>
+        {!collapsed && (
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+            {t('common.navigation', { defaultValue: 'Navigation' })}
+          </p>
+        )}
+        <button
+          type="button"
+          className="hidden items-center justify-center rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300 lg:flex"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? t('common.openNavigation') : t('common.closeNavigation')}
+          title={collapsed ? t('common.openNavigation') : t('common.closeNavigation')}
+        >
+          <CollapseIcon className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    <nav className="flex-1 space-y-0.5">
       {items.map((item) => {
         if (user?.role === 'manager_parent' && item.key === 'logsGroup') {
           const Icon = item.icon
@@ -310,15 +335,15 @@ export function Sidebar() {
               <button
                 type="button"
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition md:text-base',
-                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                  'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                   collapsed && 'justify-center lg:px-0',
                 )}
                 onClick={() => setLogsOpen((prev) => !prev)}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-[18px] w-[18px] shrink-0" />
                 <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
-                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', logsOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+                <ChevronDown className={cn('ms-auto h-3.5 w-3.5 opacity-50 transition-transform', logsOpen && 'rotate-180', collapsed && 'lg:hidden')} />
               </button>
               {logsOpen ? managerParentLogsChildren.map((child) => {
                 const ChildIcon = child.icon
@@ -330,8 +355,8 @@ export function Sidebar() {
                     to={child.href(lang)}
                     className={({ isActive }) =>
                       cn(
-                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition md:text-base',
-                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        'ms-6 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                        isActive ? 'bg-brand-50/80 font-semibold text-brand-700 border-s-2 border-brand-600 dark:bg-brand-950/30 dark:text-brand-300 dark:border-brand-500' : 'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                       )
                     }
                     onClick={() => {
@@ -341,7 +366,7 @@ export function Sidebar() {
                     }}
                     onMouseEnter={() => prefetchNavData(child.key)}
                   >
-                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <ChildIcon className="h-4 w-4 shrink-0 opacity-60" />
                     <span>{childLabel}</span>
                   </NavLink>
                 )
@@ -359,15 +384,15 @@ export function Sidebar() {
               <button
                 type="button"
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition md:text-base',
-                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                  'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                   collapsed && 'justify-center lg:px-0',
                 )}
                 onClick={() => setManagerParentBiosOpen((prev) => !prev)}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-[18px] w-[18px] shrink-0" />
                 <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
-                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', managerParentBiosOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+                <ChevronDown className={cn('ms-auto h-3.5 w-3.5 opacity-50 transition-transform', managerParentBiosOpen && 'rotate-180', collapsed && 'lg:hidden')} />
               </button>
               {managerParentBiosOpen ? managerParentBiosChildren.map((child) => {
                 const ChildIcon = child.icon
@@ -379,8 +404,8 @@ export function Sidebar() {
                     to={child.href(lang)}
                     className={({ isActive }) =>
                       cn(
-                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition md:text-base',
-                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        'ms-6 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                        isActive ? 'bg-brand-50/80 font-semibold text-brand-700 border-s-2 border-brand-600 dark:bg-brand-950/30 dark:text-brand-300 dark:border-brand-500' : 'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                       )
                     }
                     onClick={() => {
@@ -390,7 +415,7 @@ export function Sidebar() {
                     }}
                     onMouseEnter={() => prefetchNavData(child.key)}
                   >
-                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <ChildIcon className="h-4 w-4 shrink-0 opacity-60" />
                     <span>{childLabel}</span>
                   </NavLink>
                 )
@@ -408,15 +433,15 @@ export function Sidebar() {
               <button
                 type="button"
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition md:text-base',
-                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                  'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                   collapsed && 'justify-center lg:px-0',
                 )}
                 onClick={() => setManagerBiosOpen((prev) => !prev)}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-[18px] w-[18px] shrink-0" />
                 <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
-                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', managerBiosOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+                <ChevronDown className={cn('ms-auto h-3.5 w-3.5 opacity-50 transition-transform', managerBiosOpen && 'rotate-180', collapsed && 'lg:hidden')} />
               </button>
               {managerBiosOpen ? managerBiosChildren.map((child) => {
                 const ChildIcon = child.icon
@@ -428,8 +453,8 @@ export function Sidebar() {
                     to={child.href(lang)}
                     className={({ isActive }) =>
                       cn(
-                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition md:text-base',
-                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        'ms-6 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                        isActive ? 'bg-brand-50/80 font-semibold text-brand-700 border-s-2 border-brand-600 dark:bg-brand-950/30 dark:text-brand-300 dark:border-brand-500' : 'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                       )
                     }
                     onClick={() => {
@@ -439,7 +464,7 @@ export function Sidebar() {
                     }}
                     onMouseEnter={() => prefetchNavData(child.key)}
                   >
-                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <ChildIcon className="h-4 w-4 shrink-0 opacity-60" />
                     <span>{childLabel}</span>
                   </NavLink>
                 )
@@ -458,15 +483,15 @@ export function Sidebar() {
               <button
                 type="button"
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition md:text-base',
-                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                  'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                   collapsed && 'justify-center lg:px-0',
                 )}
                 onClick={() => setSettingsOpen((prev) => !prev)}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-[18px] w-[18px] shrink-0" />
                 <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
-                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', settingsOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+                <ChevronDown className={cn('ms-auto h-3.5 w-3.5 opacity-50 transition-transform', settingsOpen && 'rotate-180', collapsed && 'lg:hidden')} />
               </button>
               {settingsOpen ? settingsChildren.map((child) => {
                 const ChildIcon = child.icon
@@ -478,8 +503,8 @@ export function Sidebar() {
                     to={child.href(lang)}
                     className={({ isActive }) =>
                       cn(
-                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition md:text-base',
-                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        'ms-6 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                        isActive ? 'bg-brand-50/80 font-semibold text-brand-700 border-s-2 border-brand-600 dark:bg-brand-950/30 dark:text-brand-300 dark:border-brand-500' : 'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                       )
                     }
                     onClick={() => {
@@ -489,7 +514,7 @@ export function Sidebar() {
                     }}
                     onMouseEnter={() => prefetchNavData(child.key)}
                   >
-                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <ChildIcon className="h-4 w-4 shrink-0 opacity-60" />
                     <span>{childLabel}</span>
                   </NavLink>
                 )
@@ -507,15 +532,15 @@ export function Sidebar() {
               <button
                 type="button"
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition md:text-base',
-                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                  'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                   collapsed && 'justify-center lg:px-0',
                 )}
                 onClick={() => setSuperAdminAdminManagementOpen((prev) => !prev)}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-[18px] w-[18px] shrink-0" />
                 <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
-                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', superAdminAdminManagementOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+                <ChevronDown className={cn('ms-auto h-3.5 w-3.5 opacity-50 transition-transform', superAdminAdminManagementOpen && 'rotate-180', collapsed && 'lg:hidden')} />
               </button>
               {superAdminAdminManagementOpen ? superAdminAdminManagementChildren.map((child) => {
                 const ChildIcon = child.icon
@@ -527,8 +552,8 @@ export function Sidebar() {
                     to={child.href(lang)}
                     className={({ isActive }) =>
                       cn(
-                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition md:text-base',
-                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        'ms-6 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                        isActive ? 'bg-brand-50/80 font-semibold text-brand-700 border-s-2 border-brand-600 dark:bg-brand-950/30 dark:text-brand-300 dark:border-brand-500' : 'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                       )
                     }
                     onClick={() => {
@@ -538,7 +563,7 @@ export function Sidebar() {
                     }}
                     onMouseEnter={() => prefetchNavData(child.key)}
                   >
-                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <ChildIcon className="h-4 w-4 shrink-0 opacity-60" />
                     <span>{childLabel}</span>
                   </NavLink>
                 )
@@ -556,15 +581,15 @@ export function Sidebar() {
               <button
                 type="button"
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition md:text-base',
-                  'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                  'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                   collapsed && 'justify-center lg:px-0',
                 )}
                 onClick={() => setSuperAdminBiosOpen((prev) => !prev)}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className="h-[18px] w-[18px] shrink-0" />
                 <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
-                <ChevronDown className={cn('ms-auto h-4 w-4 transition-transform', superAdminBiosOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+                <ChevronDown className={cn('ms-auto h-3.5 w-3.5 opacity-50 transition-transform', superAdminBiosOpen && 'rotate-180', collapsed && 'lg:hidden')} />
               </button>
               {superAdminBiosOpen ? superAdminBiosChildren.map((child) => {
                 const ChildIcon = child.icon
@@ -576,8 +601,8 @@ export function Sidebar() {
                     to={child.href(lang)}
                     className={({ isActive }) =>
                       cn(
-                        'ms-8 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition md:text-base',
-                        isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                        'ms-6 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                        isActive ? 'bg-brand-50/80 font-semibold text-brand-700 border-s-2 border-brand-600 dark:bg-brand-950/30 dark:text-brand-300 dark:border-brand-500' : 'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                       )
                     }
                     onClick={() => {
@@ -587,7 +612,7 @@ export function Sidebar() {
                     }}
                     onMouseEnter={() => prefetchNavData(child.key)}
                   >
-                    <ChildIcon className="h-4 w-4 shrink-0" />
+                    <ChildIcon className="h-4 w-4 shrink-0 opacity-60" />
                     <span>{childLabel}</span>
                   </NavLink>
                 )
@@ -610,8 +635,8 @@ export function Sidebar() {
             to={item.href(lang)}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition md:text-base',
-                isActive ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+                'flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                isActive ? 'bg-brand-50/80 font-semibold text-brand-700 border-s-2 border-brand-600 dark:bg-brand-950/30 dark:text-brand-300 dark:border-brand-500' : 'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                 collapsed && 'justify-center lg:px-0',
               )
             }
@@ -624,16 +649,14 @@ export function Sidebar() {
             onMouseEnter={() => prefetchNavData(item.key)}
           >
             <div className="relative shrink-0">
-              <Icon className="h-4 w-4" />
+              <Icon className="h-[18px] w-[18px]" />
               {bcrBadge ? (
-                <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-xs font-bold text-white">
-                  {pendingBcrCount > 9 ? '9+' : pendingBcrCount}
-                </span>
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-950" />
               ) : null}
             </div>
             <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
             {bcrBadge && !collapsed ? (
-              <span className="ms-auto rounded-full bg-rose-500 px-1.5 py-0.5 text-xs font-bold text-white lg:inline">
+              <span className="ms-auto rounded-md bg-rose-100 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 lg:inline">
                 {pendingBcrCount > 99 ? '99+' : pendingBcrCount}
               </span>
             ) : null}
@@ -646,15 +669,15 @@ export function Sidebar() {
           <button
             type="button"
             className={cn(
-              'flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition md:text-base',
-              'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900',
+              'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors',
+              'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
               collapsed && 'justify-center lg:px-0',
             )}
             title={t('common.installApp')}
             onClick={() => void handleInstallClick()}
             disabled={installing}
           >
-            <Download className="h-4 w-4 shrink-0" />
+            <Download className="h-[18px] w-[18px] shrink-0" />
             <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>
               {installing ? t('common.installing') : t('common.installApp')}
             </span>
@@ -667,6 +690,7 @@ export function Sidebar() {
         </div>
       ) : null}
     </nav>
+    </div>
   )
 
   return (
@@ -688,10 +712,9 @@ export function Sidebar() {
         <aside
           data-testid="desktop-sidebar"
           className={cn(
-            'sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto border-l-4 bg-white/95 px-3 py-4 shadow-none backdrop-blur dark:bg-slate-950/95',
-            isRtl ? 'border-r-4' : 'border-l-4',
+            'sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto bg-white px-2 py-3 dark:bg-slate-950',
+            isRtl ? 'border-l border-slate-200/70 dark:border-slate-800/60' : 'border-r border-slate-200/70 dark:border-slate-800/60',
           )}
-          style={{ borderColor: primaryColor }}
         >
           {navContent}
         </aside>
@@ -699,12 +722,11 @@ export function Sidebar() {
       <aside
         data-testid="mobile-sidebar"
         className={cn(
-          'fixed top-16 z-40 h-[calc(100vh-4rem)] w-72 max-w-[85vw] overflow-y-auto border-l-4 bg-white/95 px-3 py-4 shadow-2xl backdrop-blur dark:bg-slate-950/95 lg:hidden',
+          'fixed top-14 z-40 h-[calc(100vh-3.5rem)] w-72 max-w-[85vw] overflow-y-auto bg-white px-2 py-3 shadow-xl shadow-slate-950/10 dark:bg-slate-950 lg:hidden',
           'transition-transform duration-200 ease-out',
           collapsed ? (isRtl ? 'translate-x-full' : '-translate-x-full') : 'translate-x-0',
-          isRtl ? 'right-0 border-r-4' : 'left-0 border-l-4',
+          isRtl ? 'right-0 border-l border-slate-200/70 dark:border-slate-800/60' : 'left-0 border-r border-slate-200/70 dark:border-slate-800/60',
         )}
-        style={{ borderColor: primaryColor }}
       >
         {navContent}
       </aside>

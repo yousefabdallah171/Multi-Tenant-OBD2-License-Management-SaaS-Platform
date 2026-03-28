@@ -188,12 +188,12 @@ export function DataTable<T>({
                     key={column.key}
                     scope="col"
                     aria-sort={column.sortable && isActive ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    className={cn('px-4 py-3 text-start text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 md:text-base lg:text-lg', column.className)}
+                    className={cn('px-4 py-3 text-start text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500', column.className)}
                   >
                     <button
                       type="button"
                       className={cn(
-                        'inline-flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
+                        'inline-flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
                         column.sortable ? 'cursor-pointer' : 'cursor-default',
                       )}
                       onClick={() => toggleSort(column)}
@@ -228,11 +228,11 @@ export function DataTable<T>({
               ? sortedData.map((row) => (
                   <tr
                     key={rowKey(row)}
-                    className={cn('transition hover:bg-sky-50/70 dark:hover:bg-sky-950/20', onRowClick ? 'cursor-pointer' : '')}
+                    className={cn('transition hover:bg-slate-50 dark:hover:bg-slate-800/40', onRowClick ? 'cursor-pointer' : '')}
                     onClick={() => onRowClick?.(row)}
                   >
                     {visibleColumns.map((column) => (
-                      <td key={`${rowKey(row)}-${column.key}`} className={cn('px-4 py-4 align-top text-sm text-slate-700 dark:text-slate-200 md:text-base lg:text-[17px]', column.className)}>
+                      <td key={`${rowKey(row)}-${column.key}`} className={cn('px-4 py-3.5 align-top text-sm text-slate-700 dark:text-slate-200', column.className)}>
                         {column.render(row)}
                       </td>
                     ))}
@@ -243,7 +243,7 @@ export function DataTable<T>({
         </table>
       </div>
       {pagination && onPageChange ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400 md:text-base lg:text-lg">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
           <span>{t('common.totalCount', { count: pagination.total })}</span>
           <div className="flex flex-wrap items-center gap-3">
             {onPageSizeChange && !hidePageSizeSelector && !tableKey ? (
@@ -251,7 +251,7 @@ export function DataTable<T>({
                 <span>{t('common.rowsPerPage')}</span>
                 <select
                   aria-label={t('common.rowsPerPage')}
-                  className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 md:h-10 md:text-base lg:h-11 lg:text-lg"
+                  className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                   value={pagination.perPage ?? pageSizeOptions[0]}
                   onChange={(event) => handlePageSizeChange(Number(event.target.value))}
                 >

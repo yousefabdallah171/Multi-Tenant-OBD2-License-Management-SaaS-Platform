@@ -58,11 +58,11 @@ export default defineConfig({
     }),
     process.env.BUNDLE_ANALYZE === 'true'
       ? visualizer({
-          filename: 'dist/bundle-report.html',
-          gzipSize: true,
-          brotliSize: true,
-          open: false,
-        })
+        filename: 'dist/bundle-report.html',
+        gzipSize: true,
+        brotliSize: true,
+        open: false,
+      })
       : undefined,
   ],
   build: {
@@ -102,7 +102,7 @@ export default defineConfig({
             return 'vendor-icons'
           }
 
-          if (['axios', 'clsx', 'class-variance-authority', 'framer-motion', 'sonner', 'tailwind-merge', 'zustand'].includes(normalizedPackage)) {
+          if (['axios', 'clsx', 'class-variance-authority', 'framer-motion', 'motion-dom', 'motion-utils', 'sonner', 'tailwind-merge', 'zustand'].includes(normalizedPackage)) {
             return 'vendor-ui'
           }
 

@@ -4,6 +4,9 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+      },
       colors: {
         brand: {
           50: 'var(--brand-50)',
@@ -19,10 +22,10 @@ export default {
           950: 'var(--brand-950)',
         },
         surface: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          900: '#0f172a',
-          950: '#020617',
+          50: '#f8f8fb',
+          100: '#f1f1f7',
+          900: '#13111e',
+          950: '#09080f',
         },
         success: {
           100: '#dcfce7',

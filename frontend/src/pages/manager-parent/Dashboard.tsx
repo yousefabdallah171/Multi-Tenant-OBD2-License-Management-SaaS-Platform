@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, LayoutDashboard, ShieldCheck, Users, UserSquare2 } from 'lucide-react'
+import { LayoutDashboard } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
@@ -77,27 +77,27 @@ export function DashboardPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
         {statsQuery.isLoading ? (
           <>
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
-            <SkeletonCard />
+            <SkeletonCard className="xl:col-span-2" />
           </>
         ) : (
           <>
-            <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
-              <StatsCard title={t('managerParent.pages.dashboard.teamMembers')} value={stats?.team_members ?? 0} icon={Users} color="sky" />
+            <button type="button" className="h-full text-start" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
+              <StatsCard title={t('managerParent.pages.dashboard.teamMembers')} value={stats?.team_members ?? 0} color="sky" />
             </button>
-            <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
-              <StatsCard title={t('managerParent.pages.dashboard.customers')} value={stats?.total_customers ?? 0} icon={UserSquare2} color="emerald" />
+            <button type="button" className="h-full text-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
+              <StatsCard title={t('managerParent.pages.dashboard.customers')} value={stats?.total_customers ?? 0} color="emerald" />
             </button>
-            <button type="button" className="text-start" onClick={() => navigate(`${routePaths.managerParent.customers(lang)}?status=active`)}>
-              <StatsCard title={t('managerParent.pages.dashboard.activeCustomers')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
+            <button type="button" className="h-full text-start" onClick={() => navigate(`${routePaths.managerParent.customers(lang)}?status=active`)}>
+              <StatsCard title={t('managerParent.pages.dashboard.activeCustomers')} value={stats?.active_licenses ?? 0} color="amber" />
             </button>
-            <button type="button" className="text-start" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
-              <StatsCard title={t('managerParent.pages.dashboard.monthlyRevenue')} value={formatCurrency(stats?.monthly_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+            <button type="button" className="col-span-2 h-full text-start xl:col-span-2" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
+              <StatsCard title={t('managerParent.pages.dashboard.monthlyRevenue')} value={formatCurrency(stats?.monthly_revenue ?? 0, 'USD', locale)} color="rose" />
             </button>
           </>
         )}

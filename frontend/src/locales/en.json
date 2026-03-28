@@ -177,7 +177,6 @@
     "licenseRenewedSuccess": "License renewed successfully.",
     "rowsPerPage": "Rows per page",
     "screenOptions": "Screen Options",
-    "locked": "Locked",
     "pagination": "Pagination",
     "totalCount": "{{count}} total",
     "selectAllVisible": "Select all visible",
@@ -1440,7 +1439,8 @@
     "ipBlockedPermanent": "IP Address Permanently Blocked",
     "ipBlockedMessage": "This IP was permanently blocked after repeated failed login attempts.",
     "contactSupport": "Contact support:",
-    "supportEmail": "support@obd2sw.com"
+    "supportEmail": "support@obd2sw.com",
+    "rememberMe": "Keep me signed in"
   },
   "security": {
     "lockedAccounts": "Locked Accounts",
@@ -1567,7 +1567,7 @@
     "successMessage": "License key: {{key}}",
     "errorTitle": "Activation Failed",
     "biosAlreadyActive": "This BIOS ID already has an active license for this program.",
-    "biosBlacklisted": "This BIOS ID is blacklisted and cannot be activated.",
+    "biosBlacklisted": "This BIOS ID is blacklisted and cannot be used",
     "customerNameHint": "Will be used as the external username on the license server.",
     "biosConcatenationHint": "Your BIOS will be registered as: {{value}}",
     "scheduleToggle": "Schedule activation for later",
@@ -1608,7 +1608,6 @@
     "biosConflict": "BIOS ID is already working with another reseller",
     "biosAvailable": "BIOS ID is available",
     "biosChecking": "Checking BIOS availability...",
-    "biosBlacklisted": "This BIOS ID is blacklisted and cannot be used",
     "biosLinkedUsername": "Username auto-filled from BIOS history",
     "usernameTaken": "Username is already active with another customer",
     "usernameAvailable": "Username is available",
@@ -1795,7 +1794,11 @@
     "history": "BIOS Change History",
     "reason": "Reason",
     "reviewerNotes": "Reviewer Notes",
-    "reviewedAt": "Reviewed At"
+    "reviewedAt": "Reviewed At",
+    "pendingCount": "{{count}} pending",
+    "noPending": "No pending requests",
+    "viewAll": "View all requests",
+    "bellLabel": "Pending BIOS Change Requests"
   },
   "payments": {
     "title": "Reseller Payments",
@@ -1808,13 +1811,13 @@
       "commissionRate": "Commission Rate",
       "totalOwed": "Total Owed",
       "totalPaid": "Total Paid",
-        "outstanding": "Outstanding Balance",
-        "totalPaidToManager": "Amount You Paid to Manager",
-        "remainingToPay": "Still Not Paid",
-        "creditToReceive": "Money You Should Receive",
-        "creditHelpText": "You have already paid more than what is owed. This balance should be returned or credited to you.",
-        "helpText": "This page shows how much you sold, how much you already paid to your manager, and how much is still left to pay."
-      },
+      "outstanding": "Outstanding Balance",
+      "totalPaidToManager": "Amount You Paid to Manager",
+      "remainingToPay": "Still Not Paid",
+      "creditToReceive": "Money You Should Receive",
+      "creditHelpText": "You have already paid more than what is owed. This balance should be returned or credited to you.",
+      "helpText": "This page shows how much you sold, how much you already paid to your manager, and how much is still left to pay."
+    },
     "filters": {
       "period": "Period"
     },

@@ -219,7 +219,7 @@ export function CustomersPage() {
         sortable: true,
         sortValue: (row) => row.name,
         render: (row) => (
-          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.customerDetail(lang, row.id)}>
+          <Link className="text-brand-600 hover:underline dark:text-brand-400" to={routePaths.superAdmin.customerDetail(lang, row.id)}>
             {row.name}
           </Link>
         ),
@@ -230,7 +230,7 @@ export function CustomersPage() {
         sortable: true,
         sortValue: (row) => row.username ?? '',
         render: (row) => (
-          <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.customerDetail(lang, row.id)}>
+          <Link className="text-brand-600 hover:underline dark:text-brand-400" to={routePaths.superAdmin.customerDetail(lang, row.id)}>
             {row.username ?? '-'}
           </Link>
         ),
@@ -242,7 +242,7 @@ export function CustomersPage() {
         label: t('superAdmin.pages.customers.biosId'),
         sortable: true,
         sortValue: (row) => row.bios_id ?? '',
-        render: (row) => row.bios_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, row.bios_id)}>{row.bios_id}</Link> : '-',
+        render: (row) => row.bios_id ? <Link className="text-brand-600 hover:underline dark:text-brand-400" to={routePaths.superAdmin.biosDetail(lang, row.bios_id)}>{row.bios_id}</Link> : '-',
         },
         { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => (
           <RoleIdentity
@@ -351,11 +351,12 @@ export function CustomersPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-semibold">{t('superAdmin.pages.customers.title')}</h2>
-          <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.customers.description')}</p>
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">OBD2SW</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{t('superAdmin.pages.customers.title')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.customers.description')}</p>
         </div>
         <Button type="button" onClick={() => navigate(routePaths.superAdmin.customerCreate(lang))}>
           <Plus className="me-2 h-4 w-4" />
@@ -363,7 +364,7 @@ export function CustomersPage() {
         </Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-6">
+      <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
         <StatusFilterCard
           label={t('common.all')}
           count={allCountQuery.data?.meta.total ?? 0}
@@ -432,18 +433,18 @@ export function CustomersPage() {
       </div>
 
       <Card>
-        <CardContent className="space-y-4 p-4">
-          <div className="grid gap-3 xl:grid-cols-5">
-            <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder={t('superAdmin.pages.customers.searchPlaceholder')} />
-            <select value={tenantId} onChange={(event) => { setTenantId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+        <CardContent className="p-3">
+          <div className="grid gap-2 xl:grid-cols-5">
+            <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} placeholder={t('superAdmin.pages.customers.searchPlaceholder')} className="h-9 text-sm" />
+            <select value={tenantId} onChange={(event) => { setTenantId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
               <option value="">{t('common.allTenants')}</option>
               {tenantsQuery.data?.data.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
             </select>
-            <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+            <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
               <option value="">{sellerFilterPlaceholder}</option>
               {sellerOptions.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}
             </select>
-            <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+            <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
               <option value="">{t('superAdmin.pages.customers.allPrograms', { defaultValue: 'All programs' })}</option>
               {programsQuery.data?.data.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}
             </select>

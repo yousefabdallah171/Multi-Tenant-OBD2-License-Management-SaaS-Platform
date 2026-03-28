@@ -2,6 +2,7 @@ import { useBranding } from '@/hooks/useBranding'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useTheme } from '@/hooks/useTheme'
 import { generateColorRamp } from '@/lib/role-branding'
+import { NEUTRAL_COLORS, SEMANTIC_COLORS } from '@/lib/colors'
 
 export interface ChartSeries {
   key: string
@@ -10,28 +11,29 @@ export interface ChartSeries {
   stackId?: string
 }
 
+// Neutral colors reference NEUTRAL_COLORS / SEMANTIC_COLORS tokens — no raw hex values.
 const LIGHT_NEUTRAL = {
-  grid: '#dbe4ef',
-  axis: '#64748b',
-  tooltipBackground: '#ffffff',
-  tooltipBorder: '#cbd5e1',
-  secondary: '#0f766e',
-  tertiary: '#f59e0b',
-  quaternary: '#c026d3',
-  positive: '#16a34a',
-  negative: '#dc2626',
+  grid: NEUTRAL_COLORS[200],           // slate-200
+  axis: NEUTRAL_COLORS[500],           // slate-500
+  tooltipBackground: '#ffffff',        // pure white — intentional, not a surface token
+  tooltipBorder: NEUTRAL_COLORS[300],  // slate-300
+  secondary: '#7c3aed',                // violet-600 — complements indigo brand palette
+  tertiary: SEMANTIC_COLORS.warning.main,
+  quaternary: '#c026d3',               // fuchsia-600 — semantic chart series color, no token equivalent
+  positive: SEMANTIC_COLORS.success.dark,
+  negative: SEMANTIC_COLORS.danger.dark,
 }
 
 const DARK_NEUTRAL = {
-  grid: '#334155',
-  axis: '#cbd5e1',
-  tooltipBackground: '#0f172a',
-  tooltipBorder: '#334155',
-  secondary: '#34d399',
-  tertiary: '#fbbf24',
-  quaternary: '#c084fc',
-  positive: '#4ade80',
-  negative: '#fb7185',
+  grid: NEUTRAL_COLORS[700],           // slate-700
+  axis: NEUTRAL_COLORS[300],           // slate-300
+  tooltipBackground: NEUTRAL_COLORS[900], // slate-900
+  tooltipBorder: NEUTRAL_COLORS[700],  // slate-700
+  secondary: '#a78bfa',                // violet-400 — lighter for dark bg
+  tertiary: '#fbbf24',                 // amber-400 — lighter for dark bg
+  quaternary: '#c084fc',               // purple-400 — lighter for dark bg
+  positive: '#4ade80',                 // green-400 — lighter for dark bg
+  negative: '#fb7185',                 // rose-400 — lighter for dark bg
 }
 
 export function useChartTheme() {
@@ -45,23 +47,23 @@ export function useChartTheme() {
   const brandTertiary = ramp['--brand-700'] || primaryColor
   const brandLight = ramp['--brand-300'] || primaryColor
 
-  const palette = isDark ? DARK_NEUTRAL : LIGHT_NEUTRAL
+  const themeNeutral = isDark ? DARK_NEUTRAL : LIGHT_NEUTRAL
 
   return {
     locale: lang === 'ar' ? 'ar-EG' : 'en-US',
     isRtl,
     palette: {
-      ...palette,
+      ...themeNeutral,
       primary: isDark ? brandLight : brandPrimary,
     },
     seriesColors: [
       isDark ? brandLight : brandPrimary,
       isDark ? brandSecondary : brandTertiary,
-      LIGHT_NEUTRAL.secondary,
-      LIGHT_NEUTRAL.tertiary,
-      LIGHT_NEUTRAL.quaternary,
-      LIGHT_NEUTRAL.negative,
-      LIGHT_NEUTRAL.positive,
+      themeNeutral.secondary,
+      themeNeutral.tertiary,
+      themeNeutral.quaternary,
+      themeNeutral.negative,
+      themeNeutral.positive,
     ],
   }
 }
