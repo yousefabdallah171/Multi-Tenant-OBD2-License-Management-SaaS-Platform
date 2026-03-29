@@ -53,7 +53,7 @@ export function BiosHistoryPage() {
     { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant ?? '', render: (row) => row.tenant ?? '-' },
     { key: 'customer', label: t('common.customer'), sortable: true, sortValue: (row) => row.customer ?? '', render: (row) => row.customer ?? '-' },
     { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => formatActivityActionLabel(row.action, t) },
-    { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status as never} /> },
+    { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
     { key: 'date', label: t('common.date'), sortable: true, sortValue: (row) => row.occurred_at, render: (row) => formatDate(row.occurred_at, locale) },
   ]
 
@@ -94,7 +94,7 @@ export function BiosHistoryPage() {
               <div key={event.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(event.action, t)}</p>
-                  <StatusBadge status={event.status as never} />
+                  <StatusBadge status={event.status} />
                 </div>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(event.description, locale)}</p>
               </div>

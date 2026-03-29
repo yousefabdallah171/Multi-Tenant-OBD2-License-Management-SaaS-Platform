@@ -95,7 +95,7 @@ export function BiosHistoryPage() {
         ),
       },
       { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => formatActivityActionLabel(row.action, t) },
-      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} /> },
+      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
       { key: 'date', label: t('common.date'), sortable: true, sortValue: (row) => row.occurred_at ?? '', render: (row) => (row.occurred_at ? formatDate(row.occurred_at, locale) : '-') },
     ],
     [locale, t],
@@ -172,7 +172,7 @@ export function BiosHistoryPage() {
                   </p>
                 </div>
                 <div className="text-end">
-                  <StatusBadge status={entry.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} />
+                  <StatusBadge status={entry.status} />
                   <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{entry.occurred_at ? formatDate(entry.occurred_at, locale) : '-'}</p>
                 </div>
               </div>
