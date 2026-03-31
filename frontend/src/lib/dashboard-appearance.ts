@@ -165,14 +165,11 @@ const dashboardAppearanceVars = [
 ] as const
 
 function buildGoogleFontsUrl(fontOption: DashboardFontOption) {
-  const params = new URLSearchParams()
+  const familyParams = fontOption.googleFamilies
+    .map((family) => `family=${family}`)
+    .join('&')
 
-  fontOption.googleFamilies.forEach((family) => {
-    params.append('family', family)
-  })
-  params.set('display', 'swap')
-
-  return `https://fonts.googleapis.com/css2?${params.toString()}`
+  return `https://fonts.googleapis.com/css2?${familyParams}&display=swap`
 }
 
 function clamp(value: number, min: number, max: number) {

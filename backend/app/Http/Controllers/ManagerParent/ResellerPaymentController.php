@@ -44,7 +44,7 @@ class ResellerPaymentController extends BaseManagerParentController
         [$start, $end] = $this->periodRange($period);
         $paymentsByReseller = ResellerPayment::query()
             ->whereIn('reseller_id', $resellers->pluck('id'))
-            ->whereBetween('payment_date', [$start, $end])
+            ->whereBetween('payment_date', [$start->toDateString(), $end->toDateString()])
             ->selectRaw('reseller_id, ROUND(COALESCE(SUM(amount), 0), 2) as total_paid')
             ->groupBy('reseller_id')
             ->pluck('total_paid', 'reseller_id');
@@ -316,12 +316,15 @@ class ResellerPaymentController extends BaseManagerParentController
         return $payment;
     }
 
+    /**
+     * @return array{0: CarbonImmutable, 1: CarbonImmutable}
+     */
     private function periodRange(string $period): array
     {
         $start = CarbonImmutable::createFromFormat('Y-m', $period)->startOfMonth();
         $end = $start->endOfMonth();
 
-        return [$start->toDateTimeString(), $end->toDateTimeString()];
+        return [$start, $end];
     }
 
     private function resolveComputedStatus(float $commissionOwed, float $amountPaid): string
