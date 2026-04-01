@@ -111,7 +111,9 @@ class SellerAccountingService
                 ->groupBy('activity_logs.user_id')
                 ->pluck('total_sales', 'seller_id');
 
-            $totals = $totals->merge($tenantTotals);
+            foreach ($tenantTotals as $sellerId => $totalSales) {
+                $totals->put((int) $sellerId, round((float) $totalSales, 2));
+            }
         }
 
         return $totals;
