@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, Banknote, Gift, ShieldCheck, Target, Users } from 'lucide-react'
+import { Activity, Banknote, ShieldCheck, Target, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
@@ -94,12 +94,9 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-3xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-[1px] dark:from-emerald-950/30 dark:to-emerald-900/20">
           <StatsCard title={t('reseller.pages.reports.totalRevenue')} value={formatCurrency(summary?.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
-        </div>
-        <div className="rounded-3xl bg-gradient-to-br from-violet-50 to-fuchsia-100/50 p-[1px] dark:from-violet-950/30 dark:to-fuchsia-900/20">
-          <StatsCard title={t('reseller.pages.reports.grantedValue', { defaultValue: 'Granted Value' })} value={formatCurrency(summary?.granted_value ?? 0, 'USD', locale)} icon={Gift} color="rose" />
         </div>
         <button type="button" className="rounded-3xl bg-gradient-to-br from-cyan-50 to-sky-100/50 p-[1px] text-start dark:from-cyan-950/30 dark:to-sky-900/20" onClick={() => navigate(routePaths.reseller.customers(lang))}>
           <StatsCard title={t('reseller.pages.reports.totalCustomers')} value={summary?.total_customers ?? 0} icon={Users} color="sky" />

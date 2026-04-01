@@ -21,11 +21,9 @@ class ReportController extends BaseResellerController
             'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
                 $summary = $this->revenueQuery($request, $validated)
                     ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
-                    ->selectRaw(RevenueAnalytics::revenueSumExpression('granted', 'activity_logs', 'granted_value'))
                     ->first();
 
                 $totalRevenue = round((float) ($summary?->total_revenue ?? 0), 2);
-                $grantedValue = round((float) ($summary?->granted_value ?? 0), 2);
                 $totalActivations = (int) $this->baseQuery($request, $validated)->count();
                 $activeCustomers = (int) $this->licenseQuery($request)
                     ->whereEffectivelyActive()
@@ -35,7 +33,6 @@ class ReportController extends BaseResellerController
 
                 return [
                     'total_revenue' => $totalRevenue,
-                    'granted_value' => $grantedValue,
                     'total_activations' => $totalActivations,
                     'total_customers' => $this->customerQuery($request)->count(),
                     'active_customers' => $activeCustomers,
@@ -274,7 +271,6 @@ class ReportController extends BaseResellerController
     {
         return [
             'Total Revenue' => $summary['total_revenue'],
-            'Granted Value' => $summary['granted_value'],
             'Total Customers' => $summary['total_customers'],
             'Active Customers' => $summary['active_customers'],
             'Total Activations' => $summary['total_activations'],

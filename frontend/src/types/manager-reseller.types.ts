@@ -641,7 +641,6 @@ export interface ResellerReportPoint {
 
 export interface ResellerReportSummary {
   total_revenue: number
-  granted_value: number
   total_activations: number
   total_customers: number
   active_customers: number
