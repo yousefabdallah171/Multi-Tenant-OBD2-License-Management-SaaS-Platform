@@ -206,6 +206,7 @@ export function AdminManagementPage() {
       search,
     },
   }
+  const renderEmail = (email: string | null) => email ?? t('manager.pages.team.noEmail')
 
   function validateForm() {
     if (editing && !form.username.trim()) {
@@ -241,7 +242,7 @@ export function AdminManagementPage() {
           </button>
         ),
       },
-      { key: 'email', label: t('common.email'), sortable: true, sortValue: (row) => row.email, render: (row) => row.email },
+      { key: 'email', label: t('common.email'), sortable: true, sortValue: (row) => row.email ?? '', render: (row) => renderEmail(row.email) },
       {
         key: 'username',
         label: t('common.username'),
@@ -295,7 +296,7 @@ export function AdminManagementPage() {
                   setEditing(row)
                   setForm({
                     name: row.name,
-                    email: row.email,
+                    email: row.email ?? '',
                     password: '',
                     username: row.username ?? '',
                     role: row.role === 'customer' ? 'reseller' : row.role,
@@ -564,7 +565,7 @@ export function AdminManagementPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('common.resetPassword')}</DialogTitle>
-            <DialogDescription>{passwordTarget?.email ?? t('superAdmin.pages.adminManagement.description')}</DialogDescription>
+            <DialogDescription>{passwordTarget ? renderEmail(passwordTarget.email) : t('superAdmin.pages.adminManagement.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <Label htmlFor="admin-reset-password">{t('superAdmin.pages.profile.newPassword')}</Label>
@@ -619,7 +620,7 @@ export function AdminManagementPage() {
           }
         }}
         title={t('superAdmin.pages.adminManagement.deleteTitle')}
-        description={deleteTarget ? `${deleteTarget.name} - ${deleteTarget.email}` : ''}
+        description={deleteTarget ? `${deleteTarget.name} - ${renderEmail(deleteTarget.email)}` : ''}
         confirmLabel={t('common.delete')}
         isDestructive
         onConfirm={() => {

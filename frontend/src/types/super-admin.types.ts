@@ -56,7 +56,7 @@ export interface TenantStats {
 export interface ManagedUser {
   id: number
   name: string
-  email: string
+  email: string | null
   username: string | null
   phone?: string | null
   role: 'super_admin' | 'manager_parent' | 'manager' | 'reseller' | 'customer'

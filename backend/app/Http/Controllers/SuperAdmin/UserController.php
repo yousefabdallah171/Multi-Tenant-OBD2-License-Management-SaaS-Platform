@@ -110,7 +110,7 @@ class UserController extends BaseSuperAdminController
                 'customer' => $license->customer ? [
                     'id' => $license->customer->id,
                     'name' => $license->customer->name,
-                    'email' => $license->customer->email,
+                    'email' => $this->visibleEmail($license->customer->email),
                 ] : null,
                 'program' => $license->program?->name,
                 'bios_id' => $license->bios_id,
@@ -183,7 +183,7 @@ class UserController extends BaseSuperAdminController
         return [
             'id' => $user->id,
             'name' => $user->name,
-            'email' => $user->email,
+            'email' => $this->visibleEmail($user->email),
             'username' => $user->username,
             'phone' => $user->phone,
             'role' => $user->role?->value ?? (string) $user->role,
@@ -266,5 +266,14 @@ class UserController extends BaseSuperAdminController
             'active_licenses' => (int) ($stats?->active_licenses ?? 0),
             'revenue' => round((float) ($stats?->revenue ?? 0), 2),
         ];
+    }
+
+    private function visibleEmail(?string $email): ?string
+    {
+        if (! $email) {
+            return null;
+        }
+
+        return str_starts_with($email, 'no-email+') && str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 }

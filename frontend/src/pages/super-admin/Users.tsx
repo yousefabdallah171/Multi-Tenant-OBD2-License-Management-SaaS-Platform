@@ -94,6 +94,7 @@ export function UsersPage() {
   })
 
   const resolveDetailPath = (row: ManagedUser) => (row.role === 'customer' ? routePaths.superAdmin.customerDetail(lang, row.id) : routePaths.superAdmin.userDetail(lang, row.id))
+  const renderEmail = (email: string | null) => email ?? t('manager.pages.team.noEmail')
   const columns = useMemo<Array<DataTableColumn<ManagedUser>>>(
     () => [
       {
@@ -104,7 +105,7 @@ export function UsersPage() {
         render: (row) => (
           <div>
             <div className="font-medium text-slate-950 dark:text-white">{row.name}</div>
-            <div className="text-sm text-slate-500 dark:text-slate-400">{row.email}</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">{renderEmail(row.email)}</div>
           </div>
         ),
       },
@@ -251,7 +252,7 @@ export function UsersPage() {
           }
         }}
         title={t('superAdmin.pages.users.deleteTitle')}
-        description={deleteTarget ? `${deleteTarget.name} - ${deleteTarget.email}` : ''}
+        description={deleteTarget ? `${deleteTarget.name} - ${renderEmail(deleteTarget.email)}` : ''}
         confirmLabel={t('common.delete')}
         isDestructive
         onConfirm={() => {

@@ -66,6 +66,7 @@ export function UserDetailPage() {
   })
 
   const user = detailQuery.data?.data
+  const visibleEmail = user?.email ?? t('manager.pages.team.noEmail')
   const editMutation = useMutation({
     mutationFn: async () => {
       await adminService.update(id, {
@@ -118,7 +119,7 @@ export function UserDetailPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <h2 className="max-w-4xl break-words text-2xl font-semibold leading-tight sm:text-3xl">{user?.name ?? t('superAdmin.pages.users.title')}</h2>
-          <p className="max-w-3xl break-all text-sm text-slate-500 dark:text-slate-400 sm:break-words">{user?.email ?? t('superAdmin.pages.users.description')}</p>
+          <p className="max-w-3xl break-all text-sm text-slate-500 dark:text-slate-400 sm:break-words">{user ? visibleEmail : t('superAdmin.pages.users.description')}</p>
         </div>
         {user ? (
           <Button
@@ -126,7 +127,7 @@ export function UserDetailPage() {
             onClick={() => {
               setForm({
                 name: user.name,
-                email: user.email,
+                email: user.email ?? '',
                 username: user.username ?? '',
                 phone: user.phone ?? '',
                 role: user.role,
@@ -145,7 +146,7 @@ export function UserDetailPage() {
         <>
           <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
             <MetricCard label={t('common.username')} value={user.username ?? '-'} />
-            <MetricCard label={t('common.email')} value={user.email} />
+            <MetricCard label={t('common.email')} value={visibleEmail} />
             <MetricCard label={t('common.phone')} value={user.phone ?? '-'} />
             <MetricCard label={t('managerParent.pages.teamManagement.customers')} value={user.customers_count} />
             <MetricCard label={t('managerParent.pages.teamManagement.activeLicenses')} value={user.active_licenses_count} />
