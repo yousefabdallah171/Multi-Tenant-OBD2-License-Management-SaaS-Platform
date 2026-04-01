@@ -34,7 +34,7 @@ class ResellerPaymentController extends BaseManagerController
         $statusFilter = $validated['status'] ?? null;
 
         $resellers = $this->teamResellersQuery($request)
-            ->select(['id', 'name', 'email', 'created_at'])
+            ->select(['id', 'tenant_id', 'role', 'name', 'email', 'created_at'])
             ->orderBy('name')
             ->get();
 

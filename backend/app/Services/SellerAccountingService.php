@@ -31,6 +31,8 @@ class SellerAccountingService
             return [];
         }
 
+        $sellerCollection = $this->normalizeSellers($sellerCollection);
+
         $totalSalesBySeller = $this->loadTotalSalesBySeller($sellerCollection);
         $resellerIds = $sellerCollection
             ->filter(fn (User $seller): bool => $this->roleValue($seller) === UserRole::RESELLER->value)
@@ -122,5 +124,43 @@ class SellerAccountingService
     private function roleValue(User $seller): string
     {
         return $seller->role?->value ?? (string) $seller->role;
+    }
+
+    /**
+     * Ensure tenant and role metadata exists even when controllers pass partial User selects.
+     *
+     * @param  Collection<int, User>  $sellers
+     * @return Collection<int, User>
+     */
+    private function normalizeSellers(Collection $sellers): Collection
+    {
+        $missingIds = $sellers
+            ->filter(fn (User $seller): bool => $seller->tenant_id === null || $this->roleValue($seller) === '')
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($missingIds === []) {
+            return $sellers;
+        }
+
+        $hydrated = User::query()
+            ->whereIn('id', $missingIds)
+            ->get(['id', 'tenant_id', 'role'])
+            ->keyBy('id');
+
+        return $sellers->map(function (User $seller) use ($hydrated): User {
+            if ($seller->tenant_id !== null && $this->roleValue($seller) !== '') {
+                return $seller;
+            }
+
+            /** @var User|null $resolved */
+            $resolved = $hydrated->get($seller->id);
+
+            return $resolved ?? $seller;
+        })->values();
     }
 }

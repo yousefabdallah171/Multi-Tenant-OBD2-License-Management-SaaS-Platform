@@ -37,7 +37,7 @@ class ResellerPaymentController extends BaseManagerParentController
         $resellers = User::query()
             ->where('tenant_id', $tenantId)
             ->where('role', UserRole::RESELLER->value)
-            ->select(['id', 'name', 'email', 'created_at'])
+            ->select(['id', 'tenant_id', 'role', 'name', 'email', 'created_at'])
             ->orderBy('name')
             ->get();
 
