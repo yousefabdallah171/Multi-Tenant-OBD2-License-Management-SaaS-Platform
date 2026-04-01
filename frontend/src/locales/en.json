@@ -582,7 +582,7 @@
       },
       "financialReports": {
         "title": "Financial Reports",
-        "description": "Track platform revenue, program mix, activation volume, and reseller balances from a single report surface.",
+        "description": "Track platform revenue, program mix, activation volume, and seller revenue from a single report surface.",
         "totalPlatformRevenue": "Total platform revenue",
         "totalCustomers": "Total customers",
         "totalActivations": "Total activations",
@@ -593,11 +593,11 @@
         "revenueByProgram": "Revenue by program",
         "monthlyRevenue": "Monthly revenue",
         "avgPrice": "Average price",
-        "balance": "Balance",
+        "seller": "Seller",
         "revenueBreakdown": "Financial Revenue Breakdown",
         "revenueBreakdownDescription": "Stacked tenant revenue split by program.",
-        "resellerBalancesTitle": "Reseller Balances",
-        "resellerBalancesDescription": "Top reseller balances across tenants."
+        "sellerRevenueTitle": "Seller Revenue Across Roles",
+        "sellerRevenueDescription": "Revenue across manager parent, manager, and reseller accounts."
       }
     }
   },
@@ -680,21 +680,22 @@
       },
       "financialReports": {
         "title": "Reports",
-        "description": "Review tenant revenue, reseller balances, activation quality, retention, and export the current reporting view.",
+        "description": "Review tenant revenue, seller debt, activation quality, retention, and export the current reporting view.",
         "totalTenantRevenue": "Total Tenant Revenue",
         "totalCustomers": "Total Customers",
         "activeCustomers": "Current Active Customers",
         "totalActivations": "Total Activations",
         "activeLicenses": "Active Licenses",
-        "revenueByReseller": "Revenue by Reseller",
+        "revenueByReseller": "Revenue by Seller",
         "revenueByProgram": "Revenue by Program",
         "monthlyRevenueTrend": "Monthly Revenue Trend",
-        "resellerBalances": "Reseller Balances",
+        "stillNotPaidBySeller": "Still Not Paid by Seller",
+        "stillNotPaidHint": "Still Not Paid is calculated across all time. Other metrics follow the selected date range.",
         "columns": {
-          "reseller": "Reseller",
+          "seller": "Seller",
           "totalRevenue": "Total Revenue",
           "avgPrice": "Avg Price",
-          "commission": "Commission"
+          "stillNotPaid": "Still Not Paid"
         }
       },
       "settings": {

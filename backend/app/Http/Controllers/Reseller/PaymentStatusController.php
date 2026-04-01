@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\Reseller;
 
-use App\Models\License;
 use App\Models\ResellerCommission;
 use App\Models\ResellerPayment;
-use App\Support\RevenueAnalytics;
+use App\Services\SellerAccountingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PaymentStatusController extends BaseResellerController
 {
+    public function __construct(
+        private readonly SellerAccountingService $sellerAccountingService,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $reseller = $this->currentReseller($request);
@@ -30,12 +33,16 @@ class PaymentStatusController extends BaseResellerController
             ->orderByDesc('id')
             ->get();
 
-        $totalSales = round((float) (RevenueAnalytics::baseQuery([], $tenantId, null, $reseller->id)
-            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_sales'))
-            ->first()?->total_sales ?? 0), 2);
-
-        $latestRate = $commissions->first()?->commission_rate;
-        $totalPaid = round((float) $payments->sum('amount'), 2);
+        $summary = $this->sellerAccountingService->summariesForSellers([$reseller])[(int) $reseller->id] ?? [
+            'total_sales' => 0.0,
+            'commission_rate' => 0.0,
+            'total_owed' => 0.0,
+            'total_paid' => 0.0,
+            'still_not_paid' => 0.0,
+        ];
+        $totalSales = round((float) $summary['total_sales'], 2);
+        $latestRate = round((float) $summary['commission_rate'], 2);
+        $totalPaid = round((float) $summary['total_paid'], 2);
         $monthlyBreakdown = $commissions
             ->take(12)
             ->map(fn (ResellerCommission $commission): array => $this->serializeCommission($commission))
@@ -64,10 +71,10 @@ class PaymentStatusController extends BaseResellerController
             'data' => [
                 'summary' => [
                     'total_sales' => $totalSales,
-                    'commission_rate' => round((float) ($latestRate ?? 0), 2),
-                    'total_owed' => round((float) ($commissions->isEmpty() ? $totalSales : $commissions->sum('commission_owed')), 2),
+                    'commission_rate' => $latestRate,
+                    'total_owed' => round((float) $summary['total_owed'], 2),
                     'total_paid' => $totalPaid,
-                    'outstanding_balance' => round((float) ($commissions->isEmpty() ? ($totalSales - $totalPaid) : $commissions->sum('outstanding')), 2),
+                    'outstanding_balance' => round((float) $summary['still_not_paid'], 2),
                 ],
                 'monthly_breakdown' => $monthlyBreakdown,
                 'payment_history' => $payments

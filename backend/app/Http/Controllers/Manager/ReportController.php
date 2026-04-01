@@ -6,8 +6,8 @@ use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
-use App\Models\UserBalance;
 use App\Services\ExportTaskService;
+use App\Services\SellerAccountingService;
 use App\Support\LicenseCacheInvalidation;
 use App\Support\RevenueAnalytics;
 use Carbon\CarbonImmutable;
@@ -17,6 +17,10 @@ use Illuminate\Support\Facades\Cache;
 
 class ReportController extends BaseManagerController
 {
+    public function __construct(
+        private readonly SellerAccountingService $sellerAccountingService,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $validated = $this->validatedFilters($request);
@@ -240,10 +244,13 @@ class ReportController extends BaseManagerController
 
     private function resellerBalances(int $tenantId, array $sellerIds, array $validated): array
     {
-        return User::query()
+        $sellers = User::query()
             ->whereIn('id', $sellerIds)
-            ->get()
-            ->map(function (User $seller) use ($tenantId, $validated): array {
+            ->get();
+        $accountingBySeller = $this->sellerAccountingService->summariesForSellers($sellers);
+
+        return $sellers
+            ->map(function (User $seller) use ($tenantId, $validated, $accountingBySeller): array {
                 $totals = $this->revenueQuery($tenantId, [$seller->id], $validated)
                     ->where('activity_logs.user_id', $seller->id)
                     ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
@@ -251,12 +258,10 @@ class ReportController extends BaseManagerController
                 $totalActivations = (int) $this->baseQuery($tenantId, [$seller->id], $validated)
                     ->where('licenses.reseller_id', $seller->id)
                     ->count();
-                $balance = UserBalance::query()
-                    ->where('tenant_id', $tenantId)
-                    ->where('user_id', $seller->id)
-                    ->first();
-
                 $totalRevenue = round((float) ($totals?->total_revenue ?? 0), 2);
+                $accounting = $accountingBySeller[(int) $seller->id] ?? [
+                    'still_not_paid' => 0.0,
+                ];
 
                 return [
                     'id' => $seller->id,
@@ -265,10 +270,10 @@ class ReportController extends BaseManagerController
                     'total_revenue' => $totalRevenue,
                     'total_activations' => $totalActivations,
                     'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,
-                    'commission' => round((float) ($balance?->pending_balance ?? ($totalRevenue * 0.1)), 2),
+                    'still_not_paid' => round((float) $accounting['still_not_paid'], 2),
                 ];
             })
-            ->sortByDesc('total_revenue')
+            ->sortByDesc('still_not_paid')
             ->values()
             ->all();
     }
@@ -305,8 +310,8 @@ class ReportController extends BaseManagerController
                     ->all(),
             ],
             [
-                'title' => 'Revenue by Reseller',
-                'headers' => ['Reseller', 'Revenue', 'Activations'],
+                'title' => 'Revenue by Seller',
+                'headers' => ['Seller', 'Revenue', 'Activations'],
                 'rows' => collect($report['revenue_by_reseller'])->map(fn (array $row): array => [$row['reseller'], $row['revenue'], $row['activations']])->all(),
             ],
             [
@@ -315,14 +320,14 @@ class ReportController extends BaseManagerController
                 'rows' => collect($report['revenue_by_program'])->map(fn (array $row): array => [$row['program'], $row['revenue'], $row['activations']])->all(),
             ],
             [
-                'title' => 'Reseller Balances',
-                'headers' => ['Reseller', 'Revenue', 'Activations', 'Average Price', 'Commission'],
+                'title' => 'Still Not Paid by Seller',
+                'headers' => ['Seller', 'Revenue', 'Activations', 'Average Price', 'Still Not Paid'],
                 'rows' => collect($report['reseller_balances'])->map(fn (array $row): array => [
                     $row['reseller'],
                     $row['total_revenue'],
                     $row['total_activations'],
                     $row['avg_price'],
-                    $row['commission'],
+                    $row['still_not_paid'],
                 ])->all(),
             ],
         ];

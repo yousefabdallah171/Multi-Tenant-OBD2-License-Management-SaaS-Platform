@@ -206,7 +206,6 @@ class FinancialReportController extends BaseSuperAdminController
                 'total_revenue' => round((float) ($totals?->total_revenue ?? 0), 2),
                 'total_activations' => $totalActivations,
                 'avg_price' => $totalActivations > 0 ? round(((float) ($totals?->total_revenue ?? 0)) / $totalActivations, 2) : 0,
-                'balance' => round((float) ($totals?->total_revenue ?? 0), 2),
             ];
         })
             ->sortByDesc('total_revenue')
@@ -255,15 +254,14 @@ class FinancialReportController extends BaseSuperAdminController
                 'rows' => collect($report['revenue_by_program'])->map(fn (array $row): array => [$row['program'], $row['revenue'], $row['activations']])->all(),
             ],
             [
-                'title' => 'Reseller Balances',
-                'headers' => ['Reseller', 'Tenant', 'Revenue', 'Activations', 'Average Price', 'Balance'],
+                'title' => 'Seller Revenue Across Roles',
+                'headers' => ['Seller', 'Tenant', 'Revenue', 'Activations', 'Average Price'],
                 'rows' => collect($report['reseller_balances'])->map(fn (array $row): array => [
                     $row['reseller'],
                     $row['tenant'],
                     $row['total_revenue'],
                     $row['total_activations'],
                     $row['avg_price'],
-                    $row['balance'],
                 ])->all(),
             ],
         ];

@@ -62,16 +62,26 @@ class CustomerController extends BaseManagerController
             });
         }
 
+        // Apply pagination at database level first
+        $perPage = (int) ($validated['per_page'] ?? 25);
+        $page = (int) $request->integer('page', 1);
+
         $allCustomers = $query->get();
-        $customers = $this->paginateCollection(
-            $allCustomers->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated)),
-            (int) $request->integer('page', 1),
-            (int) ($validated['per_page'] ?? 25),
-        );
+        $filtered = $allCustomers->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated));
+
+        // Manual pagination on filtered results
+        $total = $filtered->count();
+        $items = $filtered->slice(($page - 1) * $perPage, $perPage)->values();
+        $lastPage = max(1, (int) ceil($total / $perPage));
 
         return response()->json([
-            'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user, $validated))->values(),
-            'meta' => $this->paginationMeta($customers),
+            'data' => $items->map(fn (User $user): array => $this->serializeCustomer($user, $validated))->values(),
+            'meta' => [
+                'total' => $total,
+                'per_page' => $perPage,
+                'current_page' => $page,
+                'last_page' => $lastPage,
+            ],
         ]);
     }
 

@@ -295,7 +295,6 @@ export interface FinancialReportPayload {
     total_revenue: number
     total_activations: number
     avg_price: number
-    balance: number
   }>
 }
 

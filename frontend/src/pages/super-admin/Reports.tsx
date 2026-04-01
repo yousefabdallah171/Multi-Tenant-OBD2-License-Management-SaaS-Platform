@@ -77,7 +77,7 @@ export function ReportsPage() {
   const balanceColumns: Array<DataTableColumn<FinancialReportPayload['reseller_balances'][number]>> = [
     {
       key: 'reseller',
-      label: t('roles.reseller'),
+      label: t('superAdmin.pages.financialReports.seller'),
       sortable: true,
       sortValue: (row) => row.reseller ?? '',
       render: (row) => (
@@ -93,7 +93,6 @@ export function ReportsPage() {
     { key: 'revenue', label: t('common.revenue'), sortable: true, sortValue: (row) => row.total_revenue, render: (row) => formatCurrency(row.total_revenue, 'USD', locale) },
     { key: 'activations', label: t('common.activations'), sortable: true, sortValue: (row) => row.total_activations, render: (row) => row.total_activations },
     { key: 'avg', label: t('superAdmin.pages.financialReports.avgPrice'), sortable: true, sortValue: (row) => row.avg_price, render: (row) => formatCurrency(row.avg_price, 'USD', locale) },
-    { key: 'balance', label: t('superAdmin.pages.financialReports.balance'), sortable: true, sortValue: (row) => row.balance, render: (row) => formatCurrency(row.balance, 'USD', locale) },
   ]
 
   const resellerColumns: Array<DataTableColumn<TopResellerRow>> = [
@@ -151,14 +150,14 @@ export function ReportsPage() {
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
         />
         <BarChartWidget
-          title={t('superAdmin.pages.financialReports.resellerBalancesTitle')}
-          description={t('superAdmin.pages.financialReports.resellerBalancesDescription')}
+          title={t('superAdmin.pages.financialReports.sellerRevenueTitle')}
+          description={t('superAdmin.pages.financialReports.sellerRevenueDescription')}
           data={financialData?.reseller_balances ?? []}
           isLoading={financialQuery.isLoading}
           xKey="reseller"
           horizontal
           showLabels
-          series={[{ key: 'balance', label: t('superAdmin.pages.financialReports.balance') }]}
+          series={[{ key: 'total_revenue', label: t('common.revenue') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
         />
       </div>

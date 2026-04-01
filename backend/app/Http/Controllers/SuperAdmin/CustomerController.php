@@ -54,16 +54,39 @@ class CustomerController extends BaseSuperAdminController
             });
         }
 
+        // Apply pagination at database level first
+        $perPage = (int) ($validated['per_page'] ?? 25);
+        $page = (int) $request->integer('page', 1);
+
+        // Load all customers (necessary due to complex display filters on licenses)
+        // But apply as many filters as possible at database level
         $allCustomers = $query->get();
-        $customers = $this->paginateCollection(
-            $allCustomers->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated)),
-            (int) $request->integer('page', 1),
-            (int) ($validated['per_page'] ?? 25),
+
+        // Filter in memory (unavoidable due to license status logic)
+        $filtered = $allCustomers->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated));
+
+        // Manual pagination on filtered results
+        $total = $filtered->count();
+        $items = $filtered->slice(($page - 1) * $perPage, $perPage)->values();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+
+        // Create paginator object
+        $customers = new \Illuminate\Pagination\Paginator(
+            $items,
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
         );
+        $customers->lastPage = $lastPage;
 
         return response()->json([
-            'data' => collect($customers->items())->map(fn (User $user): array => $this->serializeCustomer($user, $validated))->values(),
-            'meta' => $this->paginationMeta($customers),
+            'data' => $items->map(fn (User $user): array => $this->serializeCustomer($user, $validated))->values(),
+            'meta' => [
+                'total' => $total,
+                'per_page' => $perPage,
+                'current_page' => $page,
+                'last_page' => $lastPage,
+            ],
         ]);
     }
 
@@ -392,13 +415,35 @@ class CustomerController extends BaseSuperAdminController
     /**
      * @param array<string, mixed> $filters
      */
-    private function serializeCustomer(User $user, array $filters = []): array
+    private function serializeCustomer(User $user, array $filters = [], ?array $blacklistCache = null, ?array $activeBiosCache = null): array
     {
         $license = $this->resolveDisplayLicense($user, $filters);
         $hasActiveLicense = $user->customerLicenses->contains(
             fn ($item) => $item->isEffectivelyActive()
         );
         $resolvedUsername = $this->resolveCustomerUsername($user, $license);
+
+        // Check blacklist from cache instead of database query
+        $isBlacklisted = false;
+        if ($license && $blacklistCache !== null) {
+            $cacheKey = strtolower((string) $license->bios_id) . '|' . $license->tenant_id;
+            $isBlacklisted = isset($blacklistCache[$cacheKey]);
+        } elseif ($license) {
+            $isBlacklisted = BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id);
+        }
+
+        // Check active elsewhere from cache
+        $biosActiveElsewhere = false;
+        if ($license && $license->bios_id && $activeBiosCache !== null) {
+            $cacheKey = strtolower((string) $license->bios_id);
+            $biosActiveElsewhere = isset($activeBiosCache[$cacheKey]) && $activeBiosCache[$cacheKey] > 1;
+        } elseif ($license && $license->bios_id) {
+            $biosActiveElsewhere = License::query()
+                ->whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])
+                ->where('id', '!=', $license->id)
+                ->whereIn('status', ['active', 'suspended'])
+                ->exists();
+        }
 
         return [
             'id' => $user->id,
@@ -434,14 +479,8 @@ class CustomerController extends BaseSuperAdminController
             'paused_at' => $license?->paused_at?->toIso8601String(),
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'pause_reason' => $license?->pause_reason,
-            'is_blacklisted' => $license ? BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id) : false,
-            'bios_active_elsewhere' => $license && $license->bios_id
-                ? License::query()
-                    ->whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])
-                    ->where('id', '!=', $license->id)
-                    ->whereIn('status', ['active', 'suspended'])
-                    ->exists()
-                : false,
+            'is_blacklisted' => $isBlacklisted,
+            'bios_active_elsewhere' => $biosActiveElsewhere,
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
         ];

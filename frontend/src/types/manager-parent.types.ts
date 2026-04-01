@@ -479,7 +479,7 @@ export interface FinancialReportData {
     total_revenue: number
     total_activations: number
     avg_price: number
-    commission: number
+    still_not_paid: number
   }>
 }
 

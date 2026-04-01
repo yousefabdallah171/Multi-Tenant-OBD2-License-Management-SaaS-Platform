@@ -547,7 +547,7 @@
       },
       "financialReports": {
         "title": "التقارير المالية",
-        "description": "تتبع إيرادات المنصة وتوزيع البرامج وحجم التفعيلات وأرصدة الموزعين من شاشة واحدة.",
+        "description": "تتبع إيرادات المنصة وتوزيع البرامج وحجم التفعيلات وإيرادات البائعين من شاشة واحدة.",
         "totalPlatformRevenue": "إجمالي إيراد المنصة",
         "totalCustomers": "إجمالي العملاء",
         "totalActivations": "إجمالي التفعيلات",
@@ -558,11 +558,11 @@
         "revenueByProgram": "الإيراد حسب البرنامج",
         "monthlyRevenue": "الإيراد الشهري",
         "avgPrice": "متوسط السعر",
-        "balance": "الرصيد",
+        "seller": "البائع",
         "revenueBreakdown": "تفصيل الإيراد المالي",
         "revenueBreakdownDescription": "تقسيم إيراد الشركاء حسب البرنامج.",
-        "resellerBalancesTitle": "أرصدة الموزعين",
-        "resellerBalancesDescription": "أعلى أرصدة الموزعين عبر الشركاء."
+        "sellerRevenueTitle": "إيراد البائعين عبر الأدوار",
+        "sellerRevenueDescription": "الإيراد عبر حسابات المدير الرئيسي والمدير والموزع."
       },
       "biosConflicts": {
         "title": "تعارضات BIOS",
@@ -676,21 +676,22 @@
       },
       "financialReports": {
         "title": "التقارير",
-        "description": "راجع إيرادات الشريك وأرصدة الموزعين وجودة التفعيل والاحتفاظ وصدّر العرض الحالي للتقارير.",
+        "description": "راجع إيرادات الشريك ومديونية البائعين وجودة التفعيل والاحتفاظ وصدّر العرض الحالي للتقارير.",
         "totalTenantRevenue": "إجمالي إيراد الشريك",
         "totalCustomers": "إجمالي العملاء",
         "activeCustomers": "العملاء النشطين حالياً",
         "totalActivations": "إجمالي التفعيلات",
         "activeLicenses": "التراخيص النشطة",
-        "revenueByReseller": "الإيراد حسب الموزع",
+        "revenueByReseller": "الإيراد حسب البائع",
         "revenueByProgram": "الإيراد حسب البرنامج",
         "monthlyRevenueTrend": "اتجاه الإيراد الشهري",
-        "resellerBalances": "أرصدة الموزعين",
+        "stillNotPaidBySeller": "المتبقي غير المدفوع حسب البائع",
+        "stillNotPaidHint": "يتم احتساب المتبقي غير المدفوع على مستوى كل الوقت. أما بقية المقاييس فتتبع النطاق الزمني المحدد.",
         "columns": {
-          "reseller": "الموزع",
+          "seller": "البائع",
           "totalRevenue": "إجمالي الإيراد",
           "avgPrice": "متوسط السعر",
-          "commission": "العمولة"
+          "stillNotPaid": "المتبقي غير المدفوع"
         }
       },
       "settings": {

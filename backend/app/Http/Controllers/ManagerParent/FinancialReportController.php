@@ -5,7 +5,7 @@ namespace App\Http\Controllers\ManagerParent;
 use App\Enums\UserRole;
 use App\Models\License;
 use App\Models\User;
-use App\Models\UserBalance;
+use App\Services\SellerAccountingService;
 use App\Services\ExportTaskService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,6 +15,10 @@ use App\Support\RevenueAnalytics;
 
 class FinancialReportController extends BaseManagerParentController
 {
+    public function __construct(
+        private readonly SellerAccountingService $sellerAccountingService,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $tenantId = $this->currentTenantId($request);
@@ -87,7 +91,7 @@ class FinancialReportController extends BaseManagerParentController
                 'revenue_by_reseller' => $revenueByReseller,
                 'revenue_by_program' => $revenueByProgram,
                 'monthly_revenue' => $this->monthlyRevenue($tenantId, $validated),
-                'reseller_balances' => $this->resellerBalances($tenantId),
+                'reseller_balances' => $this->resellerBalances($tenantId, $validated),
             ],
         ]);
     }
@@ -152,26 +156,28 @@ class FinancialReportController extends BaseManagerParentController
         ])->values();
     }
 
-    private function resellerBalances(int $tenantId)
+    private function resellerBalances(int $tenantId, array $validated)
     {
         $resellers = User::query()
             ->where('tenant_id', $tenantId)
             ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->get();
+        $accountingBySeller = $this->sellerAccountingService->summariesForSellers($resellers);
 
-        return $resellers->map(function (User $reseller): array {
-            $totals = RevenueAnalytics::baseQuery([], $reseller->tenant_id, null, $reseller->id)
+        return $resellers->map(function (User $reseller) use ($validated, $accountingBySeller): array {
+            $totals = RevenueAnalytics::baseQuery($validated, $reseller->tenant_id, null, $reseller->id)
                 ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
                 ->first();
             $totalActivations = (int) License::query()
                 ->where('tenant_id', $reseller->tenant_id)
+                ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
+                ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']))
                 ->where('reseller_id', $reseller->id)
                 ->count();
-            $balance = UserBalance::query()
-                ->where('tenant_id', $reseller->tenant_id)
-                ->where('user_id', $reseller->id)
-                ->first();
             $totalRevenue = round((float) ($totals?->total_revenue ?? 0), 2);
+            $accounting = $accountingBySeller[(int) $reseller->id] ?? [
+                'still_not_paid' => 0.0,
+            ];
 
             return [
                 'id' => $reseller->id,
@@ -180,9 +186,9 @@ class FinancialReportController extends BaseManagerParentController
                 'total_revenue' => $totalRevenue,
                 'total_activations' => $totalActivations,
                 'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,
-                'commission' => round((float) ($balance?->pending_balance ?? ($totalRevenue * 0.1)), 2),
+                'still_not_paid' => round((float) $accounting['still_not_paid'], 2),
             ];
-        })->sortByDesc('total_revenue')->values();
+        })->sortByDesc('still_not_paid')->values();
     }
 
     private function revenueQuery(int $tenantId, array $validated)
@@ -206,8 +212,8 @@ class FinancialReportController extends BaseManagerParentController
                     ->all(),
             ],
             [
-                'title' => 'Revenue by Reseller',
-                'headers' => ['Reseller', 'Revenue', 'Activations'],
+                'title' => 'Revenue by Seller',
+                'headers' => ['Seller', 'Revenue', 'Activations'],
                 'rows' => collect($report['revenue_by_reseller'])->map(fn (array $row): array => [$row['reseller'], $row['revenue'], $row['activations']])->all(),
             ],
             [
@@ -216,14 +222,14 @@ class FinancialReportController extends BaseManagerParentController
                 'rows' => collect($report['revenue_by_program'])->map(fn (array $row): array => [$row['program'], $row['revenue'], $row['activations']])->all(),
             ],
             [
-                'title' => 'Reseller Balances',
-                'headers' => ['Reseller', 'Revenue', 'Activations', 'Average Price', 'Commission'],
+                'title' => 'Still Not Paid by Seller',
+                'headers' => ['Seller', 'Revenue', 'Activations', 'Average Price', 'Still Not Paid'],
                 'rows' => collect($report['reseller_balances'])->map(fn (array $row): array => [
                     $row['reseller'],
                     $row['total_revenue'],
                     $row['total_activations'],
                     $row['avg_price'],
-                    $row['commission'],
+                    $row['still_not_paid'],
                 ])->all(),
             ],
         ];

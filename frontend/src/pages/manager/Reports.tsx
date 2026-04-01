@@ -12,7 +12,7 @@ import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
-import { useLanguage } from '@/hooks/useLanguage'
+import { useLanguage, type SupportedLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -49,23 +49,23 @@ export function ReportsPage() {
     () => [
       {
         key: 'reseller',
-        label: t('managerParent.pages.financialReports.columns.reseller'),
+        label: t('managerParent.pages.financialReports.columns.seller'),
         sortable: true,
         sortValue: (row) => row.reseller,
         render: (row) => (
           <RoleIdentity
             name={row.reseller}
             role={resolveUserRole(row.role)}
-            href={row.id ? routePaths.manager.teamMemberDetail(lang, row.id) : undefined}
+            href={getManagerSellerDetailPath(lang, row.id, row.role)}
           />
         ),
       },
       { key: 'revenue', label: t('managerParent.pages.financialReports.columns.totalRevenue'), sortable: true, sortValue: (row) => row.total_revenue, render: (row) => formatCurrency(row.total_revenue, 'USD', locale) },
       { key: 'activations', label: t('common.activations'), sortable: true, sortValue: (row) => row.total_activations, render: (row) => row.total_activations },
       { key: 'avgPrice', label: t('managerParent.pages.financialReports.columns.avgPrice'), sortable: true, sortValue: (row) => row.avg_price, render: (row) => formatCurrency(row.avg_price, 'USD', locale) },
-      { key: 'commission', label: t('managerParent.pages.financialReports.columns.commission'), sortable: true, sortValue: (row) => row.commission, render: (row) => formatCurrency(row.commission, 'USD', locale) },
+      { key: 'stillNotPaid', label: t('managerParent.pages.financialReports.columns.stillNotPaid'), sortable: true, sortValue: (row) => row.still_not_paid, render: (row) => formatCurrency(row.still_not_paid, 'USD', locale) },
     ],
-    [locale, t],
+    [lang, locale, t],
   )
 
   return (
@@ -125,13 +125,14 @@ export function ReportsPage() {
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
         />
         <BarChartWidget
-          title={t('managerParent.pages.financialReports.resellerBalances')}
+          title={t('managerParent.pages.financialReports.stillNotPaidBySeller')}
+          description={t('managerParent.pages.financialReports.stillNotPaidHint')}
           data={report?.reseller_balances ?? []}
           isLoading={reportQuery.isLoading}
           xKey="reseller"
           horizontal
           showLabels
-          series={[{ key: 'total_revenue', label: t('common.revenue') }]}
+          series={[{ key: 'still_not_paid', label: t('managerParent.pages.financialReports.columns.stillNotPaid') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
         />
       </div>
@@ -146,7 +147,8 @@ export function ReportsPage() {
 
       <Card>
         <CardContent className="p-6">
-          <h3 className="mb-4 text-lg font-semibold">{t('managerParent.pages.financialReports.resellerBalances')}</h3>
+          <h3 className="mb-2 text-lg font-semibold">{t('managerParent.pages.financialReports.stillNotPaidBySeller')}</h3>
+          <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.financialReports.stillNotPaidHint')}</p>
           <DataTable tableKey="manager_reports_balances" columns={columns} data={report?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={reportQuery.isLoading} />
         </CardContent>
       </Card>
@@ -160,6 +162,14 @@ function resolveUserRole(role?: string | null): UserRole | null {
   }
 
   return null
+}
+
+function getManagerSellerDetailPath(lang: SupportedLanguage, id: number, role?: string | null) {
+  if (!id || role !== 'reseller') {
+    return undefined
+  }
+
+  return routePaths.manager.teamMemberDetail(lang, id)
 }
 
 function resolvePresetRange(days: number): DateRangeValue {
