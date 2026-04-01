@@ -1860,9 +1860,11 @@
       "creditHelpText": "You have already paid more than what is owed. This balance should be returned or credited to you.",
       "helpText": "This page shows how much you sold, how much you already paid to your manager, and how much is still left to pay."
     },
-    "filters": {
-      "period": "Period"
-    },
+      "filters": {
+        "period": "Period",
+        "allTimeHint": "Showing all-time reseller balances. Select a month to review a specific commission period.",
+        "monthHint": "Showing reseller balances for the selected month only."
+      },
     "columns": {
       "reseller": "Reseller",
       "period": "Period",

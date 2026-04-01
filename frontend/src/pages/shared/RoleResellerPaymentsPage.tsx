@@ -33,6 +33,7 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [paymentOpen, setPaymentOpen] = useState(false)
+  const [period, setPeriod] = useState('')
   const [paymentForm, setPaymentForm] = useState({
     reseller_id: 0,
     amount: '',
@@ -41,8 +42,8 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
   })
 
   const query = useQuery({
-    queryKey: [queryKeyPrefix, 'reseller-payments'],
-    queryFn: () => fetchList(),
+    queryKey: [queryKeyPrefix, 'reseller-payments', period || 'all'],
+    queryFn: () => fetchList({ period: period || undefined }),
   })
 
   const rows = query.data?.data ?? []
@@ -139,6 +140,23 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
         <StatsCard title={t('payments.summary.totalOwed')} value={formatCurrency(summary?.total_owed ?? 0, 'USD', locale)} icon={WalletCards} color="amber" />
         <StatsCard title={t('payments.summary.totalPaid')} value={formatCurrency(summary?.total_paid ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
         <StatsCard title={t('payments.summary.outstanding')} value={formatCurrency(summary?.total_outstanding ?? 0, 'USD', locale)} icon={Wallet} color="rose" />
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+          <label className="flex-1 space-y-2">
+            <span className="text-sm font-medium text-slate-950 dark:text-white">{t('payments.filters.period')}</span>
+            <Input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} />
+          </label>
+          <Button type="button" variant="ghost" onClick={() => setPeriod('')}>
+            {t('common.clear')}
+          </Button>
+        </div>
+        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+          {period === ''
+            ? t('payments.filters.allTimeHint', { defaultValue: 'Showing all-time reseller balances. Select a month to review a specific commission period.' })
+            : t('payments.filters.monthHint', { defaultValue: 'Showing reseller balances for the selected month only.' })}
+        </p>
       </div>
 
       <DataTable tableKey={`${queryKeyPrefix}_reseller_payments`} columns={columns} data={rows} rowKey={(row) => row.reseller_id} isLoading={query.isLoading} emptyMessage={t('payments.empty.resellers')} />
