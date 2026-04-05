@@ -220,6 +220,31 @@ export function CustomersPage() {
   )
   const sellerFilterPlaceholder = t('common.allRoles', { defaultValue: 'All roles' })
   const selectedSeller = sellerOptions.find((seller) => seller.id === resellerId) ?? null
+  const sellerCountFilterParams = useMemo(
+    () => ({
+      search: search || undefined,
+      tenant_id: tenantId || undefined,
+      program_id: programId || undefined,
+      status: status === 'all' ? '' : status,
+    }),
+    [programId, search, status, tenantId],
+  )
+
+  const sellerCountQueries = useQueries({
+    queries: sellerOptions.map((seller) => ({
+      queryKey: ['super-admin', 'customers', 'seller-count', seller.id, sellerCountFilterParams],
+      queryFn: () => superAdminCustomerService.getAll({ page: 1, per_page: 1, ...sellerCountFilterParams, reseller_id: seller.id }),
+      ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
+    })),
+  })
+
+  const sellerCountMap = useMemo(
+    () =>
+      Object.fromEntries(
+        sellerOptions.map((seller, index) => [seller.id, sellerCountQueries[index]?.data?.meta.total ?? 0]),
+      ) as Record<number, number>,
+    [sellerCountQueries, sellerOptions],
+  )
 
   useEffect(() => {
     if (resellerId !== '' && !sellerOptions.some((seller) => seller.id === resellerId)) {
@@ -496,6 +521,7 @@ export function CustomersPage() {
                     <div className="flex w-full min-w-0 items-center justify-between gap-3">
                       <span className="min-w-0 truncate">{seller.name}</span>
                       <span className="flex shrink-0 items-center gap-2">
+                        <span className="text-sm text-slate-500 dark:text-slate-400">{sellerCountMap[seller.id] ?? 0}</span>
                         <RoleBadge role={seller.role} />
                         {resellerId === seller.id ? <Check className="h-4 w-4 text-brand-600 dark:text-brand-400" /> : null}
                       </span>

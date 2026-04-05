@@ -495,13 +495,13 @@ class CustomerController extends BaseSuperAdminController
             fn (License $license) => ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0
         );
 
-        $filtered = $licenses->filter(fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters));
+        $tenantScoped = $licenses->filter(fn (License $license): bool => $this->licenseMatchesTenantFilter($license, $filters));
 
-        if ($filtered->isNotEmpty()) {
-            return $filtered->first();
+        if ($tenantScoped->isNotEmpty()) {
+            return $tenantScoped->first();
         }
 
-        return $this->hasScopedLicenseFilters($filters) ? null : $licenses->first();
+        return ! empty($filters['tenant_id']) ? null : $licenses->first();
     }
 
     /**
@@ -516,11 +516,8 @@ class CustomerController extends BaseSuperAdminController
             return in_array($status, ['', 'all', 'pending'], true) && ! $this->hasScopedLicenseFilters($filters);
         }
 
-        if ($status === '' || $status === 'all') {
-            return true;
-        }
-
-        return $this->displayLicenseMatchesStatus($license, $status);
+        return $this->licenseMatchesScopeFilters($license, $filters)
+            && $this->displayLicenseMatchesStatus($license, $status);
     }
 
     /**
@@ -537,11 +534,8 @@ class CustomerController extends BaseSuperAdminController
      */
     private function licenseMatchesScopeFilters(License $license, array $filters): bool
     {
-        $tenantId = isset($filters['tenant_id']) ? (int) $filters['tenant_id'] : null;
-        if ($tenantId) {
-            if ((int) $license->tenant_id !== $tenantId) {
-                return false;
-            }
+        if (! $this->licenseMatchesTenantFilter($license, $filters)) {
+            return false;
         }
 
         $resellerId = isset($filters['reseller_id']) ? (int) $filters['reseller_id'] : null;
@@ -556,6 +550,19 @@ class CustomerController extends BaseSuperAdminController
             if ((int) $license->program_id !== $programId) {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function licenseMatchesTenantFilter(License $license, array $filters): bool
+    {
+        $tenantId = isset($filters['tenant_id']) ? (int) $filters['tenant_id'] : null;
+        if ($tenantId && (int) $license->tenant_id !== $tenantId) {
+            return false;
         }
 
         return true;
