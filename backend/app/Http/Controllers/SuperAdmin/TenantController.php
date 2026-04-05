@@ -27,6 +27,7 @@ class TenantController extends BaseSuperAdminController
 
         $query = Tenant::query()
             ->withCount([
+                'users as users_count',
                 'users as managers_count' => fn ($builder) => $builder->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value]),
                 'users as resellers_count' => fn ($builder) => $builder->where('role', UserRole::RESELLER->value),
                 'users as customers_count' => fn ($builder) => $builder->where('role', UserRole::CUSTOMER->value),
@@ -107,6 +108,7 @@ class TenantController extends BaseSuperAdminController
     public function show(Tenant $tenant): JsonResponse
     {
         $tenant->loadCount([
+            'users as users_count',
             'users as managers_count' => fn ($builder) => $builder->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value]),
             'users as resellers_count' => fn ($builder) => $builder->where('role', UserRole::RESELLER->value),
             'users as customers_count' => fn ($builder) => $builder->where('role', UserRole::CUSTOMER->value),
@@ -182,6 +184,7 @@ class TenantController extends BaseSuperAdminController
             'slug' => $tenant->slug,
             'status' => $tenant->status,
             'settings' => $tenant->settings,
+            'users_count' => (int) ($tenant->users_count ?? 0),
             'managers_count' => (int) ($tenant->managers_count ?? 0),
             'resellers_count' => (int) ($tenant->resellers_count ?? 0),
             'customers_count' => (int) ($tenant->customers_count ?? 0),

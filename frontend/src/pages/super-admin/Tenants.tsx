@@ -216,6 +216,7 @@ export function TenantsPage() {
           </button>
         ),
       },
+      { key: 'users', label: t('common.users'), sortable: true, sortValue: (row) => row.users_count, render: (row) => row.users_count },
       { key: 'managers', label: t('superAdmin.pages.tenants.managers'), sortable: true, sortValue: (row) => row.managers_count, render: (row) => row.managers_count },
       { key: 'resellers', label: t('superAdmin.pages.tenants.resellers'), sortable: true, sortValue: (row) => row.resellers_count, render: (row) => row.resellers_count },
       { key: 'customers', label: t('superAdmin.pages.tenants.customers'), sortable: true, sortValue: (row) => row.customers_count, render: (row) => row.customers_count },

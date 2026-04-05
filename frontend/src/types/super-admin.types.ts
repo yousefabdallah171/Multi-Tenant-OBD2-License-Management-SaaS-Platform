@@ -36,6 +36,7 @@ export interface TenantSummary {
   slug: string
   status: 'active' | 'suspended' | 'inactive'
   settings: Record<string, unknown> | null
+  users_count: number
   managers_count: number
   resellers_count: number
   customers_count: number
