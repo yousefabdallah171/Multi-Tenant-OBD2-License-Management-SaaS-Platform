@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -9,6 +9,7 @@ import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
+import { RoleBadge } from '@/components/shared/RoleBadge'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,10 +24,11 @@ import { programService } from '@/services/program.service'
 import { superAdminCustomerService } from '@/services/super-admin-customer.service'
 import { tenantService } from '@/services/tenant.service'
 import { userService } from '@/services/user.service'
-import type { SuperAdminCustomerSummary } from '@/types/super-admin.types'
+import type { ManagedUser, SuperAdminCustomerSummary } from '@/types/super-admin.types'
 import type { UserRole } from '@/types/user.types'
 
 const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
+const SELLER_ROLES: UserRole[] = ['manager_parent', 'manager', 'reseller']
 
 export function CustomersPage() {
   const { t } = useTranslation()
@@ -82,8 +84,7 @@ export function CustomersPage() {
 
   const sellersQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'sellers', tenantId],
-    queryFn: () => userService.getAll({ per_page: 100, tenant_id: tenantId || '', role: 'reseller', status: 'active' }),
-    enabled: tenantId !== '',
+    queryFn: () => userService.getAll({ per_page: 100, tenant_id: tenantId || '', status: 'active' }),
     staleTime: 10 * 60 * 1000,
     gcTime: 20 * 60 * 1000,
   })
@@ -206,10 +207,26 @@ export function CustomersPage() {
     onError: () => toast.error(t('common.error')),
   })
 
-  const sellerOptions = sellersQuery.data?.data ?? []
-  const sellerFilterPlaceholder = tenantId
-    ? t('superAdmin.pages.customers.allResellers', { defaultValue: 'All resellers' })
-    : t('superAdmin.pages.customers.allResellers', { defaultValue: 'All resellers' })
+  const sellerOptions = useMemo(
+    () =>
+      (sellersQuery.data?.data ?? [])
+        .filter(isSellerRoleUser)
+        .sort((left, right) => {
+          const roleDiff = SELLER_ROLES.indexOf(left.role) - SELLER_ROLES.indexOf(right.role)
+          if (roleDiff !== 0) return roleDiff
+          return left.name.localeCompare(right.name)
+        }),
+    [sellersQuery.data?.data],
+  )
+  const sellerFilterPlaceholder = t('common.allRoles', { defaultValue: 'All roles' })
+  const selectedSeller = sellerOptions.find((seller) => seller.id === resellerId) ?? null
+
+  useEffect(() => {
+    if (resellerId !== '' && !sellerOptions.some((seller) => seller.id === resellerId)) {
+      setResellerId('')
+      setPage(1)
+    }
+  }, [resellerId, sellerOptions])
 
   const columns = useMemo<Array<DataTableColumn<SuperAdminCustomerSummary>>>(
     () => [
@@ -440,10 +457,53 @@ export function CustomersPage() {
               <option value="">{t('common.allTenants')}</option>
               {tenantsQuery.data?.data.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
             </select>
-            <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-              <option value="">{sellerFilterPlaceholder}</option>
-              {sellerOptions.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}
-            </select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" className="h-9 w-full justify-between overflow-hidden rounded-lg border-slate-200 px-3 text-sm font-normal text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  {selectedSeller ? (
+                    <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden whitespace-nowrap">
+                      <span className="min-w-0 truncate">{selectedSeller.name}</span>
+                      <span className="shrink-0">
+                        <RoleBadge role={selectedSeller.role} />
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="truncate">{sellerFilterPlaceholder}</span>
+                  )}
+                  <ChevronDown className="ms-2 h-4 w-4 shrink-0 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-64">
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setResellerId('')
+                    setPage(1)
+                  }}
+                >
+                  <div className="flex w-full items-center justify-between gap-3">
+                    <span>{sellerFilterPlaceholder}</span>
+                    {resellerId === '' ? <Check className="h-4 w-4 text-brand-600 dark:text-brand-400" /> : null}
+                  </div>
+                </DropdownMenuItem>
+                {sellerOptions.map((seller) => (
+                  <DropdownMenuItem
+                    key={seller.id}
+                    onSelect={() => {
+                      setResellerId(seller.id)
+                      setPage(1)
+                    }}
+                  >
+                    <div className="flex w-full min-w-0 items-center justify-between gap-3">
+                      <span className="min-w-0 truncate">{seller.name}</span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <RoleBadge role={seller.role} />
+                        {resellerId === seller.id ? <Check className="h-4 w-4 text-brand-600 dark:text-brand-400" /> : null}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
               <option value="">{t('superAdmin.pages.customers.allPrograms', { defaultValue: 'All programs' })}</option>
               {programsQuery.data?.data.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}
@@ -532,4 +592,8 @@ function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
     queryClient.invalidateQueries({ queryKey: ['super-admin', 'customers'] }),
     queryClient.refetchQueries({ queryKey: ['super-admin', 'customers'], type: 'active' }),
   ])
+}
+
+function isSellerRoleUser(user: ManagedUser): user is ManagedUser & { role: UserRole } {
+  return SELLER_ROLES.includes(user.role)
 }
