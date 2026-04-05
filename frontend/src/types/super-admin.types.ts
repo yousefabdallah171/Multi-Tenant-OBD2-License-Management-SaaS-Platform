@@ -46,6 +46,7 @@ export interface TenantSummary {
 
 export interface TenantStats {
   users: number
+  managers: number
   resellers: number
   customers: number
   licenses: number

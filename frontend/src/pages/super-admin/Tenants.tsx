@@ -193,6 +193,11 @@ export function TenantsPage() {
     },
   })
 
+  function openTenantStats(tenantId: number) {
+    setSelectedTenantId(tenantId)
+    setStatsOpen(true)
+  }
+
   const columns = useMemo<Array<DataTableColumn<TenantSummary>>>(
     () => [
       {
@@ -201,10 +206,14 @@ export function TenantsPage() {
         sortable: true,
         sortValue: (row) => row.name,
         render: (row) => (
-          <div>
+          <button
+            type="button"
+            onClick={() => openTenantStats(row.id)}
+            className="text-start transition hover:opacity-80"
+          >
             <div className="font-medium text-slate-950 dark:text-white">{row.name}</div>
             <div className="text-sm text-slate-500 dark:text-slate-400">{row.slug}</div>
-          </div>
+          </button>
         ),
       },
       { key: 'managers', label: t('superAdmin.pages.tenants.managers'), sortable: true, sortValue: (row) => row.managers_count, render: (row) => row.managers_count },
@@ -226,10 +235,7 @@ export function TenantsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                onSelect={() => {
-                  setSelectedTenantId(row.id)
-                  setStatsOpen(true)
-                }}
+                onSelect={() => openTenantStats(row.id)}
               >
                 <BarChart3 className="me-2 h-4 w-4" />
                 {t('common.view')}
@@ -431,6 +437,12 @@ export function TenantsPage() {
                   <CardTitle className="text-base">{t('common.users')}</CardTitle>
                 </CardHeader>
                 <CardContent>{tenantStatsQuery.data?.data.users ?? 0}</CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">{t('superAdmin.pages.tenants.managers')}</CardTitle>
+                </CardHeader>
+                <CardContent>{tenantStatsQuery.data?.data.managers ?? 0}</CardContent>
               </Card>
               <Card>
                 <CardHeader>

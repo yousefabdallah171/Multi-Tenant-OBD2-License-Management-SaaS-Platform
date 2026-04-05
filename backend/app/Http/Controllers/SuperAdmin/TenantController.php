@@ -147,6 +147,7 @@ class TenantController extends BaseSuperAdminController
         return response()->json([
             'data' => [
                 'users' => $tenant->users()->count(),
+                'managers' => $tenant->users()->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value])->count(),
                 'resellers' => $tenant->users()->where('role', UserRole::RESELLER->value)->count(),
                 'customers' => $tenant->users()->where('role', UserRole::CUSTOMER->value)->count(),
                 'licenses' => $tenant->licenses()->count(),
