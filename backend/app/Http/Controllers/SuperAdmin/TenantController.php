@@ -5,10 +5,12 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Enums\UserRole;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class TenantController extends BaseSuperAdminController
@@ -30,7 +32,6 @@ class TenantController extends BaseSuperAdminController
                 'users as customers_count' => fn ($builder) => $builder->where('role', UserRole::CUSTOMER->value),
                 'licenses as active_licenses_count' => fn ($builder) => $builder->where('status', 'active'),
             ])
-            ->withSum('licenses as total_revenue', 'price')
             ->latest();
 
         if (! empty($validated['search'])) {
@@ -45,8 +46,10 @@ class TenantController extends BaseSuperAdminController
 
         $tenants = $query->paginate($perPage);
 
+        $revenueByTenant = RevenueAnalytics::revenueByTenantIds(collect($tenants->items())->pluck('id')->all());
+
         return response()->json([
-            'data' => collect($tenants->items())->map(fn (Tenant $tenant): array => $this->serializeTenant($tenant))->values(),
+            'data' => collect($tenants->items())->map(fn (Tenant $tenant): array => $this->serializeTenant($tenant, $revenueByTenant))->values(),
             'meta' => $this->paginationMeta($tenants),
             'status_counts' => [
                 'all' => (clone $statusCountsQuery)->count(),
@@ -108,10 +111,10 @@ class TenantController extends BaseSuperAdminController
             'users as resellers_count' => fn ($builder) => $builder->where('role', UserRole::RESELLER->value),
             'users as customers_count' => fn ($builder) => $builder->where('role', UserRole::CUSTOMER->value),
             'licenses as active_licenses_count' => fn ($builder) => $builder->where('status', 'active'),
-        ])->loadSum('licenses as total_revenue', 'price');
+        ]);
 
         return response()->json([
-            'data' => $this->serializeTenant($tenant),
+            'data' => $this->serializeTenant($tenant, collect([$tenant->id => RevenueAnalytics::totalRevenue([], $tenant->id)])),
         ]);
     }
 
@@ -148,7 +151,7 @@ class TenantController extends BaseSuperAdminController
                 'customers' => $tenant->users()->where('role', UserRole::CUSTOMER->value)->count(),
                 'licenses' => $tenant->licenses()->count(),
                 'active_licenses' => $tenant->licenses()->where('status', 'active')->count(),
-                'revenue' => (float) $tenant->licenses()->sum('price'),
+                'revenue' => RevenueAnalytics::totalRevenue([], $tenant->id),
             ],
         ]);
     }
@@ -170,7 +173,7 @@ class TenantController extends BaseSuperAdminController
     /**
      * @return array<string, mixed>
      */
-    private function serializeTenant(Tenant $tenant): array
+    private function serializeTenant(Tenant $tenant, ?Collection $revenueByTenant = null): array
     {
         return [
             'id' => $tenant->id,
@@ -182,7 +185,7 @@ class TenantController extends BaseSuperAdminController
             'resellers_count' => (int) ($tenant->resellers_count ?? 0),
             'customers_count' => (int) ($tenant->customers_count ?? 0),
             'active_licenses_count' => (int) ($tenant->active_licenses_count ?? 0),
-            'revenue' => round((float) ($tenant->total_revenue ?? 0), 2),
+            'revenue' => round((float) ($revenueByTenant?->get($tenant->id) ?? 0), 2),
             'created_at' => $tenant->created_at?->toIso8601String(),
         ];
     }

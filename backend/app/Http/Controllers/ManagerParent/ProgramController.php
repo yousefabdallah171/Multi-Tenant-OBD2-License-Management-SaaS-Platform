@@ -7,6 +7,7 @@ use App\Models\ProgramDurationPreset;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\ExternalApiSecurity;
+use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -27,7 +28,7 @@ class ProgramController extends BaseManagerParentController
         $query = Program::query()->withCount([
             'licenses as active_licenses_count' => fn ($builder) => $builder->where('status', 'active'),
             'licenses as total_licenses_count',
-        ])->withSum('licenses as total_revenue', 'price')->with('durationPresets')->latest();
+        ])->with('durationPresets')->latest();
 
         if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
@@ -41,8 +42,14 @@ class ProgramController extends BaseManagerParentController
 
         $programs = $query->paginate((int) ($validated['per_page'] ?? 12));
 
+        $revenueByProgram = RevenueAnalytics::revenueByProgramIds(
+            collect($programs->items())->pluck('id')->all(),
+            [],
+            $this->currentTenantId($request),
+        );
+
         return response()->json([
-            'data' => collect($programs->items())->map(fn (Program $program): array => $this->serializeProgram($program, $request))->values(),
+            'data' => collect($programs->items())->map(fn (Program $program): array => $this->serializeProgram($program, $request, $revenueByProgram))->values(),
             'meta' => $this->paginationMeta($programs),
         ]);
     }
@@ -122,7 +129,7 @@ class ProgramController extends BaseManagerParentController
             'program_id' => $program->id,
         ]);
 
-        return response()->json(['data' => $this->serializeProgram($program)], 201);
+        return response()->json(['data' => $this->serializeProgram($program, $request)], 201);
     }
 
     public function show(Program $program, Request $request): JsonResponse
@@ -211,7 +218,7 @@ class ProgramController extends BaseManagerParentController
             'program_id' => $program->id,
         ]);
 
-        return response()->json(['data' => $this->serializeProgram($program->fresh()->load('durationPresets'))]);
+        return response()->json(['data' => $this->serializeProgram($program->fresh()->load('durationPresets'), $request)]);
     }
 
     public function destroy(Request $request, Program $program): JsonResponse
@@ -241,7 +248,7 @@ class ProgramController extends BaseManagerParentController
                 'licenses_sold' => $program->licenses()->count(),
                 'active_licenses' => $program->licenses()->where('status', 'active')->count(),
                 'expired_licenses' => $program->licenses()->where('status', 'expired')->count(),
-                'revenue' => round((float) $program->licenses()->sum('price'), 2),
+                'revenue' => $this->programRevenue($program, $request),
             ],
         ]);
     }
@@ -260,7 +267,7 @@ class ProgramController extends BaseManagerParentController
         }
     }
 
-    private function serializeProgram(Program $program, Request $request = null): array
+    private function serializeProgram(Program $program, Request $request = null, ?Collection $revenueByProgram = null): array
     {
         $licensesSold = (int) ($program->total_licenses_count ?? 0);
 
@@ -304,10 +311,17 @@ class ProgramController extends BaseManagerParentController
             'status' => $program->status,
             'licenses_sold' => $licensesSold,
             'active_licenses_count' => (int) ($program->active_licenses_count ?? 0),
-            'revenue' => round((float) ($program->total_revenue ?? 0), 2),
+            'revenue' => round((float) ($revenueByProgram?->get($program->id) ?? $this->programRevenue($program, $request)), 2),
             'created_at' => $program->created_at?->toIso8601String(),
             'duration_presets' => $this->serializeDurationPresets($program),
         ];
+    }
+
+    private function programRevenue(Program $program, ?Request $request = null): float
+    {
+        $tenantId = $request ? $this->currentTenantId($request) : (int) ($program->tenant_id ?? 0);
+
+        return (float) (RevenueAnalytics::revenueByProgramIds([$program->id], [], $tenantId)->get($program->id) ?? 0);
     }
 
     /**

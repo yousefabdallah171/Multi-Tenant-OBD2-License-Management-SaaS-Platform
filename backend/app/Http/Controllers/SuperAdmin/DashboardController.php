@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\RevenueAnalytics;
 use App\Models\UserIpLog;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -34,7 +35,7 @@ class DashboardController extends BaseSuperAdminController
                 return [
                     'stats' => [
                         'total_tenants' => Tenant::query()->count(),
-                        'total_revenue' => (float) License::query()->sum('price'),
+                        'total_revenue' => RevenueAnalytics::totalRevenue(),
                         'active_licenses' => License::query()
                             ->whereEffectivelyActive()
                             ->whereNotNull('customer_id')
@@ -55,12 +56,7 @@ class DashboardController extends BaseSuperAdminController
         $firstMonth = CarbonImmutable::now()->startOfMonth()->subMonths(11);
 
         $totals = Cache::remember('super-admin:dashboard:revenue-trend', now()->addSeconds(60), function () use ($firstMonth) {
-            return License::query()
-                ->whereNotNull('activated_at')
-                ->where('activated_at', '>=', $firstMonth)
-                ->selectRaw("DATE_FORMAT(activated_at, '%Y-%m') as month_key, ROUND(COALESCE(SUM(price), 0), 2) as revenue")
-                ->groupByRaw("DATE_FORMAT(activated_at, '%Y-%m')")
-                ->pluck('revenue', 'month_key');
+            return RevenueAnalytics::monthlyRevenueMap(12);
         });
 
         return response()->json([
@@ -75,19 +71,21 @@ class DashboardController extends BaseSuperAdminController
     public function tenantComparison(): JsonResponse
     {
         $tenants = Cache::remember('super-admin:dashboard:tenant-comparison', now()->addMinutes(5), function (): array {
-            return Tenant::query()
+            $tenants = Tenant::query()
                 ->withCount([
                     'licenses as active_licenses_count' => fn ($query) => $query->whereEffectivelyActive(),
                 ])
-                ->withSum('licenses as total_revenue', 'price')
-                ->get()
-                ->sortByDesc(fn (Tenant $tenant): float => (float) ($tenant->total_revenue ?? 0))
+                ->get();
+            $revenueByTenant = RevenueAnalytics::revenueByTenantIds($tenants->pluck('id')->all());
+
+            return $tenants
+                ->sortByDesc(fn (Tenant $tenant): float => (float) ($revenueByTenant->get($tenant->id) ?? 0))
                 ->take(10)
                 ->values()
                 ->map(fn (Tenant $tenant): array => [
                     'id' => $tenant->id,
                     'name' => $tenant->name,
-                    'revenue' => round((float) ($tenant->total_revenue ?? 0), 2),
+                    'revenue' => round((float) ($revenueByTenant->get($tenant->id) ?? 0), 2),
                     'active_licenses' => (int) ($tenant->active_licenses_count ?? 0),
                 ])
                 ->all();

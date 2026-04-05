@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\BiosActivationService;
 use App\Support\ExternalApiSecurity;
+use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -41,7 +42,6 @@ class SoftwareController extends BaseManagerController
                 'licenses as total_licenses_count' => fn ($builder) => $builder->whereIn('reseller_id', $teamResellerIds),
             ])
             ->with('durationPresets')
-            ->withSum(['licenses as total_revenue' => fn ($builder) => $builder->whereIn('reseller_id', $teamResellerIds)], 'price')
             ->latest();
 
         if (! empty($validated['status'])) {
@@ -54,8 +54,15 @@ class SoftwareController extends BaseManagerController
 
         $programs = $query->paginate((int) ($validated['per_page'] ?? 12));
 
+        $revenueByProgram = RevenueAnalytics::revenueByProgramIds(
+            collect($programs->items())->pluck('id')->all(),
+            [],
+            $this->currentTenantId($request),
+            $teamResellerIds,
+        );
+
         return response()->json([
-            'data' => collect($programs->items())->map(fn (Program $program): array => $this->serializeProgram($program))->values(),
+            'data' => collect($programs->items())->map(fn (Program $program): array => $this->serializeProgram($program, $request, $revenueByProgram))->values(),
             'meta' => $this->paginationMeta($programs),
         ]);
     }
@@ -133,7 +140,7 @@ class SoftwareController extends BaseManagerController
             'program_id' => $program->id,
         ]);
 
-        return response()->json(['data' => $this->serializeProgram($program)], 201);
+        return response()->json(['data' => $this->serializeProgram($program, $request)], 201);
     }
 
     public function update(Request $request, Program $program): JsonResponse
@@ -213,7 +220,7 @@ class SoftwareController extends BaseManagerController
             'program_id' => $target->id,
         ]);
 
-        return response()->json(['data' => $this->serializeProgram($target->fresh()->load('durationPresets'))]);
+        return response()->json(['data' => $this->serializeProgram($target->fresh()->load('durationPresets'), $request)]);
     }
 
     public function destroy(Request $request, Program $program): JsonResponse
@@ -282,7 +289,7 @@ class SoftwareController extends BaseManagerController
             'data' => $this->serializeProgram($target->fresh()->loadCount([
                 'licenses as active_licenses_count' => fn ($builder) => $builder->where('status', 'active'),
                 'licenses as total_licenses_count',
-            ])->loadSum('licenses as total_revenue', 'price')),
+            ]), $request),
         ]);
     }
 
@@ -336,7 +343,7 @@ class SoftwareController extends BaseManagerController
     /**
      * @return array<string, mixed>
      */
-    private function serializeProgram(Program $program): array
+    private function serializeProgram(Program $program, ?Request $request = null, ?Collection $revenueByProgram = null): array
     {
         return [
             'id' => $program->id,
@@ -357,10 +364,18 @@ class SoftwareController extends BaseManagerController
             'status' => $program->status,
             'licenses_sold' => (int) ($program->total_licenses_count ?? $program->licenses()->count()),
             'active_licenses_count' => (int) ($program->active_licenses_count ?? $program->licenses()->where('status', 'active')->count()),
-            'revenue' => round((float) ($program->total_revenue ?? $program->licenses()->sum('price')), 2),
+            'revenue' => round((float) ($revenueByProgram?->get($program->id) ?? $this->programRevenue($program, $request)), 2),
             'created_at' => $program->created_at?->toIso8601String(),
             'duration_presets' => $this->serializeDurationPresets($program),
         ];
+    }
+
+    private function programRevenue(Program $program, ?Request $request = null): float
+    {
+        $tenantId = $request ? $this->currentTenantId($request) : (int) ($program->tenant_id ?? 0);
+        $sellerIds = $request ? $this->teamResellerIds($request) : null;
+
+        return (float) (RevenueAnalytics::revenueByProgramIds([$program->id], [], $tenantId, $sellerIds)->get($program->id) ?? 0);
     }
 
     /**

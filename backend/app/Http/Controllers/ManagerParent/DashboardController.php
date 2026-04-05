@@ -7,6 +7,7 @@ use App\Models\BiosConflict;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use App\Support\RevenueAnalytics;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -157,12 +158,11 @@ class DashboardController extends BaseManagerParentController
                 ->whereNotNull('customer_id')
                 ->distinct('customer_id')
                 ->count('customer_id');
-            $revenue = (float) (clone $licenseQuery)->sum('price');
-
-            $monthlyRevenue = (float) License::query()
-                ->where('tenant_id', $tenantId)
-                ->whereBetween('activated_at', [now()->startOfMonth(), now()->endOfMonth()])
-                ->sum('price');
+            $revenue = RevenueAnalytics::totalRevenue([], $tenantId);
+            $monthlyRevenue = RevenueAnalytics::totalRevenue([
+                'from' => now()->startOfMonth()->toDateString(),
+                'to' => now()->endOfMonth()->toDateString(),
+            ], $tenantId);
 
             return [
                 'users' => (int) $roleCounts->sum(),
@@ -189,13 +189,7 @@ class DashboardController extends BaseManagerParentController
             $months = collect(range(11, 0))
                 ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
 
-            $totals = License::query()
-                ->where('tenant_id', $tenantId)
-                ->whereNotNull('activated_at')
-                ->where('activated_at', '>=', $firstMonth)
-                ->selectRaw("DATE_FORMAT(activated_at, '%Y-%m') as month_key, COALESCE(SUM(price), 0) as revenue")
-                ->groupByRaw("DATE_FORMAT(activated_at, '%Y-%m')")
-                ->pluck('revenue', 'month_key');
+            $totals = RevenueAnalytics::monthlyRevenueMap(12, [], $tenantId);
 
             return $months->map(fn (CarbonImmutable $month): array => [
                 'month' => $month->format('M Y'),
@@ -257,13 +251,14 @@ class DashboardController extends BaseManagerParentController
             $metrics = License::query()
                 ->where('tenant_id', $tenantId)
                 ->whereIn('reseller_id', $resellerIds)
-                ->selectRaw('reseller_id, COUNT(*) as activations, COALESCE(SUM(price), 0) as revenue, COUNT(DISTINCT customer_id) as customers')
+                ->selectRaw('reseller_id, COUNT(*) as activations, COUNT(DISTINCT customer_id) as customers')
                 ->groupBy('reseller_id')
                 ->get()
                 ->keyBy('reseller_id');
+            $revenueBySeller = RevenueAnalytics::revenueBySellerIds($resellerIds, $tenantId);
 
             return $team
-                ->map(function (User $user) use ($metrics): array {
+                ->map(function (User $user) use ($metrics, $revenueBySeller): array {
                     $entry = $metrics->get($user->id);
 
                     return [
@@ -271,7 +266,7 @@ class DashboardController extends BaseManagerParentController
                         'name' => $user->name,
                         'role' => $user->role?->value ?? (string) $user->role,
                         'activations' => (int) ($entry?->activations ?? 0),
-                        'revenue' => round((float) ($entry?->revenue ?? 0), 2),
+                        'revenue' => round((float) ($revenueBySeller->get($user->id) ?? 0), 2),
                         'customers' => (int) ($entry?->customers ?? 0),
                     ];
                 })

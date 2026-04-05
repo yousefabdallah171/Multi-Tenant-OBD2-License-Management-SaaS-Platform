@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Reseller;
 
 use App\Models\ActivityLog;
 use App\Models\License;
+use App\Support\RevenueAnalytics;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class DashboardController extends BaseResellerController
                     ->whereNotNull('customer_id')
                     ->distinct('customer_id')
                     ->count('customer_id'),
-                'revenue' => round((float) (clone $licenseQuery)->sum('price'), 2),
+                'revenue' => RevenueAnalytics::totalRevenue([], $this->currentTenantId($request), null, $resellerId),
                 'monthly_activations' => (int) (clone $licenseQuery)
                     ->where('activated_at', '>=', $currentMonth)
                     ->count(),
@@ -72,17 +73,10 @@ class DashboardController extends BaseResellerController
     public function revenueChart(Request $request): JsonResponse
     {
         $resellerId = $this->currentReseller($request)->id;
+        $tenantId = $this->currentTenantId($request);
 
-        $data = Cache::remember("reseller:{$resellerId}:dashboard:revenue-chart", 30, function () use ($resellerId): array {
-            $firstMonth = CarbonImmutable::now()->subMonths(11)->startOfMonth();
-
-            $revenues = License::query()
-                ->where('reseller_id', $resellerId)
-                ->whereNotNull('activated_at')
-                ->where('activated_at', '>=', $firstMonth)
-                ->selectRaw("DATE_FORMAT(activated_at, '%Y-%m') as month_key, ROUND(SUM(price), 2) as total")
-                ->groupByRaw("DATE_FORMAT(activated_at, '%Y-%m')")
-                ->pluck('total', 'month_key');
+        $data = Cache::remember("reseller:{$resellerId}:dashboard:revenue-chart", 30, function () use ($resellerId, $tenantId): array {
+            $revenues = RevenueAnalytics::monthlyRevenueMap(12, [], $tenantId, null, $resellerId);
 
             $months = collect(range(11, 0))
                 ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->subMonths($offset)->startOfMonth());

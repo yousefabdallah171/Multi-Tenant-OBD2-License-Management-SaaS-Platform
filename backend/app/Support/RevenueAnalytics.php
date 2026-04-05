@@ -3,7 +3,9 @@
 namespace App\Support;
 
 use App\Models\ActivityLog;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class RevenueAnalytics
@@ -95,6 +97,93 @@ class RevenueAnalytics
             : self::earnedCondition($table);
 
         return "SUM(CASE WHEN {$condition} THEN 1 ELSE 0 END) as {$alias}";
+    }
+
+    public static function totalRevenue(array $filters = [], ?int $tenantId = null, ?array $sellerIds = null, ?int $sellerId = null): float
+    {
+        $totals = self::baseQuery($filters, $tenantId, $sellerIds, $sellerId)
+            ->selectRaw(self::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+            ->first();
+
+        return round((float) ($totals?->revenue ?? 0), 2);
+    }
+
+    public static function monthlyRevenueMap(
+        int $months = 12,
+        array $filters = [],
+        ?int $tenantId = null,
+        ?array $sellerIds = null,
+        ?int $sellerId = null
+    ): Collection {
+        $start = CarbonImmutable::now()->startOfMonth()->subMonths(max($months - 1, 0));
+
+        return self::baseQuery($filters, $tenantId, $sellerIds, $sellerId)
+            ->where('activity_logs.created_at', '>=', $start)
+            ->selectRaw("DATE_FORMAT(activity_logs.created_at, '%Y-%m') as month_key")
+            ->selectRaw(self::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+            ->groupByRaw("DATE_FORMAT(activity_logs.created_at, '%Y-%m')")
+            ->pluck('revenue', 'month_key');
+    }
+
+    public static function revenueByTenantIds(array $tenantIds, array $filters = []): Collection
+    {
+        $tenantIds = array_values(array_unique(array_map('intval', $tenantIds)));
+
+        if ($tenantIds === []) {
+            return collect();
+        }
+
+        return self::baseQuery($filters)
+            ->whereIn('activity_logs.tenant_id', $tenantIds)
+            ->selectRaw('activity_logs.tenant_id as tenant_id')
+            ->selectRaw(self::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+            ->groupBy('activity_logs.tenant_id')
+            ->get()
+            ->mapWithKeys(fn ($row): array => [
+                (int) $row->tenant_id => round((float) $row->revenue, 2),
+            ]);
+    }
+
+    public static function revenueBySellerIds(array $sellerIds, ?int $tenantId = null, array $filters = []): Collection
+    {
+        $sellerIds = array_values(array_unique(array_map('intval', $sellerIds)));
+
+        if ($sellerIds === []) {
+            return collect();
+        }
+
+        return self::baseQuery($filters, $tenantId, $sellerIds)
+            ->selectRaw('activity_logs.user_id as seller_id')
+            ->selectRaw(self::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+            ->groupBy('activity_logs.user_id')
+            ->get()
+            ->mapWithKeys(fn ($row): array => [
+                (int) $row->seller_id => round((float) $row->revenue, 2),
+            ]);
+    }
+
+    public static function revenueByProgramIds(
+        array $programIds,
+        array $filters = [],
+        ?int $tenantId = null,
+        ?array $sellerIds = null,
+        ?int $sellerId = null
+    ): Collection {
+        $programIds = array_values(array_unique(array_map('intval', $programIds)));
+
+        if ($programIds === []) {
+            return collect();
+        }
+
+        return self::baseQuery($filters, $tenantId, $sellerIds, $sellerId)
+            ->selectRaw(self::programIdExpression('activity_logs').' as program_id')
+            ->selectRaw(self::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+            ->groupByRaw(self::programIdExpression('activity_logs'))
+            ->get()
+            ->filter(fn ($row): bool => in_array((int) ($row->program_id ?? 0), $programIds, true))
+            ->mapWithKeys(fn ($row): array => [
+                (int) $row->program_id => round((float) $row->revenue, 2),
+            ]);
     }
 
     private static function isSqlite(): bool

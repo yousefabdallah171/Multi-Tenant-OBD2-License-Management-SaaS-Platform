@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
+use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -331,9 +332,9 @@ class TeamController extends BaseManagerParentController
             return collect();
         }
 
-        return License::query()
+        $licenseStats = License::query()
             ->whereIn('reseller_id', $userIds)
-            ->selectRaw('reseller_id, COUNT(*) as licenses_count, COUNT(DISTINCT customer_id) as customers, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_licenses, ROUND(COALESCE(SUM(price), 0), 2) as revenue', ['active'])
+            ->selectRaw('reseller_id, COUNT(*) as licenses_count, COUNT(DISTINCT customer_id) as customers, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_licenses', ['active'])
             ->groupBy('reseller_id')
             ->get()
             ->mapWithKeys(fn (License $license): array => [
@@ -341,8 +342,14 @@ class TeamController extends BaseManagerParentController
                     'licenses_count' => (int) ($license->licenses_count ?? 0),
                     'customers' => (int) ($license->customers ?? 0),
                     'active_licenses' => (int) ($license->active_licenses ?? 0),
-                    'revenue' => round((float) ($license->revenue ?? 0), 2),
                 ],
             ]);
+        $revenueBySeller = RevenueAnalytics::revenueBySellerIds($userIds);
+
+        return $licenseStats->map(function (array $stats, int $sellerId) use ($revenueBySeller): array {
+            $stats['revenue'] = round((float) ($revenueBySeller->get($sellerId) ?? 0), 2);
+
+            return $stats;
+        });
     }
 }

@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
+use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -270,13 +271,13 @@ class AdminManagementController extends BaseSuperAdminController
             ->where('reseller_id', $user->id);
 
         $stats = $query
-            ->selectRaw('COUNT(DISTINCT customer_id) as customers, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_licenses, ROUND(COALESCE(SUM(price), 0), 2) as revenue', ['active'])
+            ->selectRaw('COUNT(DISTINCT customer_id) as customers, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_licenses', ['active'])
             ->first();
 
         return [
             'customers' => (int) ($stats?->customers ?? 0),
             'active_licenses' => (int) ($stats?->active_licenses ?? 0),
-            'revenue' => round((float) ($stats?->revenue ?? 0), 2),
+            'revenue' => RevenueAnalytics::totalRevenue([], $user->tenant_id ? (int) $user->tenant_id : null, null, $user->id),
         ];
     }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Manager;
 
 use App\Models\ActivityLog;
 use App\Models\License;
+use App\Support\RevenueAnalytics;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -101,7 +102,7 @@ class DashboardController extends BaseManagerController
                     ->whereNotNull('customer_id')
                     ->distinct('customer_id')
                     ->count('customer_id'),
-                'team_revenue' => round((float) (clone $licenseQuery)->sum('price'), 2),
+                'team_revenue' => RevenueAnalytics::totalRevenue([], $this->currentTenantId($request), $sellerIds),
                 'monthly_activations' => (int) (clone $licenseQuery)
                     ->whereBetween('activated_at', [now()->startOfMonth(), now()->endOfMonth()])
                     ->count(),
@@ -159,12 +160,13 @@ class DashboardController extends BaseManagerController
                 return [];
             }
 
-            return License::query()
-                ->join('users as resellers', 'resellers.id', '=', 'licenses.reseller_id')
-                ->whereIn('licenses.reseller_id', $sellerIds)
-                ->where('licenses.activated_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(11))
-                ->selectRaw('licenses.reseller_id, resellers.name as reseller, COUNT(*) as activations, COALESCE(SUM(licenses.price), 0) as revenue')
-                ->groupBy('licenses.reseller_id', 'resellers.name')
+            return RevenueAnalytics::baseQuery([], $this->currentTenantId($request), $sellerIds)
+                ->join('users as resellers', 'resellers.id', '=', 'activity_logs.user_id')
+                ->where('activity_logs.created_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(11))
+                ->selectRaw('activity_logs.user_id as reseller_id, resellers.name as reseller')
+                ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
+                ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+                ->groupBy('activity_logs.user_id', 'resellers.name')
                 ->orderByDesc('revenue')
                 ->get()
                 ->map(fn ($row): array => [
