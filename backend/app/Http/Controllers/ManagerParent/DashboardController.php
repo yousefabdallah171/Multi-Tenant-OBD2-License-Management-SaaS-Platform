@@ -171,6 +171,7 @@ class DashboardController extends BaseManagerParentController
                 'active_licenses' => $activeLicenses,
                 'revenue' => round($revenue, 2),
                 'team_members' => (int) (($roleCounts[UserRole::MANAGER->value] ?? 0) + ($roleCounts[UserRole::RESELLER->value] ?? 0)),
+                'resellers' => (int) ($roleCounts[UserRole::RESELLER->value] ?? 0),
                 'total_customers' => (int) ($roleCounts[UserRole::CUSTOMER->value] ?? 0),
                 'monthly_revenue' => round($monthlyRevenue, 2),
             ];
@@ -341,6 +342,7 @@ class DashboardController extends BaseManagerParentController
             'active_licenses' => 0,
             'revenue' => 0,
             'team_members' => 0,
+            'resellers' => 0,
             'total_customers' => 0,
             'monthly_revenue' => 0,
         ];

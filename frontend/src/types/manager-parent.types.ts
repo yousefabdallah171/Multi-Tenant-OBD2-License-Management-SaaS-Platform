@@ -8,6 +8,7 @@ export interface ManagerParentDashboardStats {
   active_licenses: number
   revenue: number
   team_members: number
+  resellers: number
   total_customers: number
   monthly_revenue: number
 }

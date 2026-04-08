@@ -637,6 +637,7 @@
         "title": "Dashboard",
         "description": "Tenant-level overview for your team, customer base, activations, and current revenue momentum.",
         "teamMembers": "Team Members",
+        "resellers": "Resellers",
         "customers": "Customers",
         "activeLicenses": "Active Licenses",
         "activeCustomers": "Current Active Customers",
