@@ -80,6 +80,8 @@ api.interceptors.response.use(
   async (error) => {
     const status = error?.response?.status
     const requestUrl = String(error?.config?.url ?? '')
+    const requestMethod = String(error?.config?.method ?? 'get').toUpperCase()
+    const isReadRequest = requestMethod === 'GET' || requestMethod === 'HEAD'
     const isAuthLoginRequest = /\/auth\/login(?:\?.*)?$/.test(requestUrl)
     const accountDisabledState = extractAccountDisabledState(error?.response?.data)
 
@@ -102,7 +104,20 @@ api.interceptors.response.use(
       }
     }
 
-    if (status === 403 && typeof window !== 'undefined' && !window.location.pathname.includes('/access-denied')) {
+    if (status === 403 && typeof window !== 'undefined') {
+      if (!isReadRequest) {
+        toast.error(
+          error?.response?.data?.message
+            ?? i18n.t('common.errorPages.accessDenied.description'),
+        )
+
+        return Promise.reject(error)
+      }
+
+      if (window.location.pathname.includes('/access-denied')) {
+        return Promise.reject(error)
+      }
+
       const isMeRequest = /\/auth\/me(?:\?.*)?$/.test(requestUrl)
 
       if (!isMeRequest && useAuthStore.getState().user) {
