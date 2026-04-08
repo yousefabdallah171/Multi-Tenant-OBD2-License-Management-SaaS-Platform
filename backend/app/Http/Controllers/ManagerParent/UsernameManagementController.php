@@ -58,7 +58,7 @@ class UsernameManagementController extends BaseManagerParentController
         $user = $this->resolveTenantUser($request, $user);
 
         abort_unless(
-            in_array($user->role?->value ?? (string) $user->role, [UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
+            in_array($user->role?->value ?? (string) $user->role, [UserRole::MANAGER->value, UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
             403,
         );
 
@@ -79,7 +79,7 @@ class UsernameManagementController extends BaseManagerParentController
         $user = $this->resolveTenantUser($request, $user);
 
         abort_unless(
-            in_array($user->role?->value ?? (string) $user->role, [UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
+            in_array($user->role?->value ?? (string) $user->role, [UserRole::MANAGER->value, UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
             403,
         );
 
@@ -109,7 +109,7 @@ class UsernameManagementController extends BaseManagerParentController
         $user = $this->resolveTenantUser($request, $user);
 
         abort_unless(
-            in_array($user->role?->value ?? (string) $user->role, [UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
+            in_array($user->role?->value ?? (string) $user->role, [UserRole::MANAGER->value, UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
             403,
         );
 

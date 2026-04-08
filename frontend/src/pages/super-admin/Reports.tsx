@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, CircleDollarSign, Gift, Globe2, Users } from 'lucide-react'
+import { Banknote, Globe2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
@@ -130,12 +130,10 @@ export function ReportsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalPlatformRevenue')} value={formatCurrency(financialData?.summary.total_platform_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" /></button>
-        <div className="w-full"><StatsCard title={t('superAdmin.pages.financialReports.grantedValue', { defaultValue: 'Granted Value' })} value={formatCurrency(financialData?.summary.granted_value ?? 0, 'USD', locale)} icon={Gift} color="rose" /></div>
         <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.customers(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalCustomers')} value={financialData?.summary.total_customers ?? 0} icon={Globe2} color="sky" /></button>
         <button type="button" className="w-full text-start" onClick={() => navigate(`${routePaths.superAdmin.customers(lang)}?status=active`)}><StatsCard title={t('superAdmin.pages.financialReports.activeCustomers')} value={financialData?.summary.active_licenses ?? 0} icon={Users} color="amber" /></button>
-        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.avgRevenuePerTenant')} value={formatCurrency(financialData?.summary.avg_revenue_per_tenant ?? 0, 'USD', locale)} icon={CircleDollarSign} color="rose" /></button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

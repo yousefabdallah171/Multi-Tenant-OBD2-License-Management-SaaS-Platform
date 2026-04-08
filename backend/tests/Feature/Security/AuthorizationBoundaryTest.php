@@ -100,6 +100,52 @@ class AuthorizationBoundaryTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_manager_parent_can_reset_password_for_manager_in_same_tenant(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $manager = $this->createUser('manager', $tenant, $managerParent);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->postJson('/api/username-management/'.$manager->id.'/reset-password', [
+            'revoke_tokens' => true,
+        ])
+            ->assertOk()
+            ->assertJsonStructure(['message', 'temporary_password']);
+    }
+
+    public function test_manager_parent_can_unlock_manager_in_same_tenant(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $manager = $this->createUser('manager', $tenant, $managerParent, ['username_locked' => true]);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->postJson('/api/username-management/'.$manager->id.'/unlock', [
+            'reason' => 'test',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.username_locked', false);
+    }
+
+    public function test_manager_parent_can_change_manager_username_in_same_tenant(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $manager = $this->createUser('manager', $tenant, $managerParent);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->putJson('/api/username-management/'.$manager->id.'/username', [
+            'username' => 'updated-manager-username',
+            'reason' => 'test',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.username', 'updated-manager-username');
+    }
+
     public function test_manager_cannot_unlock_reseller_outside_his_team(): void
     {
         $tenant = $this->createTenant();
