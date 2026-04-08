@@ -31,10 +31,7 @@ class SoftwareController extends BaseManagerController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $tenantId = $this->currentTenantId($request);
-        $teamResellerIds = User::where('tenant_id', $tenantId)
-            ->where('role', 'reseller')
-            ->pluck('id');
+        $teamResellerIds = $this->teamResellerIds($request);
 
         $query = Program::query()
             ->withCount([
