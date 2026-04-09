@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { AxiosError } from 'axios'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -52,6 +52,7 @@ export function TeamManagementPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const returnTo = `${location.pathname}${location.search}`
@@ -64,7 +65,8 @@ export function TeamManagementPage() {
       status?: AccountStatusFilter
     }
   } | null)?.restore
-  const [role, setRole] = useState<'manager' | 'reseller' | ''>(() => restoreState?.role ?? '')
+  const roleFromSearch = normalizeRoleFilter(searchParams.get('role'))
+  const [role, setRole] = useState<'manager' | 'reseller' | ''>(() => roleFromSearch ?? restoreState?.role ?? '')
   const [page, setPage] = useState(() => restoreState?.page ?? 1)
   const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 10)
   const [search, setSearch] = useState(() => restoreState?.search ?? '')
@@ -327,6 +329,13 @@ export function TeamManagementPage() {
     },
   }
 
+  useEffect(() => {
+    const nextRole = roleFromSearch ?? ''
+
+    setRole((current) => (current === nextRole ? current : nextRole))
+    setPage(1)
+  }, [roleFromSearch])
+
   function closeForm() {
     setFormOpen(false)
     setEditingMember(null)
@@ -406,7 +415,19 @@ export function TeamManagementPage() {
       <Tabs
         value={role || 'all'}
         onValueChange={(value) => {
-          setRole(value === 'all' ? '' : (value as 'manager' | 'reseller'))
+          const nextRole = value === 'all' ? '' : (value as 'manager' | 'reseller')
+          setRole(nextRole)
+          setSearchParams((current) => {
+            const next = new URLSearchParams(current)
+
+            if (nextRole) {
+              next.set('role', nextRole)
+            } else {
+              next.delete('role')
+            }
+
+            return next
+          }, { replace: true })
           setPage(1)
         }}
       >
@@ -660,4 +681,12 @@ function getApiErrorMessage(error: unknown, fallback: string) {
   return response?.data?.message
     ?? Object.values(response?.data?.errors ?? {})[0]?.[0]
     ?? fallback
+}
+
+function normalizeRoleFilter(value: string | null): 'manager' | 'reseller' | null {
+  if (value === 'manager' || value === 'reseller') {
+    return value
+  }
+
+  return null
 }
