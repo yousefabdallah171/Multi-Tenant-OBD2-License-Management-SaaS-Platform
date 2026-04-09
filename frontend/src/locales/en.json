@@ -609,6 +609,7 @@
     "nav": {
       "dashboard": "Dashboard",
       "teamManagement": "Team Management",
+      "teamNetwork": "Team Network",
       "softwareManagement": "Software Management",
       "biosBlacklist": "BIOS Blacklist",
       "biosHistory": "BIOS History",
@@ -819,6 +820,22 @@
         "createAccount": "Create Account",
         "deleteTitle": "Delete team member?",
         "deleteDescription": "This will remove {{name}} from the team."
+      },
+      "teamNetwork": {
+        "title": "Team Network",
+        "description": "Visual hierarchy of your team with direct links to reports, payments, and filtered customer views.",
+        "refreshBtn": "Refresh",
+        "resetViewBtn": "Reset View",
+        "loading": "Loading team network...",
+        "empty": "No team members yet",
+        "emptyDescription": "Add managers and resellers from Team Management to see the network here.",
+        "goToTeam": "Go to Team Management",
+        "revenue": "Revenue",
+        "balance": "Balance",
+        "managers": "Managers",
+        "resellers": "Resellers",
+        "customers": "Customers",
+        "activations": "Activations"
       },
       "softwareManagement": {
         "title": "Software Management",

@@ -71,6 +71,7 @@ const ManagerParentSoftwarePage = lazyNamed(() => import('@/pages/manager-parent
 const SoftwareManagementPage = lazyNamed(() => import('@/pages/manager-parent/SoftwareManagement'), 'SoftwareManagementPage')
 const ManagerParentProgramFormPage = lazyNamed(() => import('@/pages/manager-parent/ProgramForm'), 'ProgramFormPage')
 const TeamManagementPage = lazyNamed(() => import('@/pages/manager-parent/TeamManagement'), 'TeamManagementPage')
+const TeamNetworkPage = lazyNamed(() => import('@/pages/manager-parent/TeamNetwork'), 'TeamNetworkPage')
 const TeamMemberDetailPage = lazyNamed(() => import('@/pages/manager-parent/TeamMemberDetail'), 'TeamMemberDetailPage')
 
 const ApiStatusPage = lazyNamed(() => import('@/pages/super-admin/ApiStatus'), 'ApiStatusPage')
@@ -167,6 +168,7 @@ export function AppRouter() {
                 <Route element={<DashboardLayout />}>
                   <Route path="dashboard" element={<ManagerParentDashboardPage />} />
                   <Route path="team-management" element={<TeamManagementPage />} />
+                  <Route path="team-network" element={<TeamNetworkPage />} />
                   <Route path="team-management/:id" element={<TeamMemberDetailPage />} />
                   <Route path="software" element={<ManagerParentSoftwarePage />} />
                   <Route path="software-management" element={<SoftwareManagementPage />} />

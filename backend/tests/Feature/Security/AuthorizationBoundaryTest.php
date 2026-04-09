@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Security;
 
+use App\Models\ActivityLog;
 use App\Models\ProgramDurationPreset;
+use App\Models\UserBalance;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\BuildsSecurityFixtures;
@@ -187,5 +189,86 @@ class AuthorizationBoundaryTest extends TestCase
             'revoke_tokens' => true,
         ])
             ->assertForbidden();
+    }
+
+    public function test_manager_parent_can_view_team_network_with_pending_balance_distinct_customers_and_orphan_reseller(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $manager = $this->createUser('manager', $tenant, $managerParent);
+        $managedReseller = $this->createUser('reseller', $tenant, $manager);
+        $orphanReseller = $this->createUser('reseller', $tenant, $managerParent);
+        $sharedCustomer = $this->createUser('customer', $tenant, $managedReseller);
+
+        $this->createLicense($managedReseller, null, $sharedCustomer);
+        $this->createLicense($managedReseller);
+        $this->createLicense($orphanReseller, null, $sharedCustomer);
+
+        UserBalance::query()->create([
+            'user_id' => $managerParent->id,
+            'tenant_id' => $tenant->id,
+            'pending_balance' => 125.5,
+            'total_revenue' => 999,
+            'total_activations' => 0,
+            'granted_value' => 0,
+        ]);
+
+        $this->createEarnedActivity($tenant->id, $manager->id, 50, '2026-04-01 10:00:00');
+        $this->createEarnedActivity($tenant->id, $managedReseller->id, 75, '2026-04-02 10:00:00');
+        $this->createEarnedActivity($tenant->id, $orphanReseller->id, 25, '2026-04-03 10:00:00');
+
+        Sanctum::actingAs($managerParent);
+
+        $response = $this->getJson('/api/team/network')
+            ->assertOk()
+            ->assertJsonPath('data.root.balance', 125.5)
+            ->assertJsonPath('data.root.total_revenue', 150.0)
+            ->assertJsonPath('data.root.managers_count', 1)
+            ->assertJsonPath('data.root.resellers_count', 2)
+            ->assertJsonPath('data.root.total_customers', 2);
+
+        $managerNode = collect($response->json('data.managers'))->firstWhere('id', $manager->id);
+        $managedResellerNode = collect($response->json('data.resellers'))->firstWhere('id', $managedReseller->id);
+        $orphanResellerNode = collect($response->json('data.resellers'))->firstWhere('id', $orphanReseller->id);
+
+        $this->assertNotNull($managerNode);
+        $this->assertSame(1, (int) $managerNode['resellers_count']);
+        $this->assertSame(2, (int) $managerNode['customers_count']);
+        $this->assertSame(2, (int) $managerNode['activations_count']);
+
+        $this->assertNotNull($managedResellerNode);
+        $this->assertSame($manager->id, (int) $managedResellerNode['manager_id']);
+        $this->assertSame(75.0, (float) $managedResellerNode['revenue']);
+
+        $this->assertNotNull($orphanResellerNode);
+        $this->assertNull($orphanResellerNode['manager_id']);
+        $this->assertSame(25.0, (float) $orphanResellerNode['revenue']);
+    }
+
+    public function test_manager_cannot_access_manager_parent_team_network_endpoint(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser('manager', $tenant);
+
+        Sanctum::actingAs($manager);
+
+        $this->getJson('/api/team/network')->assertForbidden();
+    }
+
+    private function createEarnedActivity(int $tenantId, int $sellerId, float $price, string $createdAt): void
+    {
+        ActivityLog::query()->create([
+            'tenant_id' => $tenantId,
+            'user_id' => $sellerId,
+            'action' => 'license.activated',
+            'description' => 'Revenue event for team network tests.',
+            'metadata' => [
+                'price' => $price,
+                'attribution_type' => 'earned',
+            ],
+            'ip_address' => '127.0.0.1',
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ]);
     }
 }

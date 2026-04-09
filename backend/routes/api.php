@@ -36,6 +36,7 @@ use App\Http\Controllers\ManagerParent\FinancialReportController as ManagerParen
 use App\Http\Controllers\ManagerParent\IpAnalyticsController as ManagerParentIpAnalyticsController;
 use App\Http\Controllers\ManagerParent\LicenseController as ManagerParentLicenseController;
 use App\Http\Controllers\ManagerParent\LogController as ManagerParentLogController;
+use App\Http\Controllers\ManagerParent\NetworkController as ManagerParentNetworkController;
 use App\Http\Controllers\ManagerParent\ProgramController as ManagerParentProgramController;
 use App\Http\Controllers\ManagerParent\ProgramLogsController as ManagerParentProgramLogsController;
 use App\Http\Controllers\ManagerParent\ReportController as ManagerParentReportController;
@@ -136,6 +137,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/dashboard/conflict-rate', [ManagerParentDashboardController::class, 'conflictRate']);
 
         Route::get('/team', [ManagerParentTeamController::class, 'index']);
+        Route::get('/team/network', [ManagerParentNetworkController::class, 'index']);
         Route::post('/team', [ManagerParentTeamController::class, 'store']);
         Route::put('/team/{user}', [ManagerParentTeamController::class, 'update']);
         Route::delete('/team/{user}', [ManagerParentTeamController::class, 'destroy']);

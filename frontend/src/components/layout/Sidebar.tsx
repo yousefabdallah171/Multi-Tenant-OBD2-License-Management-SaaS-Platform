@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Network, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -41,6 +41,7 @@ const superAdminItems: NavItem[] = [
 const managerParentItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.managerParent.dashboard, translationKey: 'managerParent.nav.dashboard' },
   { key: 'teamManagement', icon: Users, href: routePaths.managerParent.teamManagement, translationKey: 'managerParent.nav.teamManagement' },
+  { key: 'teamNetwork', icon: Network, href: routePaths.managerParent.teamNetwork, translationKey: 'managerParent.nav.teamNetwork' },
   { key: 'customers', icon: Users, href: routePaths.managerParent.customers, translationKey: 'managerParent.nav.customers' },
   { key: 'software', icon: Package, href: routePaths.managerParent.software, translationKey: 'managerParent.nav.software' },
   { key: 'softwareManagement', icon: Package, href: routePaths.managerParent.softwareManagement, translationKey: 'managerParent.nav.softwareManagement' },

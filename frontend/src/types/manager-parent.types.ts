@@ -543,3 +543,43 @@ export interface BiosConflictFilters {
   from?: string
   to?: string
 }
+
+export interface NetworkRootNode {
+  id: number
+  name: string
+  role: 'manager_parent'
+  status: string
+  total_revenue: number
+  balance: number
+  managers_count: number
+  resellers_count: number
+  total_customers: number
+}
+
+export interface NetworkManagerNode {
+  id: number
+  name: string
+  role: 'manager'
+  status: string
+  revenue: number
+  resellers_count: number
+  customers_count: number
+  activations_count: number
+}
+
+export interface NetworkResellerNode {
+  id: number
+  name: string
+  role: 'reseller'
+  status: string
+  manager_id: number | null
+  revenue: number
+  activations_count: number
+  customers_count: number
+}
+
+export interface NetworkDiagramPayload {
+  root: NetworkRootNode
+  managers: NetworkManagerNode[]
+  resellers: NetworkResellerNode[]
+}

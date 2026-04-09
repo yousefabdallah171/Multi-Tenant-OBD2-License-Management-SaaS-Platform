@@ -13,6 +13,7 @@ import type {
   ManagerParentDashboardPayload,
   ManagerParentDashboardStats,
   ManagerParentLogEntry,
+  NetworkDiagramPayload,
   CustomerLicenseHistoryEntry,
   ManagerParentBiosChangeRequest,
   PaginatedResponse,
@@ -207,6 +208,15 @@ export const managerParentService = {
 
     const { data } = await api.get<{ data: FinancialReportData }>('/financial-reports', { params })
     apiCache.set(cacheKey, data, CACHE_TTL.REPORT)
+    return data
+  },
+  async getTeamNetwork() {
+    const cacheKey = 'manager-parent:team-network'
+    const cached = apiCache.get<{ data: NetworkDiagramPayload }>(cacheKey)
+    if (cached) return cached
+
+    const { data } = await api.get<{ data: NetworkDiagramPayload }>('/team/network')
+    apiCache.set(cacheKey, data, 60 * 1000)
     return data
   },
   async getProgramsWithExternalApi() {
