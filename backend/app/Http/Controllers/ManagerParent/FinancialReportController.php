@@ -42,7 +42,7 @@ class FinancialReportController extends BaseManagerParentController
         $totalCustomers = User::query()
             ->where('tenant_id', $tenantId)
             ->where('role', UserRole::CUSTOMER->value)
-            ->whereIn('created_by', $scope['seller_ids'])
+            ->whereHas('customerLicenses', fn ($q) => $q->whereIn('reseller_id', $scope['seller_ids']))
             ->count();
         $revenueByReseller = $this->revenueQuery($tenantId, $validated, $scope)
             ->leftJoin('users as resellers', 'resellers.id', '=', 'activity_logs.user_id')
