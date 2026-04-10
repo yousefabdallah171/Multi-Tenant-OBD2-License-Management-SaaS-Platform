@@ -52,8 +52,11 @@ class OnlineUsersVisibilityTest extends TestCase
 
         $rows = collect($response->json('data'))->keyBy('id');
 
-        $this->assertArrayNotHasKey($managerParent->id, $rows->all());
-        $this->assertArrayNotHasKey($otherParent->id, $rows->all());
+        $this->assertTrue((bool) $rows[$managerParent->id]['is_self']);
+        $this->assertSame('You', $rows[$managerParent->id]['display_name']);
+        $this->assertSame('Tenant Parent', $rows[$managerParent->id]['full_name']);
+        $this->assertSame('Other Parent', $rows[$otherParent->id]['display_name']);
+        $this->assertSame('Other Parent', $rows[$otherParent->id]['full_name']);
         $this->assertSame('Main Manager', $rows[$manager->id]['display_name']);
         $this->assertSame('Main Manager', $rows[$manager->id]['full_name']);
         $this->assertSame('Farouk', $rows[$reseller->id]['display_name']);

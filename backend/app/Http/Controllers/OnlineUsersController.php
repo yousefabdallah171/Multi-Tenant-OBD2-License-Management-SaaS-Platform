@@ -31,7 +31,11 @@ class OnlineUsersController extends Controller
         } elseif ($role === UserRole::MANAGER_PARENT->value) {
             $query
                 ->where('tenant_id', $actor->tenant_id)
-                ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value]);
+                ->whereIn('role', [
+                    UserRole::MANAGER_PARENT->value,
+                    UserRole::MANAGER->value,
+                    UserRole::RESELLER->value,
+                ]);
         } elseif ($role === UserRole::MANAGER->value) {
             $query->where(function ($builder) use ($actor): void {
                 $builder
