@@ -29,14 +29,29 @@ interface CustomerCreatePageProps {
 }
 
 type DurationUnit = 'minutes' | 'hours' | 'days'
+type DurationMode = 'duration' | 'end_date' | 'preset'
 type ScheduleMode = 'after' | 'on'
 
 const MIN_DURATION_DAYS = 1 / 1440
 
 function getDefaultEndDate(timeZone: string, days = 1) {
   const next = new Date()
+  next.setSeconds(0, 0) // truncate sub-minute precision to reduce duration drift
   next.setDate(next.getDate() + days)
   return formatDateTimeLocalInTimezone(next, timeZone)
+}
+
+function formatDurationDays(days: number): string {
+  if (days <= 0) return '0'
+  const totalMinutes = Math.round(days * 1440)
+  const d = Math.floor(totalMinutes / 1440)
+  const h = Math.floor((totalMinutes % 1440) / 60)
+  const m = totalMinutes % 60
+  const parts: string[] = []
+  if (d > 0) parts.push(`${d}d`)
+  if (h > 0) parts.push(`${h}h`)
+  if (m > 0) parts.push(`${m}m`)
+  return parts.length > 0 ? parts.join(' ') : `${days.toFixed(3)}`
 }
 
 function getDefaultScheduleDate(timeZone: string) {
@@ -70,6 +85,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const isPresetSeller = user?.role === 'reseller' || user?.role === 'manager'
+  const isManagerParent = user?.role === 'manager_parent'
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [customerName, setCustomerName] = useState('')
@@ -83,7 +99,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     const parsed = param ? Number(param) : NaN
     return Number.isFinite(parsed) && parsed > 0 ? parsed : ''
   })
-  const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
+  const [mode, setMode] = useState<DurationMode>('end_date')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
   const profileTimezone = useMemo(() => resolveDisplayTimezone({ userTimezone: user?.timezone }), [user?.timezone])
@@ -195,7 +211,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   )
 
   useEffect(() => {
-    if (!isPresetSeller) {
+    if (!isPresetSeller && mode !== 'preset') {
       setSelectedPresetId(null)
       return
     }
@@ -207,7 +223,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
       return availablePresets[0]?.id ?? null
     })
-  }, [availablePresets, isPresetSeller])
+  }, [availablePresets, isPresetSeller, mode])
 
   const effectiveStartDate = useMemo(() => {
     if (!createLicenseNow || !scheduleEnabled) {
@@ -222,7 +238,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       return 0
     }
 
-    if (isPresetSeller) {
+    if (isPresetSeller || mode === 'preset') {
       return selectedPreset?.duration_days ?? 0
     }
 
@@ -239,9 +255,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
   const autoPrice = useMemo(() => {
     if (!selectedProgram || !createLicenseNow) return 0
-    if (isPresetSeller) return Number((selectedPreset?.price ?? 0).toFixed(2))
-    return Number((Math.max(durationDays, 0) * Number(selectedProgram.base_price ?? 0)).toFixed(2))
-  }, [createLicenseNow, durationDays, isPresetSeller, selectedPreset?.price, selectedProgram])
+    if (isPresetSeller || mode === 'preset') return Number((selectedPreset?.price ?? 0).toFixed(2))
+    // Round to nearest 0.01 day (~14 min) to avoid floating-point drift (e.g. 0.999 × $25 = $24.99)
+    const roundedDays = Math.round(Math.max(durationDays, 0) * 100) / 100
+    return Number((roundedDays * Number(selectedProgram.base_price ?? 0)).toFixed(2))
+  }, [createLicenseNow, durationDays, isPresetSeller, mode, selectedPreset?.price, selectedProgram])
 
   useEffect(() => {
     if (priceMode === 'auto') {
@@ -249,15 +267,16 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }
   }, [autoPrice, priceMode])
 
+
   const totalPrice = useMemo(() => {
-    if (isPresetSeller || priceMode === 'auto') return autoPrice
+    if (isPresetSeller || mode === 'preset' || priceMode === 'auto') return autoPrice
     const parsed = Number(priceInput)
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
-  }, [autoPrice, isPresetSeller, priceInput, priceMode])
+  }, [autoPrice, isPresetSeller, mode, priceInput, priceMode])
 
   const expiryPreview = useMemo(() => {
     if (!createLicenseNow || durationDays <= 0) return ''
-    if (isPresetSeller) {
+    if (isPresetSeller || mode === 'preset') {
       return new Date(effectiveStartDate.getTime() + durationDays * 86400000).toISOString()
     }
     if (mode === 'end_date') {
@@ -318,7 +337,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     if (requiresPendingLicenseFields && !programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
 
     if (createLicenseNow) {
-      if (isPresetSeller) {
+      if (isPresetSeller || mode === 'preset') {
         // Only validate if presets are loaded; selectedPreset has a fallback to availablePresets[0]
         if (availablePresets.length === 0) {
           next.duration = t('validation.required', { defaultValue: 'Field required' })
@@ -368,9 +387,9 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       customer_phone: phone.trim() || undefined,
       bios_id: biosId.trim(),
       program_id: Number(programId),
-      preset_id: isPresetSeller ? selectedPreset?.id : undefined,
-      duration_days: isPresetSeller ? undefined : Number(durationDays.toFixed(6)),
-      price: isPresetSeller ? undefined : totalPrice,
+      preset_id: (isPresetSeller || mode === 'preset') ? selectedPreset?.id : undefined,
+      duration_days: (isPresetSeller || mode === 'preset') ? undefined : Number(durationDays.toFixed(6)),
+      price: (isPresetSeller || mode === 'preset') ? undefined : totalPrice,
       is_scheduled: scheduleEnabled || undefined,
       scheduled_date_time: scheduleEnabled ? scheduleAt : undefined,
       scheduled_timezone: scheduleEnabled ? scheduleTimezone : undefined,
@@ -648,8 +667,32 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                       <Label>{t('common.duration')}</Label>
                       <Button type="button" size="sm" variant={mode === 'duration' ? 'default' : 'outline'} onClick={() => setMode('duration')}>{t('activate.durationMode', { defaultValue: 'Duration' })}</Button>
                       <Button type="button" size="sm" variant={mode === 'end_date' ? 'default' : 'outline'} onClick={() => setMode('end_date')}>{t('common.endDate', { defaultValue: 'End Date' })}</Button>
+                      {isManagerParent && availablePresets.length > 0 && (
+                        <Button type="button" size="sm" variant={mode === 'preset' ? 'default' : 'outline'} onClick={() => setMode('preset')}>{t('software.durationPresetsTitle', { defaultValue: 'Presets' })}</Button>
+                      )}
                     </div>
-                    {mode === 'duration' ? (
+                    {mode === 'preset' ? (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          {availablePresets.map((preset) => (
+                            <Button
+                              key={preset.id}
+                              type="button"
+                              size="sm"
+                              variant={selectedPreset?.id === preset.id ? 'default' : 'outline'}
+                              onClick={() => setSelectedPresetId(preset.id)}
+                            >
+                              {preset.label}
+                            </Button>
+                          ))}
+                        </div>
+                        {selectedPreset ? (
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            {t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • {formatCurrency(selectedPreset.price, 'USD', locale)}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : mode === 'duration' ? (
                       <div className="grid gap-3 md:grid-cols-[140px_180px_1fr]">
                         <Input value={durationValue} onChange={(event) => setDurationValue(event.target.value.replace(/[^\d.]/g, ''))} />
                         <select value={durationUnit} onChange={(event) => setDurationUnit(event.target.value as DurationUnit)} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
@@ -683,7 +726,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                 <div className="flex items-center justify-between gap-3">
                   <Label>{t('activate.price', { defaultValue: 'Total Price' })}</Label>
-                  {isPresetSeller ? null : (
+                  {isPresetSeller || mode === 'preset' ? null : (
                     <div className="flex gap-2">
                       <Button type="button" size="sm" variant={priceMode === 'auto' ? 'default' : 'outline'} onClick={() => setPriceMode('auto')}>{t('activate.priceModeAuto', { defaultValue: 'Auto' })}</Button>
                       <Button type="button" size="sm" variant={priceMode === 'manual' ? 'default' : 'outline'} onClick={() => setPriceMode('manual')}>{t('activate.priceModeManual', { defaultValue: 'Manual' })}</Button>
@@ -692,20 +735,20 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 </div>
                 <Input
                   value={priceInput}
-                  disabled={isPresetSeller}
-                  readOnly={isPresetSeller || priceMode === 'auto'}
+                  disabled={isPresetSeller || mode === 'preset'}
+                  readOnly={isPresetSeller || mode === 'preset' || priceMode === 'auto'}
                   onChange={(event) => setPriceInput(event.target.value.replace(/[^\d.]/g, ''))}
-                  className={isPresetSeller || priceMode === 'auto' ? 'cursor-not-allowed bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400' : ''}
+                  className={isPresetSeller || mode === 'preset' || priceMode === 'auto' ? 'cursor-not-allowed bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400' : ''}
                 />
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {isPresetSeller
+                  {isPresetSeller || mode === 'preset'
                     ? t('activate.pricePresetLocked', { defaultValue: 'Price is controlled by the selected preset.' })
                     : priceMode === 'auto'
                       ? t('activate.priceAuto', { defaultValue: 'Auto-calculated' })
                       : t('activate.priceManualHint', { defaultValue: 'Enter custom price' })}
                 </p>
                 <div className="grid gap-3 md:grid-cols-3">
-                  <Summary label={t('activate.durationDays', { defaultValue: 'Duration in Days' })} value={durationDays > 0 ? durationDays.toFixed(3) : '0'} />
+                  <Summary label={t('activate.durationDays', { defaultValue: 'Duration in Days' })} value={formatDurationDays(durationDays)} />
                   <Summary label={t('activate.expiryPreview', { defaultValue: 'Expiry Preview' })} value={expiryPreview ? formatDate(expiryPreview, locale, isPresetSeller || mode !== 'end_date' ? scheduleTimezone : endTimezone) : '-'} />
                   <Summary label={t('activate.price', { defaultValue: 'Price' })} value={formatCurrency(totalPrice, 'USD', locale)} />
                 </div>

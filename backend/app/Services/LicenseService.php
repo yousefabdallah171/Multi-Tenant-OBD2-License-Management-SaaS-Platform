@@ -1610,16 +1610,22 @@ class LicenseService
     {
         $role = $actor->role?->value ?? (string) $actor->role;
 
-        if (! in_array($role, [UserRole::RESELLER->value, UserRole::MANAGER->value], true)) {
+        $isRequiredPresetRole = in_array($role, [UserRole::RESELLER->value, UserRole::MANAGER->value], true);
+        $isOptionalPresetRole = $role === UserRole::MANAGER_PARENT->value;
+
+        if (! $isRequiredPresetRole && ! $isOptionalPresetRole) {
             return null;
         }
 
         $presetId = (int) ($data['preset_id'] ?? 0);
 
         if ($presetId <= 0) {
-            throw ValidationException::withMessages([
-                'preset_id' => 'A valid duration preset is required.',
-            ]);
+            if ($isRequiredPresetRole) {
+                throw ValidationException::withMessages([
+                    'preset_id' => 'A valid duration preset is required.',
+                ]);
+            }
+            return null; // preset is optional for manager_parent
         }
 
         $preset = ProgramDurationPreset::query()

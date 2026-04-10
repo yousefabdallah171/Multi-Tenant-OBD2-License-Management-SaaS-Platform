@@ -23,6 +23,8 @@ class LicenseController extends Controller
     {
         $role = $request->user()?->role?->value ?? (string) $request->user()?->role;
         $isReseller = in_array($role, [UserRole::RESELLER->value, UserRole::MANAGER->value], true);
+        // duration_days is also nullable when a preset_id is explicitly provided (e.g. manager_parent in preset mode)
+        $durationNullable = $isReseller || !empty($request->input('preset_id'));
 
         $validated = $request->validate([
             'program_id' => ['required', 'integer'],
@@ -42,8 +44,8 @@ class LicenseController extends Controller
                         ->where('is_active', true);
                 }),
             ],
-            'duration_days' => [$isReseller ? 'nullable' : 'required', 'numeric', 'min:0.0001', 'max:36500'],
-            'price' => [$isReseller ? 'nullable' : 'required', 'numeric', 'min:0', 'max:99999999.99'],
+            'duration_days' => [$durationNullable ? 'nullable' : 'required', 'numeric', 'min:0.0001', 'max:36500'],
+            'price' => [$durationNullable ? 'nullable' : 'required', 'numeric', 'min:0', 'max:99999999.99'],
             'is_scheduled' => ['nullable', 'boolean'],
             'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
             'scheduled_timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
