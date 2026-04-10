@@ -22,7 +22,7 @@ class LicenseController extends Controller
     public function activateLicense(Request $request): JsonResponse
     {
         $role = $request->user()?->role?->value ?? (string) $request->user()?->role;
-        $isReseller = $role === UserRole::RESELLER->value;
+        $isReseller = in_array($role, [UserRole::RESELLER->value, UserRole::MANAGER->value], true);
 
         $validated = $request->validate([
             'program_id' => ['required', 'integer'],

@@ -1610,7 +1610,7 @@ class LicenseService
     {
         $role = $actor->role?->value ?? (string) $actor->role;
 
-        if ($role !== UserRole::RESELLER->value) {
+        if (! in_array($role, [UserRole::RESELLER->value, UserRole::MANAGER->value], true)) {
             return null;
         }
 
