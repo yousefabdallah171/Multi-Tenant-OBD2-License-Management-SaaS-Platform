@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from 'react'
-import { Banknote, Scale, Users } from 'lucide-react'
+import { Banknote, Users } from 'lucide-react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -86,16 +86,6 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
           label={t('managerParent.pages.teamNetwork.customers')}
           value={String(nodeData.customers_count)}
           onClick={() => visit(buildScopedHref(routePaths.managerParent.customers(nodeData.lang), {
-            manager_parent_id: nodeData.id,
-            scope_name: nodeData.name,
-            scope_role: 'manager_parent',
-          }))}
-        />
-        <StatButton
-          icon={<Scale className="size-4 text-purple-600 dark:text-purple-300" />}
-          label={t('managerParent.pages.teamNetwork.balance')}
-          value={formatCurrency(nodeData.balance, 'USD', locale)}
-          onClick={() => visit(buildScopedHref(routePaths.managerParent.resellerPayments(nodeData.lang), {
             manager_parent_id: nodeData.id,
             scope_name: nodeData.name,
             scope_role: 'manager_parent',

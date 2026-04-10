@@ -69,7 +69,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
-  const isPresetSeller = user?.role === 'reseller' || user?.role === 'manager'
+  const isPresetSeller = user?.role === 'reseller'
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [customerName, setCustomerName] = useState('')

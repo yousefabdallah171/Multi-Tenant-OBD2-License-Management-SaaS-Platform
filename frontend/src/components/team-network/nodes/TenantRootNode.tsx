@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from 'react'
-import { Banknote, Building2, Scale, Users } from 'lucide-react'
+import { Banknote, Building2, Users } from 'lucide-react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -55,12 +55,6 @@ export const TenantRootNode = memo(function TenantRootNode({ data }: NodeProps) 
           label={t('managerParent.pages.teamNetwork.customers')}
           value={String(nodeData.total_customers)}
           onClick={() => visit(routePaths.managerParent.customers(nodeData.lang))}
-        />
-        <StatButton
-          icon={<Scale className="size-4 text-sky-600 dark:text-sky-300" />}
-          label={t('managerParent.pages.teamNetwork.balance')}
-          value={formatCurrency(nodeData.balance, 'USD', locale)}
-          onClick={() => visit(routePaths.managerParent.resellerPayments(nodeData.lang))}
         />
       </div>
     </div>
