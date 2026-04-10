@@ -69,7 +69,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
-  const isPresetSeller = user?.role === 'reseller'
+  const isPresetSeller = user?.role === 'reseller' || user?.role === 'manager'
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [customerName, setCustomerName] = useState('')
@@ -319,7 +319,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
     if (createLicenseNow) {
       if (isPresetSeller) {
-        if (!selectedPreset) next.duration = t('validation.required', { defaultValue: 'Field required' })
+        if (availablePresets.length > 0 && !selectedPreset) next.duration = t('validation.required', { defaultValue: 'Field required' })
       } else if (durationDays < MIN_DURATION_DAYS) {
         next.duration = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
       }
