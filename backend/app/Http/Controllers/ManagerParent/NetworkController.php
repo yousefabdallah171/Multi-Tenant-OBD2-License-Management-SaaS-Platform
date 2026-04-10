@@ -30,7 +30,7 @@ class NetworkController extends BaseManagerParentController
                 $team = User::query()
                     ->where('tenant_id', $tenantId)
                     ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
-                    ->select(['id', 'tenant_id', 'name', 'role', 'status', 'created_by'])
+                    ->select(['id', 'tenant_id', 'name', 'email', 'role', 'status', 'created_by'])
                     ->get();
 
                 $managerParents = $team
@@ -180,6 +180,7 @@ class NetworkController extends BaseManagerParentController
         return [
             'id' => (int) $managerParent->id,
             'name' => $managerParent->name,
+            'email' => $managerParent->email,
             'role' => UserRole::MANAGER_PARENT->value,
             'status' => (string) $managerParent->status,
             'revenue' => round($revenue, 2),
@@ -212,6 +213,7 @@ class NetworkController extends BaseManagerParentController
         return [
             'id' => (int) $manager->id,
             'name' => $manager->name,
+            'email' => $manager->email,
             'role' => UserRole::MANAGER->value,
             'status' => (string) $manager->status,
             'manager_parent_id' => isset($managerParentIdSet[(int) $manager->created_by]) ? (int) $manager->created_by : null,
@@ -236,6 +238,7 @@ class NetworkController extends BaseManagerParentController
         return [
             'id' => (int) $reseller->id,
             'name' => $reseller->name,
+            'email' => $reseller->email,
             'role' => UserRole::RESELLER->value,
             'status' => (string) $reseller->status,
             'manager_id' => $managerId,

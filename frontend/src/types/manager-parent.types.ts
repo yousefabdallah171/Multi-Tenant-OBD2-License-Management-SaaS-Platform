@@ -604,6 +604,7 @@ export interface NetworkTenantRootNode {
 export interface NetworkManagerParentNode {
   id: number
   name: string
+  email: string
   role: 'manager_parent'
   status: string
   revenue: number
@@ -617,6 +618,7 @@ export interface NetworkManagerParentNode {
 export interface NetworkManagerNode {
   id: number
   name: string
+  email: string
   role: 'manager'
   status: string
   manager_parent_id: number | null
@@ -629,6 +631,7 @@ export interface NetworkManagerNode {
 export interface NetworkResellerNode {
   id: number
   name: string
+  email: string
   role: 'reseller'
   status: string
   manager_id: number | null

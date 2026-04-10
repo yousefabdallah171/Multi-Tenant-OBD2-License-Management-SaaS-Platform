@@ -41,6 +41,7 @@ export const ResellerNode = memo(function ResellerNode({ data }: NodeProps) {
             <p className="truncate text-base font-semibold text-slate-950 dark:text-white">{nodeData.name}</p>
             <StatusDot status={nodeData.status} />
           </div>
+          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{nodeData.email}</p>
           <RoleBadge role="reseller" />
         </div>
       </button>
