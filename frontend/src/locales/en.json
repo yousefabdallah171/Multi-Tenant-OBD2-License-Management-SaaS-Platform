@@ -662,6 +662,8 @@
         "activeLicenses": "Active Licenses",
         "activeCustomers": "Current Active Customers",
         "monthlyRevenue": "Monthly Revenue",
+        "monthlyRevenueTrend": "Monthly Revenue Trend",
+        "totalRevenue": "Total Revenue",
         "licenseExpiryForecast": "License Expiry Forecast",
         "licenseCount": "Licenses",
         "licenseRangeDays": "{{from}}-{{to}} days",

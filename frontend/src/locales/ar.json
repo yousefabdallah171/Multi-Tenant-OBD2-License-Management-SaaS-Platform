@@ -662,6 +662,8 @@
         "activeLicenses": "التراخيص النشطة",
         "activeCustomers": "العملاء النشطين حالياً",
         "monthlyRevenue": "الإيراد الشهري",
+        "monthlyRevenueTrend": "اتجاه الإيراد الشهري",
+        "totalRevenue": "إجمالي الإيراد",
         "licenseExpiryForecast": "توقع انتهاء التراخيص",
         "licenseCount": "عدد التراخيص",
         "licenseRangeDays": "خلال {{from}}-{{to}} يومًا",

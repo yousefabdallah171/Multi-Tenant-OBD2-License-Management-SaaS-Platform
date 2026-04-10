@@ -101,7 +101,7 @@ export function DashboardPage() {
               <StatsCard title={t('managerParent.pages.dashboard.activeCustomers')} value={stats?.active_licenses ?? 0} color="amber" />
             </button>
             <button type="button" className="h-full text-start" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
-              <StatsCard title={t('managerParent.pages.dashboard.monthlyRevenue')} value={formatCurrency(stats?.monthly_revenue ?? 0, 'USD', locale)} color="rose" />
+              <StatsCard title={t('managerParent.pages.dashboard.totalRevenue')} value={formatCurrency(stats?.revenue ?? 0, 'USD', locale)} color="rose" />
             </button>
           </>
         )}
@@ -109,7 +109,7 @@ export function DashboardPage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <LineChartWidget
-          title={t('managerParent.pages.dashboard.monthlyRevenue')}
+          title={t('managerParent.pages.dashboard.monthlyRevenueTrend')}
           data={revenueSeries}
           isLoading={statsQuery.isLoading}
           xKey="month"
