@@ -23,7 +23,7 @@ class NetworkController extends BaseManagerParentController
         $managerParent = $this->currentManagerParent($request);
 
         $payload = Cache::remember(
-            self::cacheKey($tenantId),
+            self::cacheKey($tenantId, (int) $managerParent->id),
             now()->addSeconds(self::TEAM_NETWORK_TTL_SECONDS),
             function () use ($tenantId): array {
                 $tenant = Tenant::query()->findOrFail($tenantId);
@@ -305,11 +305,18 @@ class NetworkController extends BaseManagerParentController
     }
     public static function forgetTenantCache(int $tenantId): void
     {
-        Cache::forget(self::cacheKey($tenantId));
+        Cache::increment(self::versionKey($tenantId));
     }
 
-    private static function cacheKey(int $tenantId): string
+    private static function cacheKey(int $tenantId, int $managerParentId): string
     {
-        return "team-network:{$tenantId}";
+        $version = (int) Cache::get(self::versionKey($tenantId), 1);
+
+        return "team-network:{$tenantId}:v{$version}:{$managerParentId}";
+    }
+
+    private static function versionKey(int $tenantId): string
+    {
+        return "team-network:{$tenantId}:version";
     }
 }

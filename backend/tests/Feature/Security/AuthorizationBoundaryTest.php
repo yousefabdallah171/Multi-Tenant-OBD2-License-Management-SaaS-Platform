@@ -257,7 +257,7 @@ class AuthorizationBoundaryTest extends TestCase
         $this->getJson('/api/team/network')->assertForbidden();
     }
 
-    public function test_team_network_marks_current_manager_parent_per_request_even_with_shared_cache(): void
+    public function test_team_network_marks_current_manager_parent_per_request_with_user_scoped_cache(): void
     {
         Cache::flush();
 
