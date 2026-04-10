@@ -25,7 +25,7 @@ class NetworkController extends BaseManagerParentController
         $payload = Cache::remember(
             self::cacheKey($tenantId),
             now()->addSeconds(self::TEAM_NETWORK_TTL_SECONDS),
-            function () use ($managerParent, $tenantId): array {
+            function () use ($tenantId): array {
                 $tenant = Tenant::query()->findOrFail($tenantId);
                 $team = User::query()
                     ->where('tenant_id', $tenantId)
@@ -99,7 +99,6 @@ class NetworkController extends BaseManagerParentController
                     'manager_parents' => $managerParents
                         ->map(fn (User $parent): array => $this->serializeManagerParent(
                             $parent,
-                            $managerParent,
                             $managersByParent,
                             $directResellersByParent,
                             $resellersByManager,
@@ -137,12 +136,20 @@ class NetworkController extends BaseManagerParentController
             },
         );
 
+        $payload['manager_parents'] = collect($payload['manager_parents'] ?? [])
+            ->map(function (array $parent) use ($managerParent): array {
+                $parent['is_current'] = (int) ($parent['id'] ?? 0) === (int) $managerParent->id;
+
+                return $parent;
+            })
+            ->values()
+            ->all();
+
         return response()->json(['data' => $payload]);
     }
 
     private function serializeManagerParent(
         User $managerParent,
-        User $currentManagerParent,
         Collection $managersByParent,
         Collection $directResellersByParent,
         Collection $resellersByManager,
@@ -180,7 +187,6 @@ class NetworkController extends BaseManagerParentController
             'managers_count' => (int) $managedManagers->count(),
             'resellers_count' => (int) ($directResellers->count() + $managedResellers->count()),
             'customers_count' => (int) $this->countDistinctCustomers($customerIdsBySeller, $subtreeSellerIds),
-            'is_current' => (int) $managerParent->id === (int) $currentManagerParent->id,
         ];
     }
 

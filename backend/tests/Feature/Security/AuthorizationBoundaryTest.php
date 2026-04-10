@@ -5,6 +5,7 @@ namespace Tests\Feature\Security;
 use App\Models\ActivityLog;
 use App\Models\ProgramDurationPreset;
 use App\Models\UserBalance;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\BuildsSecurityFixtures;
@@ -222,10 +223,11 @@ class AuthorizationBoundaryTest extends TestCase
         $response = $this->getJson('/api/team/network')
             ->assertOk()
             ->assertJsonPath('data.root.balance', 125.5)
-            ->assertJsonPath('data.root.total_revenue', 150.0)
             ->assertJsonPath('data.root.managers_count', 1)
             ->assertJsonPath('data.root.resellers_count', 2)
             ->assertJsonPath('data.root.total_customers', 2);
+
+        $this->assertSame(150.0, (float) $response->json('data.root.total_revenue'));
 
         $managerNode = collect($response->json('data.managers'))->firstWhere('id', $manager->id);
         $managedResellerNode = collect($response->json('data.resellers'))->firstWhere('id', $managedReseller->id);
@@ -253,6 +255,33 @@ class AuthorizationBoundaryTest extends TestCase
         Sanctum::actingAs($manager);
 
         $this->getJson('/api/team/network')->assertForbidden();
+    }
+
+    public function test_team_network_marks_current_manager_parent_per_request_even_with_shared_cache(): void
+    {
+        Cache::flush();
+
+        $tenant = $this->createTenant();
+        $managerParentA = $this->createUser('manager_parent', $tenant, null, ['name' => 'Manager Parent A']);
+        $managerParentB = $this->createUser('manager_parent', $tenant, null, ['name' => 'Manager Parent B']);
+
+        Sanctum::actingAs($managerParentA);
+
+        $firstResponse = $this->getJson('/api/team/network')
+            ->assertOk();
+
+        $firstParents = collect($firstResponse->json('data.manager_parents'))->keyBy('id');
+        $this->assertTrue((bool) $firstParents[$managerParentA->id]['is_current']);
+        $this->assertFalse((bool) $firstParents[$managerParentB->id]['is_current']);
+
+        Sanctum::actingAs($managerParentB);
+
+        $secondResponse = $this->getJson('/api/team/network')
+            ->assertOk();
+
+        $secondParents = collect($secondResponse->json('data.manager_parents'))->keyBy('id');
+        $this->assertFalse((bool) $secondParents[$managerParentA->id]['is_current']);
+        $this->assertTrue((bool) $secondParents[$managerParentB->id]['is_current']);
     }
 
     private function createEarnedActivity(int $tenantId, int $sellerId, float $price, string $createdAt): void

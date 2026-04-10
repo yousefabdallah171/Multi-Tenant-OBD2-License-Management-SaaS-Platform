@@ -189,7 +189,7 @@ class BiosChangeRequestController extends Controller
         if (! ($result['success'] ?? false)) {
             $message = (string) ($result['message'] ?? 'The BIOS change was rejected by the external service.');
 
-            $this->logActivity($request, 'bios.direct_change_failed', sprintf('Direct BIOS change from %s to %s was not applied.', $oldBiosId, $validated['new_bios_id']), [
+            $this->logActivity($request, $license->tenant_id, 'bios.direct_change_failed', sprintf('Direct BIOS change from %s to %s was not applied.', $oldBiosId, $validated['new_bios_id']), [
                 'license_id' => $license->id,
                 'customer_id' => $license->customer_id,
                 'program_id' => $license->program_id,
@@ -208,7 +208,7 @@ class BiosChangeRequestController extends Controller
 
         $license->refresh();
 
-        $this->logActivity($request, 'bios.direct_changed', sprintf('Directly changed BIOS ID from %s to %s.', $oldBiosId, $license->bios_id), [
+        $this->logActivity($request, $license->tenant_id, 'bios.direct_changed', sprintf('Directly changed BIOS ID from %s to %s.', $oldBiosId, $license->bios_id), [
             'license_id' => $license->id,
             'customer_id' => $license->customer_id,
             'program_id' => $license->program_id,
@@ -250,10 +250,10 @@ class BiosChangeRequestController extends Controller
     /**
      * @param array<string, mixed> $metadata
      */
-    private function logActivity(Request $request, string $action, string $description, array $metadata = []): void
+    private function logActivity(Request $request, ?int $tenantId, string $action, string $description, array $metadata = []): void
     {
         ActivityLog::query()->create([
-            'tenant_id' => $request->user()?->tenant_id,
+            'tenant_id' => $tenantId,
             'user_id' => $request->user()?->id,
             'action' => $action,
             'description' => $description,

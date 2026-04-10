@@ -115,7 +115,7 @@ function CanvasInner({
   }, [storageKey])
 
   const handleNodesChange = useCallback((changes: NodeChange[]) => {
-    setFlowNodes((currentNodes) => {
+    setFlowNodes((currentNodes: Node[]) => {
       const nextNodes = applyNodeChanges(changes, currentNodes)
       const shouldPersist = changes.some((change) => change.type === 'position' && change.dragging === false)
 
@@ -128,7 +128,7 @@ function CanvasInner({
   }, [persistNodePositions, setFlowNodes])
 
   useEffect(() => {
-    setFlowNodes((currentNodes) => mergeStoredPositions(nodes, currentNodes))
+    setFlowNodes((currentNodes: Node[]) => mergeStoredPositions(nodes, currentNodes))
   }, [mergeStoredPositions, nodes, setFlowNodes])
 
   useEffect(() => {
@@ -154,7 +154,7 @@ function CanvasInner({
           pannable
           zoomable
           className="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
-          nodeColor={(node) => {
+          nodeColor={(node: Node) => {
             if (node.type === 'tenantRoot') return '#0ea5e9'
             if (node.type === 'managerParent') return '#a855f7'
             if (node.type === 'manager') return '#6366f1'
