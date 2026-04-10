@@ -385,17 +385,6 @@
       "reports": {
         "title": "تقارير عبر الشركاء",
         "description": "راجع الإيرادات والتفعيلات ونمو المستخدمين وأفضل الموزعين على مستوى المنصة.",
-        "grantedValueDescription": "إجمالي القيمة السوقية للتفعيلات التي منحت مجانًا (تجارب أو منح يدوية).",
-        "grantedActivations": {
-          "title": "التفعيلات الممنوحة",
-          "columns": {
-            "reseller": "الموزع",
-            "program": "البرنامج",
-            "biosId": "BIOS ID",
-            "price": "السعر",
-            "date": "التاريخ"
-          }
-        },
         "revenueByTenant": "الإيراد حسب الشريك",
         "activationsByTenant": "التفعيلات حسب الشريك",
         "growthTrend": "اتجاه النمو",
@@ -570,7 +559,6 @@
         "title": "التقارير المالية",
         "description": "تتبع إيرادات المنصة وتوزيع البرامج وحجم التفعيلات وإيرادات البائعين من شاشة واحدة.",
         "totalPlatformRevenue": "إجمالي إيراد المنصة",
-        "grantedValue": "القيمة الممنوحة",
         "totalCustomers": "إجمالي العملاء",
         "totalActivations": "إجمالي التفعيلات",
         "activeLicenses": "التراخيص النشطة",

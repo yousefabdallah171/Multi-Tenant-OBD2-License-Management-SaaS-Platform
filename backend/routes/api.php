@@ -428,7 +428,6 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         });
 
         Route::get('/financial-reports', [FinancialReportController::class, 'index']);
-        Route::get('/reports/granted-activations', [FinancialReportController::class, 'grantedActivations']);
         Route::get('/financial-reports/export/csv', [FinancialReportController::class, 'exportCsv']);
         Route::get('/financial-reports/export/pdf', [FinancialReportController::class, 'exportPdf']);
 

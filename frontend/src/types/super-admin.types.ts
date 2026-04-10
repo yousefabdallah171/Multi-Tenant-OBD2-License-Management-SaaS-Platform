@@ -286,7 +286,6 @@ export interface BiosConflictItem {
 export interface FinancialReportPayload {
   summary: {
     total_platform_revenue: number
-    granted_value: number
     total_customers: number
     total_activations: number
     active_licenses: number
@@ -306,18 +305,6 @@ export interface FinancialReportPayload {
     total_activations: number
     avg_price: number
   }>
-}
-
-export interface GrantedActivationRow {
-  id: number
-  reseller_id?: number | null
-  reseller_name: string | null
-  reseller_role?: string | null
-  program_id?: number | null
-  program_name: string
-  bios_id: string | null
-  price: number
-  activated_at: string | null
 }
 
 export interface TenantBackupStats {

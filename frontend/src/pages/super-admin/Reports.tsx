@@ -11,13 +11,12 @@ import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { reportService } from '@/services/report.service'
-import type { FinancialReportPayload, GrantedActivationRow } from '@/types/super-admin.types'
+import type { FinancialReportPayload } from '@/types/super-admin.types'
 import type { UserRole } from '@/types/user.types'
 
 type TopResellerRow = {
@@ -35,8 +34,6 @@ export function ReportsPage() {
   const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [dateRange, setDateRange] = useState<DateRangeValue>(() => resolvePresetRange(365))
-  const [grantedOpen, setGrantedOpen] = useState(false)
-  const [grantedPage, setGrantedPage] = useState(1)
   const params = useMemo(
     () => ({
       from: dateRange.from || undefined,
@@ -68,11 +65,6 @@ export function ReportsPage() {
   const topResellersQuery = useQuery({
     queryKey: ['super-admin', 'reports', 'top-resellers', params],
     queryFn: () => reportService.getTopResellers(params),
-  })
-  const grantedActivationsQuery = useQuery({
-    queryKey: ['super-admin', 'reports', 'granted-activations', params, grantedPage],
-    queryFn: () => reportService.getGrantedActivations({ ...params, page: grantedPage, per_page: 10 }),
-    enabled: grantedOpen,
   })
 
   const financialData = financialQuery.data?.data
@@ -121,24 +113,6 @@ export function ReportsPage() {
     { key: 'activations', label: t('common.activations'), sortable: true, sortValue: (row) => row.activations, render: (row) => row.activations },
     { key: 'revenue', label: t('common.revenue'), sortable: true, sortValue: (row) => row.revenue, render: (row) => formatCurrency(row.revenue, 'USD', locale) },
   ]
-  const grantedColumns: Array<DataTableColumn<GrantedActivationRow>> = [
-    {
-      key: 'reseller',
-      label: t('superAdmin.pages.reports.grantedActivations.columns.reseller'),
-      render: (row) => (
-        <RoleIdentity
-          name={row.reseller_name}
-          role={resolveUserRole(row.reseller_role)}
-          href={row.reseller_id ? routePaths.superAdmin.userDetail(lang, row.reseller_id) : undefined}
-        />
-      ),
-    },
-    { key: 'program', label: t('superAdmin.pages.reports.grantedActivations.columns.program'), render: (row) => row.program_name },
-    { key: 'bios', label: t('superAdmin.pages.reports.grantedActivations.columns.biosId'), render: (row) => row.bios_id ?? '-' },
-    { key: 'price', label: t('superAdmin.pages.reports.grantedActivations.columns.price'), render: (row) => formatCurrency(row.price, 'USD', locale) },
-    { key: 'date', label: t('superAdmin.pages.reports.grantedActivations.columns.date'), render: (row) => row.activated_at ? formatDate(row.activated_at, locale) : '-' },
-  ]
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -159,20 +133,7 @@ export function ReportsPage() {
         <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalPlatformRevenue')} value={formatCurrency(financialData?.summary.total_platform_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" /></button>
         <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.customers(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalCustomers')} value={financialData?.summary.total_customers ?? 0} icon={Globe2} color="sky" /></button>
         <button type="button" className="w-full text-start" onClick={() => navigate(`${routePaths.superAdmin.customers(lang)}?status=active`)}><StatsCard title={t('superAdmin.pages.financialReports.activeCustomers')} value={financialData?.summary.active_licenses ?? 0} icon={Users} color="amber" /></button>
-        <div className="space-y-2">
-          <button
-            type="button"
-            className="w-full text-start"
-            title={t('superAdmin.pages.reports.grantedValueDescription')}
-            onClick={() => {
-              setGrantedPage(1)
-              setGrantedOpen(true)
-            }}
-          >
-            <StatsCard title={t('superAdmin.pages.financialReports.grantedValue')} value={formatCurrency(financialData?.summary.granted_value ?? 0, 'USD', locale)} color="rose" />
-          </button>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.reports.grantedValueDescription')}</p>
-        </div>
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.avgRevenuePerTenant')} value={formatCurrency(financialData?.summary.avg_revenue_per_tenant ?? 0, 'USD', locale)} color="rose" /></button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -239,29 +200,6 @@ export function ReportsPage() {
 
       <DataTable tableKey="super_admin_reports_balances" columns={balanceColumns} data={financialData?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={financialQuery.isLoading} />
       <DataTable tableKey="super_admin_reports_top_resellers" columns={resellerColumns} data={(topResellersQuery.data?.data ?? []) as TopResellerRow[]} rowKey={(row) => `${row.tenant}-${row.reseller}-${row.reseller_id ?? 'unknown'}`} isLoading={topResellersQuery.isLoading} />
-
-      <Dialog open={grantedOpen} onOpenChange={setGrantedOpen}>
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>{t('superAdmin.pages.reports.grantedActivations.title')}</DialogTitle>
-            <DialogDescription>{t('superAdmin.pages.reports.grantedValueDescription')}</DialogDescription>
-          </DialogHeader>
-          <DataTable
-            tableKey="super_admin_reports_granted_activations"
-            columns={grantedColumns}
-            data={grantedActivationsQuery.data?.data ?? []}
-            rowKey={(row) => row.id}
-            isLoading={grantedActivationsQuery.isLoading}
-            pagination={grantedActivationsQuery.data?.meta ? {
-              page: grantedActivationsQuery.data.meta.current_page,
-              lastPage: grantedActivationsQuery.data.meta.last_page,
-              total: grantedActivationsQuery.data.meta.total,
-              perPage: grantedActivationsQuery.data.meta.per_page,
-            } : undefined}
-            onPageChange={setGrantedPage}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

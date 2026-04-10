@@ -38,7 +38,6 @@ class FinancialReportController extends BaseSuperAdminController
             $baseQuery = $this->baseQuery($validated);
             $summary = $this->revenueQuery($validated)
                 ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_platform_revenue'))
-                ->selectRaw(RevenueAnalytics::revenueSumExpression('granted', 'activity_logs', 'granted_value'))
                 ->first();
             $totalActivations = (int) (clone $baseQuery)->count();
             $revenueByTenant = $this->revenueQuery($validated)
@@ -106,7 +105,6 @@ class FinancialReportController extends BaseSuperAdminController
             return [
                 'summary' => [
                     'total_platform_revenue' => round((float) ($summary?->total_platform_revenue ?? 0), 2),
-                    'granted_value' => round((float) ($summary?->granted_value ?? 0), 2),
                     'total_customers' => $totalCustomers,
                     'total_activations' => $totalActivations,
                     'active_licenses' => $activeCustomers,
@@ -122,52 +120,6 @@ class FinancialReportController extends BaseSuperAdminController
         });
 
         return response()->json(['data' => $data]);
-    }
-
-    public function grantedActivations(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date'],
-            'page' => ['nullable', 'integer', 'min:1'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
-        ]);
-
-        $perPage = (int) ($validated['per_page'] ?? 15);
-        $rows = $this->revenueQuery($validated)
-            ->whereRaw(RevenueAnalytics::grantedCondition('activity_logs'))
-            ->with('user:id,name,role')
-            ->paginate($perPage);
-
-        $programIds = collect($rows->items())
-            ->map(fn ($row): int => (int) ($row->metadata['program_id'] ?? 0))
-            ->filter(fn (int $id): bool => $id > 0)
-            ->unique()
-            ->values()
-            ->all();
-
-        $programNames = \App\Models\Program::query()
-            ->whereIn('id', $programIds)
-            ->pluck('name', 'id');
-
-        return response()->json([
-            'data' => collect($rows->items())->map(function ($activity) use ($programNames): array {
-                $metadata = $activity->metadata ?? [];
-
-                return [
-                    'id' => $activity->id,
-                    'reseller_id' => $activity->user?->id,
-                    'reseller_name' => $activity->user?->name,
-                    'reseller_role' => $activity->user?->role?->value ?? (string) $activity->user?->role,
-                    'program_id' => (int) ($metadata['program_id'] ?? 0) ?: null,
-                    'program_name' => $programNames->get((int) ($metadata['program_id'] ?? 0)) ?? 'Unknown',
-                    'bios_id' => $metadata['bios_id'] ?? null,
-                    'price' => isset($metadata['price']) ? round((float) $metadata['price'], 2) : 0.0,
-                    'activated_at' => $activity->created_at?->toIso8601String(),
-                ];
-            })->values(),
-            'meta' => $this->paginationMeta($rows),
-        ]);
     }
 
     public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
@@ -322,7 +274,6 @@ class FinancialReportController extends BaseSuperAdminController
     {
         return [
             'Total Platform Revenue' => $summary['total_platform_revenue'],
-            'Granted Value' => $summary['granted_value'],
             'Total Customers' => $summary['total_customers'],
             'Total Activations' => $summary['total_activations'],
             'Active Customers' => $summary['active_licenses'],

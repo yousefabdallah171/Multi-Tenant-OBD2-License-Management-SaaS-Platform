@@ -1,6 +1,6 @@
 import { api } from '@/services/api'
 import { apiCache } from '@/lib/apiCache'
-import type { FinancialReportPayload, GrantedActivationRow, SuperAdminDashboardStats, TrendPoint } from '@/types/super-admin.types'
+import type { FinancialReportPayload, SuperAdminDashboardStats, TrendPoint } from '@/types/super-admin.types'
 import { downloadFile } from '@/utils/download'
 
 export interface RangeParams {
@@ -117,13 +117,6 @@ export const reportService = {
 
     const { data } = await api.get<{ data: FinancialReportPayload }>('/super-admin/financial-reports', { params })
     apiCache.set(cacheKey, data, CACHE_TTL.FINANCIAL)
-    return data
-  },
-  async getGrantedActivations(params: RangeParams & { page?: number; per_page?: number }) {
-    const { data } = await api.get<{ data: GrantedActivationRow[]; meta: { current_page: number; last_page: number; per_page: number; total: number } }>(
-      '/super-admin/reports/granted-activations',
-      { params },
-    )
     return data
   },
   async exportFinancialCsv(params: RangeParams) {

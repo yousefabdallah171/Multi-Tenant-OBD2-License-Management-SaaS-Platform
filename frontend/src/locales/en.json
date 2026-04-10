@@ -385,17 +385,6 @@
       "reports": {
         "title": "Cross-Tenant Reports",
         "description": "Review revenue, activations, user growth, and top-performing resellers across the platform.",
-        "grantedValueDescription": "Total market value of activations granted for free (trials, manual grants).",
-        "grantedActivations": {
-          "title": "Granted Activations",
-          "columns": {
-            "reseller": "Reseller",
-            "program": "Program",
-            "biosId": "BIOS ID",
-            "price": "Price",
-            "date": "Date"
-          }
-        },
         "revenueByTenant": "Revenue by tenant",
         "activationsByTenant": "Activations by tenant",
         "growthTrend": "Growth trend",
@@ -601,7 +590,6 @@
         "title": "Financial Reports",
         "description": "Track platform revenue, program mix, activation volume, and seller revenue from a single report surface.",
         "totalPlatformRevenue": "Total platform revenue",
-        "grantedValue": "Granted value",
         "totalCustomers": "Total customers",
         "totalActivations": "Total activations",
         "activeLicenses": "Active licenses",
