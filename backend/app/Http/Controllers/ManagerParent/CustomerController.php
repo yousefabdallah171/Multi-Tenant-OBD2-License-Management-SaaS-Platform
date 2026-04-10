@@ -911,12 +911,7 @@ class CustomerController extends BaseManagerParentController
             }
 
             return [
-                'seller_ids' => collect([$manager->id])
-                    ->merge($resellers->where('created_by', $manager->id)->pluck('id'))
-                    ->map(fn ($id): int => (int) $id)
-                    ->unique()
-                    ->values()
-                    ->all(),
+                'seller_ids' => [(int) $manager->id],
             ];
         }
 
@@ -926,17 +921,8 @@ class CustomerController extends BaseManagerParentController
                 throw ValidationException::withMessages(['manager_parent_id' => 'The selected manager parent is invalid for this tenant.']);
             }
 
-            $managedManagerIds = $managers->where('created_by', $managerParent->id)->pluck('id')->map(fn ($id): int => (int) $id)->all();
-
             return [
-                'seller_ids' => collect([$managerParent->id])
-                    ->merge($managedManagerIds)
-                    ->merge($resellers->where('created_by', $managerParent->id)->pluck('id'))
-                    ->merge($resellers->filter(fn (User $reseller): bool => in_array((int) $reseller->created_by, $managedManagerIds, true))->pluck('id'))
-                    ->map(fn ($id): int => (int) $id)
-                    ->unique()
-                    ->values()
-                    ->all(),
+                'seller_ids' => [(int) $managerParent->id],
             ];
         }
 
