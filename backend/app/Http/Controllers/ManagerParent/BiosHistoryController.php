@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\ManagerParent;
 
-use App\Models\BiosAccessLog;
 use App\Models\BiosBlacklist;
 use App\Models\BiosConflict;
 use App\Models\License;
@@ -75,23 +74,7 @@ class BiosHistoryController extends BaseManagerParentController
             ]);
         }
 
-        foreach (BiosAccessLog::query()->with('user:id,name')->get() as $log) {
-            $events->push([
-                'id' => 'access-'.$log->id,
-                'bios_id' => $log->bios_id,
-                'customer' => $log->user?->name,
-                'customer_id' => $log->user_id,
-                'external_username' => $log->user?->username,
-                'reseller' => null,
-                'reseller_id' => null,
-                'action' => $log->action,
-                'status' => 'active',
-                'description' => sprintf('BIOS %s action recorded.', $log->action),
-                'occurred_at' => $log->created_at?->toIso8601String(),
-            ]);
-        }
-
-        foreach (BiosConflict::query()->with('attemptedBy:id,name,role')->get() as $conflict) {
+foreach (BiosConflict::query()->with('attemptedBy:id,name,role')->get() as $conflict) {
             $events->push([
                 'id' => 'conflict-'.$conflict->id,
                 'bios_id' => $conflict->bios_id,
