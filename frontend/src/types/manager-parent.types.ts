@@ -414,6 +414,43 @@ export interface BiosHistoryEntry {
   occurred_at: string | null
 }
 
+export interface BiosChangeAuditEntry {
+  id: string
+  type: 'request' | 'direct_change'
+  reseller_id: number | null
+  reseller_name: string | null
+  manager_id: number | null
+  manager_name: string | null
+  old_bios_id: string
+  new_bios_id: string
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'failed'
+  reason: string | null
+  reviewer_notes: string | null
+  customer_name: string | null
+  program_name: string | null
+  license_id: number | null
+  occurred_at: string | null
+}
+
+export interface BiosChangeAuditSummary {
+  total_requests: number
+  approved: number
+  rejected: number
+  pending: number
+  direct_changes: number
+}
+
+export interface BiosChangeAuditParams {
+  page?: number
+  per_page?: number
+  manager_id?: number | undefined
+  reseller_id?: number | undefined
+  type?: 'request' | 'direct_change' | undefined
+  status?: 'pending' | 'approved' | 'rejected' | 'completed' | 'failed' | undefined
+  from?: string
+  to?: string
+}
+
 export interface IpAnalyticsEntry {
   username: string
   raw_username?: string
@@ -544,16 +581,29 @@ export interface BiosConflictFilters {
   to?: string
 }
 
-export interface NetworkRootNode {
+export interface NetworkTenantRootNode {
+  id: number
+  name: string
+  role: 'tenant'
+  total_revenue: number
+  balance: number
+  manager_parents_count: number
+  managers_count: number
+  resellers_count: number
+  total_customers: number
+}
+
+export interface NetworkManagerParentNode {
   id: number
   name: string
   role: 'manager_parent'
   status: string
-  total_revenue: number
+  revenue: number
   balance: number
   managers_count: number
   resellers_count: number
-  total_customers: number
+  customers_count: number
+  is_current: boolean
 }
 
 export interface NetworkManagerNode {
@@ -561,6 +611,7 @@ export interface NetworkManagerNode {
   name: string
   role: 'manager'
   status: string
+  manager_parent_id: number | null
   revenue: number
   resellers_count: number
   customers_count: number
@@ -573,13 +624,15 @@ export interface NetworkResellerNode {
   role: 'reseller'
   status: string
   manager_id: number | null
+  manager_parent_id: number | null
   revenue: number
   activations_count: number
   customers_count: number
 }
 
 export interface NetworkDiagramPayload {
-  root: NetworkRootNode
+  root: NetworkTenantRootNode
+  manager_parents: NetworkManagerParentNode[]
   managers: NetworkManagerNode[]
   resellers: NetworkResellerNode[]
 }

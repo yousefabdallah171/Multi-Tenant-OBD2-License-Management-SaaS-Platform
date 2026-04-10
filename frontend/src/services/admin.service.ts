@@ -16,6 +16,7 @@ export interface AdminPayload {
   password?: string
   role: 'super_admin' | 'manager_parent' | 'manager' | 'reseller'
   tenant_id?: number | null
+  assign_to_id?: number
   phone?: string | null
   status?: 'active' | 'suspended' | 'inactive'
 }

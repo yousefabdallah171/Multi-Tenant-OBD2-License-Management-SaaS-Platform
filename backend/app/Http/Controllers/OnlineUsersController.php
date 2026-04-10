@@ -62,11 +62,20 @@ class OnlineUsersController extends Controller
             ->get(['id', 'name', 'role', 'last_seen_at']);
 
         return response()->json([
-            'data' => $users->map(fn (User $user): array => [
-                'masked_name' => $this->maskName((string) $user->name),
-                'role' => $user->role?->value ?? (string) $user->role,
-                'last_seen_at' => $user->last_seen_at?->toIso8601String(),
-            ])->values(),
+            'data' => $users->map(function (User $user) use ($actor): array {
+                $isSelf = (int) $user->id === (int) $actor->id;
+                $masked = $this->maskName((string) $user->name);
+
+                return [
+                    'id' => $user->id,
+                    'display_name' => $isSelf ? 'You' : $masked,
+                    'full_name' => $isSelf ? $user->name : null,
+                    'is_self' => $isSelf,
+                    'masked_name' => $masked,
+                    'role' => $user->role?->value ?? (string) $user->role,
+                    'last_seen_at' => $user->last_seen_at?->toIso8601String(),
+                ];
+            })->values(),
         ]);
     }
 

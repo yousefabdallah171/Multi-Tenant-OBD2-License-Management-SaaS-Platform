@@ -2,6 +2,9 @@ import { api } from '@/services/api'
 import { apiCache } from '@/lib/apiCache'
 import type {
   ApiStatusHistoryPoint,
+  BiosChangeAuditEntry,
+  BiosChangeAuditParams,
+  BiosChangeAuditSummary,
   BiosConflictFilters,
   BiosConflictItem,
   BiosHistoryEntry,
@@ -137,6 +140,14 @@ export const managerParentService = {
     const { data } = await api.get<PaginatedResponse<BiosHistoryEntry>>('/bios-history', { params })
     return data
   },
+  async getBiosChangeAudit(params: BiosChangeAuditParams = {}) {
+    const { data } = await api.get<PaginatedResponse<BiosChangeAuditEntry>>('/bios-change-audit', { params })
+    return data
+  },
+  async getBiosChangeAuditSummary() {
+    const { data } = await api.get<BiosChangeAuditSummary>('/bios-change-audit/summary')
+    return data
+  },
   async getBiosHistoryById(biosId: string) {
     const { data } = await api.get<{ data: { bios_id: string; events: BiosHistoryEntry[] } }>(`/bios-history/${biosId}`)
     return data
@@ -211,12 +222,7 @@ export const managerParentService = {
     return data
   },
   async getTeamNetwork() {
-    const cacheKey = 'manager-parent:team-network'
-    const cached = apiCache.get<{ data: NetworkDiagramPayload }>(cacheKey)
-    if (cached) return cached
-
     const { data } = await api.get<{ data: NetworkDiagramPayload }>('/team/network')
-    apiCache.set(cacheKey, data, 60 * 1000)
     return data
   },
   async getProgramsWithExternalApi() {

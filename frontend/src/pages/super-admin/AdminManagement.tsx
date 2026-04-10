@@ -22,7 +22,7 @@ import { routePaths } from '@/router/routes'
 import { adminService } from '@/services/admin.service'
 import { biosService } from '@/services/bios.service'
 import { tenantService } from '@/services/tenant.service'
-import type { ManagedUser } from '@/types/super-admin.types'
+import type { AssignableManager, ManagedUser } from '@/types/super-admin.types'
 
 const emptyForm = {
   name: '',
@@ -31,6 +31,7 @@ const emptyForm = {
   username: '',
   role: 'manager_parent' as 'super_admin' | 'manager_parent' | 'manager' | 'reseller',
   tenant_id: '' as number | '',
+  assign_to_id: '' as number | '',
   phone: '',
   status: 'active' as 'active' | 'inactive',
 }
@@ -80,6 +81,11 @@ export function AdminManagementPage() {
     queryKey: ['super-admin', 'admin-tenant-options'],
     queryFn: () => tenantService.getAll({ per_page: 100 }),
   })
+  const assignableManagersQuery = useQuery({
+    queryKey: ['super-admin', 'assignable-managers', form.tenant_id],
+    queryFn: () => tenantService.getAssignableManagers(form.tenant_id as number),
+    enabled: form.role === 'reseller' && typeof form.tenant_id === 'number' && form.tenant_id > 0,
+  })
 
   function invalidateUserQueries(userId?: number) {
     void queryClient.invalidateQueries({ queryKey: ['super-admin', 'admin-management'] })
@@ -127,6 +133,7 @@ export function AdminManagementPage() {
         password: form.password,
         role: form.role,
         tenant_id: form.role === 'super_admin' ? null : Number(form.tenant_id),
+        assign_to_id: form.role === 'reseller' && form.assign_to_id ? Number(form.assign_to_id) : undefined,
         phone: normalizedPhone || null,
         status: form.status,
       })
@@ -214,12 +221,28 @@ export function AdminManagementPage() {
       return false
     }
 
+    if (!editing && form.role === 'reseller' && !form.assign_to_id) {
+      toast.error(t('superAdmin.pages.adminManagement.assignToManagerRequired'))
+      return false
+    }
+
     if (form.phone.trim() && !isValidPhoneNumber(form.phone)) {
       toast.error(t('validation.invalidPhone', { defaultValue: 'Invalid phone number' }))
       return false
     }
 
     return true
+  }
+
+  const assignableManagers = assignableManagersQuery.data?.data ?? []
+  const selectedTenantName = useMemo(
+    () => tenantsQuery.data?.data.find((tenant) => tenant.id === form.tenant_id)?.name ?? null,
+    [form.tenant_id, tenantsQuery.data?.data],
+  )
+
+  function formatAssignableManagerLabel(manager: AssignableManager) {
+    const roleLabel = t(`roles.${manager.role}`)
+    return manager.email ? `${roleLabel} - ${manager.name} - ${manager.email}` : `${roleLabel} - ${manager.name}`
   }
 
   const columns = useMemo<Array<DataTableColumn<ManagedUser>>>(
@@ -301,6 +324,7 @@ export function AdminManagementPage() {
                     username: row.username ?? '',
                     role: row.role === 'customer' ? 'reseller' : row.role,
                     tenant_id: row.tenant?.id ?? '',
+                    assign_to_id: '',
                     phone: row.phone ?? '',
                     status: toStoredAccountStatus(normalizeAccountStatus(row.status)),
                   })
@@ -491,7 +515,11 @@ export function AdminManagementPage() {
               <select
                 id="admin-role"
                 value={form.role}
-                onChange={(event) => setForm((current) => ({ ...current, role: event.target.value as typeof current.role }))}
+                onChange={(event) => setForm((current) => ({
+                  ...current,
+                  role: event.target.value as typeof current.role,
+                  assign_to_id: event.target.value === 'reseller' ? current.assign_to_id : '',
+                }))}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
                 <option value="super_admin">{t('roles.super_admin')}</option>
@@ -505,7 +533,11 @@ export function AdminManagementPage() {
               <select
                 id="admin-tenant"
                 value={form.tenant_id}
-                onChange={(event) => setForm((current) => ({ ...current, tenant_id: event.target.value ? Number(event.target.value) : '' }))}
+                onChange={(event) => setForm((current) => ({
+                  ...current,
+                  tenant_id: event.target.value ? Number(event.target.value) : '',
+                  assign_to_id: '',
+                }))}
                 disabled={form.role === 'super_admin'}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950"
               >
@@ -517,6 +549,35 @@ export function AdminManagementPage() {
                 ))}
               </select>
             </div>
+            {!editing && form.role === 'reseller' ? (
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="admin-assign-manager">{t('superAdmin.pages.adminManagement.assignToManager')}</Label>
+                <select
+                  id="admin-assign-manager"
+                  value={form.assign_to_id}
+                  onChange={(event) => setForm((current) => ({ ...current, assign_to_id: event.target.value ? Number(event.target.value) : '' }))}
+                  disabled={!form.tenant_id || assignableManagersQuery.isLoading}
+                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950"
+                >
+                  <option value="">{t('superAdmin.pages.adminManagement.selectManagerAssignment')}</option>
+                  {assignableManagers.map((manager) => (
+                    <option key={manager.id} value={manager.id}>
+                      {formatAssignableManagerLabel(manager)}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {t('superAdmin.pages.adminManagement.assignToManagerHelp')}
+                </p>
+                {form.tenant_id && !assignableManagersQuery.isLoading && assignableManagers.length === 0 ? (
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    {t('superAdmin.pages.adminManagement.noAssignableManagers', {
+                      tenant: selectedTenantName ?? t('common.selectedTenant', { defaultValue: 'the selected tenant' }),
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="admin-status">{t('common.accountStatus')}</Label>
               <select

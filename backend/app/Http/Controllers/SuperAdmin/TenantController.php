@@ -159,6 +159,25 @@ class TenantController extends BaseSuperAdminController
         ]);
     }
 
+    public function assignableManagers(Request $request, Tenant $tenant): JsonResponse
+    {
+        $managers = User::query()
+            ->where('tenant_id', $tenant->id)
+            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value])
+            ->orderByRaw('FIELD(role, ?, ?)', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value])
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'role']);
+
+        return response()->json([
+            'data' => $managers->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role?->value ?? (string) $user->role,
+            ])->values(),
+        ]);
+    }
+
     private function resolveUniqueSlug(string $name): string
     {
         $base = Str::slug($name);

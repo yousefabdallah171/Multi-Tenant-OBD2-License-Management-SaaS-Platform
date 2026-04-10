@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\ManagerParent\NetworkController as ManagerParentNetworkController;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
@@ -81,6 +82,10 @@ class UserController extends BaseSuperAdminController
 
         $user->update(['status' => $validated['status']]);
 
+        if ($user->tenant_id !== null && in_array($user->role?->value ?? (string) $user->role, [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value], true)) {
+            ManagerParentNetworkController::forgetTenantCache((int) $user->tenant_id);
+        }
+
         return response()->json([
             'data' => $this->serializeUser($user->fresh('tenant')),
         ]);
@@ -88,7 +93,7 @@ class UserController extends BaseSuperAdminController
 
     public function show(User $user): JsonResponse
     {
-        $member = $user->load('tenant');
+        $member = $user->load(['tenant', 'createdBy']);
         $member->ensureUsername();
         $stats = $this->memberStats($member);
 
@@ -169,7 +174,13 @@ class UserController extends BaseSuperAdminController
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $tenantId = $user->tenant_id;
+        $role = $user->role?->value ?? (string) $user->role;
         $user->delete();
+
+        if ($tenantId !== null && in_array($role, [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value], true)) {
+            ManagerParentNetworkController::forgetTenantCache((int) $tenantId);
+        }
 
         return response()->json([
             'message' => 'User deleted successfully.',
@@ -194,6 +205,12 @@ class UserController extends BaseSuperAdminController
                 'name' => $user->tenant->name,
                 'slug' => $user->tenant->slug,
                 'status' => $user->tenant->status,
+            ] : null,
+            'created_by' => $user->createdBy ? [
+                'id' => $user->createdBy->id,
+                'name' => $user->createdBy->name,
+                'email' => $this->visibleEmail($user->createdBy->email),
+                'role' => $user->createdBy->role?->value ?? (string) $user->createdBy->role,
             ] : null,
             'username_locked' => $user->username_locked,
             'can_delete' => ($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value

@@ -27,18 +27,18 @@ return new class extends Migration
 
         // Activity logs - for activity log queries
         Schema::table('activity_logs', function (Blueprint $table) {
-            if (!$this->indexExists('activity_logs', 'idx_user_created')) {
-                $table->index(['user_id', 'created_at'], 'idx_user_created');
+            if (!$this->indexExists('activity_logs', 'idx_activity_logs_user_created')) {
+                $table->index(['user_id', 'created_at'], 'idx_activity_logs_user_created');
             }
-            if (!$this->indexExists('activity_logs', 'idx_tenant_created')) {
-                $table->index(['tenant_id', 'created_at'], 'idx_tenant_created');
+            if (!$this->indexExists('activity_logs', 'idx_activity_logs_tenant_created')) {
+                $table->index(['tenant_id', 'created_at'], 'idx_activity_logs_tenant_created');
             }
         });
 
         // User IP logs - for IP analytics
         Schema::table('user_ip_logs', function (Blueprint $table) {
-            if (!$this->indexExists('user_ip_logs', 'idx_user_created')) {
-                $table->index(['user_id', 'created_at'], 'idx_user_created');
+            if (!$this->indexExists('user_ip_logs', 'idx_user_ip_logs_user_created')) {
+                $table->index(['user_id', 'created_at'], 'idx_user_ip_logs_user_created');
             }
         });
 
@@ -51,8 +51,8 @@ return new class extends Migration
 
         // BIOS conflicts - for conflict detection
         Schema::table('bios_conflicts', function (Blueprint $table) {
-            if (!$this->indexExists('bios_conflicts', 'idx_tenant_created')) {
-                $table->index(['tenant_id', 'created_at'], 'idx_tenant_created');
+            if (!$this->indexExists('bios_conflicts', 'idx_bios_conflicts_tenant_created')) {
+                $table->index(['tenant_id', 'created_at'], 'idx_bios_conflicts_tenant_created');
             }
         });
 
@@ -72,10 +72,10 @@ return new class extends Migration
         // Drop all added indexes
         $indexesToDrop = [
             'licenses' => ['idx_tenant_customer', 'idx_tenant_status', 'idx_program_tenant_activated'],
-            'activity_logs' => ['idx_user_created', 'idx_tenant_created'],
-            'user_ip_logs' => ['idx_user_created'],
+            'activity_logs' => ['idx_activity_logs_user_created', 'idx_activity_logs_tenant_created'],
+            'user_ip_logs' => ['idx_user_ip_logs_user_created'],
             'bios_blacklist' => ['idx_bios_status'],
-            'bios_conflicts' => ['idx_tenant_created'],
+            'bios_conflicts' => ['idx_bios_conflicts_tenant_created'],
             'users' => ['idx_tenant_role'],
         ];
 

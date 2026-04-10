@@ -23,6 +23,7 @@ class ActivityController extends BaseManagerController
 
         $query = ActivityLog::query()
             ->with('user:id,name')
+            ->where('tenant_id', $this->currentTenantId($request))
             ->whereIn('user_id', $userIds)
             ->latest();
 

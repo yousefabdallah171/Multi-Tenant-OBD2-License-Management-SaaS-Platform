@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import {
+  applyNodeChanges,
   Background,
   Controls,
   MiniMap,
+  type NodeChange,
   ReactFlow,
   ReactFlowProvider,
   useEdgesState,
@@ -12,12 +14,14 @@ import {
   type ReactFlowInstance,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { TenantRootNode } from '@/components/team-network/nodes/TenantRootNode'
 import { ManagerParentNode } from '@/components/team-network/nodes/ManagerParentNode'
 import { ManagerNode } from '@/components/team-network/nodes/ManagerNode'
 import { ResellerNode } from '@/components/team-network/nodes/ResellerNode'
 import AnimatedEdge from '@/components/team-network/edges/AnimatedEdge'
 
 const nodeTypes = {
+  tenantRoot: TenantRootNode,
   managerParent: ManagerParentNode,
   manager: ManagerNode,
   reseller: ResellerNode,
@@ -31,14 +35,16 @@ export function NetworkCanvas({
   nodes,
   edges,
   onInit,
+  storageKey,
 }: {
   nodes: Node[]
   edges: Edge[]
   onInit?: (instance: ReactFlowInstance) => void
+  storageKey?: string
 }) {
   return (
     <ReactFlowProvider>
-      <CanvasInner nodes={nodes} edges={edges} onInit={onInit} />
+      <CanvasInner nodes={nodes} edges={edges} onInit={onInit} storageKey={storageKey} />
     </ReactFlowProvider>
   )
 }
@@ -47,17 +53,83 @@ function CanvasInner({
   nodes,
   edges,
   onInit,
+  storageKey,
 }: {
   nodes: Node[]
   edges: Edge[]
   onInit?: (instance: ReactFlowInstance) => void
+  storageKey?: string
 }) {
-  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(nodes)
+  const [flowNodes, setFlowNodes] = useNodesState(nodes)
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(edges)
 
+  const persistNodePositions = useCallback((nextNodes: Node[]) => {
+    if (!storageKey || typeof window === 'undefined') {
+      return
+    }
+
+    const positions = Object.fromEntries(
+      nextNodes.map((node) => [
+        node.id,
+        {
+          x: node.position.x,
+          y: node.position.y,
+        },
+      ]),
+    )
+
+    window.localStorage.setItem(storageKey, JSON.stringify(positions))
+  }, [storageKey])
+
+  const mergeStoredPositions = useCallback((nextNodes: Node[], currentNodes: Node[]) => {
+    if (!storageKey || typeof window === 'undefined') {
+      return nextNodes
+    }
+
+    const raw = window.localStorage.getItem(storageKey)
+    if (!raw) {
+      return nextNodes
+    }
+
+    try {
+      const stored = JSON.parse(raw) as Record<string, { x: number; y: number }>
+      const currentMap = new Map(currentNodes.map((node) => [node.id, node]))
+
+      return nextNodes.map((node) => {
+        const storedPosition = stored[node.id]
+        const currentNode = currentMap.get(node.id)
+
+        if (storedPosition) {
+          return { ...node, position: storedPosition }
+        }
+
+        if (currentNode) {
+          return { ...node, position: currentNode.position }
+        }
+
+        return node
+      })
+    } catch {
+      return nextNodes
+    }
+  }, [storageKey])
+
+  const handleNodesChange = useCallback((changes: NodeChange[]) => {
+    setFlowNodes((currentNodes) => {
+      const nextNodes = applyNodeChanges(changes, currentNodes)
+      const shouldPersist = changes.some((change) => change.type === 'position' && change.dragging === false)
+
+      if (shouldPersist) {
+        persistNodePositions(nextNodes)
+      }
+
+      return nextNodes
+    })
+  }, [persistNodePositions, setFlowNodes])
+
   useEffect(() => {
-    setFlowNodes(nodes)
-  }, [nodes, setFlowNodes])
+    setFlowNodes((currentNodes) => mergeStoredPositions(nodes, currentNodes))
+  }, [mergeStoredPositions, nodes, setFlowNodes])
 
   useEffect(() => {
     setFlowEdges(edges)
@@ -68,11 +140,10 @@ function CanvasInner({
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        fitView
         minZoom={0.2}
         maxZoom={2}
         onInit={onInit}
@@ -84,6 +155,7 @@ function CanvasInner({
           zoomable
           className="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
           nodeColor={(node) => {
+            if (node.type === 'tenantRoot') return '#0ea5e9'
             if (node.type === 'managerParent') return '#a855f7'
             if (node.type === 'manager') return '#6366f1'
             return '#10b981'

@@ -2,16 +2,12 @@ import { api } from '@/services/api'
 import { apiCache } from '@/lib/apiCache'
 import type { FinancialReportData, PaginatedResponse } from '@/types/manager-parent.types'
 import type {
-  ActivateManagerSoftwareData,
-  CreateManagerSoftwareData,
   DashboardSeriesPoint,
   ManagerCustomerDetails,
   ManagerCustomerFilters,
   ManagerDashboardPayload,
   ManagerCustomerSummary,
   ManagerDashboardStats,
-  ManagerSoftwareFilters,
-  ManagerSoftwareProgram,
   ManagerSellerLogEntry,
   ManagerSellerLogSummary,
   ManagerTeamFilters,
@@ -23,7 +19,6 @@ import type {
   RoleActivityFilters,
   TeamManagedUser,
   TeamManagedUserFilters,
-  UpdateManagerSoftwareData,
   LicenseHistoryEntry,
   BiosChangeRequest,
   BiosChangeRequestFilters,
@@ -159,6 +154,10 @@ export const managerService = {
     const { data } = await api.post<{ data: unknown; message: string }>('/manager/bios-change-requests', payload)
     return data
   },
+  async directChangeBiosId(licenseId: number, newBiosId: string) {
+    const { data } = await api.post<{ success: boolean; message: string }>('/manager/bios-change-requests/direct', { license_id: licenseId, new_bios_id: newBiosId })
+    return data
+  },
   async getBiosChangeRequests(params?: BiosChangeRequestFilters) {
     const { data } = await api.get<PaginatedResponse<BiosChangeRequest>>('/manager/bios-change-requests', { params })
     return data
@@ -215,26 +214,6 @@ export const managerService = {
   },
   async getLicensesExpiring() {
     const { data } = await api.get<{ data: { day1: number; day3: number; day7: number; expired: number } }>('/manager/licenses/expiring')
-    return data
-  },
-  async getSoftwarePrograms(params?: ManagerSoftwareFilters) {
-    const { data } = await api.get<PaginatedResponse<ManagerSoftwareProgram>>('/manager/software', { params })
-    return data
-  },
-  async createProgram(payload: CreateManagerSoftwareData) {
-    const { data } = await api.post<{ data: ManagerSoftwareProgram }>('/manager/software', payload)
-    return data
-  },
-  async updateProgram(id: number, payload: UpdateManagerSoftwareData) {
-    const { data } = await api.put<{ data: ManagerSoftwareProgram }>(`/manager/software/${id}`, payload)
-    return data
-  },
-  async deleteProgram(id: number) {
-    const { data } = await api.delete<{ message: string }>(`/manager/software/${id}`)
-    return data
-  },
-  async activateProgram(id: number, payload: ActivateManagerSoftwareData) {
-    const { data } = await api.post<{ data: ManagerSoftwareProgram }>(`/manager/software/${id}/activate`, payload)
     return data
   },
   async getFinancialReports(params: ReportRangeFilters) {

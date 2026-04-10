@@ -456,6 +456,12 @@ export function CustomersPage() {
                 {t('common.view')}
               </Link>
             </DropdownMenuItem>
+            {typeof row.license_id === 'number' ? (
+              <DropdownMenuItem onClick={() => navigate(`${routePaths.managerParent.customerDetail(lang, row.id)}?change_bios=1`)}>
+                <Cpu className="me-2 h-4 w-4" />
+                {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem disabled={isBlacklisted} onClick={() => setEditTarget(row)}>
               <Pencil className="me-2 h-4 w-4" />
               {t('common.edit', { defaultValue: 'Edit' })}

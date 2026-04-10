@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\ManagerParent\NetworkController as ManagerParentNetworkController;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
@@ -75,6 +76,7 @@ class AdminManagementController extends BaseSuperAdminController
             'password' => ['required', 'string', 'min:8'],
             'role' => ['required', 'in:super_admin,manager_parent,manager,reseller'],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
+            'assign_to_id' => ['nullable', 'integer', 'exists:users,id'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
         ]);
@@ -87,7 +89,34 @@ class AdminManagementController extends BaseSuperAdminController
             return response()->json(['message' => 'Tenant assignment is required for non-super-admin accounts.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $admin = DB::transaction(function () use ($request, $validated): User {
+        $assignedManager = null;
+        if (($validated['role'] ?? null) === UserRole::RESELLER->value) {
+            if (empty($validated['assign_to_id'])) {
+                return response()->json([
+                    'message' => 'Reseller assignment is required.',
+                    'errors' => ['assign_to_id' => ['Select a manager parent or manager for this reseller.']],
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $assignedManager = User::query()->find($validated['assign_to_id']);
+
+            if (! $assignedManager
+                || (int) $assignedManager->tenant_id !== (int) $validated['tenant_id']
+                || ! in_array($assignedManager->role?->value ?? (string) $assignedManager->role, [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value], true)
+            ) {
+                return response()->json([
+                    'message' => 'Assigned manager must belong to the same tenant and have a manager role.',
+                    'errors' => ['assign_to_id' => ['Assigned manager must belong to the same tenant and have a manager role.']],
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
+        $admin = DB::transaction(function () use ($request, $validated, $assignedManager): User {
+            $createdBy = $request->user()?->id;
+            if ($validated['role'] === UserRole::RESELLER->value) {
+                $createdBy = $assignedManager?->id;
+            }
+
             $user = User::query()->create([
                 'tenant_id' => $validated['role'] === UserRole::SUPER_ADMIN->value ? null : $validated['tenant_id'],
                 'name' => $validated['name'],
@@ -97,17 +126,22 @@ class AdminManagementController extends BaseSuperAdminController
                 'password' => Hash::make($validated['password']),
                 'role' => $validated['role'],
                 'status' => $validated['status'] ?? 'active',
-                'created_by' => $request->user()?->id,
+                'created_by' => $createdBy,
                 'username_locked' => false,
             ]);
 
             $this->logActivity($request, 'admin.create', sprintf('Created admin account for %s.', $user->email), [
                 'target_user_id' => $user->id,
                 'role' => $validated['role'],
+                'assign_to_id' => $assignedManager?->id,
             ]);
 
             return $user->fresh('tenant');
         });
+
+        if ($admin->tenant_id !== null) {
+            ManagerParentNetworkController::forgetTenantCache((int) $admin->tenant_id);
+        }
 
         return response()->json(['data' => $this->serializeAdmin($admin)], 201);
     }
@@ -129,12 +163,21 @@ class AdminManagementController extends BaseSuperAdminController
 
         $this->guardSuperAdminMutation($request, $user, $validated['status'] ?? null, false);
 
+        $originalTenantId = $user->tenant_id;
+
         $user->update([
             ...$validated,
             'tenant_id' => ($validated['role'] ?? ($user->role?->value ?? $user->role)) === UserRole::SUPER_ADMIN->value
                 ? null
                 : ($validated['tenant_id'] ?? $user->tenant_id),
         ]);
+
+        if ($originalTenantId !== null) {
+            ManagerParentNetworkController::forgetTenantCache((int) $originalTenantId);
+        }
+        if ($user->tenant_id !== null) {
+            ManagerParentNetworkController::forgetTenantCache((int) $user->tenant_id);
+        }
 
         $this->logActivity($request, 'admin.update', sprintf('Updated admin account for %s.', $user->email), [
             'target_user_id' => $user->id,
@@ -299,6 +342,12 @@ class AdminManagementController extends BaseSuperAdminController
             'tenant' => $user->tenant ? [
                 'id' => $user->tenant->id,
                 'name' => $user->tenant->name,
+            ] : null,
+            'created_by' => $user->createdBy ? [
+                'id' => $user->createdBy->id,
+                'name' => $user->createdBy->name,
+                'email' => $user->createdBy->email,
+                'role' => $user->createdBy->role?->value ?? (string) $user->createdBy->role,
             ] : null,
             'created_at' => $user->created_at?->toIso8601String(),
         ];

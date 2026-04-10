@@ -66,7 +66,15 @@ export interface ManagedUser {
   username_locked?: boolean
   can_delete: boolean
   tenant: { id: number; name: string; slug?: string; status?: string } | null
+  created_by?: { id: number; name: string; email: string | null; role?: 'manager_parent' | 'manager' | 'super_admin' | 'reseller' | 'customer' } | null
   created_at: string | null
+}
+
+export interface AssignableManager {
+  id: number
+  name: string
+  email: string | null
+  role: 'manager_parent' | 'manager'
 }
 
 export interface SuperAdminCustomerSummary {
@@ -298,6 +306,18 @@ export interface FinancialReportPayload {
     total_activations: number
     avg_price: number
   }>
+}
+
+export interface GrantedActivationRow {
+  id: number
+  reseller_id?: number | null
+  reseller_name: string | null
+  reseller_role?: string | null
+  program_id?: number | null
+  program_name: string
+  bios_id: string | null
+  price: number
+  activated_at: string | null
 }
 
 export interface TenantBackupStats {

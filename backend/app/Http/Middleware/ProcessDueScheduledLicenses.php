@@ -32,9 +32,18 @@ class ProcessDueScheduledLicenses
         try {
             return Cache::add($key, true, $ttl);
         } catch (\Throwable $exception) {
-            report($exception);
+            if (! $this->isDeadlock($exception)) {
+                report($exception);
+            }
 
             return false;
         }
+    }
+
+    private function isDeadlock(\Throwable $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        return str_contains($message, 'deadlock found') || str_contains($message, 'serialization failure');
     }
 }

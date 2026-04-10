@@ -18,7 +18,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
@@ -29,7 +28,7 @@ import { routePaths } from '@/router/routes'
 import { licenseService } from '@/services/license.service'
 import { managerService } from '@/services/manager.service'
 import { programService } from '@/services/program.service'
-import type { DurationUnit, ManagerCustomerSummary, RenewLicenseData } from '@/types/manager-reseller.types'
+import type { ManagerCustomerSummary, RenewLicenseData } from '@/types/manager-reseller.types'
 import type { UserRole } from '@/types/user.types'
 import { formatUsername } from '@/utils/biosId'
 
@@ -79,7 +78,6 @@ function createEmptyActivationForm(defaultTimezone: string): ActivationFormState
 
 export function CustomersPage() {
   const { t } = useTranslation()
-  const { user } = useAuth()
   const { lang } = useLanguage()
   const queryClient = useQueryClient()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -94,13 +92,12 @@ export function CustomersPage() {
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
     STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
   )
-  const [managerId, setManagerId] = useState<number | ''>(searchParams.get('manager_id') ? Number(searchParams.get('manager_id')) : '')
   const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
   const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
-  const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
+  const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null)
   const [editTarget, setEditTarget] = useState<ManagerCustomerSummary | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ManagerCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ManagerCustomerSummary | null>(null)
@@ -111,15 +108,14 @@ export function CustomersPage() {
   const customerFilterParams = useMemo(
     () => ({
       search: search || undefined,
-      manager_id: managerId || undefined,
       reseller_id: resellerId || undefined,
       program_id: programId || undefined,
     }),
-    [managerId, programId, resellerId, search],
+    [programId, resellerId, search],
   )
 
   const customersQuery = useQuery({
-    queryKey: ['manager', 'customers', page, perPage, search, status, managerId, resellerId, programId],
+    queryKey: ['manager', 'customers', page, perPage, search, status, resellerId, programId],
     queryFn: () =>
       managerService.getCustomers({
         page,
@@ -139,14 +135,6 @@ export function CustomersPage() {
     queryKey: ['manager', 'customers', 'programs'],
     queryFn: () => programService.getAll({ per_page: 100 }),
   })
-
-  const managerOptions = useMemo(() => {
-    if (!user || user.role !== 'manager') {
-      return []
-    }
-
-    return [{ id: user.id, name: user.name }]
-  }, [user])
 
   const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
@@ -168,8 +156,7 @@ export function CustomersPage() {
         customer_phone: activationForm.customer_phone.trim().replace(/\D+/g, '') || undefined,
         bios_id: activationForm.bios_id.trim(),
         program_id: Number(activationForm.program_id),
-        duration_days: durationDays,
-        price: Number(totalPrice),
+        preset_id: selectedPreset?.id ?? undefined,
         is_scheduled: activationForm.is_scheduled || undefined,
         scheduled_date_time: activationForm.is_scheduled ? buildScheduledDateTime(activationForm) : undefined,
         scheduled_timezone: activationForm.is_scheduled ? activationForm.scheduled_timezone : undefined,
@@ -183,7 +170,7 @@ export function CustomersPage() {
       setActivationOpen(false)
       setActivationStep(0)
       setActivationForm(createEmptyActivationForm(displayTimezone))
-      setPriceMode('auto')
+      setSelectedPresetId(null)
       invalidate(queryClient)
     },
     onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
@@ -271,24 +258,36 @@ export function CustomersPage() {
   })
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
-  const durationDays = useMemo(() => {
-    if (activationForm.mode === 'end_date' && activationForm.end_date) {
-      const endDate = new Date(activationForm.end_date)
-      const today = new Date()
-      return Math.max(0, (endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  const presetOptions = useMemo(
+    () => [...(selectedProgram?.duration_presets ?? [])].filter((preset) => preset.is_active).sort((a, b) => a.sort_order - b.sort_order),
+    [selectedProgram?.duration_presets],
+  )
+  const selectedPreset = useMemo(
+    () => presetOptions.find((preset) => preset.id === selectedPresetId) ?? presetOptions[0] ?? null,
+    [presetOptions, selectedPresetId],
+  )
+
+  useEffect(() => {
+    if (presetOptions.length === 0) {
+      setSelectedPresetId(null)
+      return
     }
-    return durationToDays(Number(activationForm.duration_value), activationForm.duration_unit)
-  }, [activationForm.duration_value, activationForm.duration_unit, activationForm.mode, activationForm.end_date])
+
+    if (selectedPresetId && presetOptions.some((preset) => preset.id === selectedPresetId)) {
+      return
+    }
+
+    setSelectedPresetId(presetOptions[0]?.id ?? null)
+  }, [presetOptions, selectedPresetId])
+
+  const durationDays = useMemo(() => {
+    return selectedPreset?.duration_days ?? 0
+  }, [selectedPreset])
   const expiryPreview = useMemo(() => {
-    if (activationForm.mode === 'end_date' && activationForm.end_date) return activationForm.end_date
     if (durationDays <= 0) return ''
     return new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString()
-  }, [activationForm.mode, activationForm.end_date, durationDays])
-  const autoPrice = useMemo(() => {
-    const base = Number(selectedProgram?.base_price ?? 0)
-    return Math.max(0, base * durationDays)
-  }, [selectedProgram?.base_price, durationDays])
-  const totalPrice = priceMode === 'auto' ? autoPrice : Number(activationForm.price || 0)
+  }, [durationDays])
+  const totalPrice = useMemo(() => selectedPreset?.price ?? 0, [selectedPreset])
 
   const rows = customersQuery.data?.data ?? []
   const selectableIds = rows
@@ -487,7 +486,7 @@ export function CustomersPage() {
               <DropdownMenuItem asChild>
                 <Link to={routePaths.manager.customerBiosChangeRequest(lang, row.id)}>
                   <Cpu className="me-2 h-4 w-4" />
-                  {t('biosChangeRequests.requestAction', { defaultValue: 'Request BIOS ID Change' })}
+                  {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
                 </Link>
               </DropdownMenuItem>
             ) : null}
@@ -511,7 +510,6 @@ export function CustomersPage() {
       setPerPage(25)
       setSearch('')
       setStatus('all')
-      setManagerId('')
       setResellerId('')
       setProgramId('')
     }
@@ -523,11 +521,10 @@ export function CustomersPage() {
     if (perPage !== 25) next.set('per_page', String(perPage))
     if (search) next.set('search', search)
     if (status !== 'all') next.set('status', status)
-    if (managerId) next.set('manager_id', String(managerId))
     if (resellerId) next.set('reseller_id', String(resellerId))
     if (programId) next.set('program_id', String(programId))
     setSearchParams(next, { replace: true })
-  }, [managerId, page, perPage, programId, resellerId, search, setSearchParams, status])
+  }, [page, perPage, programId, resellerId, search, setSearchParams, status])
 
   return (
     <div className="space-y-6">
@@ -613,14 +610,8 @@ export function CustomersPage() {
 
       <div className="space-y-4">
             <Card>
-              <CardContent className="grid gap-2 p-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_180px]">
+              <CardContent className="grid gap-2 p-3 lg:grid-cols-[minmax(0,1fr)_180px_180px]">
                 <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('manager.pages.customers.searchPlaceholder')} className="h-9 text-sm" />
-                <select value={managerId} onChange={(event) => { setManagerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                  <option value="">{t('customers.filterByManager', { defaultValue: 'Filter by Manager' })}</option>
-                  {managerOptions.map((manager) => (
-                    <option key={manager.id} value={manager.id}>{manager.name}</option>
-                  ))}
-                </select>
                 <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                   <option value="">{t('manager.pages.customers.allResellers')}</option>
                   {(resellerQuery.data?.data ?? []).map((reseller) => (
@@ -666,7 +657,17 @@ export function CustomersPage() {
           />
       </div>
 
-      <Dialog open={activationOpen} onOpenChange={setActivationOpen}>
+      <Dialog
+        open={activationOpen}
+        onOpenChange={(open) => {
+          setActivationOpen(open)
+          if (!open) {
+            setActivationStep(0)
+            setActivationForm(createEmptyActivationForm(displayTimezone))
+            setSelectedPresetId(null)
+          }
+        }}
+      >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>{t('reseller.pages.customers.activationDialog.title')}</DialogTitle>
@@ -722,27 +723,31 @@ export function CustomersPage() {
           ) : null}
           {activationStep === 2 ? (
             <div className="space-y-4">
-              <div className="flex gap-2">
-                <Button type="button" size="sm" variant={activationForm.mode === 'duration' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, mode: 'duration' }))}>{t('common.duration')}</Button>
-                <Button type="button" size="sm" variant={activationForm.mode === 'end_date' ? 'default' : 'outline'} onClick={() => setActivationForm((current) => ({ ...current, mode: 'end_date' }))}>{t('common.endDate', { defaultValue: 'End Date' })}</Button>
-              </div>
-              {activationForm.mode === 'duration' ? (
-                <div className="grid gap-3 md:grid-cols-3">
-                  <Input type="number" min={1} value={activationForm.duration_value} onChange={(event) => setActivationForm((current) => ({ ...current, duration_value: event.target.value }))} />
-                  <select value={activationForm.duration_unit} onChange={(event) => setActivationForm((current) => ({ ...current, duration_unit: event.target.value as 'minutes' | 'hours' | 'days' }))} className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                    <option value="minutes">{t('common.minutes', { defaultValue: 'Minutes' })}</option>
-                    <option value="hours">{t('common.hours', { defaultValue: 'Hours' })}</option>
-                    <option value="days">{t('common.days')}</option>
-                  </select>
-                  <div className="flex flex-wrap gap-2">
-                    {[{ label: '1d', value: '1', unit: 'days' }, { label: '7d', value: '7', unit: 'days' }, { label: '30d', value: '30', unit: 'days' }, { label: '90d', value: '90', unit: 'days' }, { label: '1y', value: '365', unit: 'days' }].map((preset) => (
-                      <Button key={preset.label} type="button" size="sm" variant="outline" onClick={() => setActivationForm((current) => ({ ...current, duration_value: preset.value, duration_unit: preset.unit as 'minutes' | 'hours' | 'days' }))}>{preset.label}</Button>
-                    ))}
-                  </div>
+              <div className="space-y-2">
+                <Label>{t('activate.quickPresets', { defaultValue: 'Quick Presets' })}</Label>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {presetOptions.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setSelectedPresetId(preset.id)}
+                      className={`rounded-2xl border p-3 text-start transition ${
+                        selectedPreset?.id === preset.id
+                          ? 'border-sky-500 bg-sky-50 dark:border-sky-400 dark:bg-sky-950/30'
+                          : 'border-slate-200 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold">{preset.label}</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400">
+                        {t('activate.presetDurationSummary', { defaultValue: '{{days}} days', days: preset.duration_days })}
+                      </div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400">
+                        {t('activate.presetPriceSummary', { defaultValue: '$ {{price}}', price: preset.price.toFixed(2) })}
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <Input type="date" value={activationForm.end_date} onChange={(event) => setActivationForm((current) => ({ ...current, end_date: event.target.value }))} />
-              )}
+              </div>
 
               <div className="space-y-3 rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
                 <label className="flex items-center gap-2 text-sm">
@@ -785,11 +790,8 @@ export function CustomersPage() {
 
               <div className="space-y-2">
                 <Label>{t('common.price')}</Label>
-                <div className="flex gap-2">
-                  <Button type="button" size="sm" variant={priceMode === 'auto' ? 'default' : 'outline'} onClick={() => setPriceMode('auto')}>{t('activate.priceModeAuto', { defaultValue: 'Auto' })}</Button>
-                  <Button type="button" size="sm" variant={priceMode === 'manual' ? 'default' : 'outline'} onClick={() => setPriceMode('manual')}>{t('activate.priceModeManual', { defaultValue: 'Manual' })}</Button>
-                </div>
-                <Input type="number" min={0} step="0.01" value={priceMode === 'auto' ? totalPrice.toFixed(2) : activationForm.price} onChange={(event) => setActivationForm((current) => ({ ...current, price: event.target.value }))} readOnly={priceMode === 'auto'} />
+                <Input type="number" min={0} step="0.01" value={totalPrice.toFixed(2)} readOnly />
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('activate.pricePresetLocked', { defaultValue: 'Price is controlled by the selected preset.' })}</p>
               </div>
             </div>
           ) : null}
@@ -802,6 +804,7 @@ export function CustomersPage() {
                 <div>{activationForm.customer_phone || '-'}</div>
                 <div>{activationForm.bios_id}</div>
                 <div>{selectedProgram?.name ?? '-'}</div>
+                <div>{selectedPreset?.label ?? '-'}</div>
                 <div>{durationDays} {t('common.days')}</div>
                 <div>{expiryPreview ? formatDate(expiryPreview, locale, displayTimezone) : '-'}</div>
                 <div>{formatCurrency(totalPrice, 'USD', locale)}</div>
@@ -814,7 +817,7 @@ export function CustomersPage() {
               <Button
                 type="button"
                 onClick={() => {
-                  const error = validateActivationStep(activationStep, activationForm, totalPrice, t)
+                  const error = validateActivationStep(activationStep, activationForm, totalPrice, t, selectedPreset)
                   if (error) {
                     toast.error(error)
                     return
@@ -828,7 +831,7 @@ export function CustomersPage() {
               <Button
                 type="button"
                 onClick={() => {
-                  const error = validateActivationStep(activationStep, activationForm, totalPrice, t)
+                  const error = validateActivationStep(activationStep, activationForm, totalPrice, t, selectedPreset)
                   if (error) {
                     toast.error(error)
                     return
@@ -945,25 +948,6 @@ function resolveUserRole(role?: string | null): UserRole | null {
   return null
 }
 
-function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | DurationUnit) {
-  if (!Number.isFinite(value) || value <= 0) {
-    return 0
-  }
-  if (unit === 'minutes') {
-    return value / 1440
-  }
-  if (unit === 'hours') {
-    return value / 24
-  }
-  if (unit === 'months') {
-    return value * 30
-  }
-  if (unit === 'years') {
-    return value * 365
-  }
-  return value
-}
-
 function invalidate(queryClient: ReturnType<typeof useQueryClient>) {
   void Promise.all([
     queryClient.invalidateQueries({ queryKey: ['manager', 'customers'] }),
@@ -1000,6 +984,7 @@ function validateActivationStep(
   form: ActivationFormState,
   totalPrice: number,
   t: (key: string, options?: Record<string, unknown>) => string,
+  selectedPreset?: { id: number } | null,
 ) {
   if (step === 0 && form.customer_name.trim().length < 2) {
     return t('reseller.pages.customers.validation.customerName')
@@ -1008,19 +993,14 @@ function validateActivationStep(
     return t('reseller.pages.customers.validation.customerEmail')
   }
   if (step === 0 && form.customer_phone.trim() && !/^\d+$/.test(form.customer_phone.trim())) {
-    return 'Phone must start with optional + and contain digits only.'
+    return t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
   }
   if (step === 1) {
     if (form.bios_id.trim().length < 5) return t('reseller.pages.customers.validation.biosId')
     if (!form.program_id) return t('reseller.pages.customers.validation.selectProgram')
   }
   if (step >= 2) {
-    if (form.mode === 'duration' && Number(form.duration_value) < 1) return t('reseller.pages.customers.validation.duration')
-    if (form.mode === 'end_date' && !form.end_date) return t('reseller.pages.customers.validation.duration')
-    if (form.mode === 'end_date' && form.end_date) {
-      const endAt = new Date(form.end_date).getTime()
-      if (!Number.isFinite(endAt) || endAt <= Date.now()) return t('reseller.pages.customers.validation.duration')
-    }
+    if (!selectedPreset) return t('reseller.pages.customers.validation.duration')
     if (!Number.isFinite(totalPrice) || totalPrice < 0) return t('reseller.pages.customers.validation.price')
   }
   return ''

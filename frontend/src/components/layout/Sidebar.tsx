@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Network, Package, PackagePlus, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Network, Package, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -59,8 +59,6 @@ const managerItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.manager.dashboard, translationKey: 'manager.nav.dashboard' },
   { key: 'team', icon: Users, href: routePaths.manager.team, translationKey: 'manager.nav.team' },
   { key: 'customers', icon: UserRound, href: routePaths.manager.customers, translationKey: 'manager.nav.customers' },
-  { key: 'software', icon: Package, href: routePaths.manager.software, translationKey: 'manager.nav.software' },
-  { key: 'softwareManagement', icon: PackagePlus, href: routePaths.manager.softwareManagement, translationKey: 'manager.nav.softwareManagement' },
   { key: 'biosChangeRequestsTopLevel', icon: ClipboardList, href: routePaths.manager.biosChangeRequests, translationKey: 'manager.nav.biosChangeRequests' },
   { key: 'biosGroup', icon: History, href: routePaths.manager.biosDetails, translationKey: 'manager.nav.biosDetails' },
   { key: 'resellerPayments', icon: BarChart3, href: routePaths.manager.resellerPayments, translationKey: 'manager.nav.resellerPayments' },
@@ -113,6 +111,7 @@ export function Sidebar() {
     routePaths.managerParent.biosHistory(lang),
     routePaths.managerParent.biosDetails(lang),
     routePaths.managerParent.biosChangeRequests(lang),
+    routePaths.managerParent.biosChangeAudit(lang),
     routePaths.managerParent.biosConflicts(lang),
   ]), [lang])
   const managerBiosPaths = useMemo(() => ([
@@ -229,6 +228,7 @@ export function Sidebar() {
     { key: 'biosHistory', icon: History, href: routePaths.managerParent.biosHistory, translationKey: 'managerParent.nav.biosHistory' },
     { key: 'biosDetails', icon: History, href: routePaths.managerParent.biosDetails, translationKey: 'managerParent.nav.biosDetails' },
     { key: 'biosChangeRequests', icon: History, href: routePaths.managerParent.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
+    { key: 'biosChangeAudit', icon: History, href: routePaths.managerParent.biosChangeAudit, translationKey: 'managerParent.nav.biosChangeAudit' },
     { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.managerParent.biosConflicts, translationKey: 'managerParent.nav.biosConflicts' },
   ]
   const managerBiosChildren: NavItem[] = [

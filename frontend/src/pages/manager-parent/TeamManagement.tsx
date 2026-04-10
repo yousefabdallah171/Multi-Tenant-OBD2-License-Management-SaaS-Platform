@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useLanguage } from '@/hooks/useLanguage'
 import { normalizeAccountStatus, type AccountStatusFilter } from '@/lib/account-status'
+import { apiCache } from '@/lib/apiCache'
 import { formatCurrency, isValidPhoneNumber, normalizePhoneInput } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
@@ -96,6 +97,12 @@ export function TeamManagementPage() {
     }
   }
 
+  function refreshNetworkQueries() {
+    apiCache.clearPattern(/^manager-parent:team-network$/)
+    void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'team-network'] })
+    void queryClient.refetchQueries({ queryKey: ['manager-parent', 'team-network'], type: 'active' })
+  }
+
   const createMutation = useMutation({
     mutationFn: (payload: TeamPayload) => teamService.create(payload),
     onSuccess: () => {
@@ -104,6 +111,7 @@ export function TeamManagementPage() {
         : t('managerParent.pages.teamManagement.resellerInvited'))
       closeForm()
       invalidateTeamQueries()
+      refreshNetworkQueries()
     },
   })
 
@@ -131,6 +139,7 @@ export function TeamManagementPage() {
     onSuccess: ({ usernameUpdated, usernameErrorMessage }) => {
       closeForm()
       invalidateTeamQueries(editingMember?.id)
+      refreshNetworkQueries()
 
       if (usernameUpdated) {
         toast.success(t('managerParent.pages.teamManagement.updateSuccess'))
@@ -146,6 +155,7 @@ export function TeamManagementPage() {
     onSuccess: () => {
       toast.success(t('managerParent.pages.teamManagement.statusUpdated'))
       invalidateTeamQueries()
+      refreshNetworkQueries()
     },
   })
 
@@ -155,6 +165,7 @@ export function TeamManagementPage() {
       toast.success(t('managerParent.pages.teamManagement.deleteSuccess'))
       setDeleteTarget(null)
       invalidateTeamQueries(deleteTarget?.id)
+      refreshNetworkQueries()
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'This team member cannot be deleted.'))

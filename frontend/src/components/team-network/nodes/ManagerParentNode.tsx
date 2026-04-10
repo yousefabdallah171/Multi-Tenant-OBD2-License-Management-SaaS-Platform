@@ -6,9 +6,9 @@ import { useTranslation } from 'react-i18next'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { formatCurrency, cn } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
-import type { NetworkRootNode } from '@/types/manager-parent.types'
+import type { NetworkManagerParentNode } from '@/types/manager-parent.types'
 
-type ManagerParentNodeData = NetworkRootNode & { lang: 'ar' | 'en' }
+type ManagerParentNodeData = NetworkManagerParentNode & { lang: 'ar' | 'en' }
 
 export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeProps) {
   const navigate = useNavigate()
@@ -22,6 +22,7 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
 
   return (
     <div className="w-72 rounded-2xl border-2 border-purple-500 border-l-4 border-l-purple-500 bg-white p-4 shadow-lg shadow-purple-500/20 dark:bg-slate-800">
+      <Handle type="target" position={Position.Left} className="size-3 border-2 border-white bg-purple-500 dark:border-slate-900" />
       <Handle type="source" position={Position.Right} className="size-3 border-2 border-white bg-purple-500 dark:border-slate-900" />
 
       <button
@@ -30,7 +31,9 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
         onClick={(event) => {
           event.preventDefault()
           event.stopPropagation()
-          visit(routePaths.managerParent.profile(nodeData.lang))
+          if (nodeData.is_current) {
+            visit(routePaths.managerParent.profile(nodeData.lang))
+          }
         }}
       >
         <div className="flex size-11 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold uppercase text-purple-700 dark:bg-purple-950/50 dark:text-purple-200">
@@ -49,7 +52,7 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
         <StatButton
           icon={<Banknote className="size-4 text-purple-600 dark:text-purple-300" />}
           label={t('managerParent.pages.teamNetwork.revenue')}
-          value={formatCurrency(nodeData.total_revenue, 'USD', locale)}
+          value={formatCurrency(nodeData.revenue, 'USD', locale)}
           onClick={() => visit(routePaths.managerParent.financialReports(nodeData.lang))}
         />
         <StatButton
@@ -60,8 +63,14 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
         />
         <StatButton
           icon={<Users className="size-4 text-purple-600 dark:text-purple-300" />}
+          label={t('managerParent.pages.teamNetwork.resellers')}
+          value={String(nodeData.resellers_count)}
+          onClick={() => visit(`${routePaths.managerParent.teamManagement(nodeData.lang)}?role=reseller`)}
+        />
+        <StatButton
+          icon={<Users className="size-4 text-purple-600 dark:text-purple-300" />}
           label={t('managerParent.pages.teamNetwork.customers')}
-          value={String(nodeData.total_customers)}
+          value={String(nodeData.customers_count)}
           onClick={() => visit(routePaths.managerParent.customers(nodeData.lang))}
         />
         <StatButton

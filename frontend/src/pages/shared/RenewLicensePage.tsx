@@ -14,7 +14,7 @@ import { apiCache } from '@/lib/apiCache'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { getLicenseDisplayStatus, isPausedPendingLicense, isPlainPendingLicense } from '@/lib/utils'
 import { licenseService } from '@/services/license.service'
-import { resellerService } from '@/services/reseller.service'
+import { programService } from '@/services/program.service'
 import type { RenewLicenseData } from '@/types/manager-reseller.types'
 
 interface RenewLicensePageProps {
@@ -63,8 +63,8 @@ export function RenewLicensePage({
 
   const license = licenseQuery.data?.data
   const resellerProgramsQuery = useQuery({
-    queryKey: ['reseller', 'software', 'renew-presets', license?.program_id],
-    queryFn: () => resellerService.getSoftware(),
+    queryKey: ['license-renew', 'programs', license?.program_id],
+    queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
     enabled: presetOnly && Boolean(license?.program_id),
     staleTime: 60_000,
   })

@@ -28,7 +28,6 @@ class CustomerController extends BaseManagerController
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'manager_id' => ['nullable', 'integer'],
             'reseller_id' => ['nullable', 'integer'],
             'program_id' => ['nullable', 'integer'],
             'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
@@ -45,10 +44,6 @@ class CustomerController extends BaseManagerController
                 ->select($this->licenseListColumns())
                 ->with(['program:id,name', 'reseller:id,name,role'])])
             ->latest();
-
-        if (! empty($validated['manager_id'])) {
-            $query->where('created_by', (int) $validated['manager_id']);
-        }
 
         if (! empty($validated['search'])) {
             $query->where(function ($builder) use ($validated, $sellerIds): void {
@@ -143,6 +138,9 @@ class CustomerController extends BaseManagerController
                 ->with(['program:id,name', 'reseller:id,name,email,role']),
             'createdBy:id,name,email',
         ]);
+        $currentBiosByLicense = $customer->customerLicenses
+            ->mapWithKeys(fn (License $license): array => [$license->id => strtolower((string) $license->bios_id)])
+            ->all();
 
         $sellersSummary = $customer->customerLicenses
             ->groupBy('reseller_id')
@@ -194,6 +192,18 @@ class CustomerController extends BaseManagerController
             ->latest()
             ->limit(100)
             ->get()
+            ->filter(function (ActivityLog $log) use ($currentBiosByLicense): bool {
+                if ($log->action !== 'bios.direct_changed') {
+                    return true;
+                }
+
+                $licenseId = (int) ($log->metadata['license_id'] ?? 0);
+                $newBiosId = strtolower((string) ($log->metadata['new_bios_id'] ?? ''));
+
+                return $licenseId > 0
+                    && isset($currentBiosByLicense[$licenseId])
+                    && $currentBiosByLicense[$licenseId] === $newBiosId;
+            })
             ->map(fn (ActivityLog $log): array => [
                 'id' => $log->id,
                 'action' => $log->action,

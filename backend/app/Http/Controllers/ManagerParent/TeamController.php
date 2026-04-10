@@ -91,6 +91,7 @@ class TeamController extends BaseManagerParentController
             'target_user_id' => $user->id,
             'role' => $role->value,
         ]);
+        NetworkController::forgetTenantCache($this->currentTenantId($request));
 
         return response()->json(['data' => $this->serializeUser($user, collect([$user->id => $this->memberStats($user)]))], 201);
     }
@@ -115,6 +116,7 @@ class TeamController extends BaseManagerParentController
         $this->logActivity($request, 'team.update', sprintf('Updated team member %s.', $user->email), [
             'target_user_id' => $user->id,
         ]);
+        NetworkController::forgetTenantCache($this->currentTenantId($request));
 
         return response()->json(['data' => $this->serializeUser($user->fresh(), collect([$user->id => $this->memberStats($user)]))]);
     }
@@ -134,6 +136,7 @@ class TeamController extends BaseManagerParentController
         $this->logActivity($request, 'team.delete', sprintf('Removed team member %s.', $user->email), [
             'target_user_id' => $user->id,
         ]);
+        NetworkController::forgetTenantCache($this->currentTenantId($request));
 
         return response()->json(['message' => 'Team member removed successfully.']);
     }
@@ -156,6 +159,7 @@ class TeamController extends BaseManagerParentController
             'target_user_id' => $user->id,
             'status' => $validated['status'],
         ]);
+        NetworkController::forgetTenantCache($this->currentTenantId($request));
 
         return response()->json(['data' => $this->serializeUser($user->fresh(), collect([$user->id => $this->memberStats($user)]))]);
     }

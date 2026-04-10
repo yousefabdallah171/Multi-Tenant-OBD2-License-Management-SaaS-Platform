@@ -105,7 +105,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const { timezone: displayTimezone } = useResolvedTimezone()
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
-  const isReseller = user?.role === 'reseller'
+  const isReseller = user?.role === 'reseller' || user?.role === 'manager'
   const [form, setForm] = useState(() => createEmptyForm(displayTimezone))
   const previousDisplayTimezoneRef = useRef(displayTimezone)
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')

@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -186,7 +187,24 @@ class CustomerController extends BaseResellerController
             $customer->password = Hash::make(Str::password(16));
         }
 
-        $customer->save();
+        try {
+            $customer->save();
+        } catch (QueryException $exception) {
+            $message = $exception->getMessage();
+            if (str_contains($message, 'users_tenant_id_username_unique')) {
+                throw ValidationException::withMessages([
+                    'name' => 'This username is already used in this tenant. Please choose a different username.',
+                ]);
+            }
+
+            if (str_contains($message, 'users_tenant_id_email_unique')) {
+                throw ValidationException::withMessages([
+                    'email' => 'This email is already used in this tenant.',
+                ]);
+            }
+
+            throw $exception;
+        }
 
         if (! empty($validated['bios_id']) && ! empty($validated['program_id'])) {
             $this->createPendingLicense(

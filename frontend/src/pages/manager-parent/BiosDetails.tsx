@@ -75,7 +75,11 @@ export function BiosDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('biosDetails.title')} description={biosId || t('biosDetails.description')} />
+      <PageHeader
+        eyebrow={t('managerParent.layout.eyebrow')}
+        title={t('biosDetails.title')}
+        description={biosId || t('biosDetails.description')}
+      />
 
       <Card>
         <CardContent className="space-y-4 p-4">

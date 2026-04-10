@@ -26,7 +26,6 @@ const CustomerDownloadPage = lazyNamed(() => import('@/pages/customer/Download')
 const CustomerSoftwarePage = lazyNamed(() => import('@/pages/customer/Software'), 'SoftwarePage')
 
 const ManagerActivityPage = lazyNamed(() => import('@/pages/manager/Activity'), 'ActivityPage')
-const ActivateLicensePageForManager = lazyNamed(() => import('@/pages/manager/ActivateLicense'), 'ActivateLicensePageForManager')
 const ManagerBiosDetailsPage = lazyNamed(() => import('@/pages/manager/BiosDetails'), 'BiosDetailsPage')
 const ManagerBiosChangeRequestsPage = lazyNamed(() => import('@/pages/manager/BiosChangeRequests'), 'BiosChangeRequestsPage')
 const ManagerCustomersPage = lazyNamed(() => import('@/pages/manager/Customers'), 'CustomersPage')
@@ -40,9 +39,6 @@ const ManagerDashboardPage = lazyNamed(() => import('@/pages/manager/Dashboard')
 const ManagerProfilePage = lazyNamed(() => import('@/pages/manager/Profile'), 'ProfilePage')
 const ManagerReportsPage = lazyNamed(() => import('@/pages/manager/Reports'), 'ReportsPage')
 const ManagerResellerLogsPage = lazyNamed(() => import('@/pages/manager/ResellerLogs'), 'ResellerLogsPage')
-const ManagerSoftwarePage = lazyNamed(() => import('@/pages/manager/Software'), 'SoftwarePage')
-const ManagerSoftwareManagementPage = lazyNamed(() => import('@/pages/manager/SoftwareManagement'), 'SoftwareManagementPage')
-const ManagerProgramFormPage = lazyNamed(() => import('@/pages/manager/ProgramForm'), 'ProgramFormPage')
 const ManagerTeamPage = lazyNamed(() => import('@/pages/manager/Team'), 'TeamPage')
 const ManagerTeamMemberDetailPage = lazyNamed(() => import('@/pages/manager/TeamMemberDetail'), 'TeamMemberDetailPage')
 
@@ -50,6 +46,7 @@ const ManagerParentActivityPage = lazyNamed(() => import('@/pages/manager-parent
 const ActivateLicensePageForManagerParent = lazyNamed(() => import('@/pages/manager-parent/ActivateLicense'), 'ActivateLicensePageForManagerParent')
 const ManagerParentApiStatusPage = lazyNamed(() => import('@/pages/manager-parent/ApiStatus'), 'ApiStatusPage')
 const ManagerParentBiosBlacklistPage = lazyNamed(() => import('@/pages/manager-parent/BiosBlacklist'), 'BiosBlacklistPage')
+const ManagerParentBiosChangeAuditPage = lazyNamed(() => import('@/pages/manager-parent/BiosChangeAudit'), 'BiosChangeAuditPage')
 const ManagerParentBiosChangeRequestsPage = lazyNamed(() => import('@/pages/manager-parent/BiosChangeRequests'), 'BiosChangeRequestsPage')
 const ManagerParentBiosConflictsPage = lazyNamed(() => import('@/pages/manager-parent/BiosConflicts'), 'BiosConflictsPage')
 const ManagerParentBiosDetailsPage = lazyNamed(() => import('@/pages/manager-parent/BiosDetails'), 'BiosDetailsPage')
@@ -180,6 +177,7 @@ export function AppRouter() {
                   <Route path="bios-details" element={<ManagerParentBiosDetailsPage />} />
                   <Route path="bios-details/:biosId" element={<ManagerParentBiosDetailsPage />} />
                   <Route path="bios-change-requests" element={<ManagerParentBiosChangeRequestsPage />} />
+                  <Route path="bios-change-audit" element={<ManagerParentBiosChangeAuditPage />} />
                   <Route path="reseller-payments" element={<ManagerParentResellerPaymentsPage />} />
                   <Route path="reseller-payments/:resellerId" element={<ManagerParentResellerPaymentDetailPage />} />
                   <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
@@ -216,11 +214,6 @@ export function AppRouter() {
                   <Route path="customers/:id" element={<ManagerCustomerDetailPage />} />
                   <Route path="customers/:id/request-bios-change" element={<ManagerBiosChangeRequestPage />} />
                   <Route path="licenses" element={<Navigate to="../customers" replace />} />
-                  <Route path="software" element={<ManagerSoftwarePage />} />
-                  <Route path="software/:id/activate" element={<ActivateLicensePageForManager />} />
-                  <Route path="software-management" element={<ManagerSoftwareManagementPage />} />
-                  <Route path="software-management/create" element={<ManagerProgramFormPage />} />
-                  <Route path="software-management/:id/edit" element={<ManagerProgramFormPage />} />
                   <Route path="bios-details" element={<ManagerBiosDetailsPage />} />
                   <Route path="bios-details/:biosId" element={<ManagerBiosDetailsPage />} />
                   <Route path="bios-change-requests" element={<ManagerBiosChangeRequestsPage />} />

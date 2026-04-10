@@ -5,7 +5,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { availabilityService } from '@/services/availability.service'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BlockBadge } from '@/components/shared/BlockBadge'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -34,6 +34,7 @@ export function CustomerDetailPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const queryClient = useQueryClient()
   const { id } = useParams<{ id: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const customerId = Number(id)
   const [changeDialogOpen, setChangeDialogOpen] = useState(false)
   const [newBiosId, setNewBiosId] = useState('')
@@ -41,7 +42,11 @@ export function CustomerDetailPage() {
   const debouncedNewBiosId = useDebounce(newBiosId.trim(), 400)
 
   useEffect(() => {
-    if (debouncedNewBiosId.length < 3) { setBiosCheckResult(null); return }
+    if (debouncedNewBiosId.length < 3) {
+      setBiosCheckResult(null)
+      return
+    }
+
     availabilityService.checkBios(debouncedNewBiosId).then(setBiosCheckResult)
   }, [debouncedNewBiosId])
 
@@ -55,12 +60,6 @@ export function CustomerDetailPage() {
   const licenseHistoryQuery = useQuery({
     queryKey: ['manager-parent', 'customer-license-history', customerId],
     queryFn: () => managerParentService.getCustomerLicenseHistory(customerId),
-    enabled: Number.isFinite(customerId),
-  })
-
-  const biosChangeHistoryQuery = useQuery({
-    queryKey: ['manager-parent', 'customer-bios-change-history', customerId],
-    queryFn: () => managerParentService.getCustomerBiosChangeHistory(customerId),
     enabled: Number.isFinite(customerId),
   })
 
@@ -80,15 +79,24 @@ export function CustomerDetailPage() {
       newBiosId.trim(),
     ),
     onSuccess: (response) => {
-      toast.success(response.message ?? 'BIOS ID changed successfully.')
+      toast.success(response.message ?? t('biosChangeRequests.directSuccess'))
       setChangeDialogOpen(false)
       setNewBiosId('')
       setBiosCheckResult(null)
+      if (searchParams.get('change_bios') === '1') {
+        searchParams.delete('change_bios')
+        setSearchParams(searchParams, { replace: true })
+      }
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'customer-detail', customerId] })
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'customer-bios-change-history', customerId] })
     },
     onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
   })
+
+  useEffect(() => {
+    if (searchParams.get('change_bios') === '1' && requestableLicense) {
+      setChangeDialogOpen(true)
+    }
+  }, [requestableLicense, searchParams])
 
   return (
     <div className="space-y-6">
@@ -98,12 +106,13 @@ export function CustomerDetailPage() {
           {t('common.back')}
         </Button>
       </div>
+
       <PageHeader
         title={customer?.name ?? t('managerParent.pages.customers.customerDetails')}
         description={resolveCustomerDetailUsername(customer) ?? t('managerParent.pages.customers.customerDetailsDescription')}
         actions={requestableLicense ? (
           <Button type="button" onClick={() => setChangeDialogOpen(true)}>
-            {lang === 'ar' ? 'تغيير BIOS ID' : 'Change BIOS ID'}
+            {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
           </Button>
         ) : null}
       />
@@ -133,7 +142,6 @@ export function CustomerDetailPage() {
               <TabsTrigger value="bios">{t('managerParent.pages.customers.biosId')}</TabsTrigger>
               <TabsTrigger value="ips">{t('managerParent.pages.ipAnalytics.title')}</TabsTrigger>
               <TabsTrigger value="activity">{t('managerParent.nav.activity')}</TabsTrigger>
-              <TabsTrigger value="bios-changes">{t('customerDetail.biosChanges', { defaultValue: 'BIOS Changes' })}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="licenses">
@@ -158,16 +166,16 @@ export function CustomerDetailPage() {
                           <div key={license.id} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40">
                             <div className="grid gap-3 md:grid-cols-5">
                               <Info label={t('common.program')} value={license.program_name ?? '-'} />
-                          <Info
-                            label={t('customerDetail.soldBy')}
-                            value={
-                              <RoleIdentity
-                                name={group.name}
-                                role={resolveUserRole(group.role)}
-                                href={group.id ? routePaths.managerParent.teamMemberDetail(lang, group.id) : undefined}
+                              <Info
+                                label={t('customerDetail.soldBy')}
+                                value={(
+                                  <RoleIdentity
+                                    name={group.name}
+                                    role={resolveUserRole(group.role)}
+                                    href={group.id ? routePaths.managerParent.teamMemberDetail(lang, group.id) : undefined}
+                                  />
+                                )}
                               />
-                            }
-                          />
                               <Info label={t('customerDetail.period')} value={formatCustomerLicensePeriod(license, locale)} />
                               <Info label={t('common.price')} value={`$${Number(license.price).toFixed(2)}`} />
                               <Info label={t('common.status')} value={<LicenseStatusBadges status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(license.is_blacklisted)} />} />
@@ -240,51 +248,26 @@ export function CustomerDetailPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-
-            <TabsContent value="bios-changes">
-              <Card>
-                <CardHeader><CardTitle>{t('biosChangeRequests.title')}</CardTitle></CardHeader>
-                <CardContent className="space-y-2">
-                  {(biosChangeHistoryQuery.data?.data ?? []).map((change) => (
-                    <div key={change.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div className="flex-1 space-y-1">
-                          <p className="font-medium">{change.old_bios_id} → {change.new_bios_id}</p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{change.reason || '-'}</p>
-                          {change.requested_by ? <p className="text-sm text-slate-600 dark:text-slate-300">{t('customerDetail.requestedBy', { defaultValue: 'Requested by' })}: {change.requested_by}</p> : null}
-                          {change.reviewed_by ? <p className="text-sm text-slate-600 dark:text-slate-300">{t('customerDetail.approvedBy', { defaultValue: 'Approved by' })}: {change.reviewed_by}</p> : null}
-                        </div>
-                        <div className="text-start">
-                          <span className={`inline-flex rounded-full px-2 py-1 text-sm font-semibold ${
-                            change.status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-                            : change.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
-                            : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
-                          }`}>
-                            {change.status}
-                          </span>
-                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{change.created_at ? formatDate(change.created_at, locale) : '-'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {biosChangeHistoryQuery.data?.data?.length === 0 && !biosChangeHistoryQuery.isLoading ? (
-                    <div className="rounded-2xl border border-slate-200 p-4 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                      {t('customerDetail.noBiosChangeRequests', { defaultValue: 'No BIOS change requests' })}
-                    </div>
-                  ) : null}
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
         </>
       ) : null}
 
-      <Dialog open={changeDialogOpen} onOpenChange={(open) => { setChangeDialogOpen(open); if (!open) { setNewBiosId(''); setBiosCheckResult(null) } }}>
+      <Dialog open={changeDialogOpen} onOpenChange={(open) => {
+        setChangeDialogOpen(open)
+        if (!open) {
+          setNewBiosId('')
+          setBiosCheckResult(null)
+          if (searchParams.get('change_bios') === '1') {
+            searchParams.delete('change_bios')
+            setSearchParams(searchParams, { replace: true })
+          }
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{lang === 'ar' ? 'تغيير BIOS ID مباشرة' : 'Change BIOS ID Directly'}</DialogTitle>
+            <DialogTitle>{t('biosChangeRequests.directTitle', { defaultValue: 'Change BIOS ID Directly' })}</DialogTitle>
             <DialogDescription>
-              {lang === 'ar' ? 'سيتم تطبيق التغيير فوراً بدون موافقة.' : 'This change is applied immediately without approval.'}
+              {t('biosChangeRequests.directDescription', { defaultValue: 'This change is applied immediately without creating a request.' })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -298,13 +281,17 @@ export function CustomerDetailPage() {
             <div className="space-y-1">
               <Input
                 value={newBiosId}
-                onChange={(event) => { setNewBiosId(event.target.value); setBiosCheckResult(null) }}
+                maxLength={10}
+                onChange={(event) => {
+                  setNewBiosId(event.target.value)
+                  setBiosCheckResult(null)
+                }}
                 placeholder={t('biosChangeRequests.newBiosPlaceholder')}
               />
-              {biosCheckResult && (
+              {biosCheckResult ? (
                 <div className="space-y-1">
                   <p className={`text-sm ${biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'text-rose-600' : 'text-emerald-600'}`}>
-                    {biosCheckResult.is_blacklisted || !biosCheckResult.available ? '✗ ' : '✓ '}{biosCheckResult.message}
+                    {(biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'x ' : 'ok ') + biosCheckResult.message}
                   </p>
                   {biosCheckResult.linked_username && biosCheckResult.linked_username.trim().toLowerCase() !== customerUsername ? (
                     <p className="text-sm text-rose-600">
@@ -314,7 +301,7 @@ export function CustomerDetailPage() {
                     </p>
                   ) : null}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
           <DialogFooter>
@@ -326,12 +313,22 @@ export function CustomerDetailPage() {
               disabled={directChangeMutation.isPending}
               onClick={() => {
                 const license = requestableLicense as { id: number; bios_id?: string } | null
-                if (!license) { toast.error(t('common.error')); return }
-                if (newBiosId.trim().length < 5) { toast.error(t('biosChangeRequests.newBiosValidation')); return }
-                if ((license.bios_id ?? '').trim().toLowerCase() === newBiosId.trim().toLowerCase()) {
-                  toast.error(t('biosChangeRequests.sameBiosValidation')); return
+                if (!license) {
+                  toast.error(t('common.error'))
+                  return
                 }
-                if (biosCheckResult?.is_blacklisted) { toast.error(t('customers.biosBlacklisted')); return }
+                if (newBiosId.trim().length < 3 || newBiosId.trim().length > 10) {
+                  toast.error(t('biosChangeRequests.newBiosValidation'))
+                  return
+                }
+                if ((license.bios_id ?? '').trim().toLowerCase() === newBiosId.trim().toLowerCase()) {
+                  toast.error(t('biosChangeRequests.sameBiosValidation'))
+                  return
+                }
+                if (biosCheckResult?.is_blacklisted) {
+                  toast.error(t('customers.biosBlacklisted'))
+                  return
+                }
                 if (
                   biosCheckResult?.linked_username
                   && biosCheckResult.linked_username.trim().toLowerCase() !== customerUsername
@@ -344,12 +341,14 @@ export function CustomerDetailPage() {
                   return
                 }
                 if (biosCheckResult !== null && !biosCheckResult.available) {
-                  toast.error(biosCheckResult.message || t('common.error')); return
+                  toast.error(biosCheckResult.message || t('common.error'))
+                  return
                 }
+
                 directChangeMutation.mutate()
               }}
             >
-              {lang === 'ar' ? 'تطبيق التغيير' : 'Apply Change'}
+              {t('biosChangeRequests.applyChange', { defaultValue: 'Apply Change' })}
             </Button>
           </DialogFooter>
         </DialogContent>

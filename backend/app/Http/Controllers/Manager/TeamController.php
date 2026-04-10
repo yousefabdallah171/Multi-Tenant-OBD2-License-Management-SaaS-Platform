@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\ManagerParent\NetworkController as ManagerParentNetworkController;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\Program;
@@ -218,6 +219,7 @@ class TeamController extends BaseManagerController
             'target_user_id' => $user->id,
             'role' => UserRole::RESELLER->value,
         ]);
+        ManagerParentNetworkController::forgetTenantCache($this->currentTenantId($request));
 
         return response()->json([
             'data' => $this->serializeReseller($user, collect([$user->id => $this->resellerStats($user->id)])),
@@ -239,6 +241,7 @@ class TeamController extends BaseManagerController
         $this->logActivity($request, 'team.update', sprintf('Updated reseller %s.', $reseller->email), [
             'target_user_id' => $reseller->id,
         ]);
+        ManagerParentNetworkController::forgetTenantCache($this->currentTenantId($request));
 
         return response()->json([
             'data' => $this->serializeReseller($reseller->fresh(), collect([$reseller->id => $this->resellerStats($reseller->id)])),
@@ -260,6 +263,7 @@ class TeamController extends BaseManagerController
         $this->logActivity($request, 'team.delete', sprintf('Removed reseller %s.', $reseller->email), [
             'target_user_id' => $reseller->id,
         ]);
+        ManagerParentNetworkController::forgetTenantCache($this->currentTenantId($request));
 
         return response()->json(['message' => 'Reseller removed successfully.']);
     }
@@ -282,6 +286,7 @@ class TeamController extends BaseManagerController
             'target_user_id' => $reseller->id,
             'status' => $validated['status'],
         ]);
+        ManagerParentNetworkController::forgetTenantCache($this->currentTenantId($request));
 
         return response()->json([
             'data' => $this->serializeReseller($reseller->fresh(), collect([$reseller->id => $this->resellerStats($reseller->id)])),

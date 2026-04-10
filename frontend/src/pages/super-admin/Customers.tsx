@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -13,9 +13,13 @@ import { RoleBadge } from '@/components/shared/RoleBadge'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useLanguage } from '@/hooks/useLanguage'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { availabilityService } from '@/services/availability.service'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { canDeleteCustomerRow, canReactivateLicense, canRetryScheduledLicense, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, resolveLicenseDurationDays, shouldRenewLicense } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -52,6 +56,10 @@ export function CustomersPage() {
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SuperAdminCustomerSummary | null>(null)
+  const [biosChangeTarget, setBiosChangeTarget] = useState<SuperAdminCustomerSummary | null>(null)
+  const [newBiosId, setNewBiosId] = useState('')
+  const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string; linked_username: string | null } | null>(null)
+  const debouncedNewBiosId = useDebounce(newBiosId.trim(), 400)
   const [pauseReason, setPauseReason] = useState('')
   const customerFilterParams = useMemo(
     () => ({
@@ -62,6 +70,15 @@ export function CustomersPage() {
     }),
     [programId, resellerId, search, tenantId],
   )
+
+  useEffect(() => {
+    if (debouncedNewBiosId.length < 3) {
+      setBiosCheckResult(null)
+      return
+    }
+
+    availabilityService.checkBios(debouncedNewBiosId).then(setBiosCheckResult)
+  }, [debouncedNewBiosId])
 
   const customersQuery = useQuery({
     queryKey: ['super-admin', 'customers', page, perPage, search, status, tenantId, resellerId, programId],
@@ -205,6 +222,18 @@ export function CustomersPage() {
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
+  })
+
+  const directBiosChangeMutation = useMutation({
+    mutationFn: () => superAdminCustomerService.directChangeBiosId(biosChangeTarget?.license_id ?? 0, newBiosId.trim()),
+    onSuccess: (response) => {
+      toast.success(response.message ?? t('biosChangeRequests.directSuccess'))
+      setBiosChangeTarget(null)
+      setNewBiosId('')
+      setBiosCheckResult(null)
+      invalidate(queryClient)
+    },
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
   })
 
   const sellerOptions = useMemo(
@@ -352,6 +381,12 @@ export function CustomersPage() {
                   <Pencil className="me-2 h-4 w-4" />
                   {t('common.edit')}
                 </DropdownMenuItem>
+                {row.license_id ? (
+                  <DropdownMenuItem onSelect={() => setBiosChangeTarget(row)}>
+                    <Cpu className="me-2 h-4 w-4" />
+                    {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
+                  </DropdownMenuItem>
+                ) : null}
                 {row.license_id && (displayStatus === 'active' || shouldRenewLicense(row)) && !isBlacklisted ? (
                   <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.licenseRenew(lang, row.license_id ?? 0), { state: { returnTo: `${location.pathname}${location.search}` } })}>
                     <RotateCw className="me-2 h-4 w-4" />
@@ -567,6 +602,87 @@ export function CustomersPage() {
         onSubmit={(payload: { client_name: string; email?: string; phone?: string }) => editMutation.mutate(payload)}
         isPending={editMutation.isPending}
       />
+      <Dialog
+        open={biosChangeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBiosChangeTarget(null)
+            setNewBiosId('')
+            setBiosCheckResult(null)
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('biosChangeRequests.directTitle', { defaultValue: 'Change BIOS ID Directly' })}</DialogTitle>
+            <DialogDescription>
+              {t('biosChangeRequests.directDescription', { defaultValue: 'This change is applied immediately without creating a request.' })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosChangeRequests.currentBios')}</p>
+              <p className="font-medium font-mono">{biosChangeTarget?.bios_id ?? '-'}</p>
+            </div>
+            <div className="space-y-1">
+              <Input
+                value={newBiosId}
+                maxLength={10}
+                onChange={(event) => {
+                  setNewBiosId(event.target.value)
+                  setBiosCheckResult(null)
+                }}
+                placeholder={t('biosChangeRequests.newBiosPlaceholder')}
+              />
+              {biosCheckResult ? (
+                <div className="space-y-1">
+                  <p className={`text-sm ${biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {(biosCheckResult.is_blacklisted || !biosCheckResult.available ? 'x ' : 'ok ') + biosCheckResult.message}
+                  </p>
+                  {biosCheckResult.linked_username ? (
+                    <p className="text-sm text-rose-600">
+                      {lang === 'ar'
+                        ? `هذا الـ BIOS مرتبط باسم المستخدم ${biosCheckResult.linked_username} وليس بهذا العميل.`
+                        : `This BIOS ID is linked to username "${biosCheckResult.linked_username}" and not this customer.`}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setBiosChangeTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              disabled={directBiosChangeMutation.isPending}
+              onClick={() => {
+                const bios = newBiosId.trim()
+                if (bios.length < 3 || bios.length > 10) {
+                  toast.error(t('biosChangeRequests.newBiosValidation'))
+                  return
+                }
+                if ((biosChangeTarget?.bios_id ?? '').trim().toLowerCase() === bios.toLowerCase()) {
+                  toast.error(t('biosChangeRequests.sameBiosValidation'))
+                  return
+                }
+                if (biosCheckResult?.is_blacklisted) {
+                  toast.error(t('customers.biosBlacklisted'))
+                  return
+                }
+                if (biosCheckResult !== null && !biosCheckResult.available) {
+                  toast.error(biosCheckResult.message || t('common.error'))
+                  return
+                }
+                directBiosChangeMutation.mutate()
+              }}
+            >
+              {t('biosChangeRequests.applyChange', { defaultValue: 'Apply Change' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={pauseTarget !== null}

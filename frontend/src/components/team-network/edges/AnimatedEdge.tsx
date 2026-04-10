@@ -1,4 +1,5 @@
 import { BaseEdge, getBezierPath, type EdgeProps } from '@xyflow/react'
+import './AnimatedEdge.css'
 
 type AnimatedEdgeData = { color?: string }
 
@@ -24,7 +25,6 @@ export default function AnimatedEdge({
 
   return (
     <>
-      <style>{'@keyframes team-network-dash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -20; } }'}</style>
       <BaseEdge id={id} path={path} style={{ stroke: color, strokeOpacity: 0.28, strokeWidth: 2 }} />
       <path
         d={path}

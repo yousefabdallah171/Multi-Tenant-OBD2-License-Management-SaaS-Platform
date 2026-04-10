@@ -50,7 +50,7 @@ export const ResellerNode = memo(function ResellerNode({ data }: NodeProps) {
           icon={<Banknote className="size-4 text-emerald-600 dark:text-emerald-300" />}
           label={t('managerParent.pages.teamNetwork.revenue')}
           value={formatCurrency(nodeData.revenue, 'USD', locale)}
-          onClick={() => visit(routePaths.managerParent.resellerPayments(nodeData.lang))}
+          onClick={() => visit(routePaths.managerParent.resellerPaymentDetail(nodeData.lang, nodeData.id))}
         />
         <StatButton
           icon={<KeyRound className="size-4 text-emerald-600 dark:text-emerald-300" />}

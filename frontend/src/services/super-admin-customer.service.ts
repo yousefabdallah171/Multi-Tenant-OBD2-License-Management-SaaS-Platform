@@ -32,6 +32,13 @@ export const superAdminCustomerService = {
     const { data } = await api.delete<{ message: string }>(`/super-admin/customers/${id}`)
     return data
   },
+  async directChangeBiosId(licenseId: number, newBiosId: string) {
+    const { data } = await api.post<{ success: boolean; message: string }>('/super-admin/bios-change-requests/direct', {
+      license_id: licenseId,
+      new_bios_id: newBiosId,
+    })
+    return data
+  },
   async getExpiring() {
     const { data } = await api.get<{ data: { day1: number; day3: number; day7: number; expired: number } }>('/super-admin/licenses/expiring')
     return data

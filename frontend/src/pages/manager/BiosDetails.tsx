@@ -43,28 +43,30 @@ export function BiosDetailsPage() {
     enabled: biosId !== '',
   })
 
+  const overviewAvailable = biosId !== '' && overviewQuery.isSuccess
+
   const licensesQuery = useQuery({
     queryKey: ['manager', 'bios-details', 'licenses', biosId],
     queryFn: () => managerBiosDetailsService.getBiosLicenses(biosId),
-    enabled: biosId !== '',
+    enabled: overviewAvailable,
   })
 
   const resellersQuery = useQuery({
     queryKey: ['manager', 'bios-details', 'resellers', biosId],
     queryFn: () => managerBiosDetailsService.getResellerBreakdown(biosId),
-    enabled: biosId !== '',
+    enabled: overviewAvailable,
   })
 
   const ipsQuery = useQuery({
     queryKey: ['manager', 'bios-details', 'ips', biosId],
     queryFn: () => managerBiosDetailsService.getIpAnalytics(biosId),
-    enabled: biosId !== '',
+    enabled: overviewAvailable,
   })
 
   const activityQuery = useQuery({
     queryKey: ['manager', 'bios-details', 'activity', biosId],
     queryFn: () => managerBiosDetailsService.getBiosActivity(biosId),
-    enabled: biosId !== '',
+    enabled: overviewAvailable,
   })
 
   const visibleBiosList = debouncedSearch.length >= 3 ? (searchQuery.data ?? []) : (biosId ? [] : (recentQuery.data ?? []))
@@ -75,7 +77,11 @@ export function BiosDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('biosDetails.title')} description={biosId || t('biosDetails.description')} />
+      <PageHeader
+        eyebrow={t('manager.layout.eyebrow')}
+        title={t('biosDetails.title')}
+        description={biosId || t('biosDetails.description')}
+      />
 
       <Card>
         <CardContent className="space-y-4 p-4">
@@ -97,7 +103,23 @@ export function BiosDetailsPage() {
         </CardContent>
       </Card>
 
-      {biosId ? (
+      {biosId && overviewQuery.isLoading ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.loading')}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {biosId && overviewQuery.isError ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('biosDetails.notFound', { defaultValue: 'BIOS ID not found in your team scope.' })}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {biosId && overviewQuery.isSuccess ? (
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="flex flex-wrap">
             <TabsTrigger value="overview">{t('biosDetails.overview')}</TabsTrigger>

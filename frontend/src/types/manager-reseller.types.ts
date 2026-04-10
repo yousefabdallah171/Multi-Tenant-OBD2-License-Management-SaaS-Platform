@@ -373,7 +373,6 @@ export interface TeamManagedUserFilters {
 export interface ManagerCustomerFilters {
   page?: number
   per_page?: number
-  manager_id?: number | ''
   reseller_id?: number | ''
   program_id?: number | ''
   status?: string
@@ -666,73 +665,6 @@ export interface ResellerSoftwareProgram {
 }
 
 export type PaginatedRoleActivity = PaginatedResponse<RoleActivityEntry>
-
-export interface ManagerSoftwareProgram {
-  id: number
-  name: string
-  description: string | null
-  version: string
-  download_link: string
-  file_size: string | null
-  system_requirements: string | null
-  installation_guide_url: string | null
-  trial_days: number
-  base_price: number
-  icon: string | null
-  has_external_api: boolean
-  external_software_id: number | null
-  external_api_base_url: string | null
-  external_logs_endpoint: string
-  status: 'active' | 'inactive'
-  licenses_sold: number
-  active_licenses_count: number
-  revenue: number
-  created_at: string | null
-  duration_presets?: ProgramDurationPreset[]
-}
-
-export interface ManagerSoftwareFilters {
-  page?: number
-  per_page?: number
-  status?: '' | 'active' | 'inactive'
-  search?: string
-}
-
-export interface CreateManagerSoftwareData {
-  name: string
-  download_link: string
-  trial_days?: number
-  base_price: number
-  icon?: string | null
-  description?: string | null
-  version?: string
-  file_size?: string | null
-  system_requirements?: string | null
-  installation_guide_url?: string | null
-  external_api_key?: string | null
-  external_software_id?: number | null
-  external_api_base_url?: string | null
-  external_logs_endpoint?: string | null
-  active?: boolean
-  presets?: Array<{
-    id?: number
-    label: string
-    duration_days: number
-    price: number
-    sort_order?: number
-    is_active?: boolean
-  }>
-}
-
-export interface UpdateManagerSoftwareData extends Partial<CreateManagerSoftwareData> {
-  status?: 'active' | 'inactive'
-}
-
-export interface ActivateManagerSoftwareData {
-  username: string
-  bios_id: string
-}
-
 
 export interface BiosChangeHistoryItem {
   id: number

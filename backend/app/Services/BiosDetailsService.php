@@ -22,18 +22,24 @@ class BiosDetailsService
         private readonly IpAnalyticsService $ipAnalyticsService,
     ) {
     }
-    public function getBiosOverview(string $biosId, ?int $tenantId = null): array
+    public function getBiosOverview(string $biosId, ?int $tenantId = null, ?array $sellerIds = null): array
     {
         $query = License::query()
             ->with(['customer:id,name,username,email,phone', 'reseller:id,name,email,phone,role', 'program:id,name'])
             ->where('bios_id', $biosId);
 
-        $this->applyTenantScope($query, $tenantId);
+        $this->applyAccessScope($query, $tenantId, $sellerIds);
         $licenses = $query->orderBy('activated_at')->get();
 
         $blacklist = $this->getBlacklistStatus($biosId, $tenantId);
 
         if ($licenses->isEmpty()) {
+            // Scoped managers must never see BIOS IDs that have no licenses in their team.
+            // The fallback below (access logs, conflicts, activity) is for Super Admin / Manager Parent only.
+            if ($sellerIds !== null) {
+                abort(404, 'BIOS not found.');
+            }
+
             $latestActivity = ActivityLog::query()
                 ->where(function ($query) use ($biosId): void {
                     $query
@@ -41,18 +47,26 @@ class BiosDetailsService
                         ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.old_bios_id'))) = ?", [strtolower($biosId)]);
                 })
                 ->when($tenantId !== null, fn (Builder $query) => $query->where('tenant_id', $tenantId))
+                ->when($sellerIds !== null, function (Builder $query) use ($sellerIds): void {
+                    $normalizedSellerIds = $this->normalizeSellerIds($sellerIds);
+                    $query->where(function (Builder $scoped) use ($normalizedSellerIds): void {
+                        $scoped
+                            ->whereIn('user_id', $normalizedSellerIds)
+                            ->orWhereIn('metadata->reseller_id', $normalizedSellerIds);
+                    });
+                })
                 ->latest()
                 ->first();
-            $lastAccessLog = $this->biosAccessLogsQuery($biosId, $tenantId)->latest()->first();
-            $lastConflict = $this->biosConflictsQuery($biosId, $tenantId)->latest()->first();
+            $lastAccessLog = $this->biosAccessLogsQuery($biosId, $tenantId, $sellerIds)->latest()->first();
+            $lastConflict = $this->biosConflictsQuery($biosId, $tenantId, $sellerIds)->latest()->first();
 
-            abort_if(! $lastAccessLog && ! $lastConflict && ! $blacklist && ! $latestActivity, 404, 'BIOS not found.');
+            abort_if(! $lastAccessLog && ! $lastConflict && ! $latestActivity, 404, 'BIOS not found.');
 
             $lastActivity = collect([
                 $latestActivity?->created_at?->toIso8601String(),
                 $lastAccessLog?->created_at?->toIso8601String(),
                 $lastConflict?->created_at?->toIso8601String(),
-                $blacklist['date'] ?? null,
+                $sellerIds === null ? ($blacklist['date'] ?? null) : null,
             ])->filter()->sortDesc()->first();
 
             $activityMetadata = $latestActivity?->metadata ?? [];
@@ -229,14 +243,14 @@ class BiosDetailsService
         return $this->splitBiosId($biosId)[0];
     }
 
-    public function getBiosLicenseHistory(string $biosId, ?int $tenantId = null, array $filters = []): LengthAwarePaginator
+    public function getBiosLicenseHistory(string $biosId, ?int $tenantId = null, array $filters = [], ?array $sellerIds = null): LengthAwarePaginator
     {
         $query = License::query()
             ->with(['program:id,name', 'reseller:id,name,email,role'])
             ->where('bios_id', $biosId)
             ->orderByDesc('activated_at');
 
-        $this->applyTenantScope($query, $tenantId);
+        $this->applyAccessScope($query, $tenantId, $sellerIds);
 
         if (! empty($filters['status'])) {
             $query->where('status', (string) $filters['status']);
@@ -251,13 +265,13 @@ class BiosDetailsService
         return $query->paginate($perPage);
     }
 
-    public function getResellerBreakdown(string $biosId, ?int $tenantId = null): array
+    public function getResellerBreakdown(string $biosId, ?int $tenantId = null, ?array $sellerIds = null): array
     {
         $query = License::query()
             ->with(['reseller:id,name,email,role', 'program:id,name'])
             ->where('bios_id', $biosId);
 
-        $this->applyTenantScope($query, $tenantId);
+        $this->applyAccessScope($query, $tenantId, $sellerIds);
 
         return $query->get()
             ->groupBy('reseller_id')
@@ -284,7 +298,7 @@ class BiosDetailsService
             ->all();
     }
 
-    public function getIpAnalytics(string $biosId, ?int $tenantId = null): array
+    public function getIpAnalytics(string $biosId, ?int $tenantId = null, ?array $sellerIds = null): array
     {
         // For Super Admin (tenantId=null), resolve from the BIOS's license
         $resolvedTenantId = $tenantId;
@@ -318,6 +332,13 @@ class BiosDetailsService
         $filtered = array_values(array_filter($matched, static fn (array $row): bool =>
             isset($row['bios_id']) && strtolower((string) $row['bios_id']) === $normalizedBiosId
         ));
+
+        if ($sellerIds !== null) {
+            $normalizedSellerIds = $this->normalizeSellerIds($sellerIds);
+            $filtered = array_values(array_filter($filtered, static fn (array $row): bool =>
+                in_array((int) ($row['reseller_id'] ?? 0), $normalizedSellerIds, true)
+            ));
+        }
 
         if (empty($filtered)) {
             return [];
@@ -444,7 +465,7 @@ class BiosDetailsService
         }
     }
 
-    public function getBiosActivity(string $biosId, ?int $tenantId = null): array
+    public function getBiosActivity(string $biosId, ?int $tenantId = null, ?array $sellerIds = null): array
     {
         $activityQuery = ActivityLog::query()
             ->with('user:id,name')
@@ -459,6 +480,14 @@ class BiosDetailsService
         if ($tenantId !== null) {
             $activityQuery->where('tenant_id', $tenantId);
         }
+        if ($sellerIds !== null) {
+            $normalizedSellerIds = $this->normalizeSellerIds($sellerIds);
+            $activityQuery->where(function (Builder $query) use ($normalizedSellerIds): void {
+                $query
+                    ->whereIn('user_id', $normalizedSellerIds)
+                    ->orWhereIn('metadata->reseller_id', $normalizedSellerIds);
+            });
+        }
 
         $activities = $activityQuery->get()->map(fn (ActivityLog $log): array => [
             'id' => $log->id,
@@ -468,7 +497,7 @@ class BiosDetailsService
             'reseller_name' => $log->user?->name,
         ]);
 
-        $accessLogs = $this->biosAccessLogsQuery($biosId, $tenantId)
+        $accessLogs = $this->biosAccessLogsQuery($biosId, $tenantId, $sellerIds)
             ->with('user:id,name')
             ->latest()
             ->limit(100)
@@ -481,7 +510,7 @@ class BiosDetailsService
                 'reseller_name' => $log->user?->name,
             ]);
 
-        $conflicts = $this->biosConflictsQuery($biosId, $tenantId)
+        $conflicts = $this->biosConflictsQuery($biosId, $tenantId, $sellerIds)
             ->latest()
             ->limit(100)
             ->get()
@@ -514,7 +543,7 @@ class BiosDetailsService
             ->all();
     }
 
-    public function searchBiosIds(string $query, ?int $tenantId = null): array
+    public function searchBiosIds(string $query, ?int $tenantId = null, ?array $sellerIds = null): array
     {
         $normalizedQuery = trim($query);
 
@@ -529,33 +558,37 @@ class BiosDetailsService
             ->orderByDesc('latest_id')
             ->limit(20);
 
-        if ($tenantId !== null) {
-            $licenseIds->where('tenant_id', $tenantId);
-        }
+        $this->applyAccessScope($licenseIds, $tenantId, $sellerIds);
 
-        $blacklistIds = $this->biosBlacklistQuery(null, $tenantId)
-            ->selectRaw('bios_id, MAX(id) as latest_id')
-            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
-            ->groupBy('bios_id')
-            ->orderByDesc('latest_id')
-            ->limit(20)
-            ->pluck('bios_id');
+        $blacklistIds = $sellerIds === null
+            ? $this->biosBlacklistQuery(null, $tenantId)
+                ->selectRaw('bios_id, MAX(id) as latest_id')
+                ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
+                ->groupBy('bios_id')
+                ->orderByDesc('latest_id')
+                ->limit(20)
+                ->pluck('bios_id')
+            : collect();
 
-        $accessLogIds = $this->biosAccessLogsQuery(null, $tenantId)
-            ->selectRaw('bios_id, MAX(id) as latest_id')
-            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
-            ->groupBy('bios_id')
-            ->orderByDesc('latest_id')
-            ->limit(20)
-            ->pluck('bios_id');
+        $accessLogIds = $sellerIds === null
+            ? $this->biosAccessLogsQuery(null, $tenantId, $sellerIds)
+                ->selectRaw('bios_id, MAX(id) as latest_id')
+                ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
+                ->groupBy('bios_id')
+                ->orderByDesc('latest_id')
+                ->limit(20)
+                ->pluck('bios_id')
+            : collect();
 
-        $conflictIds = $this->biosConflictsQuery(null, $tenantId)
-            ->selectRaw('bios_id, MAX(id) as latest_id')
-            ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
-            ->groupBy('bios_id')
-            ->orderByDesc('latest_id')
-            ->limit(20)
-            ->pluck('bios_id');
+        $conflictIds = $sellerIds === null
+            ? $this->biosConflictsQuery(null, $tenantId, $sellerIds)
+                ->selectRaw('bios_id, MAX(id) as latest_id')
+                ->where('bios_id', 'like', '%'.$normalizedQuery.'%')
+                ->groupBy('bios_id')
+                ->orderByDesc('latest_id')
+                ->limit(20)
+                ->pluck('bios_id')
+            : collect();
 
         return $licenseIds->pluck('bios_id')
             ->concat($blacklistIds)
@@ -568,7 +601,7 @@ class BiosDetailsService
             ->all();
     }
 
-    public function getRecentBiosIds(?int $tenantId = null, int $limit = 20): array
+    public function getRecentBiosIds(?int $tenantId = null, int $limit = 20, ?array $sellerIds = null): array
     {
         $licenseIds = License::query()
             ->whereNotNull('bios_id')
@@ -576,38 +609,36 @@ class BiosDetailsService
             ->orderByDesc('id')
             ->limit($limit * 5);
 
-        if ($tenantId !== null) {
-            $licenseIds->where('tenant_id', $tenantId);
-        }
+        $this->applyAccessScope($licenseIds, $tenantId, $sellerIds);
 
-        $blacklistQuery = $this->biosBlacklistQuery(null, $tenantId)
-            ->whereNotNull('bios_id')
-            ->where('bios_id', '!=', '')
-            ->where('status', 'active')
-            ->orderByDesc('id')
-            ->limit($limit * 5);
+        $blacklistIds = $sellerIds === null
+            ? $this->biosBlacklistQuery(null, $tenantId)
+                ->whereNotNull('bios_id')
+                ->where('bios_id', '!=', '')
+                ->where('status', 'active')
+                ->orderByDesc('id')
+                ->limit($limit * 5)
+                ->when($tenantId !== null, fn (Builder $query) => $query->where('tenant_id', $tenantId))
+                ->pluck('bios_id')
+            : collect();
 
-        // For tenant-scoped views, only include blacklist entries that belong to that tenant
-        // (exclude global entries that have no relation to this tenant's data)
-        if ($tenantId !== null) {
-            $blacklistQuery->where('tenant_id', $tenantId);
-        }
+        $accessLogIds = $sellerIds === null
+            ? $this->biosAccessLogsQuery(null, $tenantId, $sellerIds)
+                ->whereNotNull('bios_id')
+                ->where('bios_id', '!=', '')
+                ->orderByDesc('id')
+                ->limit($limit * 5)
+                ->pluck('bios_id')
+            : collect();
 
-        $blacklistIds = $blacklistQuery->pluck('bios_id');
-
-        $accessLogIds = $this->biosAccessLogsQuery(null, $tenantId)
-            ->whereNotNull('bios_id')
-            ->where('bios_id', '!=', '')
-            ->orderByDesc('id')
-            ->limit($limit * 5)
-            ->pluck('bios_id');
-
-        $conflictIds = $this->biosConflictsQuery(null, $tenantId)
-            ->whereNotNull('bios_id')
-            ->where('bios_id', '!=', '')
-            ->orderByDesc('id')
-            ->limit($limit * 5)
-            ->pluck('bios_id');
+        $conflictIds = $sellerIds === null
+            ? $this->biosConflictsQuery(null, $tenantId, $sellerIds)
+                ->whereNotNull('bios_id')
+                ->where('bios_id', '!=', '')
+                ->orderByDesc('id')
+                ->limit($limit * 5)
+                ->pluck('bios_id')
+            : collect();
 
         return $licenseIds->pluck('bios_id')
             ->concat($blacklistIds)
@@ -656,7 +687,7 @@ class BiosDetailsService
         return $query;
     }
 
-    private function biosAccessLogsQuery(?string $biosId = null, ?int $tenantId = null): Builder
+    private function biosAccessLogsQuery(?string $biosId = null, ?int $tenantId = null, ?array $sellerIds = null): Builder
     {
         $query = BiosAccessLog::query();
 
@@ -668,10 +699,14 @@ class BiosDetailsService
             $query->where('tenant_id', $tenantId);
         }
 
+        if ($sellerIds !== null) {
+            $query->whereIn('user_id', $this->normalizeSellerIds($sellerIds));
+        }
+
         return $query;
     }
 
-    private function biosConflictsQuery(?string $biosId = null, ?int $tenantId = null): Builder
+    private function biosConflictsQuery(?string $biosId = null, ?int $tenantId = null, ?array $sellerIds = null): Builder
     {
         $query = BiosConflict::query();
 
@@ -683,17 +718,41 @@ class BiosDetailsService
             $query->where('tenant_id', $tenantId);
         }
 
+        if ($sellerIds !== null) {
+            $query->whereIn('attempted_by', $this->normalizeSellerIds($sellerIds));
+        }
+
         return $query;
     }
 
     /**
      * @param Builder<License> $query
      */
-    private function applyTenantScope(Builder $query, ?int $tenantId): void
+    private function applyAccessScope(Builder $query, ?int $tenantId, ?array $sellerIds = null): void
     {
         if ($tenantId !== null) {
             $query->where('tenant_id', $tenantId);
         }
+
+        if ($sellerIds !== null) {
+            $query->whereIn('reseller_id', $this->normalizeSellerIds($sellerIds));
+        }
+    }
+
+    /**
+     * @param array<int, int|string>|null $sellerIds
+     * @return array<int, int>
+     */
+    private function normalizeSellerIds(?array $sellerIds): array
+    {
+        $normalized = collect($sellerIds ?? [])
+            ->map(static fn (int|string $id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        return $normalized === [] ? [0] : $normalized;
     }
 
     private function overviewLicenseSortKey(License $license): int

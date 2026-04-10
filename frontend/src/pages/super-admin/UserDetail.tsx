@@ -159,6 +159,23 @@ export function UserDetailPage() {
             <MetricCard label={t('common.tenant')} value={user.tenant?.name ?? '-'} />
           </div>
 
+          {user.role === 'reseller' ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <MetricCard
+                label={t('common.assignedTo', { defaultValue: 'Assigned To' })}
+                value={user.created_by ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <RoleBadge role={user.created_by.role ?? 'manager'} />
+                      <span>{user.created_by.name}</span>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{user.created_by.email ?? '-'}</p>
+                  </div>
+                ) : '-'}
+              />
+            </div>
+          ) : null}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">{t('manager.pages.team.recentLicenses')}</CardTitle>

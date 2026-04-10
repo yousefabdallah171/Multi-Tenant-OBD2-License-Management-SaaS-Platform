@@ -92,7 +92,11 @@ export function OnlineUsersWidget() {
             ) : rows.map((entry, index) => (
               <div key={`${entry.masked_name}-${index}`} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2 dark:border-slate-800">
                 <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">{entry.masked_name}</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">
+                    {entry.is_self
+                      ? `${entry.full_name ?? entry.display_name ?? entry.masked_name} (${t('onlineWidget.you', { defaultValue: 'You' })})`
+                      : (entry.display_name ?? entry.masked_name)}
+                  </p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     {t('onlineWidget.lastSeen')}: {entry.last_seen_at ? formatDate(entry.last_seen_at, lang === 'ar' ? 'ar-EG' : 'en-US') : '-'}
                   </p>

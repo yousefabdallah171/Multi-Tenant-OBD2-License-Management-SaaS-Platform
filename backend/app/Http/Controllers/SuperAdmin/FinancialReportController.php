@@ -26,9 +26,10 @@ class FinancialReportController extends BaseSuperAdminController
 
         $data = Cache::remember($this->cacheKey('financial-reports', $validated), now()->addSeconds(90), function () use ($validated): array {
             $tenantCount = max(Tenant::query()->count(), 1);
-            $totalCustomers = User::query()
-                ->where('role', UserRole::CUSTOMER->value)
-                ->count();
+            $totalCustomers = License::query()
+                ->whereNotNull('customer_id')
+                ->distinct('customer_id')
+                ->count('customer_id');
             $activeCustomers = License::query()
                 ->whereEffectivelyActive()
                 ->whereNotNull('customer_id')
@@ -121,6 +122,52 @@ class FinancialReportController extends BaseSuperAdminController
         });
 
         return response()->json(['data' => $data]);
+    }
+
+    public function grantedActivations(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $perPage = (int) ($validated['per_page'] ?? 15);
+        $rows = $this->revenueQuery($validated)
+            ->whereRaw(RevenueAnalytics::grantedCondition('activity_logs'))
+            ->with('user:id,name,role')
+            ->paginate($perPage);
+
+        $programIds = collect($rows->items())
+            ->map(fn ($row): int => (int) ($row->metadata['program_id'] ?? 0))
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $programNames = \App\Models\Program::query()
+            ->whereIn('id', $programIds)
+            ->pluck('name', 'id');
+
+        return response()->json([
+            'data' => collect($rows->items())->map(function ($activity) use ($programNames): array {
+                $metadata = $activity->metadata ?? [];
+
+                return [
+                    'id' => $activity->id,
+                    'reseller_id' => $activity->user?->id,
+                    'reseller_name' => $activity->user?->name,
+                    'reseller_role' => $activity->user?->role?->value ?? (string) $activity->user?->role,
+                    'program_id' => (int) ($metadata['program_id'] ?? 0) ?: null,
+                    'program_name' => $programNames->get((int) ($metadata['program_id'] ?? 0)) ?? 'Unknown',
+                    'bios_id' => $metadata['bios_id'] ?? null,
+                    'price' => isset($metadata['price']) ? round((float) $metadata['price'], 2) : 0.0,
+                    'activated_at' => $activity->created_at?->toIso8601String(),
+                ];
+            })->values(),
+            'meta' => $this->paginationMeta($rows),
+        ]);
     }
 
     public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse

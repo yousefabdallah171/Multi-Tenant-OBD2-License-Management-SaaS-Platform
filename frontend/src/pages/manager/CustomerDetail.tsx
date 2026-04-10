@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Lock, XCircle } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
@@ -38,12 +38,6 @@ export function CustomerDetailPage() {
     enabled: Number.isFinite(customerId),
   })
 
-  const biosHistoryQuery = useQuery({
-    queryKey: ['manager', 'customer-bios-change-history', customerId],
-    queryFn: () => managerService.getCustomerBiosChangeHistory(customerId),
-    enabled: Number.isFinite(customerId),
-  })
-
   const customer = query.data?.data
   const licenseHistoryGroups = groupLicenseHistoryByReseller(licenseHistoryQuery.data?.data ?? [])
 
@@ -67,7 +61,7 @@ export function CustomerDetailPage() {
         description={resolveCustomerDetailUsername(customer) ?? t('manager.pages.customers.customerDetailsDescription')}
         actions={requestableLicense && !requestableLicense.is_blacklisted ? (
           <Button type="button" onClick={() => navigate(routePaths.manager.customerBiosChangeRequest(lang, customerId))}>
-            {t('biosChangeRequests.requestAction')}
+            {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
           </Button>
         ) : null}
       />
@@ -189,40 +183,6 @@ export function CustomerDetailPage() {
             </CardContent>
           </Card>
 
-          {(biosHistoryQuery.data?.data?.length ?? 0) > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('biosChangeRequests.history')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {biosHistoryQuery.data?.data.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                        <span className="font-mono text-slate-500 dark:text-slate-400">{item.old_bios_id}</span>
-                        <ArrowRight className="h-4 w-4 text-slate-400" />
-                        <span className="font-mono">{item.new_bios_id}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {item.status === 'approved' && <CheckCircle className="h-4 w-4 text-emerald-500" />}
-                        {item.status === 'pending' && <Clock className="h-4 w-4 text-amber-500" />}
-                        {item.status === 'rejected' && <XCircle className="h-4 w-4 text-rose-500" />}
-                        <span className={`text-sm font-semibold uppercase tracking-wide ${item.status === 'approved' ? 'text-emerald-600' : item.status === 'pending' ? 'text-amber-600' : 'text-rose-600'}`}>
-                          {item.status}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
-                      {item.reason && <span>{t('biosChangeRequests.reason')}: {item.reason}</span>}
-                      {item.requested_by && <span>{t('common.reseller')}: {item.requested_by}</span>}
-                      <span>{formatDate(item.created_at ?? '', locale)}</span>
-                      {item.reviewed_at && <span>{t('biosChangeRequests.reviewedAt')}: {formatDate(item.reviewed_at, locale)}</span>}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
         </>
       ) : null}
 

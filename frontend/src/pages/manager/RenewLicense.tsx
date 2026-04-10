@@ -11,6 +11,8 @@ export function RenewLicensePageForManager() {
       invalidateQueryKey={['manager']}
       eyebrow={t('roles.manager')}
       cachePattern={/^manager:/}
+      activeLicenseTitle={t('text.actions.renew', { defaultValue: 'Renew' })}
+      presetOnly
     />
   )
 }

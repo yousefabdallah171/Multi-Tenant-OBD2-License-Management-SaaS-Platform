@@ -61,6 +61,10 @@ export function formatActivityActionLabel(action: string, t?: TFunction) {
     return t ? t('common.activityActions.biosChangeRequested', { defaultValue: 'BIOS Change Requested' }) : 'BIOS Change Requested'
   }
 
+  if (normalized.includes('bios.direct_change_failed')) {
+    return t ? t('common.activityActions.biosChangeFailed', { defaultValue: 'BIOS Change Failed' }) : 'BIOS Change Failed'
+  }
+
   if (normalized.includes('license.scheduled_activation_executed')) {
     return t ? t('common.activityActions.scheduledExecuted', { defaultValue: 'Scheduled Activation Executed' }) : 'Scheduled Activation Executed'
   }

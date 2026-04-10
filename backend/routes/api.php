@@ -21,11 +21,11 @@ use App\Http\Controllers\Manager\LicenseController as ManagerLicenseController;
 use App\Http\Controllers\Manager\ReportController as ManagerReportController;
 use App\Http\Controllers\Manager\ResellerPaymentController as ManagerResellerPaymentController;
 use App\Http\Controllers\Manager\ResellerLogController as ManagerResellerLogController;
-use App\Http\Controllers\Manager\SoftwareController as ManagerSoftwareController;
 use App\Http\Controllers\Manager\TeamController as ManagerTeamController;
 use App\Http\Controllers\Manager\UsernameManagementController as ManagerUsernameManagementController;
 use App\Http\Controllers\ManagerParent\ActivityController as ManagerParentActivityController;
 use App\Http\Controllers\ManagerParent\ApiStatusController as ManagerParentApiStatusController;
+use App\Http\Controllers\ManagerParent\BiosChangeAuditController as ManagerParentBiosChangeAuditController;
 use App\Http\Controllers\ManagerParent\BiosChangeRequestController as ManagerParentBiosChangeRequestController;
 use App\Http\Controllers\ManagerParent\BiosHistoryController as ManagerParentBiosHistoryController;
 use App\Http\Controllers\ManagerParent\BiosDetailsController as ManagerParentBiosDetailsController;
@@ -198,6 +198,8 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/bios-conflicts', [ManagerParentBiosConflictController::class, 'index']);
         Route::put('/bios-conflicts/{id}/resolve', [ManagerParentBiosConflictController::class, 'resolve']);
         Route::get('/bios-change-requests', [ManagerParentBiosChangeRequestController::class, 'index']);
+        Route::get('/bios-change-audit', [ManagerParentBiosChangeAuditController::class, 'index']);
+        Route::get('/bios-change-audit/summary', [ManagerParentBiosChangeAuditController::class, 'summary']);
         Route::post('/bios-change-requests', [ManagerParentBiosChangeRequestController::class, 'store']);
         Route::post('/bios-change-requests/direct', [ManagerParentBiosChangeRequestController::class, 'directChange']);
         Route::put('/bios-change-requests/{biosChangeRequest}/approve', [ManagerParentBiosChangeRequestController::class, 'approve']);
@@ -255,11 +257,6 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/licenses/{license}', [ManagerLicenseController::class, 'show']);
         Route::post('/licenses/{license}/cancel-pending', [ManagerLicenseController::class, 'cancelPending']);
 
-        Route::get('/software', [ManagerSoftwareController::class, 'index']);
-        Route::post('/software', [ManagerSoftwareController::class, 'store']);
-        Route::put('/software/{program}', [ManagerSoftwareController::class, 'update']);
-        Route::delete('/software/{program}', [ManagerSoftwareController::class, 'destroy']);
-        Route::post('/software/{program}/activate', [ManagerSoftwareController::class, 'activate']);
         Route::get('/bios/search', [ManagerBiosDetailsController::class, 'search']);
         Route::get('/bios/recent', [ManagerBiosDetailsController::class, 'recent']);
         Route::get('/bios/{biosId}', [ManagerBiosDetailsController::class, 'show']);
@@ -269,6 +266,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/bios/{biosId}/activity', [ManagerBiosDetailsController::class, 'activity']);
         Route::get('/bios-change-requests', [ManagerBiosChangeRequestController::class, 'index']);
         Route::post('/bios-change-requests', [ManagerBiosChangeRequestController::class, 'store']);
+        Route::post('/bios-change-requests/direct', [ManagerBiosChangeRequestController::class, 'directChange']);
         Route::put('/bios-change-requests/{biosChangeRequest}/approve', [ManagerBiosChangeRequestController::class, 'approve']);
         Route::put('/bios-change-requests/{biosChangeRequest}/reject', [ManagerBiosChangeRequestController::class, 'reject']);
 
@@ -366,6 +364,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/tenants/{tenant}/backups/{backup}/download', [SuperAdminTenantResetController::class, 'download']);
         Route::post('/tenants/{tenant}/backups/{backup}/restore', [SuperAdminTenantResetController::class, 'restore']);
         Route::delete('/tenants/{tenant}/backups/{backup}', [SuperAdminTenantResetController::class, 'destroy']);
+        Route::get('/tenants/{tenant}/assignable-managers', [SuperAdminTenantController::class, 'assignableManagers']);
         Route::apiResource('tenants', SuperAdminTenantController::class);
 
         Route::get('/users', [SuperAdminUserController::class, 'index']);
@@ -405,6 +404,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::put('/bios-conflicts/{id}/resolve', [SuperAdminBiosConflictController::class, 'resolve']);
 
         Route::get('/bios-change-requests', [\App\Http\Controllers\SuperAdmin\BiosChangeRequestController::class, 'index']);
+        Route::post('/bios-change-requests/direct', [\App\Http\Controllers\SuperAdmin\BiosChangeRequestController::class, 'directChange']);
         Route::put('/bios-change-requests/{biosChangeRequest}/approve', [\App\Http\Controllers\SuperAdmin\BiosChangeRequestController::class, 'approve']);
         Route::put('/bios-change-requests/{biosChangeRequest}/reject', [\App\Http\Controllers\SuperAdmin\BiosChangeRequestController::class, 'reject']);
 
@@ -428,6 +428,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         });
 
         Route::get('/financial-reports', [FinancialReportController::class, 'index']);
+        Route::get('/reports/granted-activations', [FinancialReportController::class, 'grantedActivations']);
         Route::get('/financial-reports/export/csv', [FinancialReportController::class, 'exportCsv']);
         Route::get('/financial-reports/export/pdf', [FinancialReportController::class, 'exportPdf']);
 

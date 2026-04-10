@@ -137,6 +137,9 @@ class CustomerController extends BaseManagerParentController
                 ->with(['program:id,name', 'reseller:id,name,email,role']),
             'createdBy:id,name,email',
         ]);
+        $currentBiosByLicense = $user->customerLicenses
+            ->mapWithKeys(fn (License $license): array => [$license->id => strtolower((string) $license->bios_id)])
+            ->all();
 
         $resellersSummary = $user->customerLicenses
             ->groupBy('reseller_id')
@@ -183,6 +186,18 @@ class CustomerController extends BaseManagerParentController
             ->latest()
             ->limit(100)
             ->get()
+            ->filter(function (ActivityLog $log) use ($currentBiosByLicense): bool {
+                if ($log->action !== 'bios.direct_changed') {
+                    return true;
+                }
+
+                $licenseId = (int) ($log->metadata['license_id'] ?? 0);
+                $newBiosId = strtolower((string) ($log->metadata['new_bios_id'] ?? ''));
+
+                return $licenseId > 0
+                    && isset($currentBiosByLicense[$licenseId])
+                    && $currentBiosByLicense[$licenseId] === $newBiosId;
+            })
             ->map(fn (ActivityLog $log): array => [
                 'id' => $log->id,
                 'action' => $log->action,

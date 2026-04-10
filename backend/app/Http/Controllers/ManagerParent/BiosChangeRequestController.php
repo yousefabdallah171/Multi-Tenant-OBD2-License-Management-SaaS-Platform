@@ -10,6 +10,7 @@ use App\Models\License;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class BiosChangeRequestController extends BaseManagerParentController
 {
@@ -148,19 +149,62 @@ class BiosChangeRequestController extends BaseManagerParentController
 
         $license->load(['customer', 'reseller', 'program']);
 
-        $result = $this->licenseService->changeBiosId($license, trim((string) $validated['new_bios_id']));
+        $oldBiosId = (string) $license->bios_id;
 
-        $this->logActivity($request, 'bios.direct_changed', sprintf('Directly changed BIOS ID from %s to %s.', $license->getOriginal('bios_id') ?? $license->bios_id, $validated['new_bios_id']), [
+        try {
+            $result = $this->licenseService->changeBiosId($license, trim((string) $validated['new_bios_id']));
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+                'errors' => $exception->errors(),
+            ], 422);
+        } catch (\Throwable $exception) {
+            \Log::error('Manager Parent direct BIOS change failed.', [
+                'license_id' => $license->id,
+                'customer_id' => $license->customer_id,
+                'old_bios_id' => $oldBiosId,
+                'new_bios_id' => (string) $validated['new_bios_id'],
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'The BIOS change could not be completed right now.',
+            ], 500);
+        }
+
+        if (! ($result['success'] ?? false)) {
+            $message = (string) ($result['message'] ?? 'The BIOS change was rejected by the external service.');
+
+            $this->logActivity($request, 'bios.direct_change_failed', sprintf('Direct BIOS change from %s to %s was not applied.', $oldBiosId, $validated['new_bios_id']), [
+                'license_id' => $license->id,
+                'customer_id' => $license->customer_id,
+                'program_id' => $license->program_id,
+                'reseller_id' => $license->reseller_id,
+                'old_bios_id' => $oldBiosId,
+                'new_bios_id' => $validated['new_bios_id'],
+                'sync_status' => 'failed',
+                'response' => $result['response'] ?? [],
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+            ], 422);
+        }
+
+        $license->refresh();
+
+        $this->logActivity($request, 'bios.direct_changed', sprintf('Directly changed BIOS ID from %s to %s.', $oldBiosId, $license->bios_id), [
             'license_id' => $license->id,
-            'old_bios_id' => $license->getOriginal('bios_id') ?? $license->bios_id,
-            'new_bios_id' => $validated['new_bios_id'],
+            'old_bios_id' => $oldBiosId,
+            'new_bios_id' => $license->bios_id,
         ]);
 
         return response()->json([
-            'success' => $result['success'] ?? true,
-            'message' => $result['success'] ?? true
-                ? 'BIOS ID changed successfully.'
-                : ($result['message'] ?? 'BIOS ID updated locally but external sync may be pending.'),
+            'success' => true,
+            'message' => $result['message'] ?? 'BIOS ID changed successfully.',
         ]);
     }
 

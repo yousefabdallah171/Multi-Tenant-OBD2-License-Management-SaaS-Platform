@@ -1,5 +1,5 @@
 import { api } from '@/services/api'
-import type { PaginationMeta, TenantBackup, TenantStats, TenantSummary } from '@/types/super-admin.types'
+import type { AssignableManager, PaginationMeta, TenantBackup, TenantStats, TenantSummary } from '@/types/super-admin.types'
 import type { User } from '@/types/user.types'
 
 export interface TenantListParams {
@@ -54,6 +54,10 @@ export const tenantService = {
   },
   async getStats(id: number) {
     const { data } = await api.get<{ data: TenantStats }>(`/super-admin/tenants/${id}/stats`)
+    return data
+  },
+  async getAssignableManagers(tenantId: number) {
+    const { data } = await api.get<{ data: AssignableManager[] }>(`/super-admin/tenants/${tenantId}/assignable-managers`)
     return data
   },
   async getBackups(tenantId: number) {

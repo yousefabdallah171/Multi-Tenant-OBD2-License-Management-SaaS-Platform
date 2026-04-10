@@ -463,7 +463,9 @@ class LicenseService
         if ($apiKey !== null) {
             $apiResponse = $this->externalApiService->deactivateUser($apiKey, (string) $license->external_username, $program?->external_api_base_url);
             if (! ($apiResponse['success'] ?? false)) {
-                throw new \RuntimeException('External API deactivation failed: '.($apiResponse['data']['response'] ?? 'Unknown error'));
+                throw ValidationException::withMessages([
+                    'license' => $this->extractExternalMessage($apiResponse, 'The pause request was rejected by the external service.'),
+                ]);
             }
         }
 
@@ -959,6 +961,61 @@ class LicenseService
         ]);
 
         if (! ($apiResponse['success'] ?? false)) {
+            if ($this->shouldAllowLocalBiosChangeFallback($apiResponse)) {
+                return DB::transaction(function () use ($license, $trimmedBiosId, $newBiosLower, $reseller, $licenseUsername): array {
+                    $raceConflict = License::query()
+                        ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
+                        ->where('id', '!=', $license->id)
+                        ->whereIn('status', ['active', 'suspended'])
+                        ->lockForUpdate()
+                        ->first();
+                    if ($raceConflict) {
+                        throw ValidationException::withMessages([
+                            'new_bios_id' => 'This BIOS ID was just activated by another reseller. Cannot change.',
+                        ]);
+                    }
+
+                    $oldBiosId = (string) $license->bios_id;
+                    $oldBiosLower = strtolower($oldBiosId);
+
+                    $license->forceFill([
+                        'bios_id' => $trimmedBiosId,
+                    ])->save();
+
+                    if ($licenseUsername !== '') {
+                        BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$oldBiosLower])->delete();
+                        BiosUsernameLink::updateOrCreate(
+                            ['bios_id' => $newBiosLower],
+                            ['username' => $licenseUsername, 'tenant_id' => $license->tenant_id]
+                        );
+                    }
+
+                    $this->logActivity(
+                        $reseller,
+                        'license.bios_changed',
+                        sprintf('Changed BIOS ID from %s to %s.', $oldBiosId, $trimmedBiosId),
+                        [
+                            'license_id' => $license->id,
+                            'customer_id' => $license->customer_id,
+                            'program_id' => $license->program_id,
+                            'bios_id' => $trimmedBiosId,
+                            'old_bios_id' => $oldBiosId,
+                            'new_bios_id' => $trimmedBiosId,
+                            'external_username' => $license->external_username,
+                            'sync_status' => 'pending',
+                        ],
+                    );
+
+                    $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+
+                    return [
+                        'success' => true,
+                        'message' => 'BIOS updated locally. External sync is pending.',
+                        'response' => $apiResponse['data'] ?? [],
+                    ];
+                });
+            }
+
             return [
                 'success' => false,
                 'message' => $this->extractExternalMessage($apiResponse, 'The external service rejected the BIOS change request.'),
@@ -1039,6 +1096,31 @@ class LicenseService
             'message' => null,
             'response' => $apiResponse['data'] ?? [],
         ];
+    }
+
+    /**
+     * @param array{success?: bool, data?: array<string, mixed>} $apiResponse
+     */
+    private function shouldAllowLocalBiosChangeFallback(array $apiResponse): bool
+    {
+        if (! (bool) config('external-api.allow_bios_change_fallback', false)) {
+            return false;
+        }
+
+        $errorType = strtolower((string) ($apiResponse['data']['error_type'] ?? ''));
+        if (in_array($errorType, ['timeout', 'unavailable'], true)) {
+            return true;
+        }
+
+        $statusCode = (int) ($apiResponse['status_code'] ?? 0);
+        if ($statusCode >= 500) {
+            return true;
+        }
+
+        $responseText = strtolower((string) ($apiResponse['data']['response'] ?? ''));
+        return str_contains($responseText, 'internal server error')
+            || str_contains($responseText, 'server encountered an internal error')
+            || str_contains($responseText, 'service unavailable');
     }
 
     private function assertBiosAvailable(User $reseller, Program $program, string $biosId, string $externalUsername): void
@@ -1272,7 +1354,17 @@ class LicenseService
             }
 
             $relatedResellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
-            if ($relatedResellerRole !== UserRole::RESELLER->value) {
+            $allowedRoles = [UserRole::RESELLER->value];
+
+            if ($actorRole === UserRole::MANAGER_PARENT->value) {
+                $allowedRoles = [UserRole::RESELLER->value, UserRole::MANAGER->value, UserRole::MANAGER_PARENT->value];
+            }
+
+            if ($actorRole === UserRole::MANAGER->value && $relatedReseller->id === $actor->id) {
+                $allowedRoles = [UserRole::RESELLER->value, UserRole::MANAGER->value];
+            }
+
+            if (! in_array($relatedResellerRole, $allowedRoles, true)) {
                 throw ValidationException::withMessages([
                     'seller_id' => ['The specified user is not a reseller.'],
                 ]);
@@ -1284,7 +1376,7 @@ class LicenseService
                 ]);
             }
 
-            if ($actorRole === UserRole::MANAGER->value && (int) $relatedReseller->created_by !== (int) $actor->id) {
+            if ($actorRole === UserRole::MANAGER->value && $relatedResellerRole === UserRole::RESELLER->value && (int) $relatedReseller->created_by !== (int) $actor->id) {
                 throw ValidationException::withMessages([
                     'seller_id' => ['The selected reseller is outside your managed team.'],
                 ]);

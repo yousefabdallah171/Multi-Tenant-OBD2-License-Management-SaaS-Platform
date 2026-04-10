@@ -14,8 +14,10 @@ class BiosDetailsController extends BaseManagerController
 
     public function show(Request $request, string $biosId): JsonResponse
     {
+        $sellerIds = $this->teamSellerIds($request);
+
         return response()->json([
-            'data' => $this->biosDetailsService->getBiosOverview($biosId, $this->currentTenantId($request)),
+            'data' => $this->biosDetailsService->getBiosOverview($biosId, $this->currentTenantId($request), $sellerIds),
         ]);
     }
 
@@ -27,7 +29,7 @@ class BiosDetailsController extends BaseManagerController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $paginator = $this->biosDetailsService->getBiosLicenseHistory($biosId, $this->currentTenantId($request), $validated);
+        $paginator = $this->biosDetailsService->getBiosLicenseHistory($biosId, $this->currentTenantId($request), $validated, $this->teamSellerIds($request));
 
         return response()->json([
             'data' => $paginator->items(),
@@ -38,21 +40,21 @@ class BiosDetailsController extends BaseManagerController
     public function resellers(Request $request, string $biosId): JsonResponse
     {
         return response()->json([
-            'data' => $this->biosDetailsService->getResellerBreakdown($biosId, $this->currentTenantId($request)),
+            'data' => $this->biosDetailsService->getResellerBreakdown($biosId, $this->currentTenantId($request), $this->teamSellerIds($request)),
         ]);
     }
 
     public function ips(Request $request, string $biosId): JsonResponse
     {
         return response()->json([
-            'data' => $this->biosDetailsService->getIpAnalytics($biosId, $this->currentTenantId($request)),
+            'data' => $this->biosDetailsService->getIpAnalytics($biosId, $this->currentTenantId($request), $this->teamSellerIds($request)),
         ]);
     }
 
     public function activity(Request $request, string $biosId): JsonResponse
     {
         return response()->json([
-            'data' => $this->biosDetailsService->getBiosActivity($biosId, $this->currentTenantId($request)),
+            'data' => $this->biosDetailsService->getBiosActivity($biosId, $this->currentTenantId($request), $this->teamSellerIds($request)),
         ]);
     }
 
@@ -63,7 +65,7 @@ class BiosDetailsController extends BaseManagerController
         ]);
 
         return response()->json([
-            'data' => $this->biosDetailsService->searchBiosIds((string) $validated['query'], $this->currentTenantId($request)),
+            'data' => $this->biosDetailsService->searchBiosIds((string) $validated['query'], $this->currentTenantId($request), $this->teamSellerIds($request)),
         ]);
     }
 
@@ -74,7 +76,7 @@ class BiosDetailsController extends BaseManagerController
         ]);
 
         return response()->json([
-            'data' => $this->biosDetailsService->getRecentBiosIds($this->currentTenantId($request), (int) ($validated['limit'] ?? 20)),
+            'data' => $this->biosDetailsService->getRecentBiosIds($this->currentTenantId($request), (int) ($validated['limit'] ?? 20), $this->teamSellerIds($request)),
         ]);
     }
 }

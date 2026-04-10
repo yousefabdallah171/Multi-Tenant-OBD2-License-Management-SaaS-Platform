@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\LicenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class BiosChangeRequestController extends BaseManagerController
 {
@@ -127,6 +128,87 @@ class BiosChangeRequestController extends BaseManagerController
             'data' => $this->serialize($biosChangeRequest),
             'message' => 'BIOS change request submitted successfully.',
         ], 201);
+    }
+
+    public function directChange(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'license_id' => ['required', 'integer'],
+            'new_bios_id' => ['required', 'string', 'min:3', 'max:10'],
+        ]);
+
+        $license = $this->resolveTeamLicense($request, License::query()->findOrFail((int) $validated['license_id']));
+        $license->load(['customer', 'reseller', 'program']);
+        $oldBiosId = (string) $license->bios_id;
+
+        try {
+            $result = $this->licenseService->changeBiosId($license, trim((string) $validated['new_bios_id']));
+        } catch (ValidationException $exception) {
+            \Log::info('Manager direct BIOS change validation failed.', [
+                'license_id' => $license->id,
+                'customer_id' => $license->customer_id,
+                'old_bios_id' => $oldBiosId,
+                'new_bios_id' => (string) $validated['new_bios_id'],
+                'errors' => $exception->errors(),
+                'message' => $exception->getMessage(),
+                'user_id' => $request->user()?->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+                'errors' => $exception->errors(),
+            ], 422);
+        } catch (\Throwable $exception) {
+            \Log::error('Manager direct BIOS change failed.', [
+                'license_id' => $license->id,
+                'customer_id' => $license->customer_id,
+                'old_bios_id' => $oldBiosId,
+                'new_bios_id' => (string) $validated['new_bios_id'],
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'The BIOS change could not be completed right now.',
+            ], 500);
+        }
+
+        if (! ($result['success'] ?? false)) {
+            $message = (string) ($result['message'] ?? 'The BIOS change was rejected by the external service.');
+
+            $this->logActivity($request, 'bios.direct_change_failed', sprintf('Direct BIOS change from %s to %s was not applied.', $oldBiosId, $validated['new_bios_id']), [
+                'license_id' => $license->id,
+                'customer_id' => $license->customer_id,
+                'program_id' => $license->program_id,
+                'reseller_id' => $license->reseller_id,
+                'old_bios_id' => $oldBiosId,
+                'new_bios_id' => $validated['new_bios_id'],
+                'sync_status' => 'failed',
+                'response' => $result['response'] ?? [],
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+            ], 422);
+        }
+
+        $license->refresh();
+
+        $this->logActivity($request, 'bios.direct_changed', sprintf('Directly changed BIOS ID from %s to %s.', $oldBiosId, $license->bios_id), [
+            'license_id' => $license->id,
+            'customer_id' => $license->customer_id,
+            'program_id' => $license->program_id,
+            'reseller_id' => $license->reseller_id,
+            'old_bios_id' => $oldBiosId,
+            'new_bios_id' => $license->bios_id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'] ?? 'BIOS ID changed successfully.',
+        ]);
     }
 
     public function approve(Request $request, BiosChangeRequest $biosChangeRequest): JsonResponse

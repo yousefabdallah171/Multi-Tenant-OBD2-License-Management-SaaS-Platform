@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ReactFlowInstance } from '@xyflow/react'
 import { RefreshCcw, RotateCcw, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -9,6 +9,7 @@ import { NetworkCanvas } from '@/components/team-network/NetworkCanvas'
 import { useNetworkLayout } from '@/components/team-network/hooks/useNetworkLayout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
@@ -18,12 +19,17 @@ export function TeamNetworkPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { lang } = useLanguage()
+  const { user } = useAuth()
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null)
 
   const teamNetworkQuery = useQuery({
     queryKey: ['manager-parent', 'team-network'],
     queryFn: () => managerParentService.getTeamNetwork(),
-    staleTime: 60_000,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
+    refetchInterval: 10_000,
   })
 
   const payload = teamNetworkQuery.data?.data
@@ -64,7 +70,13 @@ export function TeamNetworkPage() {
         actions={actions}
       />
 
-      {teamNetworkQuery.isLoading ? <LoadingState text={t('managerParent.pages.teamNetwork.loading')} /> : null}
+      {teamNetworkQuery.isFetching && payload ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          {t('common.loading')}
+        </p>
+      ) : null}
+
+      {teamNetworkQuery.isLoading && !payload ? <LoadingState text={t('managerParent.pages.teamNetwork.loading')} /> : null}
 
       {teamNetworkQuery.isError ? (
         <Card>
@@ -80,7 +92,7 @@ export function TeamNetworkPage() {
         </Card>
       ) : null}
 
-      {!teamNetworkQuery.isLoading && !teamNetworkQuery.isError && isEmpty ? (
+      {!teamNetworkQuery.isLoading && !teamNetworkQuery.isError && payload && isEmpty ? (
         <Card>
           <CardContent className="flex min-h-80 flex-col items-center justify-center gap-4 p-8 text-center">
             <div className="flex size-14 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200">
@@ -97,13 +109,14 @@ export function TeamNetworkPage() {
         </Card>
       ) : null}
 
-      {!teamNetworkQuery.isLoading && !teamNetworkQuery.isError && !isEmpty ? (
+      {!teamNetworkQuery.isLoading && !teamNetworkQuery.isError && payload && !isEmpty ? (
         <Card className="overflow-hidden">
           <CardContent className="h-[calc(100dvh-16rem)] p-0">
             <div dir="ltr" className="h-full">
               <NetworkCanvas
                 nodes={nodes}
                 edges={edges}
+                storageKey={user ? `team-network:${user.id}:${user.tenant_id ?? 'global'}` : 'team-network:guest'}
                 onInit={(instance) => {
                   setFlowInstance(instance)
                   instance.fitView({ padding: 0.16 })
