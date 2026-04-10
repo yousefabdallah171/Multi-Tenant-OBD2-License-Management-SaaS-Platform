@@ -525,6 +525,11 @@ export interface ResellerPaymentDetailData {
 export interface ResellerPaymentFilters {
   period?: string
   status?: '' | 'unpaid' | 'partial' | 'paid'
+  manager_parent_id?: number | ''
+  manager_id?: number | ''
+  reseller_id?: number | ''
+  scope_name?: string
+  scope_role?: 'manager_parent' | 'manager' | 'reseller' | ''
 }
 
 export interface RecordPaymentPayload {

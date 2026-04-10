@@ -34,11 +34,11 @@ class RevenueAnalytics
         }
 
         if (! empty($filters['from'])) {
-            $query->whereDate('activity_logs.created_at', '>=', $filters['from']);
+            $query->where('activity_logs.created_at', '>=', CarbonImmutable::parse((string) $filters['from'])->startOfDay()->toDateTimeString());
         }
 
         if (! empty($filters['to'])) {
-            $query->whereDate('activity_logs.created_at', '<=', $filters['to']);
+            $query->where('activity_logs.created_at', '<=', CarbonImmutable::parse((string) $filters['to'])->endOfDay()->toDateTimeString());
         }
 
         return $query;
@@ -97,6 +97,15 @@ class RevenueAnalytics
             : self::earnedCondition($table);
 
         return "SUM(CASE WHEN {$condition} THEN 1 ELSE 0 END) as {$alias}";
+    }
+
+    public static function monthKeyExpression(string $table = 'activity_logs', string $column = 'created_at'): string
+    {
+        if (self::isSqlite()) {
+            return "strftime('%Y-%m', {$table}.{$column})";
+        }
+
+        return "DATE_FORMAT({$table}.{$column}, '%Y-%m')";
     }
 
     public static function totalRevenue(array $filters = [], ?int $tenantId = null, ?array $sellerIds = null, ?int $sellerId = null): float

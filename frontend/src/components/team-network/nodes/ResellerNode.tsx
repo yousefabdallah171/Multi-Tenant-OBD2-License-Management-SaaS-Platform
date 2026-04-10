@@ -56,13 +56,21 @@ export const ResellerNode = memo(function ResellerNode({ data }: NodeProps) {
           icon={<KeyRound className="size-4 text-emerald-600 dark:text-emerald-300" />}
           label={t('managerParent.pages.teamNetwork.activations')}
           value={String(nodeData.activations_count)}
-          onClick={() => visit(`${routePaths.managerParent.customers(nodeData.lang)}?reseller_id=${nodeData.id}`)}
+          onClick={() => visit(buildScopedHref(routePaths.managerParent.customers(nodeData.lang), {
+            reseller_id: nodeData.id,
+            scope_name: nodeData.name,
+            scope_role: 'reseller',
+          }))}
         />
         <StatButton
           icon={<Users className="size-4 text-emerald-600 dark:text-emerald-300" />}
           label={t('managerParent.pages.teamNetwork.customers')}
           value={String(nodeData.customers_count)}
-          onClick={() => visit(`${routePaths.managerParent.customers(nodeData.lang)}?reseller_id=${nodeData.id}`)}
+          onClick={() => visit(buildScopedHref(routePaths.managerParent.customers(nodeData.lang), {
+            reseller_id: nodeData.id,
+            scope_name: nodeData.name,
+            scope_role: 'reseller',
+          }))}
         />
       </div>
     </div>
@@ -108,4 +116,14 @@ function StatusDot({ status }: { status: string }) {
       {status}
     </span>
   )
+}
+
+function buildScopedHref(path: string, params: Record<string, string | number>) {
+  const query = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    query.set(key, String(value))
+  })
+
+  return `${path}?${query.toString()}`
 }

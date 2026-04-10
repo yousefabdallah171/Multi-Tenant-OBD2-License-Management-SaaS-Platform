@@ -284,6 +284,39 @@ class AuthorizationBoundaryTest extends TestCase
         $this->assertTrue((bool) $secondParents[$managerParentB->id]['is_current']);
     }
 
+    public function test_manager_parent_team_index_can_be_scoped_to_manager_parent_and_manager_subtrees(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $otherParent = $this->createUser('manager_parent', $tenant);
+        $managerA = $this->createUser('manager', $tenant, $managerParent);
+        $managerB = $this->createUser('manager', $tenant, $otherParent);
+        $resellerA = $this->createUser('reseller', $tenant, $managerA);
+        $this->createUser('reseller', $tenant, $managerB);
+        $directReseller = $this->createUser('reseller', $tenant, $managerParent);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->getJson('/api/team?role=manager&manager_parent_id='.$managerParent->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $managerA->id);
+
+        $response = $this->getJson('/api/team?role=reseller&manager_parent_id='.$managerParent->id)
+            ->assertOk();
+
+        $resellerIds = collect($response->json('data'))->pluck('id')->all();
+        sort($resellerIds);
+        $expectedResellerIds = [$resellerA->id, $directReseller->id];
+        sort($expectedResellerIds);
+        $this->assertSame($expectedResellerIds, $resellerIds);
+
+        $this->getJson('/api/team?role=reseller&manager_id='.$managerA->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $resellerA->id);
+    }
+
     private function createEarnedActivity(int $tenantId, int $sellerId, float $price, string $createdAt): void
     {
         ActivityLog::query()->create([

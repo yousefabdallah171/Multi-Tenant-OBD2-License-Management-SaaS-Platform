@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Support\RevenueAnalytics;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class FinancialReportController extends BaseManagerParentController
 {
@@ -22,18 +24,17 @@ class FinancialReportController extends BaseManagerParentController
     public function index(Request $request): JsonResponse
     {
         $tenantId = $this->currentTenantId($request);
-        $validated = $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date'],
-        ]);
+        $validated = $this->validatedFilters($request);
+        $scope = $this->resolveSellerScope($tenantId, $validated);
         $activeCustomers = License::query()
             ->where('tenant_id', $tenantId)
+            ->whereIn('reseller_id', $scope['seller_ids'])
             ->whereEffectivelyActive()
             ->whereNotNull('customer_id')
             ->distinct('customer_id')
             ->count('customer_id');
-        $baseQuery = $this->baseQuery($tenantId, $validated);
-        $summary = $this->revenueQuery($tenantId, $validated)
+        $baseQuery = $this->baseQuery($tenantId, $validated, $scope);
+        $summary = $this->revenueQuery($tenantId, $validated, $scope)
             ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
             ->selectRaw(RevenueAnalytics::revenueSumExpression('granted', 'activity_logs', 'granted_value'))
             ->first();
@@ -41,8 +42,9 @@ class FinancialReportController extends BaseManagerParentController
         $totalCustomers = User::query()
             ->where('tenant_id', $tenantId)
             ->where('role', UserRole::CUSTOMER->value)
+            ->whereIn('created_by', $scope['seller_ids'])
             ->count();
-        $revenueByReseller = $this->revenueQuery($tenantId, $validated)
+        $revenueByReseller = $this->revenueQuery($tenantId, $validated, $scope)
             ->leftJoin('users as resellers', 'resellers.id', '=', 'activity_logs.user_id')
             ->selectRaw("COALESCE(resellers.name, 'Unknown') as reseller")
             ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
@@ -57,7 +59,7 @@ class FinancialReportController extends BaseManagerParentController
             ])
             ->values()
             ->all();
-        $programRows = $this->revenueQuery($tenantId, $validated)
+        $programRows = $this->revenueQuery($tenantId, $validated, $scope)
             ->selectRaw(RevenueAnalytics::programIdExpression('activity_logs').' as program_id')
             ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
             ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
@@ -90,8 +92,8 @@ class FinancialReportController extends BaseManagerParentController
                 ],
                 'revenue_by_reseller' => $revenueByReseller,
                 'revenue_by_program' => $revenueByProgram,
-                'monthly_revenue' => $this->monthlyRevenue($tenantId, $validated),
-                'reseller_balances' => $this->resellerBalances($tenantId, $validated),
+                'monthly_revenue' => $this->monthlyRevenue($tenantId, $validated, $scope),
+                'reseller_balances' => $this->resellerBalances($validated, $scope),
             ],
         ]);
     }
@@ -130,24 +132,47 @@ class FinancialReportController extends BaseManagerParentController
         return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
-    private function baseQuery(int $tenantId, array $validated): Builder
+    /**
+     * @return array{from:?string,to:?string,manager_parent_id:?int,manager_id:?int,reseller_id:?int}
+     */
+    private function validatedFilters(Request $request): array
+    {
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'manager_parent_id' => ['nullable', 'integer'],
+            'manager_id' => ['nullable', 'integer'],
+            'reseller_id' => ['nullable', 'integer'],
+        ]);
+
+        return [
+            'from' => ! empty($validated['from']) ? (string) $validated['from'] : null,
+            'to' => ! empty($validated['to']) ? (string) $validated['to'] : null,
+            'manager_parent_id' => ! empty($validated['manager_parent_id']) ? (int) $validated['manager_parent_id'] : null,
+            'manager_id' => ! empty($validated['manager_id']) ? (int) $validated['manager_id'] : null,
+            'reseller_id' => ! empty($validated['reseller_id']) ? (int) $validated['reseller_id'] : null,
+        ];
+    }
+
+    private function baseQuery(int $tenantId, array $validated, array $scope): Builder
     {
         return License::query()
             ->where('licenses.tenant_id', $tenantId)
+            ->whereIn('licenses.reseller_id', $scope['seller_ids'])
             ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
             ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']));
     }
 
-    private function monthlyRevenue(int $tenantId, array $validated)
+    private function monthlyRevenue(int $tenantId, array $validated, array $scope)
     {
         $months = collect(range(5, 0))
             ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
 
-        $grouped = $this->revenueQuery($tenantId, $validated)
+        $grouped = $this->revenueQuery($tenantId, $validated, $scope)
             ->where('activity_logs.created_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(5))
-            ->selectRaw("DATE_FORMAT(activity_logs.created_at, '%Y-%m') as month_key")
+            ->selectRaw(RevenueAnalytics::monthKeyExpression('activity_logs', 'created_at').' as month_key')
             ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
-            ->groupByRaw("DATE_FORMAT(activity_logs.created_at, '%Y-%m')")
+            ->groupByRaw(RevenueAnalytics::monthKeyExpression('activity_logs', 'created_at'))
             ->pluck('revenue', 'month_key');
 
         return $months->map(fn (CarbonImmutable $month): array => [
@@ -156,33 +181,30 @@ class FinancialReportController extends BaseManagerParentController
         ])->values();
     }
 
-    private function resellerBalances(int $tenantId, array $validated)
+    private function resellerBalances(array $validated, array $scope)
     {
-        $resellers = User::query()
-            ->where('tenant_id', $tenantId)
-            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
-            ->get();
-        $accountingBySeller = $this->sellerAccountingService->summariesForSellers($resellers);
+        $sellers = $scope['sellers'];
+        $accountingBySeller = $this->sellerAccountingService->summariesForSellers($sellers);
 
-        return $resellers->map(function (User $reseller) use ($validated, $accountingBySeller): array {
-            $totals = RevenueAnalytics::baseQuery($validated, $reseller->tenant_id, null, $reseller->id)
+        return $sellers->map(function (User $seller) use ($validated, $accountingBySeller): array {
+            $totals = RevenueAnalytics::baseQuery($validated, (int) $seller->tenant_id, null, $seller->id)
                 ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
                 ->first();
             $totalActivations = (int) License::query()
-                ->where('tenant_id', $reseller->tenant_id)
+                ->where('tenant_id', $seller->tenant_id)
                 ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
                 ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']))
-                ->where('reseller_id', $reseller->id)
+                ->where('reseller_id', $seller->id)
                 ->count();
             $totalRevenue = round((float) ($totals?->total_revenue ?? 0), 2);
-            $accounting = $accountingBySeller[(int) $reseller->id] ?? [
+            $accounting = $accountingBySeller[(int) $seller->id] ?? [
                 'still_not_paid' => 0.0,
             ];
 
             return [
-                'id' => $reseller->id,
-                'reseller' => $reseller->name,
-                'role' => $reseller->role?->value ?? (string) $reseller->role,
+                'id' => $seller->id,
+                'reseller' => $seller->name,
+                'role' => $seller->role?->value ?? (string) $seller->role,
                 'total_revenue' => $totalRevenue,
                 'total_activations' => $totalActivations,
                 'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,
@@ -191,9 +213,81 @@ class FinancialReportController extends BaseManagerParentController
         })->sortByDesc('still_not_paid')->values();
     }
 
-    private function revenueQuery(int $tenantId, array $validated)
+    private function revenueQuery(int $tenantId, array $validated, array $scope)
     {
-        return RevenueAnalytics::baseQuery($validated, $tenantId);
+        return RevenueAnalytics::baseQuery($validated, $tenantId, $scope['seller_ids']);
+    }
+
+    /**
+     * @param  array{manager_parent_id:?int,manager_id:?int,reseller_id:?int}  $validated
+     * @return array{seller_ids: array<int, int>, sellers: Collection<int, User>}
+     */
+    private function resolveSellerScope(int $tenantId, array $validated): array
+    {
+        $team = User::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->select(['id', 'tenant_id', 'name', 'role', 'created_by'])
+            ->get();
+
+        $managerParents = $team->where('role', UserRole::MANAGER_PARENT->value)->values();
+        $managers = $team->where('role', UserRole::MANAGER->value)->values();
+        $resellers = $team->where('role', UserRole::RESELLER->value)->values();
+
+        if ($validated['reseller_id']) {
+            $reseller = $resellers->firstWhere('id', $validated['reseller_id']);
+            if (! $reseller) {
+                throw ValidationException::withMessages(['reseller_id' => 'The selected reseller is invalid for this tenant.']);
+            }
+
+            return [
+                'seller_ids' => [(int) $reseller->id],
+                'sellers' => collect([$reseller]),
+            ];
+        }
+
+        if ($validated['manager_id']) {
+            $manager = $managers->firstWhere('id', $validated['manager_id']);
+            if (! $manager) {
+                throw ValidationException::withMessages(['manager_id' => 'The selected manager is invalid for this tenant.']);
+            }
+
+            $scopedSellers = collect([$manager])
+                ->merge($resellers->where('created_by', $manager->id)->values())
+                ->unique('id')
+                ->values();
+
+            return [
+                'seller_ids' => $scopedSellers->pluck('id')->map(fn ($id): int => (int) $id)->all(),
+                'sellers' => $scopedSellers,
+            ];
+        }
+
+        if ($validated['manager_parent_id']) {
+            $managerParent = $managerParents->firstWhere('id', $validated['manager_parent_id']);
+            if (! $managerParent) {
+                throw ValidationException::withMessages(['manager_parent_id' => 'The selected manager parent is invalid for this tenant.']);
+            }
+
+            $managedManagers = $managers->where('created_by', $managerParent->id)->values();
+            $managedManagerIds = $managedManagers->pluck('id')->all();
+            $scopedSellers = collect([$managerParent])
+                ->merge($managedManagers)
+                ->merge($resellers->where('created_by', $managerParent->id)->values())
+                ->merge($resellers->filter(fn (User $reseller): bool => in_array((int) $reseller->created_by, $managedManagerIds, true))->values())
+                ->unique('id')
+                ->values();
+
+            return [
+                'seller_ids' => $scopedSellers->pluck('id')->map(fn ($id): int => (int) $id)->all(),
+                'sellers' => $scopedSellers,
+            ];
+        }
+
+        return [
+            'seller_ids' => $team->pluck('id')->map(fn ($id): int => (int) $id)->all(),
+            'sellers' => $team->values(),
+        ];
     }
 
     /**

@@ -27,6 +27,7 @@ import type {
   ProgramSummary,
   SellerLogEntry,
   SellerLogSummary,
+  SellerScopeParams,
   TenantSettings,
   TeamMemberDetail,
   UsernameManagedUser,
@@ -107,7 +108,7 @@ export const managerParentService = {
     const { data } = await api.get<{ data: Array<{ label: string; count: number; percentage: number }> }>('/reports/activation-rate', { params })
     return data
   },
-  async getRetention(params?: { from?: string; to?: string }) {
+  async getRetention(params?: { from?: string; to?: string } & SellerScopeParams) {
     const { data } = await api.get<{ data: Array<{ month: string; customers: number; activations: number }> }>('/reports/retention', { params })
     return data
   },
@@ -211,7 +212,7 @@ export const managerParentService = {
     })
     return data
   },
-  async getFinancialReports(params?: { from?: string; to?: string }) {
+  async getFinancialReports(params?: { from?: string; to?: string } & SellerScopeParams) {
     const paramKey = JSON.stringify(params)
     const cacheKey = `manager-parent:reports:financial:${paramKey}`
     const cached = apiCache.get<{ data: FinancialReportData }>(cacheKey)
@@ -317,10 +318,10 @@ export const managerParentService = {
     const { data } = await api.get<{ data: Array<{ masked_name: string; role: string }> }>('/online-users')
     return data
   },
-  async exportFinancialCsv(params?: { from?: string; to?: string }) {
+  async exportFinancialCsv(params?: { from?: string; to?: string } & SellerScopeParams) {
     await downloadFile('/financial-reports/export/csv', 'manager-parent-financial.csv', params)
   },
-  async exportFinancialPdf(params?: { from?: string; to?: string }) {
+  async exportFinancialPdf(params?: { from?: string; to?: string } & SellerScopeParams) {
     await downloadFile('/financial-reports/export/pdf', 'manager-parent-financial.pdf', params)
   },
 }

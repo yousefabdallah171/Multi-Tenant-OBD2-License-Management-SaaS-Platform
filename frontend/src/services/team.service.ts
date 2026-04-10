@@ -7,6 +7,8 @@ export interface TeamListParams {
   role?: 'manager' | 'reseller' | ''
   status?: 'active' | 'inactive' | 'deactive' | ''
   search?: string
+  manager_parent_id?: number | ''
+  manager_id?: number | ''
 }
 
 export interface TeamPayload {

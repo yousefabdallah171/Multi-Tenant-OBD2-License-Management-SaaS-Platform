@@ -64,6 +64,10 @@ export function TeamManagementPage() {
       perPage?: number
       search?: string
       status?: AccountStatusFilter
+      managerParentId?: number | ''
+      managerId?: number | ''
+      scopeName?: string
+      scopeRole?: 'manager_parent' | 'manager' | 'reseller' | ''
     }
   } | null)?.restore
   const roleFromSearch = normalizeRoleFilter(searchParams.get('role'))
@@ -72,6 +76,10 @@ export function TeamManagementPage() {
   const [perPage, setPerPage] = useState(() => restoreState?.perPage ?? 10)
   const [search, setSearch] = useState(() => restoreState?.search ?? '')
   const [status, setStatus] = useState<AccountStatusFilter>(() => restoreState?.status ?? '')
+  const [managerParentId, setManagerParentId] = useState<number | ''>(() => parseNumericParam(searchParams.get('manager_parent_id')) || restoreState?.managerParentId || '')
+  const [managerId, setManagerId] = useState<number | ''>(() => parseNumericParam(searchParams.get('manager_id')) || restoreState?.managerId || '')
+  const scopeName = searchParams.get('scope_name') || restoreState?.scopeName || ''
+  const scopeRole = normalizeScopeRole(searchParams.get('scope_role')) || restoreState?.scopeRole || ''
   const [formOpen, setFormOpen] = useState(false)
   const [inviteRole, setInviteRole] = useState<'manager' | 'reseller'>('reseller')
   const [deleteTarget, setDeleteTarget] = useState<TeamMemberSummary | null>(null)
@@ -86,8 +94,8 @@ export function TeamManagementPage() {
   const [revokeTokensOnReset, setRevokeTokensOnReset] = useState(true)
 
   const membersQuery = useQuery({
-    queryKey: ['manager-parent', 'team', role, page, perPage, search, status],
-    queryFn: () => teamService.getAll({ role: role || '', page, per_page: perPage, search, status }),
+    queryKey: ['manager-parent', 'team', role, page, perPage, search, status, managerParentId, managerId],
+    queryFn: () => teamService.getAll({ role: role || '', page, per_page: perPage, search, status, manager_parent_id: managerParentId || '', manager_id: managerId || '' }),
   })
 
   function invalidateTeamQueries(memberId?: number) {
@@ -337,6 +345,10 @@ export function TeamManagementPage() {
       perPage,
       search,
       status,
+      managerParentId,
+      managerId,
+      scopeName,
+      scopeRole,
     },
   }
 
@@ -346,6 +358,22 @@ export function TeamManagementPage() {
     setRole((current) => (current === nextRole ? current : nextRole))
     setPage(1)
   }, [roleFromSearch])
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+
+    if (role) next.set('role', role)
+    if (search) next.set('search', search)
+    if (status) next.set('status', status)
+    if (page > 1) next.set('page', String(page))
+    if (perPage !== 10) next.set('per_page', String(perPage))
+    if (managerParentId) next.set('manager_parent_id', String(managerParentId))
+    if (managerId) next.set('manager_id', String(managerId))
+    if (scopeName) next.set('scope_name', scopeName)
+    if (scopeRole) next.set('scope_role', scopeRole)
+
+    setSearchParams(next, { replace: true })
+  }, [managerId, managerParentId, page, perPage, role, scopeName, scopeRole, search, setSearchParams, status])
 
   function closeForm() {
     setFormOpen(false)
@@ -423,6 +451,18 @@ export function TeamManagementPage() {
         }
       />
 
+      {scopeRole ? (
+        <Card>
+          <CardContent className="p-4 text-sm text-sky-900 dark:text-sky-100">
+            <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900/60 dark:bg-sky-950/30">
+              {t('managerParent.pages.teamManagement.scopeHint', {
+                name: scopeName || t(`managerParent.pages.teamManagement.scopeRoles.${scopeRole}`),
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Tabs
         value={role || 'all'}
         onValueChange={(value) => {
@@ -471,6 +511,22 @@ export function TeamManagementPage() {
                 <option value="active">{t('common.active')}</option>
                 <option value="deactive">{t('common.deactive')}</option>
               </select>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setSearch('')
+                  setStatus('')
+                  setManagerParentId('')
+                  setManagerId('')
+                  setPage(1)
+                  setPerPage(10)
+                  setRole('')
+                  setSearchParams(new URLSearchParams(), { replace: true })
+                }}
+              >
+                {t('common.clear')}
+              </Button>
             </CardContent>
           </Card>
 
@@ -700,4 +756,21 @@ function normalizeRoleFilter(value: string | null): 'manager' | 'reseller' | nul
   }
 
   return null
+}
+
+function parseNumericParam(value: string | null): number | '' {
+  if (!value) {
+    return ''
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : ''
+}
+
+function normalizeScopeRole(value: string | null): 'manager_parent' | 'manager' | 'reseller' | '' {
+  if (value === 'manager_parent' || value === 'manager' || value === 'reseller') {
+    return value
+  }
+
+  return ''
 }

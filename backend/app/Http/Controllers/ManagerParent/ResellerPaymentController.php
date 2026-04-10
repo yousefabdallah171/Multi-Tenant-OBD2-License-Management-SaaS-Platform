@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ResellerPaymentController extends BaseManagerParentController
 {
@@ -26,6 +27,9 @@ class ResellerPaymentController extends BaseManagerParentController
         $validated = $request->validate([
             'period' => ['nullable', 'regex:/^\d{4}-\d{2}$/'],
             'status' => ['nullable', 'in:unpaid,partial,paid'],
+            'manager_parent_id' => ['nullable', 'integer'],
+            'manager_id' => ['nullable', 'integer'],
+            'reseller_id' => ['nullable', 'integer'],
         ]);
 
         $tenantId = $this->currentTenantId($request);
@@ -33,10 +37,12 @@ class ResellerPaymentController extends BaseManagerParentController
             ? $validated['period']
             : null;
         $statusFilter = $validated['status'] ?? null;
+        $resellerIds = $this->resolveScopedResellerIds($tenantId, $validated);
 
         $resellers = User::query()
             ->where('tenant_id', $tenantId)
             ->where('role', UserRole::RESELLER->value)
+            ->whereIn('id', $resellerIds)
             ->select(['id', 'tenant_id', 'role', 'name', 'email', 'created_at'])
             ->orderBy('name')
             ->get();
@@ -54,6 +60,89 @@ class ResellerPaymentController extends BaseManagerParentController
                 'period' => $period ?? 'all',
             ],
         ]);
+    }
+
+    /**
+     * @param array{manager_parent_id?: int, manager_id?: int, reseller_id?: int} $validated
+     * @return array<int, int>
+     */
+    private function resolveScopedResellerIds(int $tenantId, array $validated): array
+    {
+        $resellerId = isset($validated['reseller_id']) ? (int) $validated['reseller_id'] : 0;
+        if ($resellerId > 0) {
+            $exists = User::query()
+                ->where('tenant_id', $tenantId)
+                ->where('role', UserRole::RESELLER->value)
+                ->whereKey($resellerId)
+                ->exists();
+
+            if (! $exists) {
+                throw ValidationException::withMessages(['reseller_id' => 'The selected reseller is invalid for this tenant.']);
+            }
+
+            return [$resellerId];
+        }
+
+        $managerId = isset($validated['manager_id']) ? (int) $validated['manager_id'] : 0;
+        if ($managerId > 0) {
+            $manager = User::query()
+                ->where('tenant_id', $tenantId)
+                ->where('role', UserRole::MANAGER->value)
+                ->find($managerId);
+
+            if (! $manager) {
+                throw ValidationException::withMessages(['manager_id' => 'The selected manager is invalid for this tenant.']);
+            }
+
+            return User::query()
+                ->where('tenant_id', $tenantId)
+                ->where('role', UserRole::RESELLER->value)
+                ->where('created_by', $managerId)
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->all();
+        }
+
+        $managerParentId = isset($validated['manager_parent_id']) ? (int) $validated['manager_parent_id'] : 0;
+        if ($managerParentId > 0) {
+            $managerParent = User::query()
+                ->where('tenant_id', $tenantId)
+                ->where('role', UserRole::MANAGER_PARENT->value)
+                ->find($managerParentId);
+
+            if (! $managerParent) {
+                throw ValidationException::withMessages(['manager_parent_id' => 'The selected manager parent is invalid for this tenant.']);
+            }
+
+            $managedManagerIds = User::query()
+                ->where('tenant_id', $tenantId)
+                ->where('role', UserRole::MANAGER->value)
+                ->where('created_by', $managerParentId)
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->all();
+
+            return User::query()
+                ->where('tenant_id', $tenantId)
+                ->where('role', UserRole::RESELLER->value)
+                ->where(function ($query) use ($managerParentId, $managedManagerIds): void {
+                    $query->where('created_by', $managerParentId);
+
+                    if ($managedManagerIds !== []) {
+                        $query->orWhereIn('created_by', $managedManagerIds);
+                    }
+                })
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->all();
+        }
+
+        return User::query()
+            ->where('tenant_id', $tenantId)
+            ->where('role', UserRole::RESELLER->value)
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
     }
 
     public function show(Request $request, User $user): JsonResponse
@@ -388,19 +477,17 @@ class ResellerPaymentController extends BaseManagerParentController
             ->groupBy('reseller_id')
             ->pluck('total_paid', 'reseller_id');
 
-        $salesByReseller = RevenueAnalytics::baseQuery(
-            ['from' => $start->toDateString(), 'to' => $end->toDateString()],
-            $tenantId,
-            $resellers->pluck('id')->all()
-        )
-            ->selectRaw('activity_logs.user_id as reseller_id')
-            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_sales'))
-            ->groupBy('activity_logs.user_id')
-            ->pluck('total_sales', 'reseller_id');
-
-        return $resellers->map(function (User $reseller) use ($commissions, $paymentsByReseller, $salesByReseller, $period): array {
+        return $resellers->map(function (User $reseller) use ($commissions, $paymentsByReseller, $period, $tenantId, $start, $end): array {
             $commission = $commissions->get($reseller->id);
-            $totalSales = round((float) ($commission?->total_sales ?? $salesByReseller->get($reseller->id, 0)), 2);
+            $computedSales = RevenueAnalytics::baseQuery(
+                ['from' => $start->toDateString(), 'to' => $end->toDateString()],
+                $tenantId,
+                null,
+                $reseller->id
+            )
+                ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_sales'))
+                ->first();
+            $totalSales = round((float) ($commission?->total_sales ?? ($computedSales?->total_sales ?? 0)), 2);
             $amountPaid = round((float) ($commission?->amount_paid ?? $paymentsByReseller->get($reseller->id, 0)), 2);
             $commissionOwed = round((float) ($commission?->commission_owed ?? $totalSales), 2);
             $outstanding = round((float) ($commission?->outstanding ?? ($commissionOwed - $amountPaid)), 2);

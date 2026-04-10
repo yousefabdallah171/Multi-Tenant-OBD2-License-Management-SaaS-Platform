@@ -139,8 +139,8 @@ class ReportController extends BaseManagerController
             return $this->baseQuery($tenantId, $sellerIds, $validated)
                 ->whereNotNull('licenses.activated_at')
                 ->where('licenses.activated_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(5))
-                ->selectRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m') as month_key, COUNT(DISTINCT licenses.customer_id) as customers, COUNT(*) as activations")
-                ->groupByRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m')")
+                ->selectRaw(RevenueAnalytics::monthKeyExpression('licenses', 'activated_at')." as month_key, COUNT(DISTINCT licenses.customer_id) as customers, COUNT(*) as activations")
+                ->groupByRaw(RevenueAnalytics::monthKeyExpression('licenses', 'activated_at'))
                 ->get()
                 ->mapWithKeys(fn ($row): array => [
                     (string) $row->month_key => [
@@ -231,9 +231,9 @@ class ReportController extends BaseManagerController
 
         $grouped = $this->revenueQuery($tenantId, $sellerIds, $validated)
             ->where('activity_logs.created_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(5))
-            ->selectRaw("DATE_FORMAT(activity_logs.created_at, '%Y-%m') as month_key")
+            ->selectRaw(RevenueAnalytics::monthKeyExpression('activity_logs', 'created_at').' as month_key')
             ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
-            ->groupByRaw("DATE_FORMAT(activity_logs.created_at, '%Y-%m')")
+            ->groupByRaw(RevenueAnalytics::monthKeyExpression('activity_logs', 'created_at'))
             ->pluck('revenue', 'month_key');
 
         return $months->map(fn (CarbonImmutable $month): array => [

@@ -377,19 +377,17 @@ class ResellerPaymentController extends BaseManagerController
             ->groupBy('reseller_id')
             ->pluck('total_paid', 'reseller_id');
 
-        $salesByReseller = RevenueAnalytics::baseQuery(
-            ['from' => $start->toDateString(), 'to' => $end->toDateString()],
-            $tenantId,
-            $resellers->pluck('id')->all()
-        )
-            ->selectRaw('activity_logs.user_id as reseller_id')
-            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_sales'))
-            ->groupBy('activity_logs.user_id')
-            ->pluck('total_sales', 'reseller_id');
-
-        return $resellers->map(function (User $reseller) use ($commissions, $paymentsByReseller, $salesByReseller, $period): array {
+        return $resellers->map(function (User $reseller) use ($commissions, $paymentsByReseller, $period, $tenantId, $start, $end): array {
             $commission = $commissions->get($reseller->id);
-            $totalSales = round((float) ($commission?->total_sales ?? $salesByReseller->get($reseller->id, 0)), 2);
+            $computedSales = RevenueAnalytics::baseQuery(
+                ['from' => $start->toDateString(), 'to' => $end->toDateString()],
+                $tenantId,
+                null,
+                $reseller->id
+            )
+                ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_sales'))
+                ->first();
+            $totalSales = round((float) ($commission?->total_sales ?? ($computedSales?->total_sales ?? 0)), 2);
             $amountPaid = round((float) ($commission?->amount_paid ?? $paymentsByReseller->get($reseller->id, 0)), 2);
             $commissionOwed = round((float) ($commission?->commission_owed ?? $totalSales), 2);
             $outstanding = round((float) ($commission?->outstanding ?? ($commissionOwed - $amountPaid)), 2);

@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers\ManagerParent;
 
+use App\Enums\UserRole;
 use App\Models\License;
+use App\Models\User;
 use App\Services\ExportTaskService;
 use App\Support\LicenseCacheInvalidation;
+use App\Support\RevenueAnalytics;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 
 class ReportController extends BaseManagerParentController
 {
@@ -16,10 +20,11 @@ class ReportController extends BaseManagerParentController
     {
         $validated = $this->validatedFilters($request);
         $tenantId = $this->currentTenantId($request);
+        $scope = $this->resolveSellerScope($tenantId, $validated);
 
         return response()->json([
-            'data' => Cache::remember($this->cacheKey($tenantId, 'revenue-by-reseller', $validated), now()->addSeconds(90), function () use ($tenantId, $validated): array {
-                return $this->baseQuery($tenantId, $validated)
+            'data' => Cache::remember($this->cacheKey($tenantId, 'revenue-by-reseller', $validated), now()->addSeconds(90), function () use ($tenantId, $validated, $scope): array {
+                return $this->baseQuery($tenantId, $validated, $scope)
                     ->leftJoin('users as resellers', 'resellers.id', '=', 'licenses.reseller_id')
                     ->selectRaw("COALESCE(resellers.name, 'Unknown') as reseller, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue, COUNT(*) as activations")
                     ->groupBy('licenses.reseller_id', 'resellers.name')
@@ -40,10 +45,11 @@ class ReportController extends BaseManagerParentController
     {
         $validated = $this->validatedFilters($request);
         $tenantId = $this->currentTenantId($request);
+        $scope = $this->resolveSellerScope($tenantId, $validated);
 
         return response()->json([
-            'data' => Cache::remember($this->cacheKey($tenantId, 'revenue-by-program', $validated), now()->addSeconds(90), function () use ($tenantId, $validated): array {
-                return $this->baseQuery($tenantId, $validated)
+            'data' => Cache::remember($this->cacheKey($tenantId, 'revenue-by-program', $validated), now()->addSeconds(90), function () use ($tenantId, $validated, $scope): array {
+                return $this->baseQuery($tenantId, $validated, $scope)
                     ->leftJoin('programs', 'programs.id', '=', 'licenses.program_id')
                     ->selectRaw("COALESCE(programs.name, 'Unknown') as program, ROUND(COALESCE(SUM(licenses.price), 0), 2) as revenue, COUNT(*) as activations")
                     ->groupBy('licenses.program_id', 'programs.name')
@@ -64,9 +70,10 @@ class ReportController extends BaseManagerParentController
     {
         $validated = $this->validatedFilters($request);
         $tenantId = $this->currentTenantId($request);
+        $scope = $this->resolveSellerScope($tenantId, $validated);
 
-        $totals = Cache::remember($this->cacheKey($tenantId, 'activation-rate', $validated), now()->addSeconds(90), function () use ($tenantId, $validated) {
-            return $this->baseQuery($tenantId, $validated)
+        $totals = Cache::remember($this->cacheKey($tenantId, 'activation-rate', $validated), now()->addSeconds(90), function () use ($tenantId, $validated, $scope) {
+            return $this->baseQuery($tenantId, $validated, $scope)
                 ->selectRaw("COUNT(*) as total, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as success, SUM(CASE WHEN status IN ('pending', 'suspended') THEN 1 ELSE 0 END) as failure")
                 ->first();
         });
@@ -87,15 +94,16 @@ class ReportController extends BaseManagerParentController
     {
         $validated = $this->validatedFilters($request);
         $tenantId = $this->currentTenantId($request);
+        $scope = $this->resolveSellerScope($tenantId, $validated);
         $months = collect(range(5, 0))
             ->map(fn (int $offset): CarbonImmutable => CarbonImmutable::now()->startOfMonth()->subMonths($offset));
 
-        $grouped = Cache::remember($this->cacheKey($tenantId, 'retention', $validated), now()->addSeconds(90), function () use ($tenantId, $validated): array {
-            return $this->baseQuery($tenantId, $validated)
+        $grouped = Cache::remember($this->cacheKey($tenantId, 'retention', $validated), now()->addSeconds(90), function () use ($tenantId, $validated, $scope): array {
+            return $this->baseQuery($tenantId, $validated, $scope)
                 ->whereNotNull('licenses.activated_at')
                 ->where('licenses.activated_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(5))
-                ->selectRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m') as month_key, COUNT(DISTINCT licenses.customer_id) as customers, COUNT(*) as activations")
-                ->groupByRaw("DATE_FORMAT(licenses.activated_at, '%Y-%m')")
+                ->selectRaw(RevenueAnalytics::monthKeyExpression('licenses', 'activated_at')." as month_key, COUNT(DISTINCT licenses.customer_id) as customers, COUNT(*) as activations")
+                ->groupByRaw(RevenueAnalytics::monthKeyExpression('licenses', 'activated_at'))
                 ->get()
                 ->mapWithKeys(fn ($row): array => [
                     (string) $row->month_key => [
@@ -152,28 +160,99 @@ class ReportController extends BaseManagerParentController
     }
 
     /**
-     * @return array{from:?string,to:?string}
+     * @return array{from:?string,to:?string,manager_parent_id:?int,manager_id:?int,reseller_id:?int}
      */
     private function validatedFilters(Request $request): array
     {
         $validated = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
+            'manager_parent_id' => ['nullable', 'integer'],
+            'manager_id' => ['nullable', 'integer'],
+            'reseller_id' => ['nullable', 'integer'],
         ]);
 
         return [
-            'from' => $validated['from'] ?? null,
-            'to' => $validated['to'] ?? null,
+            'from' => ! empty($validated['from']) ? (string) $validated['from'] : null,
+            'to' => ! empty($validated['to']) ? (string) $validated['to'] : null,
+            'manager_parent_id' => ! empty($validated['manager_parent_id']) ? (int) $validated['manager_parent_id'] : null,
+            'manager_id' => ! empty($validated['manager_id']) ? (int) $validated['manager_id'] : null,
+            'reseller_id' => ! empty($validated['reseller_id']) ? (int) $validated['reseller_id'] : null,
         ];
     }
 
-    private function baseQuery(int $tenantId, array $validated)
+    private function baseQuery(int $tenantId, array $validated, array $scope)
     {
         return License::query()
             ->from('licenses')
             ->where('licenses.tenant_id', $tenantId)
+            ->whereIn('licenses.reseller_id', $scope['seller_ids'])
             ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
             ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']));
+    }
+
+    /**
+     * @param  array{manager_parent_id:?int,manager_id:?int,reseller_id:?int}  $validated
+     * @return array{seller_ids: array<int, int>}
+     */
+    private function resolveSellerScope(int $tenantId, array $validated): array
+    {
+        $team = User::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->select(['id', 'role', 'created_by'])
+            ->get();
+
+        $managerParents = $team->where('role', UserRole::MANAGER_PARENT->value)->values();
+        $managers = $team->where('role', UserRole::MANAGER->value)->values();
+        $resellers = $team->where('role', UserRole::RESELLER->value)->values();
+
+        if ($validated['reseller_id']) {
+            if (! $resellers->firstWhere('id', $validated['reseller_id'])) {
+                throw ValidationException::withMessages(['reseller_id' => 'The selected reseller is invalid for this tenant.']);
+            }
+
+            return ['seller_ids' => [(int) $validated['reseller_id']]];
+        }
+
+        if ($validated['manager_id']) {
+            $manager = $managers->firstWhere('id', $validated['manager_id']);
+            if (! $manager) {
+                throw ValidationException::withMessages(['manager_id' => 'The selected manager is invalid for this tenant.']);
+            }
+
+            return [
+                'seller_ids' => collect([$manager->id])
+                    ->merge($resellers->where('created_by', $manager->id)->pluck('id'))
+                    ->map(fn ($id): int => (int) $id)
+                    ->values()
+                    ->all(),
+            ];
+        }
+
+        if ($validated['manager_parent_id']) {
+            $managerParent = $managerParents->firstWhere('id', $validated['manager_parent_id']);
+            if (! $managerParent) {
+                throw ValidationException::withMessages(['manager_parent_id' => 'The selected manager parent is invalid for this tenant.']);
+            }
+
+            $managedManagerIds = $managers->where('created_by', $managerParent->id)->pluck('id')->map(fn ($id): int => (int) $id)->all();
+
+            return [
+                'seller_ids' => collect([(int) $managerParent->id])
+                    ->merge($managedManagerIds)
+                    ->merge($resellers->where('created_by', $managerParent->id)->pluck('id'))
+                    ->merge($resellers->filter(fn (User $reseller): bool => in_array((int) $reseller->created_by, $managedManagerIds, true))->pluck('id'))
+                    ->map(fn ($id): int => (int) $id)
+                    ->unique()
+                    ->values()
+                    ->all(),
+            ];
+        }
+
+        return [
+            'seller_ids' => $team->pluck('id')->map(fn ($id): int => (int) $id)->all(),
+        ];
     }
 
     private function cacheKey(int $tenantId, string $type, array $validated): string

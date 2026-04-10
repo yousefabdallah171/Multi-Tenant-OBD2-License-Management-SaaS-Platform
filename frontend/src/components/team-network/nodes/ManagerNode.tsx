@@ -51,19 +51,32 @@ export const ManagerNode = memo(function ManagerNode({ data }: NodeProps) {
           icon={<Banknote className="size-4 text-indigo-600 dark:text-indigo-300" />}
           label={t('managerParent.pages.teamNetwork.revenue')}
           value={formatCurrency(nodeData.revenue, 'USD', locale)}
-          onClick={() => visit(routePaths.managerParent.financialReports(nodeData.lang))}
+          onClick={() => visit(buildScopedHref(routePaths.managerParent.financialReports(nodeData.lang), {
+            manager_id: nodeData.id,
+            scope_name: nodeData.name,
+            scope_role: 'manager',
+          }))}
         />
         <StatButton
           icon={<Users className="size-4 text-indigo-600 dark:text-indigo-300" />}
           label={t('managerParent.pages.teamNetwork.resellers')}
           value={String(nodeData.resellers_count)}
-          onClick={() => visit(`${routePaths.managerParent.teamManagement(nodeData.lang)}?role=reseller`)}
+          onClick={() => visit(buildScopedHref(routePaths.managerParent.teamManagement(nodeData.lang), {
+            role: 'reseller',
+            manager_id: nodeData.id,
+            scope_name: nodeData.name,
+            scope_role: 'manager',
+          }))}
         />
         <StatButton
           icon={<Users className="size-4 text-indigo-600 dark:text-indigo-300" />}
           label={t('managerParent.pages.teamNetwork.customers')}
           value={String(nodeData.customers_count)}
-          onClick={() => visit(routePaths.managerParent.customers(nodeData.lang))}
+          onClick={() => visit(buildScopedHref(routePaths.managerParent.customers(nodeData.lang), {
+            manager_id: nodeData.id,
+            scope_name: nodeData.name,
+            scope_role: 'manager',
+          }))}
         />
       </div>
     </div>
@@ -109,4 +122,14 @@ function StatusDot({ status }: { status: string }) {
       {status}
     </span>
   )
+}
+
+function buildScopedHref(path: string, params: Record<string, string | number>) {
+  const query = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    query.set(key, String(value))
+  })
+
+  return `${path}?${query.toString()}`
 }

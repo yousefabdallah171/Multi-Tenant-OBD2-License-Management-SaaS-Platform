@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, Banknote, Wallet, WalletCards } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
@@ -32,8 +32,14 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
   const queryClient = useQueryClient()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const [searchParams, setSearchParams] = useSearchParams()
   const [paymentOpen, setPaymentOpen] = useState(false)
-  const [period, setPeriod] = useState('')
+  const [period, setPeriod] = useState(searchParams.get('period') || '')
+  const managerParentId = parseNumericParam(searchParams.get('manager_parent_id'))
+  const managerId = parseNumericParam(searchParams.get('manager_id'))
+  const resellerId = parseNumericParam(searchParams.get('reseller_id'))
+  const scopeName = searchParams.get('scope_name') || ''
+  const scopeRole = normalizeScopeRole(searchParams.get('scope_role'))
   const [paymentForm, setPaymentForm] = useState({
     reseller_id: 0,
     amount: '',
@@ -41,9 +47,28 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     notes: '',
   })
 
+  const listFilters = useMemo<ResellerPaymentFilters>(() => ({
+    period: period || undefined,
+    manager_parent_id: managerParentId || undefined,
+    manager_id: managerId || undefined,
+    reseller_id: resellerId || undefined,
+  }), [managerId, managerParentId, period, resellerId])
+
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (period) next.set('period', period)
+    if (managerParentId) next.set('manager_parent_id', String(managerParentId))
+    if (managerId) next.set('manager_id', String(managerId))
+    if (resellerId) next.set('reseller_id', String(resellerId))
+    if (scopeName) next.set('scope_name', scopeName)
+    if (scopeRole) next.set('scope_role', scopeRole)
+
+    setSearchParams(next, { replace: true })
+  }, [managerId, managerParentId, period, resellerId, scopeName, scopeRole, setSearchParams])
+
   const query = useQuery({
-    queryKey: [queryKeyPrefix, 'reseller-payments', period || 'all'],
-    queryFn: () => fetchList({ period: period || undefined }),
+    queryKey: [queryKeyPrefix, 'reseller-payments', listFilters],
+    queryFn: () => fetchList(listFilters),
   })
 
   const rows = query.data?.data ?? []
@@ -127,6 +152,12 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     })
   }
 
+  const scopeHint = scopeRole
+    ? t('payments.scopeHint', {
+      name: scopeName || t(`payments.scopeRoles.${scopeRole}`),
+    })
+    : ''
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -148,7 +179,14 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
             <span className="text-sm font-medium text-slate-950 dark:text-white">{t('payments.filters.period')}</span>
             <Input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} />
           </label>
-          <Button type="button" variant="ghost" onClick={() => setPeriod('')}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setPeriod('')
+              setSearchParams(new URLSearchParams(), { replace: true })
+            }}
+          >
             {t('common.clear')}
           </Button>
         </div>
@@ -157,6 +195,14 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
             ? t('payments.filters.allTimeHint', { defaultValue: 'Showing all-time reseller balances. Select a month to review a specific commission period.' })
             : t('payments.filters.monthHint', { defaultValue: 'Showing reseller balances for the selected month only.' })}
         </p>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          {t('payments.filters.reportsDifferenceHint')}
+        </p>
+        {scopeHint ? (
+          <p className="mt-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-100">
+            {scopeHint}
+          </p>
+        ) : null}
       </div>
 
       <DataTable tableKey={`${queryKeyPrefix}_reseller_payments`} columns={columns} data={rows} rowKey={(row) => row.reseller_id} isLoading={query.isLoading} emptyMessage={t('payments.empty.resellers')} />
@@ -245,4 +291,21 @@ function sanitizeMoneyInput(value: string) {
   const [whole = '', ...rest] = cleaned.split('.')
   const fraction = rest.join('').slice(0, 2)
   return fraction.length > 0 ? `${whole}.${fraction}` : whole
+}
+
+function parseNumericParam(value: string | null): number | '' {
+  if (!value) {
+    return ''
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : ''
+}
+
+function normalizeScopeRole(value: string | null): 'manager_parent' | 'manager' | 'reseller' | '' {
+  if (value === 'manager_parent' || value === 'manager' || value === 'reseller') {
+    return value
+  }
+
+  return ''
 }

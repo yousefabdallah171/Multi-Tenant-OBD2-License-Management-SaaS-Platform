@@ -219,9 +219,9 @@ class FinancialReportController extends BaseSuperAdminController
 
         $grouped = $this->revenueQuery($validated)
             ->where('activity_logs.created_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(11))
-            ->selectRaw("DATE_FORMAT(activity_logs.created_at, '%Y-%m') as month_key")
+            ->selectRaw(RevenueAnalytics::monthKeyExpression('activity_logs', 'created_at').' as month_key')
             ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
-            ->groupByRaw("DATE_FORMAT(activity_logs.created_at, '%Y-%m')")
+            ->groupByRaw(RevenueAnalytics::monthKeyExpression('activity_logs', 'created_at'))
             ->pluck('revenue', 'month_key');
 
         return $months->map(fn (CarbonImmutable $month): array => [

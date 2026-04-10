@@ -20,19 +20,7 @@ class ResellerPaymentsIndexTest extends TestCase
         $managerParent = $this->createUser('manager_parent', $tenant);
         $reseller = $this->createUser('reseller', $tenant);
 
-        ActivityLog::query()->create([
-            'tenant_id' => $tenant->id,
-            'user_id' => $reseller->id,
-            'action' => 'license.activated',
-            'description' => 'Activated a license.',
-            'metadata' => [
-                'price' => 120,
-                'attribution_type' => 'earned',
-            ],
-            'ip_address' => '127.0.0.1',
-            'created_at' => '2026-03-10 12:00:00',
-            'updated_at' => '2026-03-10 12:00:00',
-        ]);
+        $this->createEarnedActivity($tenant->id, $reseller->id, 120, '2026-03-10 12:00:00', 'license.activated');
 
         Sanctum::actingAs($managerParent);
 
@@ -51,19 +39,7 @@ class ResellerPaymentsIndexTest extends TestCase
         $manager = $this->createUser('manager', $tenant);
         $reseller = $this->createUser('reseller', $tenant, $manager);
 
-        ActivityLog::query()->create([
-            'tenant_id' => $tenant->id,
-            'user_id' => $reseller->id,
-            'action' => 'license.renewed',
-            'description' => 'Renewed a license.',
-            'metadata' => [
-                'price' => 75,
-                'attribution_type' => 'earned',
-            ],
-            'ip_address' => '127.0.0.1',
-            'created_at' => '2026-03-15 09:30:00',
-            'updated_at' => '2026-03-15 09:30:00',
-        ]);
+        $this->createEarnedActivity($tenant->id, $reseller->id, 75, '2026-03-15 09:30:00', 'license.renewed');
 
         Sanctum::actingAs($manager);
 
@@ -82,19 +58,7 @@ class ResellerPaymentsIndexTest extends TestCase
         $managerParent = $this->createUser('manager_parent', $tenant);
         $reseller = $this->createUser('reseller', $tenant);
 
-        ActivityLog::query()->create([
-            'tenant_id' => $tenant->id,
-            'user_id' => $reseller->id,
-            'action' => 'license.activated',
-            'description' => 'Activated a license.',
-            'metadata' => [
-                'price' => 120,
-                'attribution_type' => 'earned',
-            ],
-            'ip_address' => '127.0.0.1',
-            'created_at' => '2026-03-10 12:00:00',
-            'updated_at' => '2026-03-10 12:00:00',
-        ]);
+        $this->createEarnedActivity($tenant->id, $reseller->id, 120, '2026-03-10 12:00:00', 'license.activated');
 
         ResellerPayment::query()->create([
             'commission_id' => null,
@@ -124,19 +88,7 @@ class ResellerPaymentsIndexTest extends TestCase
         $manager = $this->createUser('manager', $tenant);
         $reseller = $this->createUser('reseller', $tenant, $manager);
 
-        ActivityLog::query()->create([
-            'tenant_id' => $tenant->id,
-            'user_id' => $reseller->id,
-            'action' => 'license.renewed',
-            'description' => 'Renewed a license.',
-            'metadata' => [
-                'price' => 75,
-                'attribution_type' => 'earned',
-            ],
-            'ip_address' => '127.0.0.1',
-            'created_at' => '2026-03-15 09:30:00',
-            'updated_at' => '2026-03-15 09:30:00',
-        ]);
+        $this->createEarnedActivity($tenant->id, $reseller->id, 75, '2026-03-15 09:30:00', 'license.renewed');
 
         ResellerPayment::query()->create([
             'commission_id' => null,
@@ -158,5 +110,44 @@ class ResellerPaymentsIndexTest extends TestCase
             ->assertJsonPath('data.0.amount_paid', 25)
             ->assertJsonPath('data.0.outstanding', 50)
             ->assertJsonPath('data.0.status', 'partial');
+    }
+
+    public function test_manager_parent_reseller_payments_index_can_be_scoped_to_a_manager_parent_subtree(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParentA = $this->createUser('manager_parent', $tenant);
+        $managerParentB = $this->createUser('manager_parent', $tenant);
+        $managerA = $this->createUser('manager', $tenant, $managerParentA);
+        $resellerA = $this->createUser('reseller', $tenant, $managerA);
+        $resellerB = $this->createUser('reseller', $tenant, $managerParentB);
+
+        $this->createEarnedActivity($tenant->id, $resellerA->id, 110, '2026-03-10 12:00:00', 'license.activated');
+        $this->createEarnedActivity($tenant->id, $resellerB->id, 210, '2026-03-11 12:00:00', 'license.activated');
+
+        Sanctum::actingAs($managerParentA);
+
+        $this->getJson('/api/reseller-payments?manager_parent_id='.$managerParentA->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.reseller_id', $resellerA->id)
+            ->assertJsonPath('summary.total_owed', 110);
+    }
+
+    private function createEarnedActivity(int $tenantId, int $sellerId, float $price, string $createdAt, string $action): void
+    {
+        $activity = new ActivityLog([
+            'tenant_id' => $tenantId,
+            'user_id' => $sellerId,
+            'action' => $action,
+            'description' => 'Revenue event for reseller payment tests.',
+            'metadata' => [
+                'price' => $price,
+                'attribution_type' => 'earned',
+            ],
+            'ip_address' => '127.0.0.1',
+        ]);
+        $activity->created_at = $createdAt;
+        $activity->updated_at = $createdAt;
+        $activity->saveQuietly();
     }
 }

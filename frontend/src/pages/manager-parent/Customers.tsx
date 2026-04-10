@@ -97,6 +97,8 @@ export function CustomersPage() {
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
     STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
   )
+  const scopeName = searchParams.get('scope_name') || ''
+  const scopeRole = normalizeScopeRole(searchParams.get('scope_role'))
   const [managerParentId, setManagerParentId] = useState<number | ''>(searchParams.get('manager_parent_id') ? Number(searchParams.get('manager_parent_id')) : '')
   const [managerId, setManagerId] = useState<number | ''>(searchParams.get('manager_id') ? Number(searchParams.get('manager_id')) : '')
   const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
@@ -536,8 +538,10 @@ export function CustomersPage() {
     if (managerId) next.set('manager_id', String(managerId))
     if (resellerId) next.set('reseller_id', String(resellerId))
     if (programId) next.set('program_id', String(programId))
+    if (scopeName) next.set('scope_name', scopeName)
+    if (scopeRole) next.set('scope_role', scopeRole)
     setSearchParams(next, { replace: true })
-  }, [managerId, managerParentId, page, perPage, programId, resellerId, search, setSearchParams, status])
+  }, [managerId, managerParentId, page, perPage, programId, resellerId, scopeName, scopeRole, search, setSearchParams, status])
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
   const durationDays = useMemo(() => {
@@ -562,6 +566,18 @@ export function CustomersPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t('managerParent.pages.customers.title')} description={t('managerParent.pages.customers.description')} actions={<Button type="button" onClick={() => navigate(routePaths.managerParent.customerCreate(lang))}><Plus className="me-2 h-4 w-4" />{t('managerParent.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}</Button>} />
+
+      {scopeRole ? (
+        <Card>
+          <CardContent className="p-4 text-sm text-sky-900 dark:text-sky-100">
+            <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900/60 dark:bg-sky-950/30">
+              {t('managerParent.pages.customers.scopeHint', {
+                name: scopeName || t(`managerParent.pages.customers.scopeRoles.${scopeRole}`),
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-3 gap-2 md:grid-cols-6">
         <StatusFilterCard
@@ -987,6 +1003,14 @@ function resolveUserRole(role?: string | null): UserRole | null {
   }
 
   return null
+}
+
+function normalizeScopeRole(value: string | null): 'manager_parent' | 'manager' | 'reseller' | '' {
+  if (value === 'manager_parent' || value === 'manager' || value === 'reseller') {
+    return value
+  }
+
+  return ''
 }
 
 function durationToDays(value: number, unit: 'minutes' | 'hours' | 'days' | DurationUnit) {

@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class TeamController extends BaseManagerParentController
@@ -21,16 +22,54 @@ class TeamController extends BaseManagerParentController
             'role' => ['nullable', 'in:manager,reseller'],
             'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
             'search' => ['nullable', 'string'],
+            'manager_parent_id' => ['nullable', 'integer'],
+            'manager_id' => ['nullable', 'integer'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $perPage = (int) ($validated['per_page'] ?? 10);
+        $tenantId = $this->currentTenantId($request);
+        $scope = $this->resolveTeamScope($tenantId, $validated);
 
         $paginator = User::query()
-            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('tenant_id', $tenantId)
             ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->when(! empty($validated['role']), fn ($query) => $query->where('role', $validated['role']))
+            ->when($scope['mode'] === 'manager_parent', function ($query) use ($scope): void {
+                $query->where(function ($builder) use ($scope): void {
+                    $builder
+                        ->where(function ($managerQuery) use ($scope): void {
+                            $managerQuery
+                                ->where('role', UserRole::MANAGER->value)
+                                ->where('created_by', $scope['manager_parent_id']);
+                        })
+                        ->orWhere(function ($resellerQuery) use ($scope): void {
+                            $resellerQuery
+                                ->where('role', UserRole::RESELLER->value)
+                                ->where(function ($ownerQuery) use ($scope): void {
+                                    $ownerQuery
+                                        ->where('created_by', $scope['manager_parent_id'])
+                                        ->orWhereIn('created_by', $scope['managed_manager_ids']);
+                                });
+                        });
+                });
+            })
+            ->when($scope['mode'] === 'manager', function ($query) use ($scope): void {
+                $query->where(function ($builder) use ($scope): void {
+                    $builder
+                        ->where(function ($managerQuery) use ($scope): void {
+                            $managerQuery
+                                ->where('role', UserRole::MANAGER->value)
+                                ->where('id', $scope['manager_id']);
+                        })
+                        ->orWhere(function ($resellerQuery) use ($scope): void {
+                            $resellerQuery
+                                ->where('role', UserRole::RESELLER->value)
+                                ->where('created_by', $scope['manager_id']);
+                        });
+                });
+            })
             ->when(! empty($validated['status']), function ($query) use ($validated): void {
                 if ($validated['status'] === 'deactive') {
                     $query->whereIn('status', ['suspended', 'inactive']);
@@ -58,6 +97,61 @@ class TeamController extends BaseManagerParentController
             'data' => $items->map(fn (User $user): array => $this->serializeUser($user, $stats))->values(),
             'meta' => $this->paginationMeta($paginator),
         ]);
+    }
+
+    /**
+     * @param array{manager_parent_id?: int, manager_id?: int} $validated
+     * @return array{mode: 'all'|'manager_parent'|'manager', manager_parent_id?: int, manager_id?: int, managed_manager_ids: array<int, int>}
+     */
+    private function resolveTeamScope(int $tenantId, array $validated): array
+    {
+        $managerParentId = isset($validated['manager_parent_id']) ? (int) $validated['manager_parent_id'] : 0;
+        $managerId = isset($validated['manager_id']) ? (int) $validated['manager_id'] : 0;
+
+        if ($managerId > 0) {
+            $manager = User::query()
+                ->where('tenant_id', $tenantId)
+                ->where('role', UserRole::MANAGER->value)
+                ->find($managerId);
+
+            if (! $manager) {
+                throw ValidationException::withMessages(['manager_id' => 'The selected manager is invalid for this tenant.']);
+            }
+
+            return [
+                'mode' => 'manager',
+                'manager_id' => $managerId,
+                'managed_manager_ids' => [],
+            ];
+        }
+
+        if ($managerParentId > 0) {
+            $managerParent = User::query()
+                ->where('tenant_id', $tenantId)
+                ->where('role', UserRole::MANAGER_PARENT->value)
+                ->find($managerParentId);
+
+            if (! $managerParent) {
+                throw ValidationException::withMessages(['manager_parent_id' => 'The selected manager parent is invalid for this tenant.']);
+            }
+
+            return [
+                'mode' => 'manager_parent',
+                'manager_parent_id' => $managerParentId,
+                'managed_manager_ids' => User::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('role', UserRole::MANAGER->value)
+                    ->where('created_by', $managerParentId)
+                    ->pluck('id')
+                    ->map(fn ($id): int => (int) $id)
+                    ->all(),
+            ];
+        }
+
+        return [
+            'mode' => 'all',
+            'managed_manager_ids' => [],
+        ];
     }
 
     public function store(Request $request): JsonResponse

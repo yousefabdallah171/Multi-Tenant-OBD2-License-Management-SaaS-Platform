@@ -521,6 +521,14 @@ export interface FinancialReportData {
   }>
 }
 
+export interface SellerScopeParams {
+  manager_parent_id?: number | ''
+  manager_id?: number | ''
+  reseller_id?: number | ''
+  scope_name?: string
+  scope_role?: 'manager_parent' | 'manager' | 'reseller' | ''
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
   meta: PaginationMeta

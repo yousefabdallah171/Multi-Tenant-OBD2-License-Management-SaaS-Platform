@@ -28,8 +28,9 @@ class FinancialReportAccountingTest extends TestCase
         Sanctum::actingAs($managerParent);
 
         $response = $this->getJson('/api/financial-reports?from=2026-03-01&to=2026-03-31')
-            ->assertOk()
-            ->assertJsonPath('data.summary.total_revenue', 40.0);
+            ->assertOk();
+
+        $this->assertSame(40.0, (float) $response->json('data.summary.total_revenue'));
 
         $rows = collect($response->json('data.reseller_balances'));
         $resellerRow = $rows->firstWhere('id', $reseller->id);
@@ -61,8 +62,9 @@ class FinancialReportAccountingTest extends TestCase
         Sanctum::actingAs($manager);
 
         $response = $this->getJson('/api/manager/reports/financial?from=2026-03-01&to=2026-03-31')
-            ->assertOk()
-            ->assertJsonPath('data.summary.total_revenue', 40.0);
+            ->assertOk();
+
+        $this->assertSame(40.0, (float) $response->json('data.summary.total_revenue'));
 
         $rows = collect($response->json('data.reseller_balances'));
         $resellerRow = $rows->firstWhere('id', $reseller->id);
@@ -89,11 +91,12 @@ class FinancialReportAccountingTest extends TestCase
 
         Sanctum::actingAs($reseller);
 
-        $this->getJson('/api/reseller/payment-status')
-            ->assertOk()
-            ->assertJsonPath('data.summary.total_sales', 140.0)
-            ->assertJsonPath('data.summary.total_paid', 30.0)
-            ->assertJsonPath('data.summary.outstanding_balance', 110.0);
+        $response = $this->getJson('/api/reseller/payment-status')
+            ->assertOk();
+
+        $this->assertSame(140.0, (float) $response->json('data.summary.total_sales'));
+        $this->assertSame(30.0, (float) $response->json('data.summary.total_paid'));
+        $this->assertSame(110.0, (float) $response->json('data.summary.outstanding_balance'));
     }
 
     public function test_super_admin_financial_report_exposes_seller_revenue_rows_without_balance_field(): void
@@ -119,9 +122,39 @@ class FinancialReportAccountingTest extends TestCase
         $this->assertArrayNotHasKey('balance', $resellerRow);
     }
 
+    public function test_manager_parent_financial_report_can_be_scoped_to_a_manager_subtree(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $managerA = $this->createUser('manager', $tenant, $managerParent);
+        $managerB = $this->createUser('manager', $tenant, $managerParent);
+        $resellerA = $this->createUser('reseller', $tenant, $managerA);
+        $resellerB = $this->createUser('reseller', $tenant, $managerB);
+
+        $this->createEarnedActivity($tenant->id, $managerA->id, 15, '2026-03-05 10:00:00', 'license.activated');
+        $this->createEarnedActivity($tenant->id, $resellerA->id, 40, '2026-03-06 10:00:00', 'license.renewed');
+        $this->createEarnedActivity($tenant->id, $managerB->id, 20, '2026-03-07 10:00:00', 'license.activated');
+        $this->createEarnedActivity($tenant->id, $resellerB->id, 80, '2026-03-08 10:00:00', 'license.renewed');
+
+        Sanctum::actingAs($managerParent);
+
+        $response = $this->getJson('/api/financial-reports?from=2026-03-01&to=2026-03-31&manager_id='.$managerA->id)
+            ->assertOk();
+
+        $this->assertSame(55.0, (float) $response->json('data.summary.total_revenue'));
+
+        $rows = collect($response->json('data.reseller_balances'));
+
+        $this->assertCount(2, $rows);
+        $this->assertNotNull($rows->firstWhere('id', $managerA->id));
+        $this->assertNotNull($rows->firstWhere('id', $resellerA->id));
+        $this->assertNull($rows->firstWhere('id', $managerB->id));
+        $this->assertNull($rows->firstWhere('id', $resellerB->id));
+    }
+
     private function createEarnedActivity(int $tenantId, int $sellerId, float $price, string $createdAt, string $action): void
     {
-        ActivityLog::query()->create([
+        $activity = new ActivityLog([
             'tenant_id' => $tenantId,
             'user_id' => $sellerId,
             'action' => $action,
@@ -131,9 +164,10 @@ class FinancialReportAccountingTest extends TestCase
                 'attribution_type' => 'earned',
             ],
             'ip_address' => '127.0.0.1',
-            'created_at' => $createdAt,
-            'updated_at' => $createdAt,
         ]);
+        $activity->created_at = $createdAt;
+        $activity->updated_at = $createdAt;
+        $activity->saveQuietly();
     }
 
     private function createPayment(int $resellerId, int $managerId, float $amount, string $paymentDate): void

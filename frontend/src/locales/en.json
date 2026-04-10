@@ -702,6 +702,7 @@
       "financialReports": {
         "title": "Reports",
         "description": "Review tenant revenue, seller debt, activation quality, retention, and export the current reporting view.",
+        "scopeHint": "Showing report data for {{name}} and its subtree only.",
         "totalTenantRevenue": "Total Tenant Revenue",
         "totalCustomers": "Total Customers",
         "activeCustomers": "Current Active Customers",
@@ -717,6 +718,11 @@
           "totalRevenue": "Total Revenue",
           "avgPrice": "Avg Price",
           "stillNotPaid": "Still Not Paid"
+        },
+        "scopeRoles": {
+          "manager_parent": "selected manager parent",
+          "manager": "selected manager",
+          "reseller": "selected reseller"
         }
       },
       "settings": {
@@ -752,6 +758,7 @@
       "customers": {
         "title": "Customers",
         "description": "Read-only customer directory with tenant-scoped filters for reseller, program, status, and BIOS search.",
+        "scopeHint": "Showing customers for {{name}} only.",
         "createDescription": "Create a customer profile or activate a license from the manager parent workspace.",
         "searchPlaceholder": "Search by customer, email, or BIOS ID",
         "allResellers": "All resellers",
@@ -765,7 +772,12 @@
         "biosLine": "BIOS {{biosId}}",
         "activatedBy": "Activated by {{reseller}}",
         "expiresLabel": "Expires {{date}}",
-        "addCustomer": "Add Customer"
+        "addCustomer": "Add Customer",
+        "scopeRoles": {
+          "manager_parent": "the selected manager parent subtree",
+          "manager": "the selected manager subtree",
+          "reseller": "the selected reseller"
+        }
       },
       "activity": {
         "title": "Panel Activity",
@@ -814,6 +826,7 @@
       "teamManagement": {
         "title": "Team Management",
         "description": "Invite and manage managers and resellers under this tenant. Revenue and customer counts are shown per member.",
+        "scopeHint": "Showing team members for {{name}} only.",
         "managerInvited": "Manager invited successfully.",
         "resellerInvited": "Reseller invited successfully.",
         "updateSuccess": "Team member updated successfully.",
@@ -838,7 +851,12 @@
         "saveChanges": "Save Changes",
         "createAccount": "Create Account",
         "deleteTitle": "Delete team member?",
-        "deleteDescription": "This will remove {{name}} from the team."
+        "deleteDescription": "This will remove {{name}} from the team.",
+        "scopeRoles": {
+          "manager_parent": "the selected manager parent subtree",
+          "manager": "the selected manager",
+          "reseller": "the selected reseller"
+        }
       },
       "teamNetwork": {
         "title": "Team Network",
@@ -1933,11 +1951,18 @@
       "creditHelpText": "You have already paid more than what is owed. This balance should be returned or credited to you.",
       "helpText": "This page shows how much you sold, how much you already paid to your manager, and how much is still left to pay."
     },
-      "filters": {
-        "period": "Period",
-        "allTimeHint": "Showing all-time reseller balances. Select a month to review a specific commission period.",
-        "monthHint": "Showing reseller balances for the selected month only."
-      },
+    "filters": {
+      "period": "Period",
+      "allTimeHint": "Showing all-time reseller balances. Select a month to review a specific commission period.",
+      "monthHint": "Showing reseller balances for the selected month only.",
+      "reportsDifferenceHint": "This page shows reseller commission balances only. Reports includes manager parent, manager, and reseller revenue, so totals here can be lower.",
+      "scopeHint": "Showing reseller balances for {{name}} only."
+    },
+    "scopeRoles": {
+      "manager_parent": "the selected manager parent subtree",
+      "manager": "the selected manager subtree",
+      "reseller": "the selected reseller"
+    },
     "columns": {
       "reseller": "Reseller",
       "period": "Period",
