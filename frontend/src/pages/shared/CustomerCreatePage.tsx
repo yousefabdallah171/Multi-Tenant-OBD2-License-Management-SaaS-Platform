@@ -332,7 +332,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }
 
     return next
-  }, [biosCheckResult, biosId, createLicenseNow, customerName, durationDays, email, isPresetSeller, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, usernameCheckResult, usernameIsLocked])
+  }, [availablePresets, biosCheckResult, biosId, createLicenseNow, customerName, durationDays, email, isPresetSeller, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, usernameCheckResult, usernameIsLocked])
 
   const createOnlyMutation = useMutation({
     mutationFn: () => createCustomer({
