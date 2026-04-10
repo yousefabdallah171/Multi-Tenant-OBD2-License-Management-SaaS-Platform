@@ -62,14 +62,15 @@ class OnlineUsersController extends Controller
             ->get(['id', 'name', 'role', 'last_seen_at']);
 
         return response()->json([
-            'data' => $users->map(function (User $user) use ($actor): array {
+            'data' => $users->map(function (User $user) use ($actor, $role): array {
                 $isSelf = (int) $user->id === (int) $actor->id;
                 $masked = $this->maskName((string) $user->name);
+                $canViewFullNames = $this->canViewFullNames($role);
 
                 return [
                     'id' => $user->id,
-                    'display_name' => $isSelf ? 'You' : $masked,
-                    'full_name' => $isSelf ? $user->name : null,
+                    'display_name' => $isSelf ? 'You' : ($canViewFullNames ? $user->name : $masked),
+                    'full_name' => $canViewFullNames || $isSelf ? $user->name : null,
                     'is_self' => $isSelf,
                     'masked_name' => $masked,
                     'role' => $user->role?->value ?? (string) $user->role,
@@ -104,5 +105,10 @@ class OnlineUsersController extends Controller
         $last = mb_substr($trimmed, -1);
 
         return $first.str_repeat('*', max(1, $length - 2)).$last;
+    }
+
+    private function canViewFullNames(string $role): bool
+    {
+        return in_array($role, [UserRole::SUPER_ADMIN->value, UserRole::MANAGER_PARENT->value], true);
     }
 }
