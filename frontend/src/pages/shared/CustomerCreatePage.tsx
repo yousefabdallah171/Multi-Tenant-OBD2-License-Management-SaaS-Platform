@@ -319,7 +319,10 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
     if (createLicenseNow) {
       if (isPresetSeller) {
-        if (availablePresets.length > 0 && !selectedPreset) next.duration = t('validation.required', { defaultValue: 'Field required' })
+        // Only validate if presets are loaded; selectedPreset has a fallback to availablePresets[0]
+        if (availablePresets.length === 0) {
+          next.duration = t('validation.required', { defaultValue: 'Field required' })
+        }
       } else if (durationDays < MIN_DURATION_DAYS) {
         next.duration = t('validation.invalidNumber', { defaultValue: 'Invalid number' })
       }
@@ -633,11 +636,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                         </Button>
                       ))}
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {selectedPreset
-                        ? `${t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • ${t('activate.presetPriceSummary', { price: selectedPreset.price.toFixed(2), defaultValue: '$ {{price}}' })}`
-                        : t('validation.required', { defaultValue: 'Field required' })}
-                    </p>
+                    {selectedPreset ? (
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • {t('activate.presetPriceSummary', { price: selectedPreset.price.toFixed(2), defaultValue: '$ {{price}}' })}
+                      </p>
+                    ) : null}
                   </div>
                 ) : (
                   <>
