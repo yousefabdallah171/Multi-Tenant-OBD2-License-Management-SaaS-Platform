@@ -36,32 +36,34 @@ class CustomerController extends BaseManagerParentController
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
+        $tenantId = $this->currentTenantId($request);
+        $scope = $this->resolveSellerScope($tenantId, [
+            'manager_parent_id' => ! empty($validated['manager_parent_id']) ? (int) $validated['manager_parent_id'] : null,
+            'manager_id' => ! empty($validated['manager_id']) ? (int) $validated['manager_id'] : null,
+            'reseller_id' => ! empty($validated['reseller_id']) ? (int) $validated['reseller_id'] : null,
+        ]);
 
         $query = User::query()
-            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('tenant_id', $tenantId)
             ->where('role', UserRole::CUSTOMER->value)
             ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
+                ->whereIn('reseller_id', $scope['seller_ids'])
                 ->select($this->licenseListColumns())
                 ->with(['program:id,name', 'reseller:id,name,role'])])
             ->latest();
 
-        $creatorIds = collect([
-            ! empty($validated['manager_parent_id']) ? (int) $validated['manager_parent_id'] : null,
-            ! empty($validated['manager_id']) ? (int) $validated['manager_id'] : null,
-        ])->filter()->values();
-
-        if ($creatorIds->isNotEmpty()) {
-            $query->whereIn('created_by', $creatorIds->all());
-        }
+        $query->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->whereIn('reseller_id', $scope['seller_ids']));
 
         if (! empty($validated['search'])) {
-            $query->where(function ($builder) use ($validated): void {
+            $query->where(function ($builder) use ($validated, $scope): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
-                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('bios_id', 'like', '%'.$validated['search'].'%'));
+                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
+                        ->whereIn('reseller_id', $scope['seller_ids'])
+                        ->where('bios_id', 'like', '%'.$validated['search'].'%'));
             });
         }
 
@@ -873,5 +875,73 @@ class CustomerController extends BaseManagerParentController
         throw ValidationException::withMessages([
             'email' => 'The provided email is already in use.',
         ]);
+    }
+
+    /**
+     * @param  array{manager_parent_id:?int,manager_id:?int,reseller_id:?int}  $validated
+     * @return array{seller_ids: array<int, int>}
+     */
+    private function resolveSellerScope(int $tenantId, array $validated): array
+    {
+        $team = User::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->select(['id', 'role', 'created_by'])
+            ->get();
+
+        $managerParents = $team->where('role', UserRole::MANAGER_PARENT->value)->values();
+        $managers = $team->where('role', UserRole::MANAGER->value)->values();
+        $resellers = $team->where('role', UserRole::RESELLER->value)->values();
+
+        if ($validated['reseller_id']) {
+            $reseller = $resellers->firstWhere('id', $validated['reseller_id']);
+            if (! $reseller) {
+                throw ValidationException::withMessages(['reseller_id' => 'The selected reseller is invalid for this tenant.']);
+            }
+
+            return [
+                'seller_ids' => [(int) $reseller->id],
+            ];
+        }
+
+        if ($validated['manager_id']) {
+            $manager = $managers->firstWhere('id', $validated['manager_id']);
+            if (! $manager) {
+                throw ValidationException::withMessages(['manager_id' => 'The selected manager is invalid for this tenant.']);
+            }
+
+            return [
+                'seller_ids' => collect([$manager->id])
+                    ->merge($resellers->where('created_by', $manager->id)->pluck('id'))
+                    ->map(fn ($id): int => (int) $id)
+                    ->unique()
+                    ->values()
+                    ->all(),
+            ];
+        }
+
+        if ($validated['manager_parent_id']) {
+            $managerParent = $managerParents->firstWhere('id', $validated['manager_parent_id']);
+            if (! $managerParent) {
+                throw ValidationException::withMessages(['manager_parent_id' => 'The selected manager parent is invalid for this tenant.']);
+            }
+
+            $managedManagerIds = $managers->where('created_by', $managerParent->id)->pluck('id')->map(fn ($id): int => (int) $id)->all();
+
+            return [
+                'seller_ids' => collect([$managerParent->id])
+                    ->merge($managedManagerIds)
+                    ->merge($resellers->where('created_by', $managerParent->id)->pluck('id'))
+                    ->merge($resellers->filter(fn (User $reseller): bool => in_array((int) $reseller->created_by, $managedManagerIds, true))->pluck('id'))
+                    ->map(fn ($id): int => (int) $id)
+                    ->unique()
+                    ->values()
+                    ->all(),
+            ];
+        }
+
+        return [
+            'seller_ids' => $team->pluck('id')->map(fn ($id): int => (int) $id)->all(),
+        ];
     }
 }

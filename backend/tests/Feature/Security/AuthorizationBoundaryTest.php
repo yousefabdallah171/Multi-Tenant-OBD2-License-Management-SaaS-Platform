@@ -317,6 +317,32 @@ class AuthorizationBoundaryTest extends TestCase
             ->assertJsonPath('data.0.id', $resellerA->id);
     }
 
+    public function test_manager_parent_customers_scope_uses_subtree_license_ownership_not_customer_creator(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $otherParent = $this->createUser('manager_parent', $tenant);
+        $managerA = $this->createUser('manager', $tenant, $managerParent, ['name' => 'Main Manager']);
+        $managerB = $this->createUser('manager', $tenant, $otherParent);
+        $resellerA = $this->createUser('reseller', $tenant, $managerA);
+        $resellerB = $this->createUser('reseller', $tenant, $managerB);
+        $scopedCustomer = $this->createUser('customer', $tenant, $resellerA, ['name' => 'Scoped Customer']);
+        $outsideCustomer = $this->createUser('customer', $tenant, $resellerB, ['name' => 'Outside Customer']);
+
+        $this->createLicense($resellerA, null, $scopedCustomer);
+        $this->createLicense($resellerB, null, $outsideCustomer);
+
+        Sanctum::actingAs($managerParent);
+
+        $response = $this->getJson('/api/customers?manager_id='.$managerA->id)
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1);
+
+        $customerIds = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertSame([$scopedCustomer->id], $customerIds);
+    }
+
     private function createEarnedActivity(int $tenantId, int $sellerId, float $price, string $createdAt): void
     {
         ActivityLog::query()->create([
