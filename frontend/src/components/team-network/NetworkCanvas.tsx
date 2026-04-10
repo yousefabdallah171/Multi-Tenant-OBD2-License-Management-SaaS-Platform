@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import {
   applyNodeChanges,
   Background,
@@ -12,6 +12,7 @@ import {
   type Edge,
   type Node,
   type ReactFlowInstance,
+  type Viewport,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { TenantRootNode } from '@/components/team-network/nodes/TenantRootNode'
@@ -62,6 +63,22 @@ function CanvasInner({
 }) {
   const [flowNodes, setFlowNodes] = useNodesState(nodes)
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(edges)
+
+  const storedViewport = useMemo<Viewport | undefined>(() => {
+    if (!storageKey || typeof window === 'undefined') return undefined
+    const raw = window.localStorage.getItem(`${storageKey}:viewport`)
+    if (!raw) return undefined
+    try {
+      return JSON.parse(raw) as Viewport
+    } catch {
+      return undefined
+    }
+  }, [storageKey])
+
+  const handleMoveEnd = useCallback((_event: unknown, viewport: Viewport) => {
+    if (!storageKey || typeof window === 'undefined') return
+    window.localStorage.setItem(`${storageKey}:viewport`, JSON.stringify(viewport))
+  }, [storageKey])
 
   const persistNodePositions = useCallback((nextNodes: Node[]) => {
     if (!storageKey || typeof window === 'undefined') {
@@ -146,6 +163,8 @@ function CanvasInner({
         edgeTypes={edgeTypes}
         minZoom={0.2}
         maxZoom={2}
+        defaultViewport={storedViewport}
+        onMoveEnd={handleMoveEnd}
         onInit={onInit}
       >
         <Background gap={18} size={1} color="#cbd5e1" />

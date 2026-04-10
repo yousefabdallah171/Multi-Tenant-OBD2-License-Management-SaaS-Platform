@@ -119,7 +119,11 @@ export function TeamNetworkPage() {
                 storageKey={user ? `team-network:${user.id}:${user.tenant_id ?? 'global'}` : 'team-network:guest'}
                 onInit={(instance) => {
                   setFlowInstance(instance)
-                  instance.fitView({ padding: 0.16 })
+                  const key = user ? `team-network:${user.id}:${user.tenant_id ?? 'global'}:viewport` : 'team-network:guest:viewport'
+                  const hasStoredViewport = !!window.localStorage.getItem(key)
+                  if (!hasStoredViewport) {
+                    instance.fitView({ padding: 0.16 })
+                  }
                 }}
               />
             </div>

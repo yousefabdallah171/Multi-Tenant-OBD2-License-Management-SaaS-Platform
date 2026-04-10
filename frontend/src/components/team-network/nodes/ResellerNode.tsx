@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from 'react'
-import { Banknote, KeyRound, Users } from 'lucide-react'
+import { Banknote, Users } from 'lucide-react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -52,17 +52,7 @@ export const ResellerNode = memo(function ResellerNode({ data }: NodeProps) {
           value={formatCurrency(nodeData.revenue, 'USD', locale)}
           onClick={() => visit(routePaths.managerParent.resellerPaymentDetail(nodeData.lang, nodeData.id))}
         />
-        <StatButton
-          icon={<KeyRound className="size-4 text-emerald-600 dark:text-emerald-300" />}
-          label={t('managerParent.pages.teamNetwork.activations')}
-          value={String(nodeData.activations_count)}
-          onClick={() => visit(buildScopedHref(routePaths.managerParent.customers(nodeData.lang), {
-            reseller_id: nodeData.id,
-            scope_name: nodeData.name,
-            scope_role: 'reseller',
-          }))}
-        />
-        <StatButton
+<StatButton
           icon={<Users className="size-4 text-emerald-600 dark:text-emerald-300" />}
           label={t('managerParent.pages.teamNetwork.customers')}
           value={String(nodeData.customers_count)}
