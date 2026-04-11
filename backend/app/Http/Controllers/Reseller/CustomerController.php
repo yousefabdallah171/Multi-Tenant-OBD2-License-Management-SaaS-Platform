@@ -10,6 +10,7 @@ use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
 use App\Services\LicenseService;
+use App\Support\CustomerOwnership;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
@@ -278,7 +279,7 @@ class CustomerController extends BaseResellerController
                     'bios_id' => $license->bios_id,
                     'program' => $license->program?->name,
                     'status' => $license->effectiveStatus(),
-                    'price' => (float) $license->price,
+                    'price' => CustomerOwnership::sanitizeDisplayPrice($license->price),
                     'activated_at' => $license->activated_at?->toIso8601String(),
                     'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
                     'expires_at' => $license->expires_at?->toIso8601String(),
@@ -375,30 +376,9 @@ class CustomerController extends BaseResellerController
 
         // Check if this customer's BIOS is owned by a DIFFERENT reseller
         // (active, suspended, scheduled, or paused — all block others from taking it)
-        $biosActiveElsewhere = false;
-        if ($license && $license->bios_id && $currentResellerId !== null) {
-            $biosIdLower = strtolower((string) $license->bios_id);
-            $biosActiveElsewhere = License::query()
-                ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
-                ->where('reseller_id', '!=', $currentResellerId)
-                ->where(function ($q): void {
-                    $q->whereIn('status', ['active', 'suspended'])
-                      ->orWhere(function ($q2): void {
-                          // scheduled-pending
-                          $q2->where('status', 'pending')->where('is_scheduled', true);
-                      })
-                      ->orWhere(function ($q2): void {
-                          // paused-pending
-                          $q2->where('status', 'pending')
-                             ->where(function ($q3): void {
-                                 $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
-                             })
-                             ->whereNotNull('paused_at')
-                             ->where('pause_remaining_minutes', '>', 0);
-                      });
-                })
-                ->exists();
-        }
+        $biosActiveElsewhere = $license && $license->bios_id && $currentResellerId !== null
+            ? CustomerOwnership::hasBlockingOwnershipElsewhere((string) $license->bios_id, $license->id, $currentResellerId)
+            : false;
 
         return [
             'id' => $user->id,
@@ -414,7 +394,7 @@ class CustomerController extends BaseResellerController
             'program_id' => $license?->program_id,
             'duration_days' => $license ? (float) $license->duration_days : null,
             'status' => $license?->effectiveStatus() ?? 'pending',
-            'price' => $license ? (float) $license->price : 0,
+            'price' => $license ? CustomerOwnership::sanitizeDisplayPrice($license->price) : 0,
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),
@@ -439,17 +419,11 @@ class CustomerController extends BaseResellerController
      */
     private function resolveDisplayLicense(User $user, array $filters = []): ?License
     {
-        $licenses = $user->customerLicenses->sortByDesc(
-            fn (License $license) => ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0
+        return CustomerOwnership::resolveDisplayLicense(
+            $user->customerLicenses,
+            fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters),
+            $this->hasScopedLicenseFilters($filters),
         );
-
-        $filtered = $licenses->filter(fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters));
-
-        if ($filtered->isNotEmpty()) {
-            return $filtered->first();
-        }
-
-        return $this->hasScopedLicenseFilters($filters) ? null : $licenses->first();
     }
 
     /**

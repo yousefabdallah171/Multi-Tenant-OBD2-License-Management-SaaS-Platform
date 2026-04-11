@@ -857,7 +857,7 @@ export function CustomersPage() {
                   </div>
                 </div>
               ) : (
-                <Input type="date" value={activationForm.end_date} onChange={(event) => setActivationForm((current) => ({ ...current, end_date: event.target.value }))} />
+                <Input type="datetime-local" value={activationForm.end_date} onChange={(event) => setActivationForm((current) => ({ ...current, end_date: event.target.value }))} />
               )}
 
               <div className="space-y-3 rounded-2xl border border-slate-200 p-3 dark:border-slate-800">

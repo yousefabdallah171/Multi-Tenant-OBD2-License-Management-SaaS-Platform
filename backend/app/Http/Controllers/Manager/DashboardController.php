@@ -96,7 +96,7 @@ class DashboardController extends BaseManagerController
 
             return [
                 'team_resellers' => count($resellerIds),
-                'team_customers' => $this->teamCustomersQuery($request)->count(),
+                'team_customers' => $this->currentOwnedCustomerCount($request),
                 'active_licenses' => (int) (clone $licenseQuery)
                     ->whereEffectivelyActive()
                     ->whereNotNull('customer_id')

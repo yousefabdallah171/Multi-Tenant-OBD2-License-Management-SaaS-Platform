@@ -11,6 +11,7 @@ use App\Models\Program;
 use App\Models\UserIpLog;
 use App\Models\User;
 use App\Services\LicenseService;
+use App\Support\CustomerOwnership;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -139,6 +140,7 @@ class CustomerController extends BaseManagerParentController
                 ->with(['program:id,name', 'reseller:id,name,email,role']),
             'createdBy:id,name,email',
         ]);
+        $displayLicense = $this->resolveDisplayLicense($user);
         $currentBiosByLicense = $user->customerLicenses
             ->mapWithKeys(fn (License $license): array => [$license->id => strtolower((string) $license->bios_id)])
             ->all();
@@ -214,7 +216,7 @@ class CustomerController extends BaseManagerParentController
         return response()->json([
             'data' => [
                 ...$this->serializeCustomer($user),
-                'username' => $user->customerLicenses->sortByDesc('activated_at')->first()?->external_username ?: $user->username,
+                'username' => $displayLicense?->external_username ?: $user->username,
                 'phone' => $user->phone,
                 'created_by' => $user->createdBy ? [
                     'id' => $user->createdBy->id,
@@ -233,7 +235,7 @@ class CustomerController extends BaseManagerParentController
                     'reseller_role' => $license->reseller?->role?->value ?? ($license->reseller ? (string) $license->reseller->role : null),
                     'status' => $license->effectiveStatus(),
                     'duration_days' => (float) $license->duration_days,
-                    'price' => (float) $license->price,
+                    'price' => CustomerOwnership::sanitizeDisplayPrice($license->price),
                     'activated_at' => $license->activated_at?->toIso8601String(),
                     'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
                     'expires_at' => $license->expires_at?->toIso8601String(),
@@ -681,6 +683,7 @@ class CustomerController extends BaseManagerParentController
             'duration_days' => $license ? (float) $license->duration_days : null,
             'program' => $license?->program?->name,
             'status' => $license?->effectiveStatus() ?? 'pending',
+            'price' => $license ? CustomerOwnership::sanitizeDisplayPrice($license->price) : 0,
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),
@@ -695,11 +698,7 @@ class CustomerController extends BaseManagerParentController
             'pause_reason' => $license?->pause_reason,
             'is_blacklisted' => $license ? BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id) : false,
             'bios_active_elsewhere' => $license && $license->bios_id
-                ? License::query()
-                    ->whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])
-                    ->where('id', '!=', $license->id)
-                    ->whereIn('status', ['active', 'suspended'])
-                    ->exists()
+                ? CustomerOwnership::hasBlockingOwnershipElsewhere((string) $license->bios_id, $license->id)
                 : false,
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
@@ -721,7 +720,7 @@ class CustomerController extends BaseManagerParentController
             'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),
             'duration_days' => (float) $license->duration_days,
-            'price' => (float) $license->price,
+            'price' => CustomerOwnership::sanitizeDisplayPrice($license->price),
             'status' => $license->effectiveStatus(),
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_reason' => $license->pause_reason,
@@ -733,17 +732,11 @@ class CustomerController extends BaseManagerParentController
      */
     private function resolveDisplayLicense(User $user, array $filters = []): ?License
     {
-        $licenses = $user->customerLicenses->sortByDesc(
-            fn (License $license) => ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0
+        return CustomerOwnership::resolveDisplayLicense(
+            $user->customerLicenses,
+            fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters),
+            $this->hasScopedLicenseFilters($filters),
         );
-
-        $filtered = $licenses->filter(fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters));
-
-        if ($filtered->isNotEmpty()) {
-            return $filtered->first();
-        }
-
-        return $this->hasScopedLicenseFilters($filters) ? null : $licenses->first();
     }
 
     /**
@@ -910,8 +903,13 @@ class CustomerController extends BaseManagerParentController
                 throw ValidationException::withMessages(['manager_id' => 'The selected manager is invalid for this tenant.']);
             }
 
+            $scopedSellers = collect([$manager])
+                ->merge($resellers->where('created_by', $manager->id)->values())
+                ->unique('id')
+                ->values();
+
             return [
-                'seller_ids' => [(int) $manager->id],
+                'seller_ids' => $scopedSellers->pluck('id')->map(fn ($id): int => (int) $id)->all(),
             ];
         }
 
@@ -921,8 +919,17 @@ class CustomerController extends BaseManagerParentController
                 throw ValidationException::withMessages(['manager_parent_id' => 'The selected manager parent is invalid for this tenant.']);
             }
 
+            $managedManagers = $managers->where('created_by', $managerParent->id)->values();
+            $managedManagerIds = $managedManagers->pluck('id')->map(fn ($id): int => (int) $id)->all();
+            $scopedSellers = collect([$managerParent])
+                ->merge($managedManagers)
+                ->merge($resellers->where('created_by', $managerParent->id)->values())
+                ->merge($resellers->filter(fn (User $reseller): bool => in_array((int) $reseller->created_by, $managedManagerIds, true))->values())
+                ->unique('id')
+                ->values();
+
             return [
-                'seller_ids' => [(int) $managerParent->id],
+                'seller_ids' => $scopedSellers->pluck('id')->map(fn ($id): int => (int) $id)->all(),
             ];
         }
 

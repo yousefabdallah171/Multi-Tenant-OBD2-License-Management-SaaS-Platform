@@ -11,6 +11,7 @@ use App\Models\Program;
 use App\Models\UserIpLog;
 use App\Models\User;
 use App\Services\LicenseService;
+use App\Support\CustomerOwnership;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -138,6 +139,7 @@ class CustomerController extends BaseManagerController
                 ->with(['program:id,name', 'reseller:id,name,email,role']),
             'createdBy:id,name,email',
         ]);
+        $displayLicense = $this->resolveDisplayLicense($customer);
         $currentBiosByLicense = $customer->customerLicenses
             ->mapWithKeys(fn (License $license): array => [$license->id => strtolower((string) $license->bios_id)])
             ->all();
@@ -217,7 +219,7 @@ class CustomerController extends BaseManagerController
         return response()->json([
             'data' => [
                 ...$this->serializeCustomer($customer),
-                'username' => $customer->customerLicenses->sortByDesc('activated_at')->first()?->external_username ?: $customer->username,
+                'username' => $displayLicense?->external_username ?: $customer->username,
                 'phone' => $customer->phone,
                 'created_by' => $customer->createdBy ? [
                     'id' => $customer->createdBy->id,
@@ -236,7 +238,7 @@ class CustomerController extends BaseManagerController
                     'reseller_role' => $license->reseller?->role?->value ?? ($license->reseller ? (string) $license->reseller->role : null),
                     'status' => $license->effectiveStatus(),
                     'duration_days' => (float) $license->duration_days,
-                    'price' => (float) $license->price,
+                    'price' => CustomerOwnership::sanitizeDisplayPrice($license->price),
                     'activated_at' => $license->activated_at?->toIso8601String(),
                     'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
                     'expires_at' => $license->expires_at?->toIso8601String(),
@@ -687,6 +689,7 @@ class CustomerController extends BaseManagerController
             'duration_days' => $license ? (float) $license->duration_days : null,
             'program' => $license?->program?->name,
             'status' => $license?->effectiveStatus() ?? 'pending',
+            'price' => $license ? CustomerOwnership::sanitizeDisplayPrice($license->price) : 0,
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),
@@ -701,11 +704,7 @@ class CustomerController extends BaseManagerController
             'pause_reason' => $license?->pause_reason,
             'is_blacklisted' => $license ? BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id) : false,
             'bios_active_elsewhere' => $license && $license->bios_id
-                ? License::query()
-                    ->whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])
-                    ->where('id', '!=', $license->id)
-                    ->whereIn('status', ['active', 'suspended'])
-                    ->exists()
+                ? CustomerOwnership::hasBlockingOwnershipElsewhere((string) $license->bios_id, $license->id)
                 : false,
             'license_count' => $user->customerLicenses->count(),
             'has_active_license' => $hasActiveLicense,
@@ -727,7 +726,7 @@ class CustomerController extends BaseManagerController
             'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),
             'duration_days' => (float) $license->duration_days,
-            'price' => (float) $license->price,
+            'price' => CustomerOwnership::sanitizeDisplayPrice($license->price),
             'status' => $license->effectiveStatus(),
             'paused_at' => $license->paused_at?->toIso8601String(),
             'pause_reason' => $license->pause_reason,
@@ -739,17 +738,11 @@ class CustomerController extends BaseManagerController
      */
     private function resolveDisplayLicense(User $user, array $filters = []): ?License
     {
-        $licenses = $user->customerLicenses->sortByDesc(
-            fn (License $license) => ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0
+        return CustomerOwnership::resolveDisplayLicense(
+            $user->customerLicenses,
+            fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters),
+            $this->hasScopedLicenseFilters($filters),
         );
-
-        $filtered = $licenses->filter(fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters));
-
-        if ($filtered->isNotEmpty()) {
-            return $filtered->first();
-        }
-
-        return $this->hasScopedLicenseFilters($filters) ? null : $licenses->first();
     }
 
     /**

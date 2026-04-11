@@ -15,6 +15,7 @@ use App\Models\License;
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
 use App\Models\User;
+use App\Support\CustomerOwnership;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -115,6 +116,7 @@ class LicenseService
             $durationDays = $preset ? (float) $preset->duration_days : (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
             $price = $preset ? (float) $preset->price : (float) $data['price'];
+            $this->assertReasonablePrice($price);
             $activationAnchor = $scheduledAt ?? $this->currentMinute();
             $activatedAt = $isScheduled ? null : $this->currentMinute();
 
@@ -261,6 +263,7 @@ class LicenseService
             $scheduledAt = $isScheduled ? $this->normalizeToMinute(Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc()) : null;
             $expiresAt = ($scheduledAt?->copy() ?? $anchor->copy())->addMinutes($durationMinutes);
             $activatedAt = $license->activated_at;
+            $this->assertReasonablePrice((float) $data['price']);
 
             if ($isScheduled) {
                 if ($license->status !== 'active' || ! $license->activated_at) {
@@ -1683,5 +1686,14 @@ class LicenseService
                 ? BalanceService::TYPE_EARNED
                 : BalanceService::TYPE_GRANTED,
         ];
+    }
+
+    private function assertReasonablePrice(float $price): void
+    {
+        if ($price < 0 || $price > CustomerOwnership::MAX_REASONABLE_PRICE) {
+            throw ValidationException::withMessages([
+                'price' => 'The price exceeds the allowed range.',
+            ]);
+        }
     }
 }

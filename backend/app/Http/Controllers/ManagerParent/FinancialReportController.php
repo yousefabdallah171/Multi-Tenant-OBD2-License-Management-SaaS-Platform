@@ -7,6 +7,7 @@ use App\Models\License;
 use App\Models\User;
 use App\Services\SellerAccountingService;
 use App\Services\ExportTaskService;
+use App\Support\CustomerOwnership;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -39,11 +40,7 @@ class FinancialReportController extends BaseManagerParentController
             ->selectRaw(RevenueAnalytics::revenueSumExpression('granted', 'activity_logs', 'granted_value'))
             ->first();
         $totalActivations = (int) (clone $baseQuery)->count();
-        $totalCustomers = User::query()
-            ->where('tenant_id', $tenantId)
-            ->where('role', UserRole::CUSTOMER->value)
-            ->whereHas('customerLicenses', fn ($q) => $q->whereIn('reseller_id', $scope['seller_ids']))
-            ->count();
+        $totalCustomers = CustomerOwnership::currentOwnedCustomerCount($scope['seller_ids'], $tenantId);
         $revenueByReseller = $this->revenueQuery($tenantId, $validated, $scope)
             ->leftJoin('users as resellers', 'resellers.id', '=', 'activity_logs.user_id')
             ->selectRaw("COALESCE(resellers.name, 'Unknown') as reseller")

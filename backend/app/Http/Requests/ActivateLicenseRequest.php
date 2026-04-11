@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\UserRole;
+use App\Support\CustomerOwnership;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -37,11 +38,10 @@ class ActivateLicenseRequest extends FormRequest
                 }),
             ],
             'duration_days' => [$isReseller ? 'nullable' : 'required', 'numeric', 'min:0.0001', 'max:36500'],
-            'price' => [$isReseller ? 'nullable' : 'required', 'numeric', 'min:0', 'max:99999999.99'],
+            'price' => [$isReseller ? 'nullable' : 'required', 'numeric', 'min:0', 'max:'.CustomerOwnership::MAX_REASONABLE_PRICE],
             'is_scheduled' => ['nullable', 'boolean'],
             'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
             'scheduled_timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
         ];
     }
 }
-

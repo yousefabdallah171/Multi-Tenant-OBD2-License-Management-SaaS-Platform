@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
+use App\Support\CustomerOwnership;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -65,6 +66,11 @@ abstract class BaseManagerController extends Controller
         return User::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->whereIn('id', $customerIds);
+    }
+
+    protected function currentOwnedCustomerCount(Request $request): int
+    {
+        return CustomerOwnership::currentOwnedCustomerCount($this->teamSellerIds($request), $this->currentTenantId($request));
     }
 
     protected function teamUsersQuery(Request $request)

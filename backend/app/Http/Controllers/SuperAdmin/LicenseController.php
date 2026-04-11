@@ -8,6 +8,7 @@ use App\Models\Program;
 use App\Models\User;
 use App\Services\ExternalApiService;
 use App\Services\LicenseService;
+use App\Support\CustomerOwnership;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,23 +46,38 @@ class LicenseController extends BaseSuperAdminController
     {
         $validated = $request->validate([
             'customer_id' => ['required', 'integer', 'exists:users,id'],
+            'seller_id' => ['required', 'integer', 'exists:users,id'],
             'bios_id' => ['required', 'string', 'min:5'],
             'program_id' => ['required', 'integer', 'exists:programs,id'],
             'license_type' => ['nullable', 'string'],
-            'price' => ['required', 'numeric', 'min:0'],
+            'price' => ['required', 'numeric', 'min:0', 'max:'.CustomerOwnership::MAX_REASONABLE_PRICE],
             'duration_months' => ['required', 'integer', 'min:1'],
         ]);
 
         $biosId = strtolower($validated['bios_id']);
         $customer = User::query()->find($validated['customer_id']);
         $program = Program::query()->find($validated['program_id']);
+        $seller = User::query()->find($validated['seller_id']);
 
         if (! $customer) {
             throw ValidationException::withMessages(['customer_id' => 'Customer not found']);
         }
 
+        if (! $seller) {
+            throw ValidationException::withMessages(['seller_id' => 'Seller not found']);
+        }
+
         if (! $program) {
             throw ValidationException::withMessages(['program_id' => 'Program not found']);
+        }
+
+        if ((int) $seller->tenant_id !== (int) $customer->tenant_id) {
+            throw ValidationException::withMessages(['seller_id' => 'Seller must belong to the same tenant as the customer.']);
+        }
+
+        $sellerRole = $seller->role?->value ?? (string) $seller->role;
+        if (! in_array($sellerRole, ['reseller', 'manager', 'manager_parent'], true)) {
+            throw ValidationException::withMessages(['seller_id' => 'The selected seller cannot own licenses.']);
         }
 
         $usernameLower = strtolower((string) $customer->username);
@@ -123,17 +139,21 @@ class LicenseController extends BaseSuperAdminController
         }
 
         $tenantId = $customer->tenant_id;
-        $license = DB::transaction(function () use ($customer, $validated, $biosId, $tenantId) {
+        $license = DB::transaction(function () use ($customer, $seller, $validated, $biosId, $tenantId) {
+            $durationMonths = (int) $validated['duration_months'];
             $license = License::create([
                 'customer_id' => $customer->id,
+                'reseller_id' => $seller->id,
+                'created_by_reseller_id' => $seller->id,
                 'program_id' => $validated['program_id'],
                 'bios_id' => $biosId,
                 'external_username' => $customer->username,
                 'status' => 'active',
                 'price' => $validated['price'],
-                'license_type' => $validated['license_type'],
+                'license_type' => $validated['license_type'] ?? null,
+                'duration_days' => $durationMonths * 30,
                 'starts_at' => now(),
-                'expires_at' => now()->addMonths($validated['duration_months']),
+                'expires_at' => now()->addMonths($durationMonths),
                 'tenant_id' => $tenantId,
             ]);
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\License;
 use App\Models\User;
+use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class LicenseController extends Controller
                 }),
             ],
             'duration_days' => [$durationNullable ? 'nullable' : 'required', 'numeric', 'min:0.0001', 'max:36500'],
-            'price' => [$durationNullable ? 'nullable' : 'required', 'numeric', 'min:0', 'max:99999999.99'],
+            'price' => [$durationNullable ? 'nullable' : 'required', 'numeric', 'min:0', 'max:'.CustomerOwnership::MAX_REASONABLE_PRICE],
             'is_scheduled' => ['nullable', 'boolean'],
             'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
             'scheduled_timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
@@ -100,7 +101,7 @@ class LicenseController extends Controller
     {
         $validated = $request->validate([
             'duration_days' => ['required', 'numeric', 'min:0.0001', 'max:36500'],
-            'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'price' => ['required', 'numeric', 'min:0', 'max:'.CustomerOwnership::MAX_REASONABLE_PRICE],
             'is_scheduled' => ['nullable', 'boolean'],
             'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
             'scheduled_timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
@@ -202,7 +203,7 @@ class LicenseController extends Controller
         $validated = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'duration_days' => ['required', 'numeric', 'min:0.0001', 'max:36500'],
-            'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'price' => ['required', 'numeric', 'min:0', 'max:'.CustomerOwnership::MAX_REASONABLE_PRICE],
         ]);
 
         $ids = collect($validated['ids'])

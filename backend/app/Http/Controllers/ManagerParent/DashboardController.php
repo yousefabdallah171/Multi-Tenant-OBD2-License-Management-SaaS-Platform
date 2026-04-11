@@ -7,6 +7,7 @@ use App\Models\BiosConflict;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use App\Support\CustomerOwnership;
 use App\Support\RevenueAnalytics;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -252,6 +253,9 @@ class DashboardController extends BaseManagerParentController
             $metrics = License::query()
                 ->where('tenant_id', $tenantId)
                 ->whereIn('reseller_id', $resellerIds)
+                ->where(function ($query): void {
+                    CustomerOwnership::applyBlockingOwnershipScope($query);
+                })
                 ->selectRaw('reseller_id, COUNT(*) as activations, COUNT(DISTINCT customer_id) as customers')
                 ->groupBy('reseller_id')
                 ->get()

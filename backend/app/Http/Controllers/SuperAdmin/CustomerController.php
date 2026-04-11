@@ -10,6 +10,7 @@ use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
 use App\Models\UserIpLog;
+use App\Support\CustomerOwnership;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -101,6 +102,7 @@ class CustomerController extends BaseSuperAdminController
                 ->with(['program:id,name', 'reseller:id,name,email,role']),
             'createdBy:id,name,email',
         ]);
+        $displayLicense = $this->resolveDisplayLicense($user);
         $currentBiosByLicense = $user->customerLicenses
             ->mapWithKeys(fn (License $license): array => [$license->id => strtolower((string) $license->bios_id)])
             ->all();
@@ -174,7 +176,7 @@ class CustomerController extends BaseSuperAdminController
         return response()->json([
             'data' => [
                 ...$this->serializeCustomer($user),
-                'username' => $this->resolveCustomerUsername($user, $user->customerLicenses->sortByDesc('activated_at')->first()),
+                'username' => $this->resolveCustomerUsername($user, $displayLicense),
                 'phone' => $user->phone,
                 'tenant' => $user->tenant ? [
                     'id' => $user->tenant->id,
@@ -199,7 +201,7 @@ class CustomerController extends BaseSuperAdminController
                     'reseller_role' => $license->reseller?->role?->value ?? ($license->reseller ? (string) $license->reseller->role : null),
                     'status' => $license->effectiveStatus(),
                     'duration_days' => (float) $license->duration_days,
-                    'price' => (float) $license->price,
+                    'price' => CustomerOwnership::sanitizeDisplayPrice($license->price),
                     'activated_at' => $license->activated_at?->toIso8601String(),
                     'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
                     'expires_at' => $license->expires_at?->toIso8601String(),
@@ -453,11 +455,7 @@ class CustomerController extends BaseSuperAdminController
             $cacheKey = strtolower((string) $license->bios_id);
             $biosActiveElsewhere = isset($activeBiosCache[$cacheKey]) && $activeBiosCache[$cacheKey] > 1;
         } elseif ($license && $license->bios_id) {
-            $biosActiveElsewhere = License::query()
-                ->whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])
-                ->where('id', '!=', $license->id)
-                ->whereIn('status', ['active', 'suspended'])
-                ->exists();
+            $biosActiveElsewhere = CustomerOwnership::hasBlockingOwnershipElsewhere((string) $license->bios_id, $license->id);
         }
 
         return [
@@ -482,6 +480,7 @@ class CustomerController extends BaseSuperAdminController
             'duration_days' => $license ? (float) $license->duration_days : null,
             'program' => $license?->program?->name,
             'status' => $license?->effectiveStatus() ?? 'pending',
+            'price' => $license ? CustomerOwnership::sanitizeDisplayPrice($license->price) : 0,
             'activated_at' => $license?->activated_at?->toIso8601String(),
             'start_at' => ($license?->scheduled_at ?? $license?->activated_at)?->toIso8601String(),
             'expiry' => $license?->expires_at?->toIso8601String(),
@@ -506,17 +505,11 @@ class CustomerController extends BaseSuperAdminController
      */
     private function resolveDisplayLicense(User $user, array $filters = []): ?License
     {
-        $licenses = $user->customerLicenses->sortByDesc(
-            fn (License $license) => ($license->scheduled_at ?? $license->activated_at ?? $license->expires_at)?->getTimestamp() ?? 0
+        return CustomerOwnership::resolveDisplayLicense(
+            $user->customerLicenses,
+            fn (License $license): bool => $this->licenseMatchesTenantFilter($license, $filters),
+            ! empty($filters['tenant_id']),
         );
-
-        $tenantScoped = $licenses->filter(fn (License $license): bool => $this->licenseMatchesTenantFilter($license, $filters));
-
-        if ($tenantScoped->isNotEmpty()) {
-            return $tenantScoped->first();
-        }
-
-        return ! empty($filters['tenant_id']) ? null : $licenses->first();
     }
 
     /**

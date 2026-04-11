@@ -31,11 +31,7 @@ abstract class BaseResellerController extends Controller
         return User::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('role', UserRole::CUSTOMER->value)
-            ->where(function ($builder) use ($request): void {
-                $builder
-                    ->where('created_by', $this->currentReseller($request)->id)
-                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('reseller_id', $this->currentReseller($request)->id));
-            });
+            ->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('reseller_id', $this->currentReseller($request)->id));
     }
 
     protected function licenseQuery(Request $request)

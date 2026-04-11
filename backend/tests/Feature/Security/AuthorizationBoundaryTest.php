@@ -3,6 +3,7 @@
 namespace Tests\Feature\Security;
 
 use App\Models\ActivityLog;
+use App\Models\License;
 use App\Models\ProgramDurationPreset;
 use App\Models\UserBalance;
 use Illuminate\Support\Facades\Cache;
@@ -37,6 +38,14 @@ class AuthorizationBoundaryTest extends TestCase
         $managerB = $this->createUser('manager', $tenant);
         $resellerB = $this->createUser('reseller', $tenant, $managerB);
         $program = $this->createProgram($tenant);
+        $preset = ProgramDurationPreset::query()->create([
+            'program_id' => $program->id,
+            'label' => '30 Days',
+            'duration_days' => 30,
+            'price' => 25,
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
 
         Sanctum::actingAs($managerA);
 
@@ -45,6 +54,7 @@ class AuthorizationBoundaryTest extends TestCase
             'seller_id' => $resellerB->id,
             'customer_name' => 'Escalation Attempt',
             'bios_id' => 'TEAMLOCK1',
+            'preset_id' => $preset->id,
             'duration_days' => 30,
             'price' => 25,
             'is_scheduled' => true,
@@ -341,6 +351,97 @@ class AuthorizationBoundaryTest extends TestCase
         $customerIds = collect($response->json('data'))->pluck('id')->all();
 
         $this->assertSame([$scopedCustomer->id], $customerIds);
+    }
+
+    public function test_reseller_sees_historical_customer_as_expired_after_manager_parent_takeover_and_counts_drop_to_current_owners_only(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $reseller = $this->createUser('reseller', $tenant, $managerParent, ['name' => 'Legacy Reseller']);
+        $customer = $this->createUser('customer', $tenant, $reseller, ['name' => 'Takeover Customer']);
+        $program = $this->createProgram($tenant);
+
+        $this->createLicense($reseller, $program, $customer, [
+            'bios_id' => 'TAKEOVER1',
+            'status' => 'expired',
+            'price' => 60,
+            'activated_at' => now()->subDays(40),
+            'expires_at' => now()->subDays(10),
+        ]);
+
+        $this->createLicense($managerParent, $program, $customer, [
+            'bios_id' => 'TAKEOVER1',
+            'status' => 'active',
+            'price' => 75,
+            'activated_at' => now()->subDay(),
+            'expires_at' => now()->addDays(29),
+        ]);
+
+        Sanctum::actingAs($reseller);
+
+        $customers = $this->getJson('/api/reseller/customers')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1);
+
+        $this->assertSame('expired', $customers->json('data.0.status'));
+        $this->assertTrue((bool) $customers->json('data.0.bios_active_elsewhere'));
+
+        $this->getJson('/api/reseller/reports/summary')
+            ->assertOk()
+            ->assertJsonPath('data.total_customers', 0)
+            ->assertJsonPath('data.active_customers', 0);
+
+        $this->getJson('/api/reseller/dashboard/stats')
+            ->assertOk()
+            ->assertJsonPath('stats.customers', 0)
+            ->assertJsonPath('stats.active_licenses', 0);
+    }
+
+    public function test_manager_parent_activation_rejects_unreasonable_price(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $program = $this->createProgram($tenant);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->postJson('/api/licenses/activate', [
+            'program_id' => $program->id,
+            'customer_name' => 'price_guard',
+            'bios_id' => 'PRICE123',
+            'duration_days' => 30,
+            'price' => 25000,
+            'is_scheduled' => true,
+            'scheduled_date_time' => now()->addDay()->toIso8601String(),
+            'scheduled_timezone' => 'UTC',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('price');
+    }
+
+    public function test_super_admin_force_activate_assigns_the_selected_seller_as_owner(): void
+    {
+        $superAdmin = $this->createUser('super_admin');
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $customer = $this->createUser('customer', $tenant, $managerParent);
+        $program = $this->createProgram($tenant);
+
+        Sanctum::actingAs($superAdmin);
+
+        $response = $this->postJson('/api/super-admin/licenses/force-activate', [
+            'customer_id' => $customer->id,
+            'seller_id' => $managerParent->id,
+            'bios_id' => 'FORCE123',
+            'program_id' => $program->id,
+            'price' => 50,
+            'duration_months' => 1,
+        ])->assertCreated();
+
+        $licenseId = (int) $response->json('data.id');
+        $license = License::query()->findOrFail($licenseId);
+
+        $this->assertSame($managerParent->id, (int) $license->reseller_id);
     }
 
     private function createEarnedActivity(int $tenantId, int $sellerId, float $price, string $createdAt): void

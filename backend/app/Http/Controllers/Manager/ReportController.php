@@ -88,7 +88,7 @@ class ReportController extends BaseManagerController
                         'total_revenue' => round((float) ($summary?->total_revenue ?? 0), 2),
                         'granted_value' => round((float) ($summary?->granted_value ?? 0), 2),
                         'total_activations' => $totalActivations,
-                        'total_customers' => $this->teamCustomersQuery($request)->count(),
+                        'total_customers' => $this->currentOwnedCustomerCount($request),
                         'active_customers' => $activeCustomers,
                         'active_licenses' => $activeCustomers,
                     ],

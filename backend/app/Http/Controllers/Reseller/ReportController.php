@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Reseller;
 
 use App\Services\ExportTaskService;
+use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
 use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,7 @@ class ReportController extends BaseResellerController
         $cacheKey = $this->cacheKey($resellerId, 'summary', $validated);
 
         return response()->json([
-            'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
+            'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated, $resellerId): array {
                 $summary = $this->revenueQuery($request, $validated)
                     ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
                     ->first();
@@ -34,7 +35,7 @@ class ReportController extends BaseResellerController
                 return [
                     'total_revenue' => $totalRevenue,
                     'total_activations' => $totalActivations,
-                    'total_customers' => $this->customerQuery($request)->count(),
+                    'total_customers' => CustomerOwnership::currentOwnedCustomerCount([$resellerId], $this->currentTenantId($request)),
                     'active_customers' => $activeCustomers,
                     'active_licenses' => $activeCustomers,
                     'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,
