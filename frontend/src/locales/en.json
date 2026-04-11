@@ -1935,6 +1935,7 @@
       "totalOwed": "Total Owed",
       "totalPaid": "Total Paid",
       "outstanding": "Outstanding Balance",
+      "amountToCollect": "Amount To Collect",
       "totalPaidToManager": "Amount You Paid to Manager",
       "remainingToPay": "Still Not Paid",
       "creditToReceive": "Money You Should Receive",

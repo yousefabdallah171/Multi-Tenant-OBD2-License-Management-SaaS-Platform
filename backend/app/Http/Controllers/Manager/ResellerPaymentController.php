@@ -48,6 +48,7 @@ class ResellerPaymentController extends BaseManagerController
                 'total_owed' => round((float) $rows->sum('commission_owed'), 2),
                 'total_paid' => round((float) $rows->sum('amount_paid'), 2),
                 'total_outstanding' => round((float) $rows->sum('outstanding'), 2),
+                'total_collectible' => round((float) $rows->sum(fn (array $row): float => max((float) ($row['outstanding'] ?? 0), 0)), 2),
                 'period' => $period ?? 'all',
             ],
         ]);

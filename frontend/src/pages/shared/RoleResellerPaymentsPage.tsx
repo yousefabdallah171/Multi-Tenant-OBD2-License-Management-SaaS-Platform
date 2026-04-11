@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, Banknote, Wallet, WalletCards } from 'lucide-react'
+import { ArrowRight, Banknote, CircleDollarSign, Wallet, WalletCards } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -167,10 +167,11 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <StatsCard title={t('payments.summary.totalOwed')} value={formatCurrency(summary?.total_owed ?? 0, 'USD', locale)} icon={WalletCards} color="amber" />
         <StatsCard title={t('payments.summary.totalPaid')} value={formatCurrency(summary?.total_paid ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
         <StatsCard title={t('payments.summary.outstanding')} value={formatCurrency(summary?.total_outstanding ?? 0, 'USD', locale)} icon={Wallet} color="rose" />
+        <StatsCard title={t('payments.summary.amountToCollect', { defaultValue: 'Amount To Collect' })} value={formatCurrency(summary?.total_collectible ?? 0, 'USD', locale)} icon={CircleDollarSign} color="sky" />
       </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">

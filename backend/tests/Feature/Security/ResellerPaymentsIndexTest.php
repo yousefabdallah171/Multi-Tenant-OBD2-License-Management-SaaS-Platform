@@ -57,6 +57,7 @@ class ResellerPaymentsIndexTest extends TestCase
         $tenant = $this->createTenant();
         $managerParent = $this->createUser('manager_parent', $tenant);
         $reseller = $this->createUser('reseller', $tenant);
+        $creditReseller = $this->createUser('reseller', $tenant);
 
         $this->createEarnedActivity($tenant->id, $reseller->id, 120, '2026-03-10 12:00:00', 'license.activated');
 
@@ -69,12 +70,22 @@ class ResellerPaymentsIndexTest extends TestCase
             'payment_method' => 'cash',
         ]);
 
+        ResellerPayment::query()->create([
+            'commission_id' => null,
+            'reseller_id' => $creditReseller->id,
+            'manager_id' => $managerParent->id,
+            'amount' => 10,
+            'payment_date' => '2026-03-21',
+            'payment_method' => 'cash',
+        ]);
+
         Sanctum::actingAs($managerParent);
 
         $this->getJson('/api/reseller-payments')
             ->assertOk()
             ->assertJsonPath('summary.period', 'all')
-            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('summary.total_collectible', 100)
+            ->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.period', 'All Time')
             ->assertJsonPath('data.0.total_sales', 120)
             ->assertJsonPath('data.0.amount_paid', 20)
