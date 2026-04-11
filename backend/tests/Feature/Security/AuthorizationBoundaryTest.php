@@ -511,6 +511,50 @@ class AuthorizationBoundaryTest extends TestCase
         $this->assertTrue((bool) $customers->json('data.0.bios_active_elsewhere'));
     }
 
+    public function test_owner_repair_command_can_preserve_previous_reseller_history(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant, null, ['email' => 'repair-owner@example.test']);
+        $reseller = $this->createUser('reseller', $tenant, $managerParent);
+        $customer = $this->createUser('customer', $tenant, $reseller, ['username' => 'repair_customer']);
+        $program = $this->createProgram($tenant);
+        $activeLicense = $this->createLicense($reseller, $program, $customer, [
+            'bios_id' => 'REPAIRBIOS1',
+            'external_username' => 'repair_customer',
+            'status' => 'active',
+            'price' => 60,
+            'activated_at' => now()->subDay(),
+            'expires_at' => now()->addMonth(),
+        ]);
+
+        $this->artisan('licenses:reassign-current-owner', [
+            'bios_id' => 'REPAIRBIOS1',
+            'owner_email' => 'repair-owner@example.test',
+            '--preserve-history' => true,
+            '--force' => true,
+        ])->assertSuccessful();
+
+        $activeLicense->refresh();
+        $this->assertSame($managerParent->id, (int) $activeLicense->reseller_id);
+
+        $historicalLicense = License::query()
+            ->where('bios_id', 'REPAIRBIOS1')
+            ->where('reseller_id', $reseller->id)
+            ->where('status', 'expired')
+            ->firstOrFail();
+
+        $this->assertSame($customer->id, (int) $historicalLicense->customer_id);
+
+        Sanctum::actingAs($reseller);
+
+        $customers = $this->getJson('/api/reseller/customers')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1);
+
+        $this->assertSame('expired', $customers->json('data.0.status'));
+        $this->assertTrue((bool) $customers->json('data.0.bios_active_elsewhere'));
+    }
+
     public function test_manager_parent_activation_rejects_unreasonable_price(): void
     {
         $tenant = $this->createTenant();

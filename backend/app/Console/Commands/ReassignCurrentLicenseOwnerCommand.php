@@ -17,6 +17,7 @@ class ReassignCurrentLicenseOwnerCommand extends Command
         {bios_id : BIOS ID to repair}
         {owner_email : Email of the correct current owner}
         {--tenant= : Require a specific tenant id}
+        {--preserve-history : Create an expired historical copy for the previous owner before reassigning}
         {--dry-run : Preview the matching row without changing it}
         {--force : Apply without interactive confirmation}';
 
@@ -66,7 +67,7 @@ class ReassignCurrentLicenseOwnerCommand extends Command
         }
 
         $this->table(
-            ['License ID', 'BIOS ID', 'Customer', 'Current Owner', 'New Owner', 'Status', 'Expires At'],
+            ['License ID', 'BIOS ID', 'Customer', 'Current Owner', 'New Owner', 'Status', 'Expires At', 'Preserve History'],
             [[
                 $license->id,
                 $license->bios_id,
@@ -75,6 +76,7 @@ class ReassignCurrentLicenseOwnerCommand extends Command
                 sprintf('%s <%s>', $owner->name, $owner->email),
                 $license->effectiveStatus(),
                 $license->expires_at?->toDateTimeString() ?? '-',
+                (bool) $this->option('preserve-history') ? 'yes' : 'no',
             ]]
         );
 
@@ -85,6 +87,9 @@ class ReassignCurrentLicenseOwnerCommand extends Command
 
         if ($isDryRun) {
             $this->info('Dry run complete. No changes were written.');
+            if (! (bool) $this->option('preserve-history')) {
+                $this->warn('Run with --preserve-history if the previous owner must keep an expired historical row.');
+            }
             return self::SUCCESS;
         }
 
@@ -95,6 +100,45 @@ class ReassignCurrentLicenseOwnerCommand extends Command
 
         DB::transaction(function () use ($license, $owner): void {
             $previousOwnerId = (int) $license->reseller_id;
+            $historicalLicenseId = null;
+
+            if ((bool) $this->option('preserve-history')) {
+                $historicalLicense = $license->replicate([
+                    'external_activation_response',
+                    'scheduled_at',
+                    'scheduled_timezone',
+                    'scheduled_last_attempt_at',
+                    'scheduled_failed_at',
+                    'scheduled_failure_message',
+                    'is_scheduled',
+                    'activated_at_scheduled',
+                    'paused_at',
+                    'pause_remaining_minutes',
+                    'pause_reason',
+                    'paused_by_role',
+                    'status',
+                    'created_at',
+                    'updated_at',
+                ]);
+                $historicalLicense->forceFill([
+                    'reseller_id' => $previousOwnerId,
+                    'status' => 'expired',
+                    'expires_at' => now()->subMinute(),
+                    'scheduled_at' => null,
+                    'scheduled_timezone' => null,
+                    'scheduled_last_attempt_at' => null,
+                    'scheduled_failed_at' => null,
+                    'scheduled_failure_message' => null,
+                    'is_scheduled' => false,
+                    'activated_at_scheduled' => null,
+                    'paused_at' => null,
+                    'pause_remaining_minutes' => null,
+                    'pause_reason' => null,
+                    'paused_by_role' => null,
+                    'external_activation_response' => 'Historical copy created during owner repair.',
+                ])->save();
+                $historicalLicenseId = (int) $historicalLicense->id;
+            }
 
             $license->forceFill([
                 'reseller_id' => $owner->id,
@@ -112,6 +156,7 @@ class ReassignCurrentLicenseOwnerCommand extends Command
                     'previous_owner_id' => $previousOwnerId,
                     'new_owner_id' => $owner->id,
                     'new_owner_role' => $owner->role?->value ?? (string) $owner->role,
+                    'historical_license_id' => $historicalLicenseId,
                 ],
             ]);
         });
