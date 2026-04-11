@@ -282,6 +282,10 @@ export const managerParentService = {
     const { data } = await api.put<{ data: unknown; message: string }>(`/reseller-payments/${paymentId}`, payload)
     return data
   },
+  async deletePayment(paymentId: number) {
+    const { data } = await api.delete<{ message: string }>(`/reseller-payments/${paymentId}`)
+    return data
+  },
   async storeCommission(payload: StoreCommissionPayload) {
     const { data } = await api.post<{ data: unknown; message: string }>('/reseller-commissions', payload)
     return data

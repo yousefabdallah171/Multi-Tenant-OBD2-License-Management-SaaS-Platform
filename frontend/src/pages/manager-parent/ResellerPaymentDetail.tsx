@@ -14,6 +14,7 @@ export function ResellerPaymentDetailPage() {
       fetchDetail={managerParentService.getResellerPaymentDetail}
       recordPayment={managerParentService.recordPayment}
       updatePayment={managerParentService.updatePayment}
+      deletePayment={managerParentService.deletePayment}
       storeCommission={managerParentService.storeCommission}
     />
   )

@@ -164,6 +164,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/reseller-payments/{user}', [ManagerParentResellerPaymentController::class, 'show']);
         Route::post('/reseller-payments', [ManagerParentResellerPaymentController::class, 'storePayment']);
         Route::put('/reseller-payments/{resellerPayment}', [ManagerParentResellerPaymentController::class, 'updatePayment']);
+        Route::delete('/reseller-payments/{resellerPayment}', [ManagerParentResellerPaymentController::class, 'destroyPayment']);
         Route::post('/reseller-commissions', [ManagerParentResellerPaymentController::class, 'storeCommission']);
 
         Route::get('/activity/export', [ManagerParentActivityController::class, 'export']);

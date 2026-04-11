@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,7 @@ interface RoleResellerPaymentDetailPageProps {
   fetchDetail: (resellerId: number) => Promise<{ data: ResellerPaymentDetailData }>
   recordPayment: (payload: RecordPaymentPayload) => Promise<{ message?: string }>
   updatePayment: (paymentId: number, payload: RecordPaymentPayload) => Promise<{ message?: string }>
+  deletePayment?: (paymentId: number) => Promise<{ message?: string }>
   storeCommission: (payload: StoreCommissionPayload) => Promise<{ message?: string }>
 }
 
@@ -39,6 +41,7 @@ export function RoleResellerPaymentDetailPage({
   fetchDetail,
   recordPayment,
   updatePayment,
+  deletePayment,
   storeCommission,
 }: RoleResellerPaymentDetailPageProps) {
   const { t } = useTranslation()
@@ -50,6 +53,7 @@ export function RoleResellerPaymentDetailPage({
   const resolvedResellerId = Number(resellerId)
   const [paymentDialog, setPaymentDialog] = useState<PaymentDialogState>(null)
   const [commissionDialog, setCommissionDialog] = useState<CommissionDialogState>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ResellerPayment | null>(null)
   const [paymentForm, setPaymentForm] = useState({
     commission_id: 0,
     amount: '',
@@ -97,6 +101,25 @@ export function RoleResellerPaymentDetailPage({
       toast.success(response.message ?? t('payments.messages.commissionSaved'))
       setCommissionDialog(null)
       resetCommissionForm()
+      void queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, 'reseller-payments'] })
+      void queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, 'reseller-payment-detail', resolvedResellerId] })
+    },
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
+  })
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: (paymentId: number) => {
+      if (!deletePayment) {
+        throw new Error('Delete payment is not available for this role.')
+      }
+
+      return deletePayment(paymentId)
+    },
+    onSuccess: (response) => {
+      toast.success(response.message ?? t('payments.messages.paymentDeleted'))
+      setDeleteTarget(null)
+      setPaymentDialog(null)
+      resetPaymentForm()
       void queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, 'reseller-payments'] })
       void queryClient.invalidateQueries({ queryKey: [queryKeyPrefix, 'reseller-payment-detail', resolvedResellerId] })
     },
@@ -215,6 +238,17 @@ export function RoleResellerPaymentDetailPage({
               </label>
             </div>
             <div className="mt-6 flex flex-wrap justify-end gap-3">
+              {paymentDialog.mode === 'edit' && paymentDialog.payment && deletePayment ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="me-auto"
+                  disabled={deletePaymentMutation.isPending}
+                  onClick={() => setDeleteTarget(paymentDialog.payment ?? null)}
+                >
+                  {t('payments.actions.deletePayment', { defaultValue: 'Delete Payment' })}
+                </Button>
+              ) : null}
               <Button type="button" variant="ghost" onClick={() => { setPaymentDialog(null); resetPaymentForm() }}>{t('common.cancel')}</Button>
               <Button type="button" disabled={paymentMutation.isPending} onClick={() => {
                 const commissionId = paymentDialog.payment?.commission_id ?? (paymentForm.commission_id || undefined)
@@ -303,6 +337,25 @@ export function RoleResellerPaymentDetailPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+          }
+        }}
+        title={t('payments.actions.deletePayment', { defaultValue: 'Delete Payment' })}
+        description={t('payments.messages.deletePaymentConfirm', { defaultValue: 'Delete this payment record? This action cannot be undone.' })}
+        confirmLabel={t('common.delete')}
+        isDestructive
+        confirmDisabled={deletePaymentMutation.isPending}
+        onConfirm={() => {
+          if (deleteTarget) {
+            deletePaymentMutation.mutate(deleteTarget.id)
+          }
+        }}
+      />
     </div>
   )
 }

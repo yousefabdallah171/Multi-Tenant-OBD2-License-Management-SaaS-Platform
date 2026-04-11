@@ -301,6 +301,30 @@ class ResellerPaymentController extends BaseManagerParentController
         ]);
     }
 
+    public function destroyPayment(Request $request, ResellerPayment $resellerPayment, ResellerCommissionService $commissionService): JsonResponse
+    {
+        $payment = $this->resolvePayment($request, $resellerPayment);
+        $payment->loadMissing('reseller:id,name,email');
+
+        $this->logActivity(
+            $request,
+            'reseller.payment_deleted',
+            sprintf('Deleted payment #%d for %s.', $payment->id, $payment->reseller?->name ?? 'reseller'),
+            [
+                'reseller_id' => $payment->reseller_id,
+                'commission_id' => $payment->commission_id,
+                'payment_id' => $payment->id,
+                'amount' => round((float) $payment->amount, 2),
+            ],
+        );
+
+        $commissionService->deletePayment($payment);
+
+        return response()->json([
+            'message' => 'Payment deleted successfully.',
+        ]);
+    }
+
     public function storeCommission(Request $request, ResellerCommissionService $commissionService): JsonResponse
     {
         $validated = $request->validate([

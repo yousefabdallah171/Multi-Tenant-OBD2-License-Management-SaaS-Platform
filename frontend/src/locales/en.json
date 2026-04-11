@@ -1986,7 +1986,8 @@
       "recordPayment": "Record Payment",
       "addCommission": "Add Commission",
       "editCommission": "Edit Commission",
-      "editPayment": "Edit Payment"
+      "editPayment": "Edit Payment",
+      "deletePayment": "Delete Payment"
     },
     "dialogs": {
       "recordPayment": "Record Payment",
@@ -2022,6 +2023,8 @@
     },
     "messages": {
       "paymentSaved": "Payment saved successfully.",
+      "paymentDeleted": "Payment deleted successfully.",
+      "deletePaymentConfirm": "Delete this payment record? This action cannot be undone.",
       "commissionSaved": "Commission saved successfully."
     }
   },

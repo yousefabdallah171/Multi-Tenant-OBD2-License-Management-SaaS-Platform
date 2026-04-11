@@ -2007,7 +2007,8 @@
       "recordPayment": "تسجيل دفعة",
       "addCommission": "إضافة عمولة",
       "editCommission": "تعديل العمولة",
-      "editPayment": "تعديل الدفعة"
+      "editPayment": "تعديل الدفعة",
+      "deletePayment": "حذف الدفعة"
     },
     "dialogs": {
       "recordPayment": "تسجيل دفعة",
@@ -2043,6 +2044,8 @@
     },
     "messages": {
       "paymentSaved": "تم حفظ الدفعة بنجاح.",
+      "paymentDeleted": "تم حذف الدفعة بنجاح.",
+      "deletePaymentConfirm": "هل تريد حذف سجل هذه الدفعة؟ لا يمكن التراجع عن هذا الإجراء.",
       "commissionSaved": "تم حفظ العمولة بنجاح."
     }
   }

@@ -95,6 +95,19 @@ class ResellerCommissionService
         });
     }
 
+    public function deletePayment(ResellerPayment $payment): void
+    {
+        DB::transaction(function () use ($payment): void {
+            $commissionId = $payment->commission_id !== null ? (int) $payment->commission_id : null;
+
+            $payment->delete();
+
+            if ($commissionId !== null) {
+                $this->recalculateCommissionById($commissionId);
+            }
+        });
+    }
+
     public function recalculateCommission(ResellerCommission $commission): ResellerCommission
     {
         $commission->amount_paid = round((float) $commission->payments()->sum('amount'), 2);

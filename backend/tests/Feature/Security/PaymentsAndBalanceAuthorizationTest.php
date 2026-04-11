@@ -94,4 +94,70 @@ class PaymentsAndBalanceAuthorizationTest extends TestCase
         ])
             ->assertForbidden();
     }
+
+    public function test_manager_parent_can_delete_payment_and_recalculate_commission(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $manager = $this->createUser('manager', $tenant, $managerParent);
+        $reseller = $this->createUser('reseller', $tenant, $manager);
+
+        $commission = ResellerCommission::query()->create([
+            'tenant_id' => $tenant->id,
+            'reseller_id' => $reseller->id,
+            'manager_id' => $managerParent->id,
+            'period' => '2026-03',
+            'total_sales' => 500,
+            'commission_rate' => 10,
+            'commission_owed' => 50,
+            'amount_paid' => 22,
+            'outstanding' => 28,
+            'status' => 'partial',
+        ]);
+
+        $payment = ResellerPayment::query()->create([
+            'commission_id' => $commission->id,
+            'reseller_id' => $reseller->id,
+            'manager_id' => $managerParent->id,
+            'amount' => 22,
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'cash',
+        ]);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->deleteJson('/api/reseller-payments/'.$payment->id)
+            ->assertOk()
+            ->assertJsonPath('message', 'Payment deleted successfully.');
+
+        $this->assertDatabaseMissing('reseller_payments', ['id' => $payment->id]);
+        $this->assertDatabaseHas('reseller_commissions', [
+            'id' => $commission->id,
+            'amount_paid' => 0,
+            'outstanding' => 50,
+            'status' => 'unpaid',
+        ]);
+    }
+
+    public function test_manager_cannot_delete_payment_through_manager_parent_endpoint(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $manager = $this->createUser('manager', $tenant, $managerParent);
+        $reseller = $this->createUser('reseller', $tenant, $manager);
+
+        $payment = ResellerPayment::query()->create([
+            'commission_id' => null,
+            'reseller_id' => $reseller->id,
+            'manager_id' => $managerParent->id,
+            'amount' => 22,
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'cash',
+        ]);
+
+        Sanctum::actingAs($manager);
+
+        $this->deleteJson('/api/reseller-payments/'.$payment->id)
+            ->assertForbidden();
+    }
 }
