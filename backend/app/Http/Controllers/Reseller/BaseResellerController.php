@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
+use App\Support\CustomerOwnership;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -28,10 +29,21 @@ abstract class BaseResellerController extends Controller
 
     protected function customerQuery(Request $request)
     {
+        $resellerId = $this->currentReseller($request)->id;
+
+        $customerIds = CustomerOwnership::applyBlockingOwnershipScope(
+            License::query()
+                ->where('tenant_id', $this->currentTenantId($request))
+                ->where('reseller_id', $resellerId)
+                ->whereNotNull('customer_id')
+        )
+            ->distinct()
+            ->pluck('customer_id');
+
         return User::query()
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('role', UserRole::CUSTOMER->value)
-            ->whereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('reseller_id', $this->currentReseller($request)->id));
+            ->whereIn('id', $customerIds);
     }
 
     protected function licenseQuery(Request $request)

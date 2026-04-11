@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Lock } from 'lucide-react'
+import { ArrowLeft, Lock, FileText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -14,6 +15,7 @@ import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { superAdminCustomerService } from '@/services/super-admin-customer.service'
+import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import type { UserRole } from '@/types/user.types'
 import { IpLocationCell } from '@/utils/countryFlag'
 
@@ -24,6 +26,7 @@ export function CustomerDetailPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false)
 
   const query = useQuery({
     queryKey: ['super-admin', 'customer-detail', customerId],
@@ -36,10 +39,14 @@ export function CustomerDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-start">
+      <div className="flex items-center justify-between">
         <Button type="button" variant="outline" onClick={() => navigate(routePaths.superAdmin.customers(lang))}>
           <ArrowLeft className="me-2 h-4 w-4" />
           {t('common.back')}
+        </Button>
+        <Button type="button" variant="outline" onClick={() => setIsNotesDialogOpen(true)}>
+          <FileText className="me-2 h-4 w-4" />
+          {t('common.notes', { defaultValue: 'Notes' })}
         </Button>
       </div>
 
@@ -166,6 +173,8 @@ export function CustomerDetailPage() {
           </Tabs>
         </>
       ) : null}
+
+      <CustomerNoteDialog isOpen={isNotesDialogOpen} onClose={() => setIsNotesDialogOpen(false)} customerId={customerId} />
     </div>
   )
 }

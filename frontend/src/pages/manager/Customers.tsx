@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
+import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -99,6 +100,7 @@ export function CustomersPage() {
   const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null)
   const [editTarget, setEditTarget] = useState<ManagerCustomerSummary | null>(null)
+  const [notesCustomerId, setNotesCustomerId] = useState<number | null>(null)
   const [pauseTarget, setPauseTarget] = useState<ManagerCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ManagerCustomerSummary | null>(null)
   const [pauseReason, setPauseReason] = useState('')
@@ -444,6 +446,15 @@ export function CustomersPage() {
               <Link to={routePaths.manager.customerDetail(lang, row.id)}>
                 {t('common.view')}
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation()
+                setNotesCustomerId(row.id)
+              }}
+            >
+              <FileText className="me-2 h-4 w-4" />
+              {t('common.notes', { defaultValue: 'Notes' })}
             </DropdownMenuItem>
             <DropdownMenuItem disabled={isBlacklisted} onClick={() => setEditTarget(row)}>
               <Pencil className="me-2 h-4 w-4" />
@@ -932,6 +943,8 @@ export function CustomersPage() {
           />
         </div>
       </ConfirmDialog>
+
+      <CustomerNoteDialog isOpen={notesCustomerId !== null} onClose={() => setNotesCustomerId(null)} customerId={notesCustomerId ?? 0} />
     </div>
   )
 }

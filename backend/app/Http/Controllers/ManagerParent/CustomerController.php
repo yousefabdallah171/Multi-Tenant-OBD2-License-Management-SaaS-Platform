@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\ActivityLog;
 use App\Models\BiosBlacklist;
 use App\Models\BiosUsernameLink;
+use App\Models\CustomerNote;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\UserIpLog;
@@ -266,6 +267,7 @@ class CustomerController extends BaseManagerParentController
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'bios_id' => ['nullable', 'string', 'min:3', 'max:10', 'required_with:program_id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id'],
+            'notes' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $username = Str::of((string) $validated['name'])->ascii()->replaceMatches('/[^A-Za-z0-9_]+/', '_')->trim('_')->value();
@@ -335,6 +337,16 @@ class CustomerController extends BaseManagerParentController
                 (int) $validated['program_id'],
                 $this->currentManagerParent($request),
             );
+        }
+
+        // Create customer note if provided
+        if (! empty($validated['notes'])) {
+            CustomerNote::create([
+                'tenant_id' => $this->currentTenantId($request),
+                'user_id' => auth()->id(),
+                'customer_id' => $customer->id,
+                'note' => $validated['notes'],
+            ]);
         }
 
         $customer->load(['customerLicenses' => fn ($licenseQuery) => $licenseQuery

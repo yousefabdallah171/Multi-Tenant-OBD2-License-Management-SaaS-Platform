@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, Cpu, Eye, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, UserRound, X } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, Eye, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
+import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -310,6 +311,7 @@ export function CustomersPage() {
   )
   const [programFilter, setProgramFilter] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [editTarget, setEditTarget] = useState<ResellerCustomerSummary | null>(null)
+  const [notesCustomerId, setNotesCustomerId] = useState<number | null>(null)
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
@@ -657,6 +659,15 @@ export function CustomersPage() {
                   <Eye className="me-2 h-4 w-4" />
                   {text.actions.view}
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setNotesCustomerId(row.id)
+                }}
+              >
+                <FileText className="me-2 h-4 w-4" />
+                {t('common.notes', { defaultValue: 'Notes' })}
               </DropdownMenuItem>
               {typeof row.license_id === 'number' && !isBlacklisted && !isBiosActiveElsewhere ? (
                 <DropdownMenuItem asChild>
@@ -1393,6 +1404,8 @@ export function CustomersPage() {
         isPending={editMutation.isPending}
         onSubmit={(payload) => editMutation.mutate(payload)}
       />
+
+      <CustomerNoteDialog isOpen={notesCustomerId !== null} onClose={() => setNotesCustomerId(null)} customerId={notesCustomerId ?? 0} />
     </div>
   )
 

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, CheckCircle2, ChevronDown, Clock3, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
+import { Check, CheckCircle2, ChevronDown, Clock3, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
+import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -110,6 +111,7 @@ export function CustomersPage() {
   const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [editTarget, setEditTarget] = useState<CustomerSummary | null>(null)
+  const [notesCustomerId, setNotesCustomerId] = useState<number | null>(null)
   const [pauseTarget, setPauseTarget] = useState<CustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<CustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CustomerSummary | null>(null)
@@ -513,6 +515,15 @@ export function CustomersPage() {
               <Link to={routePaths.managerParent.customerDetail(lang, row.id)}>
                 {t('common.view')}
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation()
+                setNotesCustomerId(row.id)
+              }}
+            >
+              <FileText className="me-2 h-4 w-4" />
+              {t('common.notes', { defaultValue: 'Notes' })}
             </DropdownMenuItem>
             {typeof row.license_id === 'number' ? (
               <DropdownMenuItem onClick={() => navigate(`${routePaths.managerParent.customerDetail(lang, row.id)}?change_bios=1`)}>
@@ -1062,6 +1073,8 @@ export function CustomersPage() {
         isDestructive
         onConfirm={() => bulkDeleteMutation.mutate()}
       />
+
+      <CustomerNoteDialog isOpen={notesCustomerId !== null} onClose={() => setNotesCustomerId(null)} customerId={notesCustomerId ?? 0} />
     </div>
   )
 }

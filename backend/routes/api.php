@@ -11,6 +11,7 @@ use App\Http\Controllers\BiosConflictController;
 // use App\Http\Controllers\Customer\SoftwareController as CustomerSoftwareController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardAppearanceController;
+use App\Http\Controllers\CustomerNoteController;
 use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\Manager\ActivityController as ManagerActivityController;
 use App\Http\Controllers\Manager\BiosChangeRequestController as ManagerBiosChangeRequestController;
@@ -124,6 +125,14 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
     Route::get('/dashboard-appearance/settings', [DashboardAppearanceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::get('/table-preferences', [TablePreferenceController::class, 'show'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::put('/table-preferences/{tableKey}', [TablePreferenceController::class, 'update'])->middleware('role:super_admin,manager_parent,manager,reseller');
+
+    // Customer Notes (accessible to all roles)
+    Route::middleware('role:super_admin,manager_parent,manager,reseller')->group(function (): void {
+        Route::get('/customers/{customerId}/notes', [CustomerNoteController::class, 'index']);
+        Route::post('/customers/{customerId}/notes', [CustomerNoteController::class, 'store']);
+        Route::put('/notes/{noteId}', [CustomerNoteController::class, 'update']);
+        Route::delete('/notes/{noteId}', [CustomerNoteController::class, 'destroy']);
+    });
 
     Route::get('/programs', [ManagerParentProgramController::class, 'index'])->middleware('role:super_admin,manager_parent,manager,reseller');
     Route::get('/programs/{program}/stats', [ManagerParentProgramController::class, 'stats'])->middleware('role:super_admin,manager_parent,manager,reseller');

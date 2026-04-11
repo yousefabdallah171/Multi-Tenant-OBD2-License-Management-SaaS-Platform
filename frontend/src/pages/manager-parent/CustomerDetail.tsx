@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Lock } from 'lucide-react'
+import { ArrowLeft, Lock, FileText } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { availabilityService } from '@/services/availability.service'
 import { toast } from 'sonner'
@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BlockBadge } from '@/components/shared/BlockBadge'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
@@ -39,6 +40,7 @@ export function CustomerDetailPage() {
   const [changeDialogOpen, setChangeDialogOpen] = useState(false)
   const [newBiosId, setNewBiosId] = useState('')
   const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string; linked_username: string | null } | null>(null)
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false)
   const debouncedNewBiosId = useDebounce(newBiosId.trim(), 400)
 
   useEffect(() => {
@@ -110,11 +112,19 @@ export function CustomerDetailPage() {
       <PageHeader
         title={customer?.name ?? t('managerParent.pages.customers.customerDetails')}
         description={resolveCustomerDetailUsername(customer) ?? t('managerParent.pages.customers.customerDetailsDescription')}
-        actions={requestableLicense ? (
-          <Button type="button" onClick={() => setChangeDialogOpen(true)}>
-            {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
-          </Button>
-        ) : null}
+        actions={
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => setIsNotesDialogOpen(true)}>
+              <FileText className="me-2 h-4 w-4" />
+              {t('common.notes', { defaultValue: 'Notes' })}
+            </Button>
+            {requestableLicense ? (
+              <Button type="button" onClick={() => setChangeDialogOpen(true)}>
+                {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
+              </Button>
+            ) : null}
+          </div>
+        }
       />
 
       {customer ? (
@@ -353,6 +363,8 @@ export function CustomerDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CustomerNoteDialog isOpen={isNotesDialogOpen} onClose={() => setIsNotesDialogOpen(false)} customerId={customerId} />
     </div>
   )
 }

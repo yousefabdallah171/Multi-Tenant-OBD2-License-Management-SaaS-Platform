@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Lock } from 'lucide-react'
+import { ArrowLeft, FileText, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
@@ -24,6 +26,7 @@ export function CustomerDetailPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false)
 
   const query = useQuery({
     queryKey: ['manager', 'customer-detail', customerId],
@@ -59,11 +62,19 @@ export function CustomerDetailPage() {
         eyebrow={t('manager.layout.eyebrow')}
         title={customer?.name ?? t('manager.pages.customers.customerDetails')}
         description={resolveCustomerDetailUsername(customer) ?? t('manager.pages.customers.customerDetailsDescription')}
-        actions={requestableLicense && !requestableLicense.is_blacklisted ? (
-          <Button type="button" onClick={() => navigate(routePaths.manager.customerBiosChangeRequest(lang, customerId))}>
-            {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
-          </Button>
-        ) : null}
+        actions={
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => setIsNotesDialogOpen(true)}>
+              <FileText className="me-2 h-4 w-4" />
+              {t('common.notes', { defaultValue: 'Notes' })}
+            </Button>
+            {requestableLicense && !requestableLicense.is_blacklisted ? (
+              <Button type="button" onClick={() => navigate(routePaths.manager.customerBiosChangeRequest(lang, customerId))}>
+                {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
+              </Button>
+            ) : null}
+          </div>
+        }
       />
 
       {customer ? (
@@ -186,6 +197,7 @@ export function CustomerDetailPage() {
         </>
       ) : null}
 
+      <CustomerNoteDialog isOpen={isNotesDialogOpen} onClose={() => setIsNotesDialogOpen(false)} customerId={customerId} />
     </div>
   )
 }

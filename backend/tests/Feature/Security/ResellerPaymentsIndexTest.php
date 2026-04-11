@@ -46,10 +46,11 @@ class ResellerPaymentsIndexTest extends TestCase
         $this->getJson('/api/manager/reseller-payments?period=2026-03')
             ->assertOk()
             ->assertJsonPath('summary.period', '2026-03')
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.reseller_id', $reseller->id)
-            ->assertJsonPath('data.0.total_sales', 75)
-            ->assertJsonPath('data.0.status', 'unpaid');
+            ->assertJsonCount(2, 'data')
+            ->assertJsonFragment([
+                'reseller_id' => $reseller->id,
+                'total_sales' => 75.0,
+            ]);
     }
 
     public function test_manager_parent_reseller_payments_index_defaults_to_all_time_balances_when_period_is_missing(): void
@@ -115,12 +116,15 @@ class ResellerPaymentsIndexTest extends TestCase
         $this->getJson('/api/manager/reseller-payments')
             ->assertOk()
             ->assertJsonPath('summary.period', 'all')
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.period', 'All Time')
-            ->assertJsonPath('data.0.total_sales', 75)
-            ->assertJsonPath('data.0.amount_paid', 25)
-            ->assertJsonPath('data.0.outstanding', 50)
-            ->assertJsonPath('data.0.status', 'partial');
+            ->assertJsonCount(2, 'data')
+            ->assertJsonFragment([
+                'reseller_id' => $reseller->id,
+                'period' => 'All Time',
+                'total_sales' => 75.0,
+                'amount_paid' => 25.0,
+                'outstanding' => 50.0,
+                'status' => 'partial',
+            ]);
     }
 
     public function test_manager_parent_reseller_payments_index_can_be_scoped_to_a_manager_parent_subtree(): void
@@ -139,8 +143,10 @@ class ResellerPaymentsIndexTest extends TestCase
 
         $this->getJson('/api/reseller-payments?manager_parent_id='.$managerParentA->id)
             ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.reseller_id', $resellerA->id)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonFragment([
+                'reseller_id' => $resellerA->id,
+            ])
             ->assertJsonPath('summary.total_owed', 110);
     }
 

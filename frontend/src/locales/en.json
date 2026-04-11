@@ -222,6 +222,17 @@
     "offline": "Offline",
     "degraded": "Degraded",
     "unknown": "Unknown",
+    "notes": "Notes",
+    "notesDesc": "Your private notes for this customer. Only you can see your notes.",
+    "notesHint": "Add internal notes for this customer. Only visible to you.",
+    "notesPlaceholder": "Add a note...",
+    "noteNewPlaceholder": "Add a new note...",
+    "add": "Add",
+    "noNotes": "No notes yet. Add one to get started.",
+    "noteSaved": "Note added successfully.",
+    "noteUpdated": "Note updated successfully.",
+    "noteDeleted": "Note deleted successfully.",
+    "error": "An error occurred. Please try again.",
     "errorPages": {
       "notFound": {
         "title": "Page not found",

@@ -1,4 +1,5 @@
 import type { PaginatedResponse } from '@/types/manager-parent.types'
+import type { UserRole } from '@/types/user.types'
 
 export type PeriodFilter = 'daily' | 'weekly' | 'monthly'
 export type DurationUnit = 'days' | 'months' | 'years'
@@ -484,6 +485,7 @@ export interface ResellerPaymentRow {
   reseller_id: number
   reseller_name: string
   reseller_email: string
+  reseller_role?: UserRole | null
   period: string
   commission_id?: number | null
   total_sales: number
@@ -511,6 +513,7 @@ export interface ResellerPaymentDetailData {
     id: number
     name: string
     email: string
+    role?: UserRole | null
     created_at: string | null
   }
   summary: {

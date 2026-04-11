@@ -37,19 +37,19 @@ class ResellerPaymentController extends BaseManagerParentController
             ? $validated['period']
             : null;
         $statusFilter = $validated['status'] ?? null;
-        $resellerIds = $this->resolveScopedResellerIds($tenantId, $validated);
+        $sellerIds = $this->resolveScopedSellerIds($tenantId, $validated);
 
-        $resellers = User::query()
+        $sellers = User::query()
             ->where('tenant_id', $tenantId)
-            ->where('role', UserRole::RESELLER->value)
-            ->whereIn('id', $resellerIds)
-            ->select(['id', 'tenant_id', 'role', 'name', 'email', 'created_at'])
+            ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->whereIn('id', $sellerIds)
+            ->select(['id', 'tenant_id', 'role', 'name', 'email', 'created_at', 'created_by'])
             ->orderBy('name')
             ->get();
 
         $rows = $period === null
-            ? $this->allTimeRows($resellers, $statusFilter)
-            : $this->periodRows($resellers, $tenantId, $period, $statusFilter);
+            ? $this->allTimeRows($sellers, $statusFilter)
+            : $this->periodRows($sellers, $tenantId, $period, $statusFilter);
 
         return response()->json([
             'data' => $rows,
@@ -67,17 +67,19 @@ class ResellerPaymentController extends BaseManagerParentController
      * @param array{manager_parent_id?: int, manager_id?: int, reseller_id?: int} $validated
      * @return array<int, int>
      */
-    private function resolveScopedResellerIds(int $tenantId, array $validated): array
+    private function resolveScopedSellerIds(int $tenantId, array $validated): array
     {
         $resellerId = isset($validated['reseller_id']) ? (int) $validated['reseller_id'] : 0;
         if ($resellerId > 0) {
-            $exists = User::query()
+            $seller = User::query()
                 ->where('tenant_id', $tenantId)
-                ->where('role', UserRole::RESELLER->value)
                 ->whereKey($resellerId)
-                ->exists();
+                ->select(['id', 'role'])
+                ->first();
 
-            if (! $exists) {
+            $role = $seller?->role?->value ?? (string) $seller?->role;
+
+            if (! $seller || ! in_array($role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true)) {
                 throw ValidationException::withMessages(['reseller_id' => 'The selected reseller is invalid for this tenant.']);
             }
 
@@ -95,13 +97,15 @@ class ResellerPaymentController extends BaseManagerParentController
                 throw ValidationException::withMessages(['manager_id' => 'The selected manager is invalid for this tenant.']);
             }
 
-            return User::query()
+            $resellerIds = User::query()
                 ->where('tenant_id', $tenantId)
                 ->where('role', UserRole::RESELLER->value)
                 ->where('created_by', $managerId)
                 ->pluck('id')
                 ->map(fn ($id): int => (int) $id)
                 ->all();
+
+            return array_values(array_unique([$managerId, ...$resellerIds]));
         }
 
         $managerParentId = isset($validated['manager_parent_id']) ? (int) $validated['manager_parent_id'] : 0;
@@ -123,7 +127,7 @@ class ResellerPaymentController extends BaseManagerParentController
                 ->map(fn ($id): int => (int) $id)
                 ->all();
 
-            return User::query()
+            $resellerIds = User::query()
                 ->where('tenant_id', $tenantId)
                 ->where('role', UserRole::RESELLER->value)
                 ->where(function ($query) use ($managerParentId, $managedManagerIds): void {
@@ -136,11 +140,13 @@ class ResellerPaymentController extends BaseManagerParentController
                 ->pluck('id')
                 ->map(fn ($id): int => (int) $id)
                 ->all();
+
+            return array_values(array_unique([...$managedManagerIds, ...$resellerIds]));
         }
 
         return User::query()
             ->where('tenant_id', $tenantId)
-            ->where('role', UserRole::RESELLER->value)
+            ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->all();
@@ -148,7 +154,7 @@ class ResellerPaymentController extends BaseManagerParentController
 
     public function show(Request $request, User $user): JsonResponse
     {
-        $reseller = $this->resolveReseller($request, $user);
+        $reseller = $this->resolveSeller($request, $user);
 
         $commissions = ResellerCommission::query()
             ->with(['manager:id,name,email', 'payments.manager:id,name,email', 'reseller:id,name,email'])
@@ -197,6 +203,7 @@ class ResellerPaymentController extends BaseManagerParentController
                     'id' => $reseller->id,
                     'name' => $reseller->name,
                     'email' => $reseller->email,
+                    'role' => $reseller->role?->value ?? (string) $reseller->role,
                     'created_at' => $reseller->created_at?->toIso8601String(),
                 ],
                 'summary' => [
@@ -228,10 +235,12 @@ class ResellerPaymentController extends BaseManagerParentController
             : now()->toDateString();
         $validated['payment_method'] = $validated['payment_method'] ?? 'bank_transfer';
 
-        $reseller = $this->resolveReseller($request, User::query()->findOrFail((int) $validated['reseller_id']));
+        $reseller = $this->resolveSeller($request, User::query()->findOrFail((int) $validated['reseller_id']));
         $commission = isset($validated['commission_id'])
             ? $this->resolveCommission($request, ResellerCommission::query()->findOrFail((int) $validated['commission_id']))
             : null;
+        $sellerRole = $reseller->role?->value ?? (string) $reseller->role;
+        abort_unless($commission === null || $sellerRole === UserRole::RESELLER->value, 422, 'Commission does not belong to the selected reseller.');
         abort_unless($commission === null || (int) $commission->reseller_id === $reseller->id, 422, 'Commission does not belong to the selected reseller.');
 
         $payment = $commissionService->recordPayment($commission, $this->currentManagerParent($request), $validated);
@@ -276,10 +285,12 @@ class ResellerPaymentController extends BaseManagerParentController
             : ($payment->payment_date?->toDateString() ?: now()->toDateString());
         $validated['payment_method'] = $validated['payment_method'] ?? ($payment->payment_method ?: 'bank_transfer');
 
-        $reseller = $this->resolveReseller($request, User::query()->findOrFail((int) $validated['reseller_id']));
+        $reseller = $this->resolveSeller($request, User::query()->findOrFail((int) $validated['reseller_id']));
         $commission = isset($validated['commission_id'])
             ? $this->resolveCommission($request, ResellerCommission::query()->findOrFail((int) $validated['commission_id']))
             : null;
+        $sellerRole = $reseller->role?->value ?? (string) $reseller->role;
+        abort_unless($commission === null || $sellerRole === UserRole::RESELLER->value, 422, 'Commission does not belong to the selected reseller.');
         abort_unless($commission === null || (int) $commission->reseller_id === $reseller->id, 422, 'Commission does not belong to the selected reseller.');
 
         $updatedPayment = $commissionService->updatePayment($payment, $this->currentManagerParent($request), $validated);
@@ -358,21 +369,36 @@ class ResellerPaymentController extends BaseManagerParentController
         ]);
     }
 
-    private function resolveReseller(Request $request, User $user): User
+    private function resolveSeller(Request $request, User $user): User
     {
+        $role = $user->role?->value ?? (string) $user->role;
+
         abort_unless(
             (int) $user->tenant_id === $this->currentTenantId($request)
-                && ($user->role?->value ?? (string) $user->role) === UserRole::RESELLER->value,
+                && in_array($role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true),
             404,
         );
 
         return $user;
     }
 
+    private function resolveReseller(Request $request, User $user): User
+    {
+        $seller = $this->resolveSeller($request, $user);
+
+        $role = $seller->role?->value ?? (string) $seller->role;
+        abort_unless($role === UserRole::RESELLER->value, 404);
+
+        return $seller;
+    }
+
     private function resolveCommission(Request $request, ResellerCommission $commission): ResellerCommission
     {
+        $commissionRole = $commission->reseller?->role?->value ?? (string) $commission->reseller?->role;
+
         abort_unless(
             (int) $commission->tenant_id === $this->currentTenantId($request)
+                && $commissionRole === UserRole::RESELLER->value
                 && $this->resolveReseller($request, User::query()->findOrFail((int) $commission->reseller_id)),
             404,
         );
@@ -384,9 +410,11 @@ class ResellerPaymentController extends BaseManagerParentController
     {
         $payment->loadMissing('commission', 'reseller');
 
+        $role = $payment->reseller?->role?->value ?? (string) $payment->reseller?->role;
+
         abort_unless(
             (int) $payment->reseller?->tenant_id === $this->currentTenantId($request)
-                && ($payment->reseller?->role?->value ?? (string) $payment->reseller?->role) === UserRole::RESELLER->value,
+                && in_array($role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true),
             404,
         );
 
@@ -452,12 +480,18 @@ class ResellerPaymentController extends BaseManagerParentController
         ];
     }
 
-    private function allTimeRows($resellers, ?string $statusFilter)
+    private function allTimeRows($sellers, ?string $statusFilter)
     {
-        $accountingBySeller = $this->sellerAccountingService->summariesForSellers($resellers);
+        $accountingBySeller = $this->sellerAccountingService->summariesForSellers($sellers);
+        $paymentsBySeller = ResellerPayment::query()
+            ->whereIn('reseller_id', $sellers->pluck('id'))
+            ->selectRaw('reseller_id, ROUND(COALESCE(SUM(amount), 0), 2) as total_paid')
+            ->groupBy('reseller_id')
+            ->pluck('total_paid', 'reseller_id');
 
-        return $resellers->map(function (User $reseller) use ($accountingBySeller): array {
-            $accounting = $accountingBySeller[(int) $reseller->id] ?? [
+        return $sellers->map(function (User $seller) use ($accountingBySeller, $paymentsBySeller): array {
+            $role = $seller->role?->value ?? (string) $seller->role;
+            $accounting = $accountingBySeller[(int) $seller->id] ?? [
                 'total_sales' => 0.0,
                 'commission_rate' => 0.0,
                 'total_owed' => 0.0,
@@ -465,62 +499,81 @@ class ResellerPaymentController extends BaseManagerParentController
                 'still_not_paid' => 0.0,
             ];
 
+            $totalSales = round((float) $accounting['total_sales'], 2);
+            $commissionRate = round((float) $accounting['commission_rate'], 2);
             $commissionOwed = round((float) $accounting['total_owed'], 2);
-            $amountPaid = round((float) $accounting['total_paid'], 2);
+            $amountPaid = round((float) ($accounting['total_paid'] ?? 0), 2);
+            $outstanding = round((float) $accounting['still_not_paid'], 2);
+
+            if ($role !== UserRole::RESELLER->value) {
+                $commissionRate = 0.0;
+                $amountPaid = round((float) ($paymentsBySeller->get($seller->id, 0) ?? 0), 2);
+                $commissionOwed = $totalSales;
+                $outstanding = round($commissionOwed - $amountPaid, 2);
+            }
 
             return [
-                'reseller_id' => $reseller->id,
-                'reseller_name' => $reseller->name,
-                'reseller_email' => $reseller->email,
+                'reseller_id' => $seller->id,
+                'reseller_name' => $seller->name,
+                'reseller_email' => $seller->email,
+                'reseller_role' => $role,
                 'period' => 'All Time',
                 'commission_id' => null,
-                'total_sales' => round((float) $accounting['total_sales'], 2),
-                'commission_rate' => round((float) $accounting['commission_rate'], 2),
+                'total_sales' => $totalSales,
+                'commission_rate' => $commissionRate,
                 'commission_owed' => $commissionOwed,
                 'amount_paid' => $amountPaid,
-                'outstanding' => round((float) $accounting['still_not_paid'], 2),
+                'outstanding' => $outstanding,
                 'status' => $this->resolveComputedStatus($commissionOwed, $amountPaid),
-                'created_at' => $reseller->created_at?->toIso8601String(),
+                'created_at' => $seller->created_at?->toIso8601String(),
             ];
         })->filter(fn (array $row): bool => $statusFilter ? $row['status'] === $statusFilter : true)->values();
     }
 
-    private function periodRows($resellers, int $tenantId, string $period, ?string $statusFilter)
+    private function periodRows($sellers, int $tenantId, string $period, ?string $statusFilter)
     {
         $commissions = ResellerCommission::query()
             ->where('tenant_id', $tenantId)
-            ->whereIn('reseller_id', $resellers->pluck('id'))
+            ->whereIn('reseller_id', $sellers->pluck('id'))
             ->where('period', $period)
             ->get()
             ->keyBy('reseller_id');
 
         [$start, $end] = $this->periodRange($period);
         $paymentsByReseller = ResellerPayment::query()
-            ->whereIn('reseller_id', $resellers->pluck('id'))
+            ->whereIn('reseller_id', $sellers->pluck('id'))
             ->whereBetween('payment_date', [$start->toDateString(), $end->toDateString()])
             ->selectRaw('reseller_id, ROUND(COALESCE(SUM(amount), 0), 2) as total_paid')
             ->groupBy('reseller_id')
             ->pluck('total_paid', 'reseller_id');
 
-        return $resellers->map(function (User $reseller) use ($commissions, $paymentsByReseller, $period, $tenantId, $start, $end): array {
-            $commission = $commissions->get($reseller->id);
+        return $sellers->map(function (User $seller) use ($commissions, $paymentsByReseller, $period, $tenantId, $start, $end): array {
+            $role = $seller->role?->value ?? (string) $seller->role;
+            $commission = $commissions->get($seller->id);
             $computedSales = RevenueAnalytics::baseQuery(
                 ['from' => $start->toDateString(), 'to' => $end->toDateString()],
                 $tenantId,
                 null,
-                $reseller->id
+                $seller->id
             )
                 ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_sales'))
                 ->first();
             $totalSales = round((float) ($commission?->total_sales ?? ($computedSales?->total_sales ?? 0)), 2);
-            $amountPaid = round((float) ($commission?->amount_paid ?? $paymentsByReseller->get($reseller->id, 0)), 2);
+            $amountPaid = round((float) ($commission?->amount_paid ?? $paymentsByReseller->get($seller->id, 0)), 2);
             $commissionOwed = round((float) ($commission?->commission_owed ?? $totalSales), 2);
             $outstanding = round((float) ($commission?->outstanding ?? ($commissionOwed - $amountPaid)), 2);
 
+            if ($role !== UserRole::RESELLER->value) {
+                $amountPaid = round((float) ($paymentsByReseller->get($seller->id, 0) ?? 0), 2);
+                $commissionOwed = $totalSales;
+                $outstanding = round($commissionOwed - $amountPaid, 2);
+            }
+
             return [
-                'reseller_id' => $reseller->id,
-                'reseller_name' => $reseller->name,
-                'reseller_email' => $reseller->email,
+                'reseller_id' => $seller->id,
+                'reseller_name' => $seller->name,
+                'reseller_email' => $seller->email,
+                'reseller_role' => $role,
                 'period' => $period,
                 'commission_id' => $commission?->id,
                 'total_sales' => $totalSales,
@@ -529,7 +582,7 @@ class ResellerPaymentController extends BaseManagerParentController
                 'amount_paid' => $amountPaid,
                 'outstanding' => $outstanding,
                 'status' => $commission?->status ?? $this->resolveComputedStatus($commissionOwed, $amountPaid),
-                'created_at' => $reseller->created_at?->toIso8601String(),
+                'created_at' => $seller->created_at?->toIso8601String(),
             ];
         })->filter(fn (array $row): bool => $statusFilter ? $row['status'] === $statusFilter : true)->values();
     }

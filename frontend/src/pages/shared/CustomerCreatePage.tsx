@@ -25,7 +25,7 @@ interface CustomerCreatePageProps {
   title: string
   description: string
   backPath: (lang: 'ar' | 'en') => string
-  createCustomer: (payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) => Promise<unknown>
+  createCustomer: (payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number; notes?: string }) => Promise<unknown>
 }
 
 type DurationUnit = 'minutes' | 'hours' | 'days'
@@ -92,6 +92,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [notes, setNotes] = useState('')
   const [createLicenseNow, setCreateLicenseNow] = useState(true)
   const [biosId, setBiosId] = useState('')
   const [programId, setProgramId] = useState<number | ''>(() => {
@@ -364,6 +365,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       phone: phone.trim() || undefined,
       bios_id: biosId.trim() || undefined,
       program_id: programId ? Number(programId) : undefined,
+      notes: notes.trim() || undefined,
     }),
     onSuccess: () => {
       setSubmitError('')
@@ -431,6 +433,49 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
+              <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
+                <Input
+                  value={biosId}
+                  onChange={(event) => { setBiosId(event.target.value); setSubmitError('') }}
+                  maxLength={10}
+                  data-testid="bios-id"
+                />
+              </Field>
+              {biosCheckLoading && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <Loader2 className="size-3 animate-spin" />
+                  <span data-testid="bios-checking">{t('activate.biosChecking', { defaultValue: 'Checking BIOS availability...' })}</span>
+                </div>
+              )}
+              {biosCheckResult && !biosCheckLoading && (
+                <>
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : biosCheckResult.is_blacklisted ? 'text-red-600 dark:text-red-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {biosCheckResult.available ? (
+                      <>
+                        <Check className="size-3" />
+                        <span data-testid="bios-check-available">{t('activate.biosAvailable', { defaultValue: 'BIOS ID is available' })}</span>
+                      </>
+                    ) : biosCheckResult.is_blacklisted ? (
+                      <>
+                        <X className="size-3" />
+                        <span data-testid="bios-blacklist-error" className="font-semibold">{t('activate.biosBlacklisted', { defaultValue: 'This BIOS ID is blacklisted and cannot be used' })}</span>
+                      </>
+                    ) : (
+                      <>
+                        <X className="size-3" />
+                        <span data-testid="bios-conflict-error">{biosCheckResult.message || t('activate.biosConflict', { defaultValue: 'BIOS ID is already working with another reseller' })}</span>
+                      </>
+                    )}
+                  </div>
+                  {biosLinkedUsername && (
+                    <div className="mt-2 text-sm text-amber-600 dark:text-amber-400" data-testid="bios-linked-hint">
+                      {t('activate.biosLinkedUsername', { defaultValue: 'Username auto-filled from BIOS history' })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div>
               <Field label={t('activate.username', { defaultValue: 'Username (API)' })} hint={t('activate.usernameHint', { defaultValue: 'API username — auto-formatted (no spaces)' })} error={errors.customerName}>
                 <Input
                   value={customerName}
@@ -494,49 +539,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
           ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
-                <Input
-                  value={biosId}
-                  onChange={(event) => { setBiosId(event.target.value); setSubmitError('') }}
-                  maxLength={10}
-                  data-testid="bios-id"
-                />
-              </Field>
-              {biosCheckLoading && (
-                <div className="mt-2 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                  <Loader2 className="size-3 animate-spin" />
-                  <span data-testid="bios-checking">{t('activate.biosChecking', { defaultValue: 'Checking BIOS availability...' })}</span>
-                </div>
-              )}
-              {biosCheckResult && !biosCheckLoading && (
-                <>
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${biosCheckResult.available ? 'text-emerald-600 dark:text-emerald-400' : biosCheckResult.is_blacklisted ? 'text-red-600 dark:text-red-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                    {biosCheckResult.available ? (
-                      <>
-                        <Check className="size-3" />
-                        <span data-testid="bios-check-available">{t('activate.biosAvailable', { defaultValue: 'BIOS ID is available' })}</span>
-                      </>
-                    ) : biosCheckResult.is_blacklisted ? (
-                      <>
-                        <X className="size-3" />
-                        <span data-testid="bios-blacklist-error" className="font-semibold">{t('activate.biosBlacklisted', { defaultValue: 'This BIOS ID is blacklisted and cannot be used' })}</span>
-                      </>
-                    ) : (
-                      <>
-                        <X className="size-3" />
-                        <span data-testid="bios-conflict-error">{biosCheckResult.message || t('activate.biosConflict', { defaultValue: 'BIOS ID is already working with another reseller' })}</span>
-                      </>
-                    )}
-                  </div>
-                  {biosLinkedUsername && (
-                    <div className="mt-2 text-sm text-amber-600 dark:text-amber-400" data-testid="bios-linked-hint">
-                      {t('activate.biosLinkedUsername', { defaultValue: 'Username auto-filled from BIOS history' })}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
             <Field label={t('common.program')} error={errors.programId}>
               <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
                 <option value="">{t('reseller.pages.customers.activationDialog.selectProgram', { defaultValue: 'Select program' })}</option>
@@ -755,6 +757,17 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               </div>
             </>
           ) : null}
+
+          <Field label={t('common.notes', { defaultValue: 'Notes (Optional)' })} hint={t('common.notesHint', { defaultValue: 'Add internal notes for this customer. Only visible to you.' })}>
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder={t('common.notesPlaceholder', { defaultValue: 'e.g. Special activation request, trial account, etc.' })}
+              maxLength={5000}
+              rows={4}
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
+          </Field>
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => navigate(backPath(lang))} disabled={isBusy}>{t('common.cancel')}</Button>

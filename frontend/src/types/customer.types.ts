@@ -61,3 +61,12 @@ export interface CustomerDownloadItem {
   days_remaining: number
   can_download: boolean
 }
+
+export interface CustomerNote {
+  id: number
+  user_id: number
+  customer_id: number
+  note: string
+  created_at: string
+  updated_at: string
+}

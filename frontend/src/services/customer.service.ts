@@ -1,5 +1,5 @@
 import { api } from '@/services/api'
-import type { CustomerDashboardData, CustomerDownloadItem, CustomerSoftwareItem } from '@/types/customer.types'
+import type { CustomerDashboardData, CustomerDownloadItem, CustomerNote, CustomerSoftwareItem } from '@/types/customer.types'
 import type { CustomerDetails, CustomerSummary, PaginatedResponse } from '@/types/manager-parent.types'
 
 export interface CustomerParams {
@@ -32,6 +32,22 @@ export const customerService = {
   },
   async remove(id: number) {
     const { data } = await api.delete<{ message: string }>(`/customers/${id}`)
+    return data
+  },
+  async getMyNotes(customerId: number) {
+    const { data } = await api.get<{ data: CustomerNote[] }>(`/customers/${customerId}/notes`)
+    return data
+  },
+  async addNote(customerId: number, note: string) {
+    const { data } = await api.post<{ data: CustomerNote }>(`/customers/${customerId}/notes`, { note })
+    return data
+  },
+  async updateNote(noteId: number, note: string) {
+    const { data } = await api.put<{ data: CustomerNote }>(`/notes/${noteId}`, { note })
+    return data
+  },
+  async deleteNote(noteId: number) {
+    const { data } = await api.delete<{ message: string }>(`/notes/${noteId}`)
     return data
   },
 }

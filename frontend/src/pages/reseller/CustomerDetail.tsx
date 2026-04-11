@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Lock, XCircle } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Lock, XCircle, FileText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
+import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,6 +21,7 @@ export function CustomerDetailPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false)
 
   const query = useQuery({
     queryKey: ['reseller', 'customer-detail', customerId],
@@ -52,11 +55,19 @@ export function CustomerDetailPage() {
         eyebrow={t('roles.reseller')}
         title={customer?.name ?? t('reseller.pages.customers.title')}
         description={resolveCustomerDetailUsername(customer) ?? customer?.phone ?? t('reseller.pages.customers.description')}
-        actions={requestableLicense && !requestableLicense.is_blacklisted && !customer?.bios_active_elsewhere ? (
-          <Button type="button" onClick={() => navigate(routePaths.reseller.customerBiosChangeRequest(lang, customerId))}>
-            {t('biosChangeRequests.requestAction')}
-          </Button>
-        ) : null}
+        actions={
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => setIsNotesDialogOpen(true)}>
+              <FileText className="me-2 h-4 w-4" />
+              {t('common.notes', { defaultValue: 'Notes' })}
+            </Button>
+            {requestableLicense && !requestableLicense.is_blacklisted && !customer?.bios_active_elsewhere ? (
+              <Button type="button" onClick={() => navigate(routePaths.reseller.customerBiosChangeRequest(lang, customerId))}>
+                {t('biosChangeRequests.requestAction')}
+              </Button>
+            ) : null}
+          </div>
+        }
       />
 
       {customer ? (
@@ -154,6 +165,7 @@ export function CustomerDetailPage() {
         </>
       ) : null}
 
+      <CustomerNoteDialog isOpen={isNotesDialogOpen} onClose={() => setIsNotesDialogOpen(false)} customerId={customerId} />
     </div>
   )
 }

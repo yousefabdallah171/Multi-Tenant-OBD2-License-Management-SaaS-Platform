@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, Cpu, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { EditCustomerDialog } from '@/components/customers/EditCustomerDialog'
+import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -53,6 +54,7 @@ export function CustomersPage() {
   const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
   const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
   const [editTarget, setEditTarget] = useState<SuperAdminCustomerSummary | null>(null)
+  const [notesCustomerId, setNotesCustomerId] = useState<number | null>(null)
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SuperAdminCustomerSummary | null>(null)
@@ -377,6 +379,10 @@ export function CustomersPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.customerDetail(lang, row.id))}>{t('common.view')}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setNotesCustomerId(row.id)}>
+                  <FileText className="me-2 h-4 w-4" />
+                  {t('common.notes', { defaultValue: 'Notes' })}
+                </DropdownMenuItem>
                 <DropdownMenuItem disabled={isBlacklisted} onSelect={() => setEditTarget(row)}>
                   <Pencil className="me-2 h-4 w-4" />
                   {t('common.edit')}
@@ -717,6 +723,8 @@ export function CustomersPage() {
         onConfirm={() => resumeTarget?.license_id && resumeMutation.mutate(resumeTarget.license_id)}
       />
       <ConfirmDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)} title={t('common.delete')} description={deleteTarget?.name ?? ''} confirmLabel={t('common.delete')} isDestructive onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} />
+
+      <CustomerNoteDialog isOpen={notesCustomerId !== null} onClose={() => setNotesCustomerId(null)} customerId={notesCustomerId ?? 0} />
     </div>
   )
 }

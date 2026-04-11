@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { RoleBadge } from '@/components/shared/RoleBadge'
+import { RoleOptionPicker } from '@/components/shared/RoleOptionPicker'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -76,7 +78,8 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
   const resellerOptions = rows.map((row) => ({
     id: row.reseller_id,
     name: row.reseller_name,
-    email: row.reseller_email,
+    role: row.reseller_role ?? null,
+    secondary: row.reseller_email,
   }))
 
   const paymentMutation = useMutation({
@@ -98,7 +101,10 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
       sortValue: (row) => row.reseller_name,
       render: (row) => (
         <div>
-          <p className="font-medium">{row.reseller_name}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{row.reseller_name}</span>
+            {row.reseller_role ? <RoleBadge role={row.reseller_role} /> : null}
+          </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">{row.reseller_email}</p>
         </div>
       ),
@@ -218,16 +224,12 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
             <div className="mt-4 grid gap-4">
               <label className="space-y-2">
                 <span className="text-sm font-medium">{t('payments.columns.reseller', { defaultValue: 'Reseller' })}</span>
-                <select
-                  value={paymentForm.reseller_id}
-                  onChange={(event) => setPaymentForm((current) => ({ ...current, reseller_id: Number(event.target.value) }))}
-                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-                >
-                  <option value={0}>{t('common.selectOption', { defaultValue: 'Select an option' })}</option>
-                  {resellerOptions.map((reseller) => (
-                    <option key={reseller.id} value={reseller.id}>{`${reseller.name} (${reseller.email})`}</option>
-                  ))}
-                </select>
+                <RoleOptionPicker
+                  value={paymentForm.reseller_id === 0 ? '' : paymentForm.reseller_id}
+                  onChange={(value) => setPaymentForm((current) => ({ ...current, reseller_id: value === '' ? 0 : value }))}
+                  options={resellerOptions}
+                  placeholder={t('common.selectOption', { defaultValue: 'Select an option' })}
+                />
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-medium">{t('payments.fields.amount')}</span>
