@@ -737,9 +737,7 @@ class CustomerController extends BaseResellerController
     {
         $usernames = $users
             ->pluck('username')
-            ->filter()
-            ->map(fn (string $username): string => strtolower($username))
-            ->unique()
+            ->filter(fn ($username): bool => is_string($username) && $username !== '')
             ->values();
 
         if ($usernames->isEmpty()) {
@@ -748,7 +746,7 @@ class CustomerController extends BaseResellerController
 
         return BiosUsernameLink::query()
             ->where('tenant_id', $tenantId)
-            ->whereIn(DB::raw('LOWER(username)'), $usernames->all())
+            ->whereIn('username', $usernames->all())
             ->get(['username', 'bios_id'])
             ->mapWithKeys(fn (BiosUsernameLink $link): array => [strtolower((string) $link->username) => (string) $link->bios_id])
             ->all();
