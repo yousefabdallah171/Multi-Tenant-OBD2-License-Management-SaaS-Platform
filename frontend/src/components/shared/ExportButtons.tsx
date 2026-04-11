@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Download, FileText, LoaderCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 interface ExportButtonsProps {
   onExportCsv: () => Promise<void> | void
@@ -19,6 +20,9 @@ export function ExportButtons({ onExportCsv, onExportPdf, isExporting = false }:
 
     try {
       await action()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('common.error')
+      toast.error(message || t('common.error'))
     } finally {
       setActiveFormat(null)
     }
