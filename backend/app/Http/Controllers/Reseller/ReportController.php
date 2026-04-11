@@ -26,7 +26,12 @@ class ReportController extends BaseResellerController
                         ->first();
 
                     $totalRevenue = round((float) ($summary?->total_revenue ?? 0), 2);
-                    $totalActivations = (int) $this->baseQuery($request, $validated)->count();
+                    $baseQuery = $this->baseQuery($request, $validated);
+                    $totalActivations = (int) $baseQuery->count();
+                    $totalCustomers = (int) (clone $baseQuery)
+                        ->whereNotNull('customer_id')
+                        ->distinct('customer_id')
+                        ->count('customer_id');
                     $activeCustomers = (int) $this->licenseQuery($request)
                         ->whereEffectivelyActive()
                         ->whereNotNull('customer_id')
@@ -36,7 +41,7 @@ class ReportController extends BaseResellerController
                     return [
                         'total_revenue' => $totalRevenue,
                         'total_activations' => $totalActivations,
-                        'total_customers' => CustomerOwnership::currentOwnedCustomerCount([$resellerId], $this->currentTenantId($request)),
+                        'total_customers' => $totalCustomers,
                         'active_customers' => $activeCustomers,
                         'active_licenses' => $activeCustomers,
                         'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,

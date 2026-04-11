@@ -164,7 +164,7 @@ export function FinancialReportsPage() {
           showLabels
           series={[{ key: 'revenue', label: t('common.revenue') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
-          tooltipLabelFormatter={(value, payload) => sellerLabel(payload)}
+          tooltipLabelFormatter={(_value, payload) => sellerLabel(payload)}
           onEntryClick={(payload) => handleSellerClick(payload)}
         />
         <BarChartWidget
@@ -196,7 +196,7 @@ export function FinancialReportsPage() {
           showLabels
           series={[{ key: 'still_not_paid', label: t('managerParent.pages.financialReports.columns.stillNotPaid') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
-          tooltipLabelFormatter={(value, payload) => sellerLabel(payload as { reseller?: string; email?: string | null })}
+          tooltipLabelFormatter={(_value, payload) => sellerLabel(payload as { reseller?: string; email?: string | null })}
           onEntryClick={(payload) => handleSellerClick(payload as { id?: number; role?: string | null })}
         />
       </div>

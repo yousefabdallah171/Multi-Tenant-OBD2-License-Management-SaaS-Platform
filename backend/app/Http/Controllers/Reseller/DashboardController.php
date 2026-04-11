@@ -22,7 +22,12 @@ class DashboardController extends BaseResellerController
             $licenseQuery = License::query()->where('reseller_id', $resellerId);
 
             return [
-                'customers' => CustomerOwnership::currentOwnedCustomerCount([$resellerId], $this->currentTenantId($request)),
+                'customers' => (int) License::query()
+                    ->where('tenant_id', $this->currentTenantId($request))
+                    ->where('reseller_id', $resellerId)
+                    ->whereNotNull('customer_id')
+                    ->distinct('customer_id')
+                    ->count('customer_id'),
                 'active_licenses' => (int) (clone $licenseQuery)
                     ->whereEffectivelyActive()
                     ->whereNotNull('customer_id')

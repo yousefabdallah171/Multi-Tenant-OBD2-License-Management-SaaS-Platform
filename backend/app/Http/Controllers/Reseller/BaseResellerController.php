@@ -31,12 +31,10 @@ abstract class BaseResellerController extends Controller
     {
         $resellerId = $this->currentReseller($request)->id;
 
-        $customerIds = CustomerOwnership::applyBlockingOwnershipScope(
-            License::query()
-                ->where('tenant_id', $this->currentTenantId($request))
-                ->where('reseller_id', $resellerId)
-                ->whereNotNull('customer_id')
-        )
+        $customerIds = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->where('reseller_id', $resellerId)
+            ->whereNotNull('customer_id')
             ->distinct()
             ->pluck('customer_id');
 
