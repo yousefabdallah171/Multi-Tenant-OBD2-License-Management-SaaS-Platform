@@ -47,28 +47,28 @@ class RevenueAnalytics
     public static function priceExpression(string $table = 'activity_logs'): string
     {
         if (self::isSqlite()) {
-            return "CAST(json_extract({$table}.metadata, '$.price') AS REAL)";
+            return "CASE WHEN json_valid({$table}.metadata) THEN CAST(json_extract({$table}.metadata, '$.price') AS REAL) ELSE 0 END";
         }
 
-        return "CAST(JSON_UNQUOTE(JSON_EXTRACT({$table}.metadata, '$.price')) AS DECIMAL(12,2))";
+        return "CASE WHEN JSON_VALID({$table}.metadata) THEN CAST(JSON_UNQUOTE(JSON_EXTRACT({$table}.metadata, '$.price')) AS DECIMAL(12,2)) ELSE 0 END";
     }
 
     public static function programIdExpression(string $table = 'activity_logs'): string
     {
         if (self::isSqlite()) {
-            return "CAST(json_extract({$table}.metadata, '$.program_id') AS INTEGER)";
+            return "CASE WHEN json_valid({$table}.metadata) THEN CAST(json_extract({$table}.metadata, '$.program_id') AS INTEGER) ELSE 0 END";
         }
 
-        return "CAST(JSON_UNQUOTE(JSON_EXTRACT({$table}.metadata, '$.program_id')) AS UNSIGNED)";
+        return "CASE WHEN JSON_VALID({$table}.metadata) THEN CAST(JSON_UNQUOTE(JSON_EXTRACT({$table}.metadata, '$.program_id')) AS UNSIGNED) ELSE 0 END";
     }
 
     public static function attributionTypeExpression(string $table = 'activity_logs'): string
     {
         if (self::isSqlite()) {
-            return "COALESCE(json_extract({$table}.metadata, '$.attribution_type'), 'earned')";
+            return "CASE WHEN json_valid({$table}.metadata) THEN COALESCE(json_extract({$table}.metadata, '$.attribution_type'), 'earned') ELSE 'earned' END";
         }
 
-        return "COALESCE(JSON_UNQUOTE(JSON_EXTRACT({$table}.metadata, '$.attribution_type')), 'earned')";
+        return "CASE WHEN JSON_VALID({$table}.metadata) THEN COALESCE(JSON_UNQUOTE(JSON_EXTRACT({$table}.metadata, '$.attribution_type')), 'earned') ELSE 'earned' END";
     }
 
     public static function earnedCondition(string $table = 'activity_logs'): string

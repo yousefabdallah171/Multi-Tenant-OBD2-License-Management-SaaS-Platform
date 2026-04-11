@@ -5,6 +5,7 @@ namespace Tests\Feature\Security;
 use App\Models\ActivityLog;
 use App\Models\ResellerPayment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\BuildsSecurityFixtures;
 use Tests\TestCase;
@@ -150,6 +151,44 @@ class FinancialReportAccountingTest extends TestCase
         $this->assertNotNull($rows->firstWhere('id', $resellerA->id));
         $this->assertNull($rows->firstWhere('id', $managerB->id));
         $this->assertNull($rows->firstWhere('id', $resellerB->id));
+    }
+
+    public function test_revenue_widgets_ignore_malformed_activity_log_metadata_instead_of_throwing(): void
+    {
+        $tenant = $this->createTenant();
+        $superAdmin = $this->createUser('super_admin');
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $reseller = $this->createUser('reseller', $tenant, $managerParent);
+
+        $this->createEarnedActivity($tenant->id, $reseller->id, 85, '2026-04-10 10:00:00', 'license.activated');
+
+        DB::table('activity_logs')->insert([
+            'tenant_id' => $tenant->id,
+            'user_id' => $reseller->id,
+            'action' => 'license.activated',
+            'description' => 'Legacy malformed activity metadata.',
+            'metadata' => '{bad-json',
+            'ip_address' => '127.0.0.1',
+            'created_at' => '2026-04-10 11:00:00',
+            'updated_at' => '2026-04-10 11:00:00',
+        ]);
+
+        Sanctum::actingAs($reseller);
+
+        $summary = $this->getJson('/api/reseller/reports/summary?from=2025-04-12&to=2026-04-11&period=monthly')
+            ->assertOk();
+
+        $this->assertSame(85.0, (float) $summary->json('data.total_revenue'));
+
+        Sanctum::actingAs($superAdmin);
+
+        $comparison = $this->getJson('/api/super-admin/dashboard/tenant-comparison')
+            ->assertOk();
+
+        $tenantRow = collect($comparison->json('data'))->firstWhere('id', $tenant->id);
+
+        $this->assertNotNull($tenantRow);
+        $this->assertSame(85.0, (float) $tenantRow['revenue']);
     }
 
     private function createEarnedActivity(int $tenantId, int $sellerId, float $price, string $createdAt, string $action): void
