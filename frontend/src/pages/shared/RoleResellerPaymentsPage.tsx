@@ -85,8 +85,12 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     if (balanceFilter === 'positive') {
       return rows.filter((row) => row.outstanding > 0)
     }
-    if (balanceFilter === 'paid') {
-      return rows.filter((row) => row.amount_paid > 0)
+    if (balanceFilter === 'collected') {
+      return rows.filter((row) => {
+        const commissionOwed = row.commission_owed ?? 0
+        const outstanding = Math.max(row.outstanding ?? 0, 0)
+        return commissionOwed > 0 && commissionOwed - outstanding > 0
+      })
     }
     return rows
   }, [balanceFilter, rows])
@@ -112,7 +116,11 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
   const balanceAvailability = useMemo(() => ({
     positive: rows.some((row) => row.outstanding > 0),
     negative: rows.some((row) => row.outstanding < 0),
-    paid: rows.some((row) => row.amount_paid > 0),
+    collected: rows.some((row) => {
+      const commissionOwed = row.commission_owed ?? 0
+      const outstanding = Math.max(row.outstanding ?? 0, 0)
+      return commissionOwed > 0 && commissionOwed - outstanding > 0
+    }),
   }), [rows])
   const resellerOptions = rows.map((row) => ({
     id: row.reseller_id,
@@ -215,7 +223,7 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     setSearchParams((current) => updateRoleFilter(current, nextRole), { replace: true })
   }
 
-  const handleBalanceToggle = (nextValue: '' | 'negative' | 'positive' | 'paid') => {
+  const handleBalanceToggle = (nextValue: '' | 'negative' | 'positive' | 'collected') => {
     if (nextValue === '') {
       setSearchParams((current) => updateBalanceFilter(current, ''), { replace: true })
       return
@@ -253,14 +261,19 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
         <button
           type="button"
           className="h-full text-start"
-          onClick={() => handleBalanceToggle('paid')}
+          onClick={() => handleBalanceToggle('collected')}
         >
           <StatsCard
-            title={t('payments.summary.totalPaid')}
-            value={formatCurrency(summary?.total_paid ?? 0, 'USD', locale)}
+            title={t('payments.summary.totalCollected')}
+            value={formatCurrency(
+              summary?.total_collected
+                ?? Math.max(0, (summary?.total_owed ?? 0) - (summary?.total_collectible ?? 0)),
+              'USD',
+              locale
+            )}
             icon={Banknote}
             color="emerald"
-            helperText={t('payments.summary.totalPaidHint')}
+            helperText={t('payments.summary.totalCollectedHint')}
           />
         </button>
         <button type="button" className="h-full text-start" onClick={() => handleBalanceToggle('negative')}>
@@ -478,8 +491,8 @@ function normalizeScopeRole(value: string | null): 'manager_parent' | 'manager' 
   return ''
 }
 
-function normalizeBalanceFilter(value: string | null): '' | 'negative' | 'positive' | 'paid' {
-  if (value === 'negative' || value === 'positive' || value === 'paid') {
+function normalizeBalanceFilter(value: string | null): '' | 'negative' | 'positive' | 'collected' {
+  if (value === 'negative' || value === 'positive' || value === 'collected') {
     return value
   }
 
@@ -493,7 +506,7 @@ function normalizeRoleFilter(value: string | null): '' | 'manager_parent' | 'man
   return ''
 }
 
-function updateBalanceFilter(current: URLSearchParams, nextValue: '' | 'negative' | 'positive' | 'paid') {
+function updateBalanceFilter(current: URLSearchParams, nextValue: '' | 'negative' | 'positive' | 'collected') {
   const next = new URLSearchParams(current)
   if (nextValue) {
     next.set('balance', nextValue)

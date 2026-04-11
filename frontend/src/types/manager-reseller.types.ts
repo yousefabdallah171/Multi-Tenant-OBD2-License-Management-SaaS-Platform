@@ -501,9 +501,9 @@ export interface ResellerPaymentListData {
   data: ResellerPaymentRow[]
   summary: {
     total_owed: number
-    total_paid: number
     total_outstanding: number
     total_collectible: number
+    total_collected?: number
     period: string
   }
 }
