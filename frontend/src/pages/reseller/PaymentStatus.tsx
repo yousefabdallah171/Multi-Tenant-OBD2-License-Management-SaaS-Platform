@@ -24,6 +24,7 @@ export function PaymentStatusPage() {
   const data = query.data?.data
   const outstandingBalance = data?.summary.outstanding_balance ?? 0
   const hasCreditBalance = outstandingBalance < 0
+  const hasDebitBalance = outstandingBalance > 0
   const balanceCardTitle = hasCreditBalance
     ? t('payments.summary.creditToReceive', { defaultValue: 'Your Advanced Payment (Your Deposit)' })
     : t('payments.summary.remainingToPay', { defaultValue: 'Still Not Paid' })
@@ -49,8 +50,8 @@ export function PaymentStatusPage() {
           title={balanceCardTitle}
           value={balanceCardValue}
           icon={Wallet}
-          color={hasCreditBalance ? 'sky' : 'rose'}
-          className={hasCreditBalance
+          color={hasCreditBalance || !hasDebitBalance ? 'sky' : 'rose'}
+          className={hasCreditBalance || !hasDebitBalance
             ? 'ring-1 ring-sky-300/60 shadow-[0_0_18px_rgba(56,189,248,0.35)] dark:ring-sky-500/40'
             : 'ring-1 ring-rose-300/60 shadow-[0_0_18px_rgba(244,63,94,0.35)] dark:ring-rose-500/40'}
         />

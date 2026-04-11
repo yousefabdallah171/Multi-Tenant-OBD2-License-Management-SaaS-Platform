@@ -74,6 +74,12 @@ export const resellerService = {
     const { data } = await api.get<PaginatedResponse<ResellerCustomerSummary>>('/reseller/customers', { params })
     return data
   },
+  async exportCustomersXlsx(params: ResellerCustomerFilters) {
+    await downloadFile('/reseller/customers/export/csv', 'reseller-customers.xlsx', params)
+  },
+  async exportCustomersPdf(params: ResellerCustomerFilters) {
+    await downloadFile('/reseller/customers/export/pdf', 'reseller-customers.pdf', params)
+  },
   async createCustomer(payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: ResellerCustomerSummary }>('/reseller/customers', payload)
     // Invalidate dashboard cache after mutation

@@ -12,6 +12,7 @@ import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { ExportButtons } from '@/components/shared/ExportButtons'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { Button } from '@/components/ui/button'
 import {
@@ -328,6 +329,13 @@ export function CustomersPage() {
       program_id: programFilter || undefined,
     }),
     [programFilter, search],
+  )
+  const exportParams = useMemo(
+    () => ({
+      ...customerFilterParams,
+      status: status === 'all' ? '' : status,
+    }),
+    [customerFilterParams, status],
   )
 
   const customersQuery = useQuery({
@@ -783,10 +791,16 @@ export function CustomersPage() {
         title={text.title}
         description={text.description}
         actions={
-          <Button type="button" onClick={() => navigate(routePaths.reseller.customerCreate(lang))}>
-            <Plus className="me-2 h-4 w-4" />
-            {text.addCustomer}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <ExportButtons
+              onExportCsv={() => resellerService.exportCustomersXlsx(exportParams)}
+              onExportPdf={() => resellerService.exportCustomersPdf(exportParams)}
+            />
+            <Button type="button" onClick={() => navigate(routePaths.reseller.customerCreate(lang))}>
+              <Plus className="me-2 h-4 w-4" />
+              {text.addCustomer}
+            </Button>
+          </div>
         }
       />
 

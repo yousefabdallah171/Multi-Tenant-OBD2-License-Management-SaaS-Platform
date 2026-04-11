@@ -22,9 +22,10 @@ interface StatsCardProps {
   color?: keyof typeof cardColors
   helperText?: string
   className?: string
+  density?: 'normal' | 'compact'
 }
 
-export function StatsCard({ title, value, trend, color = 'sky', helperText, className }: StatsCardProps) {
+export function StatsCard({ title, value, trend, color = 'sky', helperText, className, density = 'normal' }: StatsCardProps) {
   const hasTrend = typeof trend === 'number'
   const { appearance } = useDashboardAppearance()
   const { primaryColor } = useBranding()
@@ -52,11 +53,11 @@ export function StatsCard({ title, value, trend, color = 'sky', helperText, clas
         borderLeftColor: palette.accentColor,
       }}
     >
-      <CardContent className="space-y-1.5 p-4 sm:p-5">
-        <p className="dashboard-text-label text-xs font-semibold uppercase tracking-wide" style={{ color: palette.color }}>{title}</p>
-        <p className="dashboard-text-display tabular-nums text-2xl font-bold text-slate-950 dark:text-white sm:text-3xl">{value}</p>
+      <CardContent className={cn('space-y-1.5', density === 'compact' ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
+        <p className={cn('dashboard-text-label font-semibold uppercase tracking-wide', density === 'compact' ? 'text-[11px]' : 'text-xs')} style={{ color: palette.color }}>{title}</p>
+        <p className={cn('dashboard-text-display tabular-nums font-bold text-slate-950 dark:text-white', density === 'compact' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl')}>{value}</p>
         {helperText ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">{helperText}</p>
+          <p className={cn('text-slate-500 dark:text-slate-400', density === 'compact' ? 'text-[11px]' : 'text-xs')}>{helperText}</p>
         ) : null}
         {hasTrend ? (
           <div

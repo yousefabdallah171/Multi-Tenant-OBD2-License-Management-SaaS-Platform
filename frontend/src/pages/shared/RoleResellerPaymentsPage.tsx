@@ -43,6 +43,7 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
   const resellerId = parseNumericParam(searchParams.get('reseller_id'))
   const scopeName = searchParams.get('scope_name') || ''
   const scopeRole = normalizeScopeRole(searchParams.get('scope_role'))
+  const roleFilter = normalizeRoleFilter(searchParams.get('role'))
   const [paymentForm, setPaymentForm] = useState({
     reseller_id: 0,
     amount: '',
@@ -64,11 +65,12 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     if (managerId) next.set('manager_id', String(managerId))
     if (resellerId) next.set('reseller_id', String(resellerId))
     if (balanceFilter) next.set('balance', balanceFilter)
+    if (roleFilter) next.set('role', roleFilter)
     if (scopeName) next.set('scope_name', scopeName)
     if (scopeRole) next.set('scope_role', scopeRole)
 
     setSearchParams(next, { replace: true })
-  }, [managerId, managerParentId, period, resellerId, balanceFilter, scopeName, scopeRole, setSearchParams])
+  }, [managerId, managerParentId, period, resellerId, balanceFilter, roleFilter, scopeName, scopeRole, setSearchParams])
 
   const query = useQuery({
     queryKey: [queryKeyPrefix, 'reseller-payments', listFilters],
@@ -89,6 +91,29 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     return rows
   }, [balanceFilter, rows])
   const summary = query.data?.summary
+  const totalsByRole = useMemo(() => {
+    const initial = {
+      reseller: 0,
+      manager: 0,
+      manager_parent: 0,
+    }
+
+    return rows.reduce((acc, row) => {
+      if (row.reseller_role === 'reseller') {
+        acc.reseller += row.total_sales ?? 0
+      } else if (row.reseller_role === 'manager') {
+        acc.manager += row.total_sales ?? 0
+      } else if (row.reseller_role === 'manager_parent') {
+        acc.manager_parent += row.total_sales ?? 0
+      }
+      return acc
+    }, initial)
+  }, [rows])
+  const balanceAvailability = useMemo(() => ({
+    positive: rows.some((row) => row.outstanding > 0),
+    negative: rows.some((row) => row.outstanding < 0),
+    paid: rows.some((row) => row.amount_paid > 0),
+  }), [rows])
   const resellerOptions = rows.map((row) => ({
     id: row.reseller_id,
     name: row.reseller_name,
@@ -163,6 +188,13 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     },
   ], [detailPath, lang, locale, navigate, t])
 
+  const displayedRows = useMemo(() => {
+    if (roleFilter) {
+      return filteredRows.filter((row) => row.reseller_role === roleFilter)
+    }
+    return filteredRows
+  }, [filteredRows, roleFilter])
+
   function resetPaymentForm() {
     setPaymentForm({
       reseller_id: rows[0]?.reseller_id ?? 0,
@@ -178,6 +210,22 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     })
     : ''
 
+  const handleRoleToggle = (role: ResellerPaymentRow['reseller_role']) => {
+    setSearchParams((current) => updateRoleFilter(current, roleFilter === role ? '' : role), { replace: true })
+  }
+
+  const handleBalanceToggle = (nextValue: '' | 'negative' | 'positive' | 'paid') => {
+    if (nextValue === '') {
+      setSearchParams((current) => updateBalanceFilter(current, ''), { replace: true })
+      return
+    }
+
+    const isActive = balanceFilter === nextValue
+    const hasRows = balanceAvailability[nextValue]
+    const nextFilter = isActive || !hasRows ? '' : nextValue
+    setSearchParams((current) => updateBalanceFilter(current, nextFilter), { replace: true })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -191,7 +239,7 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
         <button
           type="button"
           className="h-full text-start"
-          onClick={() => setSearchParams((current) => updateBalanceFilter(current, balanceFilter === 'positive' ? '' : 'positive'), { replace: true })}
+          onClick={() => handleBalanceToggle('positive')}
         >
           <StatsCard
             title={t('payments.summary.totalOwed')}
@@ -204,7 +252,7 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
         <button
           type="button"
           className="h-full text-start"
-          onClick={() => setSearchParams((current) => updateBalanceFilter(current, balanceFilter === 'paid' ? '' : 'paid'), { replace: true })}
+          onClick={() => handleBalanceToggle('paid')}
         >
           <StatsCard
             title={t('payments.summary.totalPaid')}
@@ -214,7 +262,7 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
             helperText={t('payments.summary.totalPaidHint')}
           />
         </button>
-        <button type="button" className="h-full text-start" onClick={() => setSearchParams((current) => updateBalanceFilter(current, balanceFilter === 'negative' ? '' : 'negative'), { replace: true })}>
+        <button type="button" className="h-full text-start" onClick={() => handleBalanceToggle('negative')}>
           <StatsCard
             title={t('payments.summary.outstanding')}
             value={formatCurrency(summary?.total_outstanding ?? 0, 'USD', locale)}
@@ -223,13 +271,61 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
             helperText={t('payments.summary.outstandingHint')}
           />
         </button>
-        <button type="button" className="h-full text-start" onClick={() => setSearchParams((current) => updateBalanceFilter(current, balanceFilter === 'positive' ? '' : 'positive'), { replace: true })}>
+        <button type="button" className="h-full text-start" onClick={() => handleBalanceToggle('positive')}>
           <StatsCard
             title={t('payments.summary.amountToCollect', { defaultValue: 'Amount To Collect' })}
             value={formatCurrency(summary?.total_collectible ?? 0, 'USD', locale)}
             icon={CircleDollarSign}
             color="sky"
             helperText={t('payments.summary.amountToCollectHint')}
+          />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <button
+          type="button"
+          className="h-full text-start"
+          onClick={() => handleRoleToggle('manager_parent')}
+        >
+          <StatsCard
+            title={t('payments.summary.totalSalesManagerParent')}
+            value={formatCurrency(totalsByRole.manager_parent, 'USD', locale)}
+            icon={WalletCards}
+            color={roleFilter === 'manager_parent' ? 'sky' : 'amber'}
+            helperText={t('payments.summary.totalSalesManagerParentHint')}
+            density="compact"
+            className={roleFilter === 'manager_parent' ? 'ring-2 ring-sky-400/60 dark:ring-sky-500/60' : undefined}
+          />
+        </button>
+        <button
+          type="button"
+          className="h-full text-start"
+          onClick={() => handleRoleToggle('manager')}
+        >
+          <StatsCard
+            title={t('payments.summary.totalSalesManager')}
+            value={formatCurrency(totalsByRole.manager, 'USD', locale)}
+            icon={WalletCards}
+            color={roleFilter === 'manager' ? 'emerald' : 'amber'}
+            helperText={t('payments.summary.totalSalesManagerHint')}
+            density="compact"
+            className={roleFilter === 'manager' ? 'ring-2 ring-emerald-400/60 dark:ring-emerald-500/60' : undefined}
+          />
+        </button>
+        <button
+          type="button"
+          className="h-full text-start"
+          onClick={() => handleRoleToggle('reseller')}
+        >
+          <StatsCard
+            title={t('payments.summary.totalSalesReseller')}
+            value={formatCurrency(totalsByRole.reseller, 'USD', locale)}
+            icon={WalletCards}
+            color={roleFilter === 'reseller' ? 'amber' : 'amber'}
+            helperText={t('payments.summary.totalSalesResellerHint')}
+            density="compact"
+            className={roleFilter === 'reseller' ? 'ring-2 ring-amber-400/60 dark:ring-amber-500/60' : undefined}
           />
         </button>
       </div>
@@ -266,7 +362,7 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
         ) : null}
       </div>
 
-      <DataTable tableKey={`${queryKeyPrefix}_reseller_payments`} columns={columns} data={filteredRows} rowKey={(row) => row.reseller_id} isLoading={query.isLoading} emptyMessage={t('payments.empty.resellers')} />
+      <DataTable tableKey={`${queryKeyPrefix}_reseller_payments`} columns={columns} data={displayedRows} rowKey={(row) => row.reseller_id} isLoading={query.isLoading} emptyMessage={t('payments.empty.resellers')} />
 
       {paymentOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="record-payment-title" aria-describedby="record-payment-description">
@@ -375,12 +471,30 @@ function normalizeBalanceFilter(value: string | null): '' | 'negative' | 'positi
   return ''
 }
 
+function normalizeRoleFilter(value: string | null): '' | 'manager_parent' | 'manager' | 'reseller' {
+  if (value === 'manager_parent' || value === 'manager' || value === 'reseller') {
+    return value
+  }
+  return ''
+}
+
 function updateBalanceFilter(current: URLSearchParams, nextValue: '' | 'negative' | 'positive' | 'paid') {
   const next = new URLSearchParams(current)
   if (nextValue) {
     next.set('balance', nextValue)
   } else {
     next.delete('balance')
+  }
+  next.delete('role')
+  return next
+}
+
+function updateRoleFilter(current: URLSearchParams, nextValue: '' | 'manager_parent' | 'manager' | 'reseller') {
+  const next = new URLSearchParams(current)
+  if (nextValue) {
+    next.set('role', nextValue)
+  } else {
+    next.delete('role')
   }
   return next
 }

@@ -9,6 +9,7 @@ import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { ExportButtons } from '@/components/shared/ExportButtons'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
@@ -71,6 +72,13 @@ export function CustomersPage() {
       program_id: programId || undefined,
     }),
     [programId, resellerId, search, tenantId],
+  )
+  const exportParams = useMemo(
+    () => ({
+      ...customerFilterParams,
+      status: status === 'all' ? '' : status,
+    }),
+    [customerFilterParams, status],
   )
 
   useEffect(() => {
@@ -441,10 +449,16 @@ export function CustomersPage() {
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{t('superAdmin.pages.customers.title')}</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.customers.description')}</p>
         </div>
-        <Button type="button" onClick={() => navigate(routePaths.superAdmin.customerCreate(lang))}>
-          <Plus className="me-2 h-4 w-4" />
-          {t('superAdmin.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButtons
+            onExportCsv={() => superAdminCustomerService.exportXlsx(exportParams)}
+            onExportPdf={() => superAdminCustomerService.exportPdf(exportParams)}
+          />
+          <Button type="button" onClick={() => navigate(routePaths.superAdmin.customerCreate(lang))}>
+            <Plus className="me-2 h-4 w-4" />
+            {t('superAdmin.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 md:grid-cols-6">

@@ -109,12 +109,13 @@ export function FinancialReportsPage() {
   const customersHref = buildScopedCustomersPath(routePaths.managerParent.customers(lang), scope)
   const activeCustomersHref = buildScopedCustomersPath(routePaths.managerParent.customers(lang), scope, { status: 'active' })
 
-  const sellerLabel = (seller?: { reseller?: string; email?: string | null }) => {
+  const sellerLabel = (seller?: { reseller?: string; email?: string | null; role?: string | null }) => {
     if (!seller) return ''
+    const roleLabel = seller.role ? resolveRoleLabel(seller.role, t) : ''
     if (seller.email) {
-      return `${seller.reseller} • ${seller.email}`
+      return roleLabel ? `${seller.reseller} • ${seller.email} • ${roleLabel}` : `${seller.reseller} • ${seller.email}`
     }
-    return seller.reseller ?? ''
+    return roleLabel ? `${seller.reseller ?? ''} • ${roleLabel}` : (seller.reseller ?? '')
   }
 
   const handleSellerClick = (seller?: { id?: number; role?: string | null }) => {
@@ -196,7 +197,7 @@ export function FinancialReportsPage() {
           showLabels
           series={[{ key: 'still_not_paid', label: t('managerParent.pages.financialReports.columns.stillNotPaid') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
-          tooltipLabelFormatter={(_value, payload) => sellerLabel(payload as { reseller?: string; email?: string | null })}
+          tooltipLabelFormatter={(_value, payload) => sellerLabel(payload as { reseller?: string; email?: string | null; role?: string | null })}
           onEntryClick={(payload) => handleSellerClick(payload as { id?: number; role?: string | null })}
         />
       </div>
@@ -226,6 +227,13 @@ function resolveUserRole(role?: string | null): UserRole | null {
   }
 
   return null
+}
+
+function resolveRoleLabel(role: string, t: ReturnType<typeof useTranslation>['t']) {
+  if (role === 'manager_parent') return t('roles.manager_parent')
+  if (role === 'manager') return t('roles.manager')
+  if (role === 'reseller') return t('roles.reseller')
+  return role
 }
 
 function getManagerParentSellerDetailPath(lang: SupportedLanguage, id: number, role?: string | null) {

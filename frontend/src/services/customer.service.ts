@@ -1,6 +1,7 @@
 import { api } from '@/services/api'
 import type { CustomerDashboardData, CustomerDownloadItem, CustomerNote, CustomerSoftwareItem } from '@/types/customer.types'
 import type { CustomerDetails, CustomerSummary, PaginatedResponse } from '@/types/manager-parent.types'
+import { downloadFile } from '@/utils/download'
 
 export interface CustomerParams {
   page?: number
@@ -17,6 +18,12 @@ export const customerService = {
   async getAll(params: CustomerParams) {
     const { data } = await api.get<PaginatedResponse<CustomerSummary>>('/customers', { params })
     return data
+  },
+  async exportXlsx(params: CustomerParams) {
+    await downloadFile('/customers/export/csv', 'manager-parent-customers.xlsx', params)
+  },
+  async exportPdf(params: CustomerParams) {
+    await downloadFile('/customers/export/pdf', 'manager-parent-customers.pdf', params)
   },
   async create(payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: CustomerSummary }>('/customers', payload)

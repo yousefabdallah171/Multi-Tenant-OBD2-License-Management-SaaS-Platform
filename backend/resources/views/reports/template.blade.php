@@ -3,12 +3,17 @@
 <head>
     <meta charset="utf-8">
     <style>
+        @page {
+            size: A4 landscape;
+            margin: 18px;
+        }
+
         body {
             font-family: DejaVu Sans, sans-serif;
             color: #0f172a;
-            font-size: 12px;
-            line-height: 1.45;
-            margin: 24px;
+            font-size: 11px;
+            line-height: 1.35;
+            margin: 0;
         }
 
         .header {
@@ -66,20 +71,32 @@
         table.data {
             border-collapse: collapse;
             width: 100%;
+            table-layout: fixed;
         }
 
         table.data th,
         table.data td {
             border: 1px solid #cbd5e1;
-            padding: 8px;
+            padding: 6px;
             text-align: {{ $lang === 'ar' ? 'right' : 'left' }};
             vertical-align: top;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         table.data th {
             background: #e0f2fe;
             color: #0c4a6e;
             font-weight: 700;
+            font-size: 10px;
+        }
+
+        table.data td {
+            font-size: 10px;
+        }
+
+        table.data tbody tr:nth-child(even) {
+            background: #f8fafc;
         }
 
         .footer {

@@ -11,6 +11,7 @@ import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { RenewLicenseDialog } from '@/components/licenses/RenewLicenseDialog'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { ExportButtons } from '@/components/shared/ExportButtons'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
@@ -114,6 +115,13 @@ export function CustomersPage() {
       program_id: programId || undefined,
     }),
     [programId, resellerId, search],
+  )
+  const exportParams = useMemo(
+    () => ({
+      ...customerFilterParams,
+      status: status === 'all' ? '' : status,
+    }),
+    [customerFilterParams, status],
   )
 
   const customersQuery = useQuery({
@@ -544,10 +552,16 @@ export function CustomersPage() {
         title={t('manager.pages.customers.title')}
         description={t('manager.pages.customers.description')}
         actions={
-          <Button type="button" onClick={() => navigate(routePaths.manager.customerCreate(lang))}>
-            <Plus className="me-2 h-4 w-4" />
-            {t('manager.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <ExportButtons
+              onExportCsv={() => managerService.exportCustomersXlsx(exportParams)}
+              onExportPdf={() => managerService.exportCustomersPdf(exportParams)}
+            />
+            <Button type="button" onClick={() => navigate(routePaths.manager.customerCreate(lang))}>
+              <Plus className="me-2 h-4 w-4" />
+              {t('manager.pages.customers.addCustomer', { defaultValue: 'Add Customer' })}
+            </Button>
+          </div>
         }
       />
 

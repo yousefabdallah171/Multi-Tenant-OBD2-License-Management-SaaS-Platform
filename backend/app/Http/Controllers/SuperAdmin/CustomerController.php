@@ -12,8 +12,10 @@ use App\Models\Program;
 use App\Models\User;
 use App\Models\UserIpLog;
 use App\Support\CustomerOwnership;
+use App\Services\ExportTaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -90,6 +92,38 @@ class CustomerController extends BaseSuperAdminController
                 'last_page' => $lastPage,
             ],
         ]);
+    }
+
+    public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
+    {
+        $task = $exportTaskService->queue(
+            $request,
+            'xlsx',
+            'super-admin-customers.xlsx',
+            'Super Admin Customers',
+            $this->exportSections($request),
+            [],
+            null,
+            $this->reportLanguage($request),
+        );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
+    }
+
+    public function exportPdf(Request $request, ExportTaskService $exportTaskService): JsonResponse
+    {
+        $task = $exportTaskService->queue(
+            $request,
+            'pdf',
+            'super-admin-customers.pdf',
+            'Super Admin Customers',
+            $this->exportSections($request),
+            [],
+            null,
+            $this->reportLanguage($request),
+        );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
     }
 
     public function show(User $user): JsonResponse
@@ -324,6 +358,141 @@ class CustomerController extends BaseSuperAdminController
             ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         return response()->json(['data' => $this->serializeCustomer($customer)], 201);
+    }
+
+    /**
+     * @return array<int, array{title?: string|null, headers: array<int, string>, rows: array<int, array<int, string|int|float|null>>}>
+     */
+    private function exportSections(Request $request): array
+    {
+        $validated = $request->validate([
+            'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
+            'reseller_id' => ['nullable', 'integer', 'exists:users,id'],
+            'program_id' => ['nullable', 'integer', 'exists:programs,id'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
+            'search' => ['nullable', 'string'],
+        ]);
+
+        $query = User::query()
+            ->with('tenant')
+            ->where('role', UserRole::CUSTOMER->value)
+            ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
+            ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
+                ->select($this->licenseListColumns())
+                ->with(['program:id,name', 'reseller:id,name,role'])])
+            ->latest();
+
+        if (! empty($validated['tenant_id'])) {
+            $query->where('tenant_id', (int) $validated['tenant_id']);
+        }
+
+        if (! empty($validated['search'])) {
+            $query->where(function ($builder) use ($validated): void {
+                $builder
+                    ->where('name', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('username', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('email', 'like', '%'.$validated['search'].'%')
+                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
+                        ->where('bios_id', 'like', '%'.$validated['search'].'%'));
+            });
+        }
+
+        $allCustomers = $query->get();
+        $rows = $allCustomers
+            ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated))
+            ->map(fn (User $user): array => $this->serializeCustomer($user, $validated))
+            ->values();
+        $notesMap = $this->resolveNotesForExport($rows->pluck('id')->filter()->all());
+
+        return [
+            [
+                'title' => 'Customers',
+                'headers' => [
+                    'Tenant',
+                    'Name',
+                    'Username',
+                    'Email',
+                    'Phone',
+                    'BIOS ID',
+                    'Program',
+                    'Seller',
+                    'Seller Role',
+                    'Duration (Days)',
+                    'Status',
+                    'Price (USD)',
+                    'Start',
+                    'Expiry',
+                    'Notes',
+                ],
+                'rows' => $rows->map(fn (array $row): array => [
+                    $row['tenant']['name'] ?? '',
+                    $row['name'] ?? '',
+                    $row['username'] ?? '',
+                    $row['email'] ?? '',
+                    $row['phone'] ?? '',
+                    $row['bios_id'] ?? '',
+                    $row['program'] ?? '',
+                    $row['reseller'] ?? '',
+                    $row['reseller_role'] ?? '',
+                    $this->resolveExportDurationDays($row['duration_days'] ?? null, $row['start_at'] ?? null, $row['expiry'] ?? null),
+                    $row['status'] ?? '',
+                    $row['price'] ?? null,
+                    $row['start_at'] ?? $row['activated_at'] ?? '',
+                    $row['expiry'] ?? '',
+                    $notesMap[(int) ($row['id'] ?? 0)] ?? '',
+                ])->all(),
+            ],
+        ];
+    }
+
+    private function reportLanguage(Request $request): string
+    {
+        $lang = $request->query('lang', $request->header('Accept-Language', 'en'));
+
+        return str_starts_with((string) $lang, 'ar') ? 'ar' : 'en';
+    }
+
+    /**
+     * @param  array<int, int>  $customerIds
+     * @return array<int, string>
+     */
+    private function resolveNotesForExport(array $customerIds): array
+    {
+        if ($customerIds === []) {
+            return [];
+        }
+
+        $notes = CustomerNote::query()
+            ->where('user_id', auth()->id())
+            ->whereIn('customer_id', $customerIds)
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('customer_id')
+            ->map(fn ($group) => (string) ($group->first()?->note ?? ''))
+            ->all();
+
+        return $notes;
+    }
+
+    private function resolveExportDurationDays(?float $durationDays, ?string $startAt, ?string $expiryAt): ?float
+    {
+        if ($startAt && $expiryAt) {
+            try {
+                $start = Carbon::parse($startAt);
+                $expiry = Carbon::parse($expiryAt);
+                if ($expiry->greaterThan($start)) {
+                    return round($expiry->diffInSeconds($start) / 86400, 2);
+                }
+            } catch (\Throwable) {
+                // fall through to duration_days
+            }
+        }
+
+        if ($durationDays !== null && is_finite($durationDays) && $durationDays > 0) {
+            return round($durationDays, 2);
+        }
+
+        return null;
     }
 
     public function update(Request $request, User $user): JsonResponse
