@@ -37,9 +37,12 @@ class GenerateExportTask implements ShouldQueue
             $lang = $payload['lang'] ?? 'en';
             $title = $task->title ?? 'Report';
 
+            $resolvedDateRange = is_string($dateRange) ? $dateRange : null;
+            $resolvedLang = is_string($lang) ? $lang : 'en';
+
             $binary = $task->format === 'pdf'
-                ? $reportExporter->pdfBinary($title, $sections, $summary, is_string($dateRange) ? $dateRange : null, is_string($lang) ? $lang : 'en')
-                : $reportExporter->csvString($sections);
+                ? $reportExporter->pdfBinary($title, $sections, $summary, $resolvedDateRange, $resolvedLang)
+                : $reportExporter->csvString($sections, $title, $summary, $resolvedDateRange, $resolvedLang);
 
             $disk = 'local';
             $path = sprintf('exports/%s/%s', now()->format('Y/m/d'), $task->id.'.'.$task->format);
