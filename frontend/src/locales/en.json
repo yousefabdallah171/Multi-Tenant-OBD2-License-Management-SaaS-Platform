@@ -1954,7 +1954,7 @@
       "amountToCollectHint": "Sum of positive outstanding values only (what you can collect now).",
       "totalPaidToManager": "Amount You Paid to Manager",
       "remainingToPay": "Still Not Paid",
-      "creditToReceive": "Money You Should Receive",
+      "creditToReceive": "Your Advanced Payment (Your Deposit)",
       "creditHelpText": "You have already paid more than what is owed. This balance should be returned or credited to you.",
       "helpText": "This page shows how much you sold, how much you already paid to your manager, and how much is still left to pay."
     },

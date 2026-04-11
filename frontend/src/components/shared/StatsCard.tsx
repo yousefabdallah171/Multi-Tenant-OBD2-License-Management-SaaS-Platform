@@ -21,9 +21,10 @@ interface StatsCardProps {
   trend?: number
   color?: keyof typeof cardColors
   helperText?: string
+  className?: string
 }
 
-export function StatsCard({ title, value, trend, color = 'sky', helperText }: StatsCardProps) {
+export function StatsCard({ title, value, trend, color = 'sky', helperText, className }: StatsCardProps) {
   const hasTrend = typeof trend === 'number'
   const { appearance } = useDashboardAppearance()
   const { primaryColor } = useBranding()
@@ -44,7 +45,7 @@ export function StatsCard({ title, value, trend, color = 'sky', helperText }: St
   return (
     <Card
       data-testid="stats-card"
-      className="h-full border-l-4 hover:shadow-md hover:shadow-slate-950/8"
+      className={cn("h-full border-l-4 hover:shadow-md hover:shadow-slate-950/8", className)}
       style={{
         backgroundColor: palette.backgroundColor,
         borderColor: palette.borderColor,

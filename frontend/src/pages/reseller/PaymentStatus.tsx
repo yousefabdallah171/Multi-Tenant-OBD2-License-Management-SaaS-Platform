@@ -25,7 +25,7 @@ export function PaymentStatusPage() {
   const outstandingBalance = data?.summary.outstanding_balance ?? 0
   const hasCreditBalance = outstandingBalance < 0
   const balanceCardTitle = hasCreditBalance
-    ? t('payments.summary.creditToReceive', { defaultValue: 'Money You Should Receive' })
+    ? t('payments.summary.creditToReceive', { defaultValue: 'Your Advanced Payment (Your Deposit)' })
     : t('payments.summary.remainingToPay', { defaultValue: 'Still Not Paid' })
   const balanceCardValue = formatCurrency(hasCreditBalance ? Math.abs(outstandingBalance) : outstandingBalance, 'USD', locale)
   const paymentColumns = useMemo<Array<DataTableColumn<ResellerPayment>>>(() => [
@@ -45,7 +45,13 @@ export function PaymentStatusPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <StatsCard title={t('payments.summary.totalSales')} value={formatCurrency(data?.summary.total_sales ?? 0, 'USD', locale)} icon={WalletCards} color="sky" />
         <StatsCard title={t('payments.summary.totalPaidToManager', { defaultValue: 'Amount You Paid to Manager' })} value={formatCurrency(data?.summary.total_paid ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
-        <StatsCard title={balanceCardTitle} value={balanceCardValue} icon={Wallet} color={hasCreditBalance ? 'emerald' : 'rose'} />
+        <StatsCard
+          title={balanceCardTitle}
+          value={balanceCardValue}
+          icon={Wallet}
+          color={hasCreditBalance ? 'rose' : 'amber'}
+          className={hasCreditBalance ? 'ring-1 ring-rose-300/60 shadow-[0_0_18px_rgba(244,63,94,0.35)] dark:ring-rose-500/40' : undefined}
+        />
       </div>
 
       <Card>

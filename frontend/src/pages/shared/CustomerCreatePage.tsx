@@ -432,17 +432,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label={t('common.program')} error={errors.programId}>
-              <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                <option value="">{t('reseller.pages.customers.activationDialog.selectProgram', { defaultValue: 'Select program' })}</option>
-                {(programsQuery.data?.data ?? []).map((program) => (
-                  <option key={program.id} value={program.id}>{program.name}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
                 <Input
@@ -532,6 +521,14 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 </div>
               )}
             </div>
+            <Field label={t('common.program')} error={errors.programId}>
+              <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                <option value="">{t('reseller.pages.customers.activationDialog.selectProgram', { defaultValue: 'Select program' })}</option>
+                {(programsQuery.data?.data ?? []).map((program) => (
+                  <option key={program.id} value={program.id}>{program.name}</option>
+                ))}
+              </select>
+            </Field>
             <Field label={t('activate.clientName', { defaultValue: 'Client Display Name' })} hint={t('activate.clientNameHint', { defaultValue: 'Human-readable name for display in your dashboard' })}>
               <Input value={clientName} placeholder={t('activate.clientNamePlaceholder', { defaultValue: 'Full client name (optional)' })} onChange={(event) => setClientName(event.target.value)} />
             </Field>
