@@ -15,7 +15,16 @@ class CustomerOwnership
     {
         return $query->where(function (Builder $blocking) use ($table): void {
             $blocking
-                ->whereIn("{$table}.status", ['active', 'suspended'])
+                ->where("{$table}.status", 'suspended')
+                ->orWhere(function (Builder $active) use ($table): void {
+                    $active
+                        ->where("{$table}.status", 'active')
+                        ->where(function (Builder $notExpired) use ($table): void {
+                            $notExpired
+                                ->whereNull("{$table}.expires_at")
+                                ->orWhere("{$table}.expires_at", '>=', now()->copy()->startOfMinute()->addMinute());
+                        });
+                })
                 ->orWhere(function (Builder $scheduled) use ($table): void {
                     $scheduled
                         ->where("{$table}.status", 'pending')

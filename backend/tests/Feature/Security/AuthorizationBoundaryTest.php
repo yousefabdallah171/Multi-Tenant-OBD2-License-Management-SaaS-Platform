@@ -457,6 +457,60 @@ class AuthorizationBoundaryTest extends TestCase
         $this->assertTrue((bool) $customers->json('data.0.bios_active_elsewhere'));
     }
 
+    public function test_manager_parent_activation_can_take_over_stale_active_expired_reseller_bios(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $reseller = $this->createUser('reseller', $tenant, $managerParent, ['name' => 'Legacy Reseller']);
+        $customer = $this->createUser('customer', $tenant, $reseller, [
+            'name' => 'Stale Active Customer',
+            'username' => 'stale_active',
+            'username_locked' => true,
+        ]);
+        $program = $this->createProgram($tenant);
+
+        $legacyLicense = $this->createLicense($reseller, $program, $customer, [
+            'bios_id' => 'STALEACTIVE1',
+            'external_username' => 'stale-active',
+            'status' => 'active',
+            'price' => 60,
+            'activated_at' => now()->subDays(40),
+            'expires_at' => now()->subDays(10),
+        ]);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->postJson('/api/licenses/activate', [
+            'program_id' => $program->id,
+            'customer_name' => 'stale_active',
+            'bios_id' => 'STALEACTIVE1',
+            'duration_days' => 30,
+            'price' => 75,
+            'is_scheduled' => true,
+            'scheduled_date_time' => now()->addDay()->toIso8601String(),
+            'scheduled_timezone' => 'UTC',
+        ])->assertCreated();
+
+        $takeoverLicense = License::query()
+            ->where('customer_id', $customer->id)
+            ->where('bios_id', 'STALEACTIVE1')
+            ->whereKeyNot($legacyLicense->id)
+            ->firstOrFail();
+
+        $this->assertSame($managerParent->id, (int) $takeoverLicense->reseller_id);
+        $this->assertSame('pending', $takeoverLicense->status);
+        $this->assertTrue((bool) $takeoverLicense->is_scheduled);
+
+        Sanctum::actingAs($reseller);
+
+        $customers = $this->getJson('/api/reseller/customers')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1);
+
+        $this->assertSame('expired', $customers->json('data.0.status'));
+        $this->assertTrue((bool) $customers->json('data.0.bios_active_elsewhere'));
+    }
+
     public function test_manager_parent_activation_rejects_unreasonable_price(): void
     {
         $tenant = $this->createTenant();
@@ -484,7 +538,7 @@ class AuthorizationBoundaryTest extends TestCase
         $superAdmin = $this->createUser('super_admin');
         $tenant = $this->createTenant();
         $managerParent = $this->createUser('manager_parent', $tenant);
-        $customer = $this->createUser('customer', $tenant, $managerParent);
+        $customer = $this->createUser('customer', $tenant, $managerParent, ['username' => 'force_customer']);
         $program = $this->createProgram($tenant);
 
         Sanctum::actingAs($superAdmin);

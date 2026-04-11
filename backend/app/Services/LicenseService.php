@@ -101,7 +101,7 @@ class LicenseService
                 $biosIdLowerActivate = strtolower($biosId);
                 $raceConflict = License::query()
                     ->whereRaw('LOWER(bios_id) = ?', [$biosIdLowerActivate])
-                    ->whereIn('status', ['active', 'suspended'])
+                    ->tap(fn ($q) => $this->scopeBiosOwned($q))
                     ->lockForUpdate()
                     ->first();
                 if ($raceConflict) {
@@ -891,7 +891,7 @@ class LicenseService
         $globalConflict = License::query()
             ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
             ->where('id', '!=', $license->id)
-            ->whereIn('status', ['active', 'suspended'])
+            ->tap(fn ($q) => $this->scopeBiosOwned($q))
             ->first();
 
         if ($globalConflict) {
@@ -932,7 +932,7 @@ class LicenseService
                 $raceConflict = License::query()
                     ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
                     ->where('id', '!=', $license->id)
-                    ->whereIn('status', ['active', 'suspended'])
+                    ->tap(fn ($q) => $this->scopeBiosOwned($q))
                     ->lockForUpdate()
                     ->first();
                 if ($raceConflict) {
@@ -998,7 +998,7 @@ class LicenseService
                     $raceConflict = License::query()
                         ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
                         ->where('id', '!=', $license->id)
-                        ->whereIn('status', ['active', 'suspended'])
+                        ->tap(fn ($q) => $this->scopeBiosOwned($q))
                         ->lockForUpdate()
                         ->first();
                     if ($raceConflict) {
@@ -1080,7 +1080,7 @@ class LicenseService
             $raceConflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$newBiosLower])
                 ->where('id', '!=', $license->id)
-                ->whereIn('status', ['active', 'suspended'])
+                ->tap(fn ($q) => $this->scopeBiosOwned($q))
                 ->lockForUpdate()
                 ->first();
             if ($raceConflict) {
@@ -1257,7 +1257,14 @@ class LicenseService
     private function scopeBiosOwned(\Illuminate\Database\Eloquent\Builder $q): void
     {
         $q->where(function ($q1): void {
-            $q1->whereIn('status', ['active', 'suspended'])
+            $q1->where('status', 'suspended')
+               ->orWhere(function ($q2): void {
+                   $q2->where('status', 'active')
+                      ->where(function ($q3): void {
+                          $q3->whereNull('expires_at')
+                             ->orWhere('expires_at', '>=', now()->copy()->startOfMinute()->addMinute());
+                      });
+               })
                ->orWhere(function ($q2): void {
                    // scheduled-pending
                    $q2->where('status', 'pending')
