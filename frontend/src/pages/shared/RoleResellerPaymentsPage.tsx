@@ -441,9 +441,13 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
 }
 
 function sanitizeMoneyInput(value: string) {
-  const cleaned = value.replace(/[^0-9.]/g, '')
+  const normalized = value.replace(/,/g, '.')
+  const cleaned = normalized.replace(/[^0-9.]/g, '')
   const [whole = '', ...rest] = cleaned.split('.')
   const fraction = rest.join('').slice(0, 2)
+  if (whole === '' && fraction.length > 0) {
+    return `0.${fraction}`
+  }
   return fraction.length > 0 ? `${whole}.${fraction}` : whole
 }
 
