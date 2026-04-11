@@ -14,34 +14,49 @@ class ReportController extends BaseResellerController
 {
     public function summary(Request $request): JsonResponse
     {
-        $validated = $this->validatedFilters($request);
-        $resellerId = $this->currentReseller($request)->id;
-        $cacheKey = $this->cacheKey($resellerId, 'summary', $validated);
+        try {
+            $validated = $this->validatedFilters($request);
+            $resellerId = $this->currentReseller($request)->id;
+            $cacheKey = $this->cacheKey($resellerId, 'summary', $validated);
 
-        return response()->json([
-            'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated, $resellerId): array {
-                $summary = $this->revenueQuery($request, $validated)
-                    ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
-                    ->first();
+            return response()->json([
+                'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated, $resellerId): array {
+                    $summary = $this->revenueQuery($request, $validated)
+                        ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
+                        ->first();
 
-                $totalRevenue = round((float) ($summary?->total_revenue ?? 0), 2);
-                $totalActivations = (int) $this->baseQuery($request, $validated)->count();
-                $activeCustomers = (int) $this->licenseQuery($request)
-                    ->whereEffectivelyActive()
-                    ->whereNotNull('customer_id')
-                    ->distinct('customer_id')
-                    ->count('customer_id');
+                    $totalRevenue = round((float) ($summary?->total_revenue ?? 0), 2);
+                    $totalActivations = (int) $this->baseQuery($request, $validated)->count();
+                    $activeCustomers = (int) $this->licenseQuery($request)
+                        ->whereEffectivelyActive()
+                        ->whereNotNull('customer_id')
+                        ->distinct('customer_id')
+                        ->count('customer_id');
 
-                return [
-                    'total_revenue' => $totalRevenue,
-                    'total_activations' => $totalActivations,
-                    'total_customers' => CustomerOwnership::currentOwnedCustomerCount([$resellerId], $this->currentTenantId($request)),
-                    'active_customers' => $activeCustomers,
-                    'active_licenses' => $activeCustomers,
-                    'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,
-                ];
-            }),
-        ]);
+                    return [
+                        'total_revenue' => $totalRevenue,
+                        'total_activations' => $totalActivations,
+                        'total_customers' => CustomerOwnership::currentOwnedCustomerCount([$resellerId], $this->currentTenantId($request)),
+                        'active_customers' => $activeCustomers,
+                        'active_licenses' => $activeCustomers,
+                        'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,
+                    ];
+                }),
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'data' => [
+                    'total_revenue' => 0.0,
+                    'total_activations' => 0,
+                    'total_customers' => 0,
+                    'active_customers' => 0,
+                    'active_licenses' => 0,
+                    'avg_price' => 0.0,
+                ],
+            ]);
+        }
     }
 
     public function revenue(Request $request): JsonResponse

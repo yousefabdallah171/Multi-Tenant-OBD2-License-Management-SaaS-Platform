@@ -70,28 +70,34 @@ class DashboardController extends BaseSuperAdminController
 
     public function tenantComparison(): JsonResponse
     {
-        $tenants = Cache::remember('super-admin:dashboard:tenant-comparison', now()->addMinutes(5), function (): array {
-            $tenants = Tenant::query()
-                ->withCount([
-                    'licenses as active_licenses_count' => fn ($query) => $query->whereEffectivelyActive(),
-                ])
-                ->get();
-            $revenueByTenant = RevenueAnalytics::revenueByTenantIds($tenants->pluck('id')->all());
+        try {
+            $tenants = Cache::remember('super-admin:dashboard:tenant-comparison', now()->addMinutes(5), function (): array {
+                $tenants = Tenant::query()
+                    ->withCount([
+                        'licenses as active_licenses_count' => fn ($query) => $query->whereEffectivelyActive(),
+                    ])
+                    ->get();
+                $revenueByTenant = RevenueAnalytics::revenueByTenantIds($tenants->pluck('id')->all());
 
-            return $tenants
-                ->sortByDesc(fn (Tenant $tenant): float => (float) ($revenueByTenant->get($tenant->id) ?? 0))
-                ->take(10)
-                ->values()
-                ->map(fn (Tenant $tenant): array => [
-                    'id' => $tenant->id,
-                    'name' => $tenant->name,
-                    'revenue' => round((float) ($revenueByTenant->get($tenant->id) ?? 0), 2),
-                    'active_licenses' => (int) ($tenant->active_licenses_count ?? 0),
-                ])
-                ->all();
-        });
+                return $tenants
+                    ->sortByDesc(fn (Tenant $tenant): float => (float) ($revenueByTenant->get($tenant->id) ?? 0))
+                    ->take(10)
+                    ->values()
+                    ->map(fn (Tenant $tenant): array => [
+                        'id' => $tenant->id,
+                        'name' => $tenant->name,
+                        'revenue' => round((float) ($revenueByTenant->get($tenant->id) ?? 0), 2),
+                        'active_licenses' => (int) ($tenant->active_licenses_count ?? 0),
+                    ])
+                    ->all();
+            });
 
-        return response()->json(['data' => $tenants]);
+            return response()->json(['data' => $tenants]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json(['data' => []]);
+        }
     }
 
     public function licenseTimeline(): JsonResponse
