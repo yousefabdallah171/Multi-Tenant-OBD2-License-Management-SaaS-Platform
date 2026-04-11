@@ -215,23 +215,33 @@ class ReportController extends BaseSuperAdminController
         return [
             [
                 'title' => 'Revenue by Tenant',
-                'headers' => ['Tenant', 'Revenue'],
-                'rows' => $revenueRows->map(fn (array $row): array => [$row['tenant'], $row['revenue']])->all(),
+                'headers' => ['Tenant', 'Revenue (USD)'],
+                'rows' => $revenueRows->map(fn (array $row): array => [$row['tenant'], $this->formatMoney($row['revenue'] ?? 0)])->all(),
             ],
             [
                 'title' => 'Activations by Tenant',
                 'headers' => ['Tenant', 'Activations', 'Active', 'Pending'],
-                'rows' => $activationRows->map(fn (array $row): array => [$row['tenant'], $row['activations'], $row['active'], $row['pending']])->all(),
+                'rows' => $activationRows->map(fn (array $row): array => [
+                    $row['tenant'],
+                    $this->formatCount($row['activations'] ?? 0),
+                    $this->formatCount($row['active'] ?? 0),
+                    $this->formatCount($row['pending'] ?? 0),
+                ])->all(),
             ],
             [
                 'title' => 'User Growth',
                 'headers' => ['Month', 'New Users'],
-                'rows' => $growthRows->map(fn (array $row): array => [$row['month'], $row['users']])->all(),
+                'rows' => $growthRows->map(fn (array $row): array => [$row['month'], $this->formatCount($row['users'] ?? 0)])->all(),
             ],
             [
                 'title' => 'Top Resellers',
-                'headers' => ['Reseller', 'Tenant', 'Activations', 'Revenue'],
-                'rows' => $topResellerRows->map(fn (array $row): array => [$row['reseller'], $row['tenant'], $row['activations'], $row['revenue']])->all(),
+                'headers' => ['Reseller', 'Tenant', 'Activations', 'Revenue (USD)'],
+                'rows' => $topResellerRows->map(fn (array $row): array => [
+                    $row['reseller'],
+                    $row['tenant'],
+                    $this->formatCount($row['activations'] ?? 0),
+                    $this->formatMoney($row['revenue'] ?? 0),
+                ])->all(),
             ],
         ];
     }
@@ -261,5 +271,15 @@ class ReportController extends BaseSuperAdminController
         $lang = $request->query('lang', $request->header('Accept-Language', 'en'));
 
         return str_starts_with((string) $lang, 'ar') ? 'ar' : 'en';
+    }
+
+    private function formatMoney(float|int $value): string
+    {
+        return '$'.number_format((float) $value, 2, '.', ',');
+    }
+
+    private function formatCount(float|int $value): string
+    {
+        return number_format((float) $value, 0, '.', ',');
     }
 }

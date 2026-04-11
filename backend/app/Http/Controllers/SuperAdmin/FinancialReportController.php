@@ -244,23 +244,30 @@ class FinancialReportController extends BaseSuperAdminController
             ],
             [
                 'title' => 'Revenue by Tenant',
-                'headers' => ['Tenant', 'Revenue'],
-                'rows' => collect($report['revenue_by_tenant'])->map(fn (array $row): array => [$row['tenant'], $row['revenue']])->all(),
+                'headers' => ['Tenant', 'Revenue (USD)'],
+                'rows' => collect($report['revenue_by_tenant'])->map(fn (array $row): array => [
+                    $row['tenant'],
+                    $this->formatMoney($row['revenue'] ?? 0),
+                ])->all(),
             ],
             [
                 'title' => 'Revenue by Program',
-                'headers' => ['Program', 'Revenue', 'Activations'],
-                'rows' => collect($report['revenue_by_program'])->map(fn (array $row): array => [$row['program'], $row['revenue'], $row['activations']])->all(),
+                'headers' => ['Program', 'Revenue (USD)', 'Activations'],
+                'rows' => collect($report['revenue_by_program'])->map(fn (array $row): array => [
+                    $row['program'],
+                    $this->formatMoney($row['revenue'] ?? 0),
+                    $this->formatCount($row['activations'] ?? 0),
+                ])->all(),
             ],
             [
                 'title' => 'Seller Revenue Across Roles',
-                'headers' => ['Seller', 'Tenant', 'Revenue', 'Activations', 'Average Price'],
+                'headers' => ['Seller', 'Tenant', 'Revenue (USD)', 'Activations', 'Average Price (USD)'],
                 'rows' => collect($report['reseller_balances'])->map(fn (array $row): array => [
                     $row['reseller'],
                     $row['tenant'],
-                    $row['total_revenue'],
-                    $row['total_activations'],
-                    $row['avg_price'],
+                    $this->formatMoney($row['total_revenue'] ?? 0),
+                    $this->formatCount($row['total_activations'] ?? 0),
+                    $this->formatMoney($row['avg_price'] ?? 0),
                 ])->all(),
             ],
         ];
@@ -273,11 +280,11 @@ class FinancialReportController extends BaseSuperAdminController
     private function summaryLabels(array $summary): array
     {
         return [
-            'Total Platform Revenue' => $summary['total_platform_revenue'],
-            'Total Customers' => $summary['total_customers'],
-            'Total Activations' => $summary['total_activations'],
-            'Active Customers' => $summary['active_licenses'],
-            'Average Revenue per Tenant' => $summary['avg_revenue_per_tenant'],
+            'Total Platform Revenue' => $this->formatMoney($summary['total_platform_revenue'] ?? 0),
+            'Total Customers' => $this->formatCount($summary['total_customers'] ?? 0),
+            'Total Activations' => $this->formatCount($summary['total_activations'] ?? 0),
+            'Active Customers' => $this->formatCount($summary['active_licenses'] ?? 0),
+            'Average Revenue per Tenant' => $this->formatMoney($summary['avg_revenue_per_tenant'] ?? 0),
         ];
     }
 
@@ -306,5 +313,15 @@ class FinancialReportController extends BaseSuperAdminController
         $lang = $request->query('lang', $request->header('Accept-Language', 'en'));
 
         return str_starts_with((string) $lang, 'ar') ? 'ar' : 'en';
+    }
+
+    private function formatMoney(float|int $value): string
+    {
+        return '$'.number_format((float) $value, 2, '.', ',');
+    }
+
+    private function formatCount(float|int $value): string
+    {
+        return number_format((float) $value, 0, '.', ',');
     }
 }

@@ -304,23 +304,31 @@ class FinancialReportController extends BaseManagerParentController
             ],
             [
                 'title' => 'Revenue by Seller',
-                'headers' => ['Seller', 'Revenue', 'Activations'],
-                'rows' => collect($report['revenue_by_reseller'])->map(fn (array $row): array => [$row['reseller'], $row['revenue'], $row['activations']])->all(),
+                'headers' => ['Seller', 'Revenue (USD)', 'Activations'],
+                'rows' => collect($report['revenue_by_reseller'])->map(fn (array $row): array => [
+                    $row['reseller'],
+                    $this->formatMoney($row['revenue'] ?? 0),
+                    $this->formatCount($row['activations'] ?? 0),
+                ])->all(),
             ],
             [
                 'title' => 'Revenue by Program',
-                'headers' => ['Program', 'Revenue', 'Activations'],
-                'rows' => collect($report['revenue_by_program'])->map(fn (array $row): array => [$row['program'], $row['revenue'], $row['activations']])->all(),
+                'headers' => ['Program', 'Revenue (USD)', 'Activations'],
+                'rows' => collect($report['revenue_by_program'])->map(fn (array $row): array => [
+                    $row['program'],
+                    $this->formatMoney($row['revenue'] ?? 0),
+                    $this->formatCount($row['activations'] ?? 0),
+                ])->all(),
             ],
             [
                 'title' => 'Still Not Paid by Seller',
-                'headers' => ['Seller', 'Revenue', 'Activations', 'Average Price', 'Still Not Paid'],
+                'headers' => ['Seller', 'Revenue (USD)', 'Activations', 'Average Price (USD)', 'Still Not Paid (USD)'],
                 'rows' => collect($report['reseller_balances'])->map(fn (array $row): array => [
                     $row['reseller'],
-                    $row['total_revenue'],
-                    $row['total_activations'],
-                    $row['avg_price'],
-                    $row['still_not_paid'],
+                    $this->formatMoney($row['total_revenue'] ?? 0),
+                    $this->formatCount($row['total_activations'] ?? 0),
+                    $this->formatMoney($row['avg_price'] ?? 0),
+                    $this->formatMoney($row['still_not_paid'] ?? 0),
                 ])->all(),
             ],
         ];
@@ -333,12 +341,21 @@ class FinancialReportController extends BaseManagerParentController
     private function summaryLabels(array $summary): array
     {
         return [
-            'Total Revenue' => $summary['total_revenue'],
-            'Granted Value' => $summary['granted_value'],
-            'Total Customers' => $summary['total_customers'],
-            'Active Customers' => $summary['active_customers'],
-            'Total Activations' => $summary['total_activations'],
+            'Total Revenue' => $this->formatMoney($summary['total_revenue'] ?? 0),
+            'Total Customers' => $this->formatCount($summary['total_customers'] ?? 0),
+            'Active Customers' => $this->formatCount($summary['active_customers'] ?? 0),
+            'Total Activations' => $this->formatCount($summary['total_activations'] ?? 0),
         ];
+    }
+
+    private function formatMoney(float|int $value): string
+    {
+        return '$'.number_format((float) $value, 2, '.', ',');
+    }
+
+    private function formatCount(float|int $value): string
+    {
+        return number_format((float) $value, 0, '.', ',');
     }
 
     private function dateRangeLabel(Request $request): string

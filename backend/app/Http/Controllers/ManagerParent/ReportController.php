@@ -279,23 +279,39 @@ class ReportController extends BaseManagerParentController
         return [
             [
                 'title' => 'Revenue by Reseller',
-                'headers' => ['Reseller', 'Revenue', 'Activations'],
-                'rows' => $revenueRows->map(fn (array $row): array => [$row['reseller'], $row['revenue'], $row['activations']])->all(),
+                'headers' => ['Reseller', 'Revenue (USD)', 'Activations'],
+                'rows' => $revenueRows->map(fn (array $row): array => [
+                    $row['reseller'],
+                    $this->formatMoney($row['revenue'] ?? 0),
+                    $this->formatCount($row['activations'] ?? 0),
+                ])->all(),
             ],
             [
                 'title' => 'Revenue by Program',
-                'headers' => ['Program', 'Revenue', 'Activations'],
-                'rows' => $programRows->map(fn (array $row): array => [$row['program'], $row['revenue'], $row['activations']])->all(),
+                'headers' => ['Program', 'Revenue (USD)', 'Activations'],
+                'rows' => $programRows->map(fn (array $row): array => [
+                    $row['program'],
+                    $this->formatMoney($row['revenue'] ?? 0),
+                    $this->formatCount($row['activations'] ?? 0),
+                ])->all(),
             ],
             [
                 'title' => 'Activation Rate',
                 'headers' => ['Label', 'Count', 'Percentage'],
-                'rows' => $activationRows->map(fn (array $row): array => [$row['label'], $row['count'], $row['percentage']])->all(),
+                'rows' => $activationRows->map(fn (array $row): array => [
+                    $row['label'],
+                    $this->formatCount($row['count'] ?? 0),
+                    $this->formatPercent($row['percentage'] ?? 0),
+                ])->all(),
             ],
             [
                 'title' => 'Retention',
                 'headers' => ['Month', 'Customers', 'Activations'],
-                'rows' => $retentionRows->map(fn (array $row): array => [$row['month'], $row['customers'], $row['activations']])->all(),
+                'rows' => $retentionRows->map(fn (array $row): array => [
+                    $row['month'],
+                    $this->formatCount($row['customers'] ?? 0),
+                    $this->formatCount($row['activations'] ?? 0),
+                ])->all(),
             ],
         ];
     }
@@ -325,5 +341,20 @@ class ReportController extends BaseManagerParentController
         $lang = $request->query('lang', $request->header('Accept-Language', 'en'));
 
         return str_starts_with((string) $lang, 'ar') ? 'ar' : 'en';
+    }
+
+    private function formatMoney(float|int $value): string
+    {
+        return '$'.number_format((float) $value, 2, '.', ',');
+    }
+
+    private function formatCount(float|int $value): string
+    {
+        return number_format((float) $value, 0, '.', ',');
+    }
+
+    private function formatPercent(float|int $value): string
+    {
+        return number_format((float) $value, 2, '.', ',').'%';
     }
 }

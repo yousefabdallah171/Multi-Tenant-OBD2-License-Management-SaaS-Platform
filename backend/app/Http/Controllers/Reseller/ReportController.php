@@ -244,18 +244,22 @@ class ReportController extends BaseResellerController
             ],
             [
                 'title' => 'Revenue',
-                'headers' => ['Period', 'Revenue'],
-                'rows' => $revenueRows->map(fn (array $row): array => [$row['period'], $row['revenue']])->all(),
+                'headers' => ['Period', 'Revenue (USD)'],
+                'rows' => $revenueRows->map(fn (array $row): array => [$row['period'], $this->formatMoney($row['revenue'] ?? 0)])->all(),
             ],
             [
                 'title' => 'Activations',
                 'headers' => ['Period', 'Activations'],
-                'rows' => $activationRows->map(fn (array $row): array => [$row['period'], $row['count']])->all(),
+                'rows' => $activationRows->map(fn (array $row): array => [$row['period'], $this->formatCount($row['count'] ?? 0)])->all(),
             ],
             [
                 'title' => 'Top Programs',
-                'headers' => ['Program', 'Activations', 'Revenue'],
-                'rows' => $programRows->map(fn (array $row): array => [$row['program'], $row['count'], $row['revenue']])->all(),
+                'headers' => ['Program', 'Activations', 'Revenue (USD)'],
+                'rows' => $programRows->map(fn (array $row): array => [
+                    $row['program'],
+                    $this->formatCount($row['count'] ?? 0),
+                    $this->formatMoney($row['revenue'] ?? 0),
+                ])->all(),
             ],
         ];
     }
@@ -286,12 +290,22 @@ class ReportController extends BaseResellerController
     private function summaryLabels(array $summary): array
     {
         return [
-            'Total Revenue' => $summary['total_revenue'],
-            'Total Customers' => $summary['total_customers'],
-            'Active Customers' => $summary['active_customers'],
-            'Total Activations' => $summary['total_activations'],
-            'Average Price' => $summary['avg_price'],
+            'Total Revenue' => $this->formatMoney($summary['total_revenue'] ?? 0),
+            'Total Customers' => $this->formatCount($summary['total_customers'] ?? 0),
+            'Active Customers' => $this->formatCount($summary['active_customers'] ?? 0),
+            'Total Activations' => $this->formatCount($summary['total_activations'] ?? 0),
+            'Average Price' => $this->formatMoney($summary['avg_price'] ?? 0),
         ];
+    }
+
+    private function formatMoney(float|int $value): string
+    {
+        return '$'.number_format((float) $value, 2, '.', ',');
+    }
+
+    private function formatCount(float|int $value): string
+    {
+        return number_format((float) $value, 0, '.', ',');
     }
 
     private function reportLanguage(Request $request): string
