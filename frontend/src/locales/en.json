@@ -1934,7 +1934,7 @@
       "commissionRate": "Commission Rate",
       "totalOwed": "Total Owed",
       "totalPaid": "Total Paid",
-      "outstanding": "Outstanding Balance",
+      "outstanding": "Net Outstanding Balance",
       "amountToCollect": "Amount To Collect",
       "totalPaidToManager": "Amount You Paid to Manager",
       "remainingToPay": "Still Not Paid",
