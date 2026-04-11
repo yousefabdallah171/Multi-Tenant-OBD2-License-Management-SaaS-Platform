@@ -441,14 +441,24 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
 }
 
 function sanitizeMoneyInput(value: string) {
-  const normalized = value.replace(/,/g, '.')
+  const normalized = value
+    .replace(/٬/g, '')
+    .replace(/٫/g, '.')
+    .replace(/[>,]/g, '.')
   const cleaned = normalized.replace(/[^0-9.]/g, '')
   const [whole = '', ...rest] = cleaned.split('.')
   const fraction = rest.join('').slice(0, 2)
+  const hasTrailingDot = cleaned.endsWith('.')
   if (whole === '' && fraction.length > 0) {
     return `0.${fraction}`
   }
-  return fraction.length > 0 ? `${whole}.${fraction}` : whole
+  if (fraction.length > 0) {
+    return `${whole}.${fraction}`
+  }
+  if (hasTrailingDot && whole.length > 0) {
+    return `${whole}.`
+  }
+  return whole
 }
 
 function parseNumericParam(value: string | null): number | '' {
