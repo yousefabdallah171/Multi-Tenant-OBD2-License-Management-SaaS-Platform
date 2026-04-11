@@ -320,6 +320,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
     const requiresPendingLicenseFields = createLicenseNow || biosId.trim().length > 0 || Boolean(programId)
+    if (!programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
     if (customerName.trim().length < 2) next.customerName = t('validation.required', { defaultValue: 'Field required' })
     // When username is auto-filled from BIOS link, skip the availability error —
     // the backend allows the same customer to be re-activated with their linked BIOS
@@ -335,7 +336,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     if (phone.trim() && !/^\+?\d{6,20}$/.test(phone.trim())) next.phone = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
     if (requiresPendingLicenseFields && biosId.trim().length < 3) next.biosId = t('validation.required', { defaultValue: 'Field required' })
     if (requiresPendingLicenseFields && biosCheckResult && !biosCheckResult.available) next.biosId = biosCheckResult.message
-    if (requiresPendingLicenseFields && !programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
 
     if (createLicenseNow) {
       if (isPresetSeller || mode === 'preset') {
@@ -431,6 +431,17 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
           <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label={t('common.program')} error={errors.programId}>
+              <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                <option value="">{t('reseller.pages.customers.activationDialog.selectProgram', { defaultValue: 'Select program' })}</option>
+                {(programsQuery.data?.data ?? []).map((program) => (
+                  <option key={program.id} value={program.id}>{program.name}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
@@ -537,17 +548,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               {submitError}
             </div>
           ) : null}
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label={t('common.program')} error={errors.programId}>
-              <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
-                <option value="">{t('reseller.pages.customers.activationDialog.selectProgram', { defaultValue: 'Select program' })}</option>
-                {(programsQuery.data?.data ?? []).map((program) => (
-                  <option key={program.id} value={program.id}>{program.name}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
 
           <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
             <div className="grid gap-3 md:grid-cols-2">

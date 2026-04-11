@@ -1,6 +1,6 @@
-import { useState, useMemo, memo } from 'react'
+import { useState, memo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, X, Edit2, Trash2 } from 'lucide-react'
+import { Loader2, Edit2, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -99,7 +99,7 @@ const NoteItem = memo(function NoteItem({
                   setEditingNoteId(note.id)
                   setEditText(note.note)
                 }}
-                disabled={isBusy}
+                disabled={isBusy || note.id < 0} // Disable for optimistic notes
                 className="h-7 w-7 p-0"
               >
                 <Edit2 className="h-3 w-3" />
@@ -108,8 +108,14 @@ const NoteItem = memo(function NoteItem({
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => deleteNoteMutation.mutate(note.id)}
-                disabled={isBusy}
+                onClick={() => {
+                  if (note.id < 0) {
+                    // Can't delete optimistic notes that haven't been saved yet
+                    return
+                  }
+                  deleteNoteMutation.mutate(note.id)
+                }}
+                disabled={isBusy || note.id < 0} // Disable for optimistic notes
                 className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 dark:text-rose-400"
               >
                 <Trash2 className="h-3 w-3" />
@@ -122,7 +128,7 @@ const NoteItem = memo(function NoteItem({
   )
 })
 
-export function CustomerNoteDialog({ isOpen, onClose, customerId }: CustomerNoteDialogProps) {
+function CustomerNoteDialogComponent({ isOpen, onClose, customerId }: CustomerNoteDialogProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [isEditing, setIsEditing] = useState(false)
@@ -150,7 +156,7 @@ export function CustomerNoteDialog({ isOpen, onClose, customerId }: CustomerNote
       const previousNotes = queryClient.getQueryData(['customer-notes', customerId])
 
       const optimisticNote = {
-        id: Date.now(),
+        id: -Date.now(), // Use negative ID to identify as optimistic
         customer_id: customerId,
         user_id: 0,
         note: newNoteText.trim(),
@@ -165,16 +171,27 @@ export function CustomerNoteDialog({ isOpen, onClose, customerId }: CustomerNote
 
       return previousNotes
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setNewNoteText('')
+      // Update cache with real note data from server
+      queryClient.setQueryData(['customer-notes', customerId], (old: any) => ({
+        ...old,
+        data: [
+          ...(old?.data?.filter((n: any) => n.id && n.id > 0) ?? []),
+          data.data
+        ],
+      }))
       toast.success(t('common.noteSaved', { defaultValue: 'Note added successfully.' }))
-      void queryClient.invalidateQueries({ queryKey: ['customer-notes', customerId] })
     },
-    onError: (err, variables, context) => {
+    onError: (err: any, _variables, context) => {
       if (context) {
         queryClient.setQueryData(['customer-notes', customerId], context)
       }
-      toast.error(t('common.error', { defaultValue: 'Failed to add note' }))
+      const errorMessage = err?.response?.data?.message ||
+                          err?.message ||
+                          t('common.error', { defaultValue: 'Failed to add note' })
+      console.error('Add note error:', { err, errorMessage })
+      toast.error(errorMessage)
     },
   })
 
@@ -204,7 +221,7 @@ export function CustomerNoteDialog({ isOpen, onClose, customerId }: CustomerNote
       toast.success(t('common.noteUpdated', { defaultValue: 'Note updated successfully.' }))
       void queryClient.invalidateQueries({ queryKey: ['customer-notes', customerId] })
     },
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context) {
         queryClient.setQueryData(['customer-notes', customerId], context)
       }
@@ -214,7 +231,12 @@ export function CustomerNoteDialog({ isOpen, onClose, customerId }: CustomerNote
 
   // Delete note mutation with optimistic update
   const deleteNoteMutation = useMutation({
-    mutationFn: (noteId: number) => customerService.deleteNote(noteId),
+    mutationFn: (noteId: number) => {
+      if (noteId < 0) {
+        return Promise.reject(new Error('Cannot delete unsaved notes'))
+      }
+      return customerService.deleteNote(noteId)
+    },
     onMutate: async (noteId) => {
       await queryClient.cancelQueries({ queryKey: ['customer-notes', customerId] })
       const previousNotes = queryClient.getQueryData(['customer-notes', customerId])
@@ -224,17 +246,29 @@ export function CustomerNoteDialog({ isOpen, onClose, customerId }: CustomerNote
         data: (old?.data ?? []).filter((note: CustomerNote) => note.id !== noteId),
       }))
 
-      return previousNotes
+      return { previousNotes, noteId }
     },
     onSuccess: () => {
       toast.success(t('common.noteDeleted', { defaultValue: 'Note deleted successfully.' }))
-      void queryClient.invalidateQueries({ queryKey: ['customer-notes', customerId] })
     },
-    onError: (err, variables, context) => {
-      if (context) {
-        queryClient.setQueryData(['customer-notes', customerId], context)
+    onError: (err: any, _noteId, context: any) => {
+      // If deletion returns 404, the note might already be deleted on server
+      // Just keep the optimistic update (don't rollback)
+      if (err?.response?.status === 404) {
+        // Note is actually deleted, just show success
+        toast.success(t('common.noteDeleted', { defaultValue: 'Note deleted successfully.' }))
+        return
       }
-      toast.error(t('common.error', { defaultValue: 'Failed to delete note' }))
+
+      // For other errors, rollback the optimistic update
+      if (context?.previousNotes) {
+        queryClient.setQueryData(['customer-notes', customerId], context.previousNotes)
+      }
+
+      const errorMessage = err?.response?.data?.message ||
+                          err?.message ||
+                          t('common.error', { defaultValue: 'Failed to delete note' })
+      toast.error(errorMessage)
     },
   })
 
@@ -313,3 +347,6 @@ export function CustomerNoteDialog({ isOpen, onClose, customerId }: CustomerNote
     </Dialog>
   )
 }
+
+// Memoize the entire dialog component to prevent unnecessary re-renders
+export const CustomerNoteDialog = memo(CustomerNoteDialogComponent)
