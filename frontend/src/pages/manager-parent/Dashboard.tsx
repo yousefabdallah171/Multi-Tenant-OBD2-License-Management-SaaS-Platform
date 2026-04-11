@@ -142,12 +142,24 @@ export function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <BarChartWidget
           title={t('managerParent.pages.dashboard.teamPerformance')}
-          data={(statsQuery.data?.teamPerformance ?? []).map((member) => ({ name: member.name, activations: member.activations }))}
+          data={(statsQuery.data?.teamPerformance ?? []).map((member) => ({
+            id: member.id,
+            role: member.role,
+            name: member.name,
+            activations: member.activations,
+          }))}
           isLoading={statsQuery.isLoading}
           xKey="name"
           horizontal
           showLabels
           series={[{ key: 'activations', label: t('common.activations') }]}
+          onEntryClick={(payload) => {
+            const id = (payload as { id?: number }).id
+            const role = (payload as { role?: string }).role
+            if (id && (role === 'manager' || role === 'reseller')) {
+              navigate(routePaths.managerParent.teamMemberDetail(lang, id))
+            }
+          }}
         />
         <LineChartWidget
           title={t('managerParent.pages.dashboard.conflictRate')}
