@@ -233,7 +233,11 @@ function getManagerParentSellerDetailPath(lang: SupportedLanguage, id: number, r
     return undefined
   }
 
-  if (role === 'manager_parent' || role === 'manager' || role === 'reseller') {
+  if (role === 'reseller') {
+    return routePaths.managerParent.resellerPaymentDetail(lang, id)
+  }
+
+  if (role === 'manager') {
     return routePaths.managerParent.teamMemberDetail(lang, id)
   }
 

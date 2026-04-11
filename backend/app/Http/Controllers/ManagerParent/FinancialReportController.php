@@ -41,15 +41,20 @@ class FinancialReportController extends BaseManagerParentController
             ->first();
         $totalActivations = (int) (clone $baseQuery)->count();
         $totalCustomers = CustomerOwnership::currentOwnedCustomerCount($scope['seller_ids'], $tenantId);
-        $revenueMap = RevenueAnalytics::revenueBySellerIds($scope['seller_ids'], $tenantId, $validated);
-        $activationCounts = $this->revenueQuery($tenantId, $validated, $scope)
+        $revenueSellers = $scope['sellers']
+            ->filter(fn (User $seller): bool => in_array($seller->role?->value ?? (string) $seller->role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true))
+            ->values();
+        $revenueSellerIds = $revenueSellers->pluck('id')->map(fn ($id): int => (int) $id)->all();
+
+        $revenueMap = RevenueAnalytics::revenueBySellerIds($revenueSellerIds, $tenantId, $validated);
+        $activationCounts = $this->revenueQuery($tenantId, $validated, ['seller_ids' => $revenueSellerIds])
             ->selectRaw('activity_logs.user_id as seller_id')
             ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
             ->groupBy('activity_logs.user_id')
             ->get()
             ->mapWithKeys(fn ($row): array => [(int) $row->seller_id => (int) $row->activations]);
 
-        $revenueByReseller = $scope['sellers']
+        $revenueByReseller = $revenueSellers
             ->map(fn (User $seller): array => [
                 'id' => $seller->id,
                 'reseller' => $seller->name ?? 'Unknown',
