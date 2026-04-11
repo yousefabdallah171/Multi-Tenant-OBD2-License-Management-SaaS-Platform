@@ -515,27 +515,40 @@ class AuthorizationBoundaryTest extends TestCase
     {
         $tenant = $this->createTenant();
         $managerParent = $this->createUser('manager_parent', $tenant, null, ['email' => 'repair-owner@example.test']);
-        $reseller = $this->createUser('reseller', $tenant, $managerParent);
+        $reseller = $this->createUser('reseller', $tenant, $managerParent, ['email' => 'repair-history@example.test']);
         $customer = $this->createUser('customer', $tenant, $reseller, ['username' => 'repair_customer']);
         $program = $this->createProgram($tenant);
+        $activatedAt = now()->subDay();
+        $historicalExpiresAt = (clone $activatedAt)->addHours(2);
+        $currentExpiresAt = (clone $activatedAt)->addDays(30);
         $activeLicense = $this->createLicense($reseller, $program, $customer, [
             'bios_id' => 'REPAIRBIOS1',
             'external_username' => 'repair_customer',
             'status' => 'active',
             'price' => 60,
-            'activated_at' => now()->subDay(),
-            'expires_at' => now()->addMonth(),
+            'activated_at' => $activatedAt,
+            'expires_at' => now()->addDay(),
         ]);
 
         $this->artisan('licenses:reassign-current-owner', [
             'bios_id' => 'REPAIRBIOS1',
             'owner_email' => 'repair-owner@example.test',
             '--preserve-history' => true,
+            '--historical-owner-email' => 'repair-history@example.test',
+            '--current-price' => 250,
+            '--current-started-at' => $activatedAt->toDateTimeString(),
+            '--current-expires-at' => $currentExpiresAt->toDateTimeString(),
+            '--historical-price' => 60,
+            '--historical-started-at' => $activatedAt->toDateTimeString(),
+            '--historical-expires-at' => $historicalExpiresAt->toDateTimeString(),
             '--force' => true,
         ])->assertSuccessful();
 
         $activeLicense->refresh();
         $this->assertSame($managerParent->id, (int) $activeLicense->reseller_id);
+        $this->assertSame(250.0, (float) $activeLicense->price);
+        $this->assertGreaterThan(29.0, (float) $activeLicense->duration_days);
+        $this->assertTrue($activeLicense->expires_at?->greaterThan($historicalExpiresAt));
 
         $historicalLicense = License::query()
             ->where('bios_id', 'REPAIRBIOS1')
@@ -544,6 +557,9 @@ class AuthorizationBoundaryTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame($customer->id, (int) $historicalLicense->customer_id);
+        $this->assertSame(60.0, (float) $historicalLicense->price);
+        $this->assertLessThan(1.0, (float) $historicalLicense->duration_days);
+        $this->assertSame('expired', $historicalLicense->effectiveStatus());
 
         Sanctum::actingAs($reseller);
 
@@ -552,6 +568,7 @@ class AuthorizationBoundaryTest extends TestCase
             ->assertJsonPath('meta.total', 1);
 
         $this->assertSame('expired', $customers->json('data.0.status'));
+        $this->assertEquals(60.0, (float) $customers->json('data.0.price'));
         $this->assertTrue((bool) $customers->json('data.0.bios_active_elsewhere'));
     }
 
