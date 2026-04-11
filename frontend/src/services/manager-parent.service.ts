@@ -323,7 +323,7 @@ export const managerParentService = {
     return data
   },
   async exportFinancialCsv(params?: { from?: string; to?: string } & SellerScopeParams) {
-    await downloadFile('/financial-reports/export/csv', 'manager-parent-financial.csv', params)
+    await downloadFile('/financial-reports/export/csv', 'manager-parent-financial.xlsx', params)
   },
   async exportFinancialPdf(params?: { from?: string; to?: string } & SellerScopeParams) {
     await downloadFile('/financial-reports/export/pdf', 'manager-parent-financial.pdf', params)

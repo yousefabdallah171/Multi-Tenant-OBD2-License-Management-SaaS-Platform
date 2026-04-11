@@ -127,8 +127,8 @@ class FinancialReportController extends BaseSuperAdminController
         $report = $this->index($request)->getData(true)['data'];
         $task = $exportTaskService->queue(
             $request,
-            'csv',
-            'super-admin-financial-report.csv',
+            'xlsx',
+            'super-admin-financial-report.xlsx',
             'Super Admin Financial Report',
             $this->exportSections($report),
             $this->summaryLabels($report['summary']),

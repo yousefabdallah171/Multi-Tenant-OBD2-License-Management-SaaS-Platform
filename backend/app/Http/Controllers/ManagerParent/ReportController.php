@@ -131,8 +131,8 @@ class ReportController extends BaseManagerParentController
     {
         $task = $exportTaskService->queue(
             $request,
-            'csv',
-            'manager-parent-reports.csv',
+            'xlsx',
+            'manager-parent-reports.xlsx',
             'Manager Parent Reports',
             $this->exportSections($request),
             [],

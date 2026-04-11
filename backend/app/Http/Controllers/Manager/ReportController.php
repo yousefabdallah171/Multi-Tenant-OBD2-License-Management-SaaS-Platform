@@ -169,8 +169,8 @@ class ReportController extends BaseManagerController
         $report = $this->index($request)->getData(true)['data'];
         $task = $exportTaskService->queue(
             $request,
-            'csv',
-            'manager-tenant-financial.csv',
+            'xlsx',
+            'manager-tenant-financial.xlsx',
             'Manager Tenant Financial Report',
             $this->exportSections($report),
             $this->summaryLabels($report['summary']),

@@ -11,10 +11,10 @@ interface ExportButtonsProps {
 
 export function ExportButtons({ onExportCsv, onExportPdf, isExporting = false }: ExportButtonsProps) {
   const { t } = useTranslation()
-  const [activeFormat, setActiveFormat] = useState<'csv' | 'pdf' | null>(null)
+  const [activeFormat, setActiveFormat] = useState<'xlsx' | 'pdf' | null>(null)
   const disabled = isExporting || activeFormat !== null
 
-  async function handleExport(format: 'csv' | 'pdf', action: () => Promise<void> | void) {
+  async function handleExport(format: 'xlsx' | 'pdf', action: () => Promise<void> | void) {
     setActiveFormat(format)
 
     try {
@@ -26,9 +26,9 @@ export function ExportButtons({ onExportCsv, onExportPdf, isExporting = false }:
 
   return (
     <div className="flex flex-wrap gap-3">
-      <Button type="button" variant="outline" onClick={() => void handleExport('csv', onExportCsv)} disabled={disabled}>
-        {activeFormat === 'csv' ? <LoaderCircle className="me-2 h-4 w-4 animate-spin" /> : <Download className="me-2 h-4 w-4" />}
-        {t('common.csv')}
+      <Button type="button" variant="outline" onClick={() => void handleExport('xlsx', onExportCsv)} disabled={disabled}>
+        {activeFormat === 'xlsx' ? <LoaderCircle className="me-2 h-4 w-4 animate-spin" /> : <Download className="me-2 h-4 w-4" />}
+        {t('common.xlsx')}
       </Button>
       <Button type="button" variant="outline" onClick={() => void handleExport('pdf', onExportPdf)} disabled={disabled}>
         {activeFormat === 'pdf' ? <LoaderCircle className="me-2 h-4 w-4 animate-spin" /> : <FileText className="me-2 h-4 w-4" />}

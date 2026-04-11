@@ -104,7 +104,7 @@ export const reportService = {
     return data
   },
   async exportCsv(params: RangeParams) {
-    await downloadFile('/super-admin/reports/export/csv', 'super-admin-reports.csv', params)
+    await downloadFile('/super-admin/reports/export/csv', 'super-admin-reports.xlsx', params)
   },
   async exportPdf(params: RangeParams) {
     await downloadFile('/super-admin/reports/export/pdf', 'super-admin-reports.pdf', params)
@@ -120,7 +120,7 @@ export const reportService = {
     return data
   },
   async exportFinancialCsv(params: RangeParams) {
-    await downloadFile('/super-admin/financial-reports/export/csv', 'super-admin-financial.csv', params)
+    await downloadFile('/super-admin/financial-reports/export/csv', 'super-admin-financial.xlsx', params)
   },
   async exportFinancialPdf(params: RangeParams) {
     await downloadFile('/super-admin/financial-reports/export/pdf', 'super-admin-financial.pdf', params)

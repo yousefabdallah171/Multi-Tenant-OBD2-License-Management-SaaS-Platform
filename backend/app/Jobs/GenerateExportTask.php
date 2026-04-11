@@ -40,19 +40,29 @@ class GenerateExportTask implements ShouldQueue
             $resolvedDateRange = is_string($dateRange) ? $dateRange : null;
             $resolvedLang = is_string($lang) ? $lang : 'en';
 
-            $binary = $task->format === 'pdf'
-                ? $reportExporter->pdfBinary($title, $sections, $summary, $resolvedDateRange, $resolvedLang)
-                : $reportExporter->csvString($sections, $title, $summary, $resolvedDateRange, $resolvedLang);
+            if ($task->format === 'pdf') {
+                $binary = $reportExporter->pdfBinary($title, $sections, $summary, $resolvedDateRange, $resolvedLang);
+            } elseif ($task->format === 'xlsx') {
+                $binary = $reportExporter->xlsxBinary($sections, $title, $summary, $resolvedDateRange, $resolvedLang);
+            } else {
+                $binary = $reportExporter->csvString($sections, $title, $summary, $resolvedDateRange, $resolvedLang);
+            }
 
             $disk = 'local';
             $path = sprintf('exports/%s/%s', now()->format('Y/m/d'), $task->id.'.'.$task->format);
             Storage::disk($disk)->put($path, $binary);
 
+            $mimeType = match ($task->format) {
+                'pdf' => 'application/pdf',
+                'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                default => 'text/csv',
+            };
+
             $task->forceFill([
                 'status' => 'completed',
                 'storage_disk' => $disk,
                 'storage_path' => $path,
-                'mime_type' => $task->format === 'pdf' ? 'application/pdf' : 'text/csv',
+                'mime_type' => $mimeType,
                 'completed_at' => now(),
             ])->save();
         } catch (Throwable $exception) {

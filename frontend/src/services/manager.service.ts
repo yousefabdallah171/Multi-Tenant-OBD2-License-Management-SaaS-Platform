@@ -247,7 +247,7 @@ export const managerService = {
     return data
   },
   async exportFinancialCsv(params: ReportRangeFilters) {
-    await downloadFile('/manager/reports/export/csv', 'manager-tenant-financial.csv', params)
+    await downloadFile('/manager/reports/export/csv', 'manager-tenant-financial.xlsx', params)
   },
   async exportFinancialPdf(params: ReportRangeFilters) {
     await downloadFile('/manager/reports/export/pdf', 'manager-tenant-financial.pdf', params)

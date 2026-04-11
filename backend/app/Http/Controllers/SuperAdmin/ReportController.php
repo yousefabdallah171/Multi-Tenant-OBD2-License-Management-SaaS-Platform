@@ -135,8 +135,8 @@ class ReportController extends BaseSuperAdminController
         $sections = $this->exportSections($request);
         $task = $exportTaskService->queue(
             $request,
-            'csv',
-            'super-admin-reports.csv',
+            'xlsx',
+            'super-admin-reports.xlsx',
             'Super Admin Reports',
             $sections,
             [],

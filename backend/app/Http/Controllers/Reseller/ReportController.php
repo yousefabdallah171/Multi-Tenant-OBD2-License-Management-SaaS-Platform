@@ -144,8 +144,8 @@ class ReportController extends BaseResellerController
     {
         $task = $exportTaskService->queue(
             $request,
-            'csv',
-            'reseller-report.csv',
+            'xlsx',
+            'reseller-report.xlsx',
             'Reseller Report',
             $this->exportSections($request),
             [],

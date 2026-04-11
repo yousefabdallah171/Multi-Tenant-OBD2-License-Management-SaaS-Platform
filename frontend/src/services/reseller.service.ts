@@ -164,7 +164,7 @@ export const resellerService = {
     return data
   },
   async exportCsv(params: ResellerReportFilters) {
-    await downloadFile('/reseller/reports/export/csv', 'reseller-report.csv', params)
+    await downloadFile('/reseller/reports/export/csv', 'reseller-report.xlsx', params)
   },
   async exportPdf(params: ResellerReportFilters) {
     await downloadFile('/reseller/reports/export/pdf', 'reseller-report.pdf', params)

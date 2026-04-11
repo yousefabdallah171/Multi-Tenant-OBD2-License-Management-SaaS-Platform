@@ -100,8 +100,8 @@ class FinancialReportController extends BaseManagerParentController
         $report = $this->index($request)->getData(true)['data'];
         $task = $exportTaskService->queue(
             $request,
-            'csv',
-            'manager-parent-financial.csv',
+            'xlsx',
+            'manager-parent-financial.xlsx',
             'Manager Parent Financial Report',
             $this->exportSections($report),
             $this->summaryLabels($report['summary']),
