@@ -210,8 +210,9 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
     })
     : ''
 
-  const handleRoleToggle = (role: ResellerPaymentRow['reseller_role']) => {
-    setSearchParams((current) => updateRoleFilter(current, roleFilter === role ? '' : role), { replace: true })
+  const handleRoleToggle = (role: 'manager_parent' | 'manager' | 'reseller') => {
+    const nextRole = roleFilter === role ? '' : role
+    setSearchParams((current) => updateRoleFilter(current, nextRole), { replace: true })
   }
 
   const handleBalanceToggle = (nextValue: '' | 'negative' | 'positive' | 'paid') => {
