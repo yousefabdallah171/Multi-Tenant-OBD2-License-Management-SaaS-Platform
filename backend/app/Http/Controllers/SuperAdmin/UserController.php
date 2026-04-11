@@ -7,6 +7,7 @@ use App\Http\Controllers\ManagerParent\NetworkController as ManagerParentNetwork
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
+use App\Support\CustomerOwnership;
 use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -121,7 +122,7 @@ class UserController extends BaseSuperAdminController
                 'program' => $license->program?->name,
                 'bios_id' => $license->bios_id,
                 'status' => $license->status,
-                'price' => (float) $license->price,
+                'price' => CustomerOwnership::displayPriceForLicense($license),
                 'expires_at' => $license->expires_at?->toIso8601String(),
             ])
             ->values();

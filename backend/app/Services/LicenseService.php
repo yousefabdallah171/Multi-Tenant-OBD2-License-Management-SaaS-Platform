@@ -190,6 +190,8 @@ class LicenseService
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
         $license->loadMissing(['program', 'customer', 'reseller']);
+        $renewalOwner = $this->resolveRenewalOwner($actor, $license, $reseller);
+        $shouldCreateTakeover = $this->shouldCreateRenewalTakeover($actor, $license);
 
         $isScheduled = (bool) ($data['is_scheduled'] ?? false);
         $apiResponse = [
@@ -234,13 +236,13 @@ class LicenseService
             }
         }
 
-        $this->logBiosAccess($reseller, $license->bios_id, 'renew', [
+        $this->logBiosAccess($renewalOwner, $license->bios_id, 'renew', [
             'license_id' => $license->id,
             'external' => $apiResponse,
             'is_scheduled' => $isScheduled,
         ]);
 
-        $renewedLicense = DB::transaction(function () use ($actor, $license, $data, $reseller, $apiResponse, $isScheduled, $renewBiosLower): License {
+        $renewedLicense = DB::transaction(function () use ($actor, $license, $data, $renewalOwner, $apiResponse, $isScheduled, $renewBiosLower, $shouldCreateTakeover): License {
             // Locked re-check inside transaction to close the race window
             if (! $isScheduled) {
                 $renewRaceConflict = License::query()
@@ -273,61 +275,88 @@ class LicenseService
                 $activatedAt = $this->currentMinute();
             }
 
-            $license->forceFill([
-                'duration_days' => $durationDays,
-                'price' => (float) $data['price'],
-                'activated_at' => $activatedAt,
-                'expires_at' => $expiresAt,
-                'external_activation_response' => (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
-                'status' => $isScheduled ? 'pending' : 'active',
-                'scheduled_at' => $scheduledAt,
-                'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
-                'scheduled_last_attempt_at' => null,
-                'scheduled_failed_at' => null,
-                'scheduled_failure_message' => null,
-                'is_scheduled' => $isScheduled,
-                'activated_at_scheduled' => $isScheduled ? null : $license->activated_at_scheduled,
-                'paused_at' => null,
-                'pause_remaining_minutes' => null,
-                'pause_reason' => null,
-            ])->save();
+            $renewed = $shouldCreateTakeover
+                ? License::query()->create([
+                    'tenant_id' => $renewalOwner->tenant_id,
+                    'customer_id' => $license->customer_id,
+                    'reseller_id' => $renewalOwner->id,
+                    'program_id' => $license->program_id,
+                    'bios_id' => $license->bios_id,
+                    'external_username' => $license->external_username,
+                    'external_activation_response' => (string) ($apiResponse['data']['response'] ?? 'Renewed under new owner.'),
+                    'duration_days' => $durationDays,
+                    'price' => (float) $data['price'],
+                    'activated_at' => $activatedAt,
+                    'expires_at' => $expiresAt,
+                    'scheduled_at' => $scheduledAt,
+                    'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
+                    'scheduled_last_attempt_at' => null,
+                    'scheduled_failed_at' => null,
+                    'scheduled_failure_message' => null,
+                    'is_scheduled' => $isScheduled,
+                    'activated_at_scheduled' => null,
+                    'paused_at' => null,
+                    'pause_remaining_minutes' => null,
+                    'pause_reason' => null,
+                    'status' => $isScheduled ? 'pending' : 'active',
+                ])
+                : tap($license, function (License $license) use ($data, $durationDays, $activatedAt, $expiresAt, $apiResponse, $isScheduled, $scheduledAt, $scheduledTimezone): void {
+                    $license->forceFill([
+                        'duration_days' => $durationDays,
+                        'price' => (float) $data['price'],
+                        'activated_at' => $activatedAt,
+                        'expires_at' => $expiresAt,
+                        'external_activation_response' => (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
+                        'status' => $isScheduled ? 'pending' : 'active',
+                        'scheduled_at' => $scheduledAt,
+                        'scheduled_timezone' => $isScheduled ? $scheduledTimezone : null,
+                        'scheduled_last_attempt_at' => null,
+                        'scheduled_failed_at' => null,
+                        'scheduled_failure_message' => null,
+                        'is_scheduled' => $isScheduled,
+                        'activated_at_scheduled' => $isScheduled ? null : $license->activated_at_scheduled,
+                        'paused_at' => null,
+                        'pause_remaining_minutes' => null,
+                        'pause_reason' => null,
+                    ])->save();
+                });
 
-            $attribution = $this->resolveRevenueAttribution($actor, $license);
+            $attribution = $this->resolveRevenueAttribution($actor, $renewed);
 
             $this->balanceService->recordRevenue(
-                $reseller,
-                (float) $license->price,
+                $renewalOwner,
+                (float) $renewed->price,
                 false,
                 $attribution['attribution_type']
             );
             $this->logActivity(
-                $reseller,
+                $renewalOwner,
                 'license.renewed',
-                sprintf('Renewed license for BIOS %s.', $license->bios_id),
+                sprintf('Renewed license for BIOS %s.', $renewed->bios_id),
                 [
-                    'license_id' => $license->id,
-                    'customer_id' => $license->customer_id,
-                    'program_id' => $license->program_id,
-                    'bios_id' => $license->bios_id,
-                    'external_username' => $license->external_username,
+                    'license_id' => $renewed->id,
+                    'customer_id' => $renewed->customer_id,
+                    'program_id' => $renewed->program_id,
+                    'bios_id' => $renewed->bios_id,
+                    'external_username' => $renewed->external_username,
                     'duration_days' => $durationDays,
-                    'price' => (float) $license->price,
+                    'price' => (float) $renewed->price,
                     'actor_id' => $attribution['actor_id'],
                     'actor_role' => $attribution['actor_role'],
                     'owner_user_id' => $attribution['owner_user_id'],
                     'owner_role' => $attribution['owner_role'],
-                    'seller_id' => (int) $reseller->id,
-                    'seller_role' => $reseller->role?->value ?? (string) $reseller->role,
+                    'seller_id' => (int) $renewalOwner->id,
+                    'seller_role' => $renewalOwner->role?->value ?? (string) $renewalOwner->role,
                     'attribution_type' => $attribution['attribution_type'],
                 ],
             );
 
-            $license->load(['customer', 'program', 'reseller']);
+            $renewed->load(['customer', 'program', 'reseller']);
 
-            event(new LicenseRenewed($license));
-            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+            event(new LicenseRenewed($renewed));
+            $this->forgetDashboardCaches((int) $renewalOwner->tenant_id, (int) $renewalOwner->id);
 
-            return $license;
+            return $renewed;
         });
 
         return $renewedLicense;
@@ -1415,6 +1444,30 @@ class LicenseService
         ]);
     }
 
+    private function resolveRenewalOwner(User $actor, License $license, User $licenseOwner): User
+    {
+        if ($this->shouldCreateRenewalTakeover($actor, $license)) {
+            return $actor;
+        }
+
+        return $licenseOwner;
+    }
+
+    private function shouldCreateRenewalTakeover(User $actor, License $license): bool
+    {
+        $actorRole = $actor->role?->value ?? (string) $actor->role;
+
+        if (! in_array($actorRole, [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value], true)) {
+            return false;
+        }
+
+        if ((int) $actor->id === (int) $license->reseller_id) {
+            return false;
+        }
+
+        return ! CustomerOwnership::isBlockingOwnershipLicense($license);
+    }
+
     private function resolveSuperAdminSeller(User $relatedReseller): User
     {
         $sellerRole = $relatedReseller->role?->value ?? (string) $relatedReseller->role;
@@ -1657,21 +1710,19 @@ class LicenseService
     private function resolveRevenueAttribution(User $actor, License $license): array
     {
         $license->loadMissing([
-            'customer.createdBy:id,role',
             'reseller:id,role',
         ]);
 
-        $owner = $license->customer?->createdBy;
+        $owner = $license->reseller;
         $ownerRole = $owner?->role?->value ?? (string) $owner?->role;
 
         if (! $owner || ! in_array($ownerRole, [
-            UserRole::SUPER_ADMIN->value,
             UserRole::MANAGER_PARENT->value,
             UserRole::MANAGER->value,
             UserRole::RESELLER->value,
         ], true)) {
-            $owner = $license->reseller;
-            $ownerRole = $owner?->role?->value ?? (string) $owner?->role;
+            $owner = null;
+            $ownerRole = null;
         }
 
         $ownerUserId = $owner?->id ? (int) $owner->id : null;

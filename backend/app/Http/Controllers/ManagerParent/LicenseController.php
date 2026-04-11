@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Models\License;
+use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -169,7 +170,7 @@ class LicenseController extends BaseManagerParentController
             'reseller_id' => $license->reseller_id,
             'reseller_name' => $license->reseller?->name,
             'duration_days' => $license->duration_days,
-            'price' => (float) $license->price,
+            'price' => CustomerOwnership::displayPriceForLicense($license),
             'activated_at' => $license->activated_at?->toIso8601String(),
             'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),

@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use App\Support\CustomerOwnership;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -134,7 +135,7 @@ class ResellerLogController extends BaseResellerController
             'bios_id' => $license?->bios_id ?? ($metadata['bios_id'] ?? null),
             'license_id' => $license?->id ?? ((int) ($metadata['license_id'] ?? 0) ?: null),
             'license_status' => $license?->status,
-            'price' => array_key_exists('price', $metadata) ? (float) $metadata['price'] : ($license ? (float) $license->price : null),
+            'price' => CustomerOwnership::displayPriceFromMetadataOrLicense($metadata, $license),
             'metadata' => $metadata,
             'created_at' => $activity->created_at?->toIso8601String(),
         ];
@@ -156,7 +157,7 @@ class ResellerLogController extends BaseResellerController
 
                     return (($metadata['attribution_type'] ?? 'earned') === 'granted')
                         ? 0.0
-                        : (float) ($metadata['price'] ?? 0);
+                        : CustomerOwnership::sanitizeDisplayPrice($metadata['price'] ?? 0);
                 }), 2),
         ];
     }

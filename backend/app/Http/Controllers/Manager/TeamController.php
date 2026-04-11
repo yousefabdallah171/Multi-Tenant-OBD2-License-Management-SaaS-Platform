@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use App\Support\CustomerOwnership;
 use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -79,7 +80,7 @@ class TeamController extends BaseManagerController
                 'program' => $license->program?->name,
                 'bios_id' => $license->bios_id,
                 'status' => $license->status,
-                'price' => (float) $license->price,
+                'price' => CustomerOwnership::displayPriceForLicense($license),
                 'expires_at' => $license->expires_at?->toIso8601String(),
             ])
             ->values();
@@ -176,7 +177,7 @@ class TeamController extends BaseManagerController
                     'bios_id' => $license?->bios_id ?? ($metadata['bios_id'] ?? null),
                     'license_id' => $license?->id ?? ((int) ($metadata['license_id'] ?? 0) ?: null),
                     'license_status' => $license?->status,
-                    'price' => array_key_exists('price', $metadata) ? (float) $metadata['price'] : ($license ? (float) $license->price : null),
+                    'price' => CustomerOwnership::displayPriceFromMetadataOrLicense($metadata, $license),
                     'ip_address' => $activity->ip_address,
                     'created_at' => $activity->created_at?->toIso8601String(),
                 ];

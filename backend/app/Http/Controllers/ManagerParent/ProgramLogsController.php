@@ -8,6 +8,7 @@ use App\Models\Program;
 use App\Models\License;
 use App\Models\User;
 use App\Services\ExternalApiService;
+use App\Support\CustomerOwnership;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -289,7 +290,7 @@ class ProgramLogsController extends BaseManagerParentController
             'external_username' => (string) ($metadata['external_username'] ?? $license?->external_username ?? $license?->customer?->username ?? ''),
             'program_id' => (int) ($metadata['program_id'] ?? $program->id),
             'program_name' => $program->name,
-            'price' => array_key_exists('price', $metadata) ? (float) $metadata['price'] : ($license ? (float) $license->price : null),
+            'price' => CustomerOwnership::displayPriceFromMetadataOrLicense($metadata, $license),
             'license_status' => $license?->status,
             'created_at' => $activity->created_at?->toIso8601String(),
         ];

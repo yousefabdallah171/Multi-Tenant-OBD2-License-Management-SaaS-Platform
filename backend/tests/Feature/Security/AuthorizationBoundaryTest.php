@@ -361,12 +361,22 @@ class AuthorizationBoundaryTest extends TestCase
         $customer = $this->createUser('customer', $tenant, $reseller, ['name' => 'Takeover Customer']);
         $program = $this->createProgram($tenant);
 
-        $this->createLicense($reseller, $program, $customer, [
+        $legacyLicense = $this->createLicense($reseller, $program, $customer, [
             'bios_id' => 'TAKEOVER1',
             'status' => 'expired',
-            'price' => 60,
+            'price' => 21686.75,
             'activated_at' => now()->subDays(40),
             'expires_at' => now()->subDays(10),
+        ]);
+        ActivityLog::query()->create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $reseller->id,
+            'action' => 'license.activated',
+            'description' => 'Activated legacy license.',
+            'metadata' => [
+                'license_id' => $legacyLicense->id,
+                'price' => 60,
+            ],
         ]);
 
         $this->createLicense($managerParent, $program, $customer, [
@@ -384,6 +394,7 @@ class AuthorizationBoundaryTest extends TestCase
             ->assertJsonPath('meta.total', 1);
 
         $this->assertSame('expired', $customers->json('data.0.status'));
+        $this->assertEquals(60.0, (float) $customers->json('data.0.price'));
         $this->assertTrue((bool) $customers->json('data.0.bios_active_elsewhere'));
 
         $this->getJson('/api/reseller/reports/summary')
@@ -395,6 +406,55 @@ class AuthorizationBoundaryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('stats.customers', 0)
             ->assertJsonPath('stats.active_licenses', 0);
+    }
+
+    public function test_manager_parent_renewing_expired_reseller_license_creates_current_parent_owned_license(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $reseller = $this->createUser('reseller', $tenant, $managerParent, ['name' => 'Legacy Reseller']);
+        $customer = $this->createUser('customer', $tenant, $reseller, ['name' => 'Renew Takeover']);
+        $program = $this->createProgram($tenant);
+        $legacyLicense = $this->createLicense($reseller, $program, $customer, [
+            'bios_id' => 'RENEWTAKE1',
+            'status' => 'expired',
+            'price' => 60,
+            'activated_at' => now()->subDays(40),
+            'expires_at' => now()->subDays(10),
+        ]);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->postJson('/api/licenses/'.$legacyLicense->id.'/renew', [
+            'duration_days' => 30,
+            'price' => 75,
+            'is_scheduled' => true,
+            'scheduled_date_time' => now()->addDay()->toIso8601String(),
+            'scheduled_timezone' => 'UTC',
+        ])->assertOk();
+
+        $renewed = License::query()
+            ->where('customer_id', $customer->id)
+            ->where('bios_id', 'RENEWTAKE1')
+            ->whereKeyNot($legacyLicense->id)
+            ->firstOrFail();
+
+        $this->assertSame($managerParent->id, (int) $renewed->reseller_id);
+        $this->assertSame('pending', $renewed->status);
+        $this->assertTrue((bool) $renewed->is_scheduled);
+
+        $legacyLicense->refresh();
+        $this->assertSame($reseller->id, (int) $legacyLicense->reseller_id);
+        $this->assertSame('expired', $legacyLicense->effectiveStatus());
+
+        Sanctum::actingAs($reseller);
+
+        $customers = $this->getJson('/api/reseller/customers')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1);
+
+        $this->assertSame('expired', $customers->json('data.0.status'));
+        $this->assertTrue((bool) $customers->json('data.0.bios_active_elsewhere'));
     }
 
     public function test_manager_parent_activation_rejects_unreasonable_price(): void

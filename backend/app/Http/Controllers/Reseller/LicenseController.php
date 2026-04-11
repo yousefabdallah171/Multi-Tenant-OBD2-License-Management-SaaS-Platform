@@ -7,6 +7,7 @@ use App\Http\Requests\RenewLicenseRequest;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Services\LicenseService;
+use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -333,7 +334,7 @@ class LicenseController extends BaseResellerController
             'program' => $license->program?->name,
             'program_id' => $license->program_id,
             'duration_days' => $license->duration_days,
-            'price' => (float) $license->price,
+            'price' => CustomerOwnership::displayPriceForLicense($license),
             'activated_at' => $license->activated_at?->toIso8601String(),
             'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),

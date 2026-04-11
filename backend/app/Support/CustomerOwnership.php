@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\ActivityLog;
 use App\Models\License;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -112,6 +113,48 @@ class CustomerOwnership
         }
 
         return $numeric;
+    }
+
+    public static function displayPriceForLicense(?License $license): float
+    {
+        if (! $license) {
+            return 0.0;
+        }
+
+        $price = round((float) $license->price, 2);
+        if ($price >= 0 && $price <= self::MAX_REASONABLE_PRICE) {
+            return $price;
+        }
+
+        $activity = ActivityLog::query()
+            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->where('metadata->license_id', $license->id)
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->first(function (ActivityLog $log): bool {
+                $price = round((float) ($log->metadata['price'] ?? -1), 2);
+
+                return $price >= 0 && $price <= self::MAX_REASONABLE_PRICE;
+            });
+
+        return $activity ? round((float) ($activity->metadata['price'] ?? 0), 2) : 0.0;
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    public static function displayPriceFromMetadataOrLicense(array $metadata, ?License $license): ?float
+    {
+        if (array_key_exists('price', $metadata)) {
+            $price = round((float) $metadata['price'], 2);
+
+            if ($price >= 0 && $price <= self::MAX_REASONABLE_PRICE) {
+                return $price;
+            }
+        }
+
+        return $license ? self::displayPriceForLicense($license) : null;
     }
 
     private static function sortTimestamp(License $license): int
