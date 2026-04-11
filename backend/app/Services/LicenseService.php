@@ -177,9 +177,9 @@ class LicenseService
             $customer->update(['username_locked' => true]);
 
             if (! $isScheduled) {
-                event(new LicenseActivated($license));
+                $this->dispatchDomainEventSafely(new LicenseActivated($license));
             }
-            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+            $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
         });
@@ -353,8 +353,8 @@ class LicenseService
 
             $renewed->load(['customer', 'program', 'reseller']);
 
-            event(new LicenseRenewed($renewed));
-            $this->forgetDashboardCaches((int) $renewalOwner->tenant_id, (int) $renewalOwner->id);
+            $this->dispatchDomainEventSafely(new LicenseRenewed($renewed));
+            $this->forgetDashboardCachesSafely((int) $renewalOwner->tenant_id, (int) $renewalOwner->id);
 
             return $renewed;
         });
@@ -410,8 +410,8 @@ class LicenseService
 
             $license->load(['customer', 'program', 'reseller']);
 
-            event(new LicenseDeactivated($license));
-            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+            $this->dispatchDomainEventSafely(new LicenseDeactivated($license));
+            $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
         });
@@ -462,7 +462,7 @@ class LicenseService
             );
 
             $license->load(['customer', 'program', 'reseller']);
-            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+            $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
         });
@@ -546,7 +546,7 @@ class LicenseService
             );
 
             $license->load(['customer', 'program', 'reseller']);
-            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+            $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
         });
@@ -672,7 +672,7 @@ class LicenseService
             );
 
             $license->load(['customer', 'program', 'reseller']);
-            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+            $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
         });
@@ -784,8 +784,8 @@ class LicenseService
             );
 
             $license->load(['customer', 'program', 'reseller']);
-            event(new LicenseActivated($license));
-            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+            $this->dispatchDomainEventSafely(new LicenseActivated($license));
+            $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
 
             return $license;
         });
@@ -972,7 +972,7 @@ class LicenseService
                     ],
                 );
 
-                $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+                $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
 
                 return [
                     'success' => true,
@@ -1038,7 +1038,7 @@ class LicenseService
                         ],
                     );
 
-                    $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+                    $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
 
                     return [
                         'success' => true,
@@ -1120,7 +1120,7 @@ class LicenseService
                 ],
             );
 
-            $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+            $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
         });
 
         return [
@@ -1602,7 +1602,7 @@ class LicenseService
                         'message' => $cleanMessage,
                     ],
                 );
-                $this->forgetDashboardCaches((int) $reseller->tenant_id, (int) $reseller->id);
+                $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
             }
         });
 
@@ -1635,6 +1635,24 @@ class LicenseService
             'ip_address' => request()->ip(),
             'metadata' => $metadata,
         ]);
+    }
+
+    private function dispatchDomainEventSafely(object $event): void
+    {
+        try {
+            event($event);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    private function forgetDashboardCachesSafely(int $tenantId, int $resellerId): void
+    {
+        try {
+            $this->forgetDashboardCaches($tenantId, $resellerId);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
     }
 
     private function forgetDashboardCaches(int $tenantId, int $resellerId): void
