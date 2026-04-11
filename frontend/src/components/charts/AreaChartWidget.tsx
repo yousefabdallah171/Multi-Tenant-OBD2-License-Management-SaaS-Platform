@@ -8,6 +8,8 @@ import { type ChartSeries, formatChartNumber, resolveSeriesColor, useChartTheme 
 type ChartRow = object
 type ValueFormatter<TData extends ChartRow> = (value: number | string, seriesKey: string, payload: TData) => string
 
+type TooltipLabelFormatter<TData extends ChartRow> = (value: string | number, payload?: TData) => string
+
 interface AreaChartWidgetProps<TData extends ChartRow = ChartRow> {
   title: string
   description?: string
@@ -21,7 +23,7 @@ interface AreaChartWidgetProps<TData extends ChartRow = ChartRow> {
   showLegend?: boolean
   valueFormatter?: ValueFormatter<TData>
   xAxisFormatter?: (value: string | number) => string
-  tooltipLabelFormatter?: (value: string | number) => string
+  tooltipLabelFormatter?: TooltipLabelFormatter<TData>
 }
 
 export function AreaChartWidget<TData extends ChartRow>({
@@ -72,7 +74,13 @@ export function AreaChartWidget<TData extends ChartRow>({
 
               return [formatted, label]
             }}
-            labelFormatter={(value) => (tooltipLabelFormatter ? tooltipLabelFormatter(value) : xAxisFormatter ? xAxisFormatter(value) : String(value))}
+            labelFormatter={(value, payload) => {
+              const row = (payload?.[0]?.payload as TData | undefined)
+              if (tooltipLabelFormatter) {
+                return tooltipLabelFormatter(value, row)
+              }
+              return xAxisFormatter ? xAxisFormatter(value) : String(value)
+            }}
           />
           {(showLegend ?? series.length > 1) ? <Legend /> : null}
           {series.map((entry, index) => {

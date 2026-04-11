@@ -6,6 +6,7 @@ import { type ChartSeries, formatChartNumber, resolveSeriesColor, useChartTheme 
 
 type ChartRow = object
 type ValueFormatter<TData extends ChartRow> = (value: number | string, seriesKey: string, payload: TData) => string
+type TooltipLabelFormatter<TData extends ChartRow> = (value: string | number, payload?: TData) => string
 
 interface BarChartWidgetProps<TData extends ChartRow = ChartRow> {
   title: string
@@ -21,9 +22,10 @@ interface BarChartWidgetProps<TData extends ChartRow = ChartRow> {
   showLegend?: boolean
   showLabels?: boolean
   xAxisFormatter?: (value: string | number) => string
-  tooltipLabelFormatter?: (value: string | number) => string
+  tooltipLabelFormatter?: TooltipLabelFormatter<TData>
   valueFormatter?: ValueFormatter<TData>
   colorByEntry?: (payload: TData, index: number) => string | undefined
+  onEntryClick?: (payload: TData) => void
 }
 
 export function BarChartWidget<TData extends ChartRow>({
@@ -43,6 +45,7 @@ export function BarChartWidget<TData extends ChartRow>({
   tooltipLabelFormatter,
   valueFormatter,
   colorByEntry,
+  onEntryClick,
 }: BarChartWidgetProps<TData>) {
   const { palette, seriesColors, locale, isRtl } = useChartTheme()
   const layout = horizontal ? 'vertical' : 'horizontal'
@@ -74,7 +77,13 @@ export function BarChartWidget<TData extends ChartRow>({
 
               return [formatted, label]
             }}
-            labelFormatter={(value) => (tooltipLabelFormatter ? tooltipLabelFormatter(value) : xAxisFormatter ? xAxisFormatter(value) : String(value))}
+            labelFormatter={(value, payload) => {
+              const row = (payload?.[0]?.payload as TData | undefined)
+              if (tooltipLabelFormatter) {
+                return tooltipLabelFormatter(value, row)
+              }
+              return xAxisFormatter ? xAxisFormatter(value) : String(value)
+            }}
           />
           {(showLegend ?? series.length > 1) ? <Legend /> : null}
           {series.map((entry, index) => (
@@ -85,6 +94,7 @@ export function BarChartWidget<TData extends ChartRow>({
               stackId={entry.stackId}
               fill={resolveSeriesColor(entry, index, seriesColors)}
               radius={horizontal ? [0, 10, 10, 0] : [10, 10, 0, 0]}
+              onClick={onEntryClick ? (entry) => onEntryClick((entry as { payload: TData }).payload) : undefined}
             >
               {colorByEntry && series.length === 1
                 ? data.map((item, itemIndex) => <Cell key={`${entry.key}-${itemIndex}`} fill={colorByEntry(item, itemIndex) ?? resolveSeriesColor(entry, index, seriesColors)} />)

@@ -41,19 +41,24 @@ class FinancialReportController extends BaseManagerParentController
             ->first();
         $totalActivations = (int) (clone $baseQuery)->count();
         $totalCustomers = CustomerOwnership::currentOwnedCustomerCount($scope['seller_ids'], $tenantId);
-        $revenueByReseller = $this->revenueQuery($tenantId, $validated, $scope)
-            ->leftJoin('users as resellers', 'resellers.id', '=', 'activity_logs.user_id')
-            ->selectRaw("COALESCE(resellers.name, 'Unknown') as reseller")
-            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+        $revenueMap = RevenueAnalytics::revenueBySellerIds($scope['seller_ids'], $tenantId, $validated);
+        $activationCounts = $this->revenueQuery($tenantId, $validated, $scope)
+            ->selectRaw('activity_logs.user_id as seller_id')
             ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
-            ->groupBy('activity_logs.user_id', 'resellers.name')
-            ->orderByDesc('revenue')
+            ->groupBy('activity_logs.user_id')
             ->get()
-            ->map(fn ($row): array => [
-                'reseller' => (string) $row->reseller,
-                'revenue' => round((float) $row->revenue, 2),
-                'activations' => (int) $row->activations,
+            ->mapWithKeys(fn ($row): array => [(int) $row->seller_id => (int) $row->activations]);
+
+        $revenueByReseller = $scope['sellers']
+            ->map(fn (User $seller): array => [
+                'id' => $seller->id,
+                'reseller' => $seller->name ?? 'Unknown',
+                'email' => $seller->email,
+                'role' => $seller->role?->value ?? (string) $seller->role,
+                'revenue' => round((float) ($revenueMap->get((int) $seller->id) ?? 0), 2),
+                'activations' => (int) ($activationCounts[(int) $seller->id] ?? 0),
             ])
+            ->sortByDesc('revenue')
             ->values()
             ->all();
         $programRows = $this->revenueQuery($tenantId, $validated, $scope)
@@ -201,6 +206,7 @@ class FinancialReportController extends BaseManagerParentController
             return [
                 'id' => $seller->id,
                 'reseller' => $seller->name,
+                'email' => $seller->email,
                 'role' => $seller->role?->value ?? (string) $seller->role,
                 'total_revenue' => $totalRevenue,
                 'total_activations' => $totalActivations,
@@ -224,7 +230,7 @@ class FinancialReportController extends BaseManagerParentController
         $team = User::query()
             ->where('tenant_id', $tenantId)
             ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
-            ->select(['id', 'tenant_id', 'name', 'role', 'created_by'])
+            ->select(['id', 'tenant_id', 'name', 'email', 'role', 'created_by'])
             ->get();
 
         $managerParents = $team->where('role', UserRole::MANAGER_PARENT->value)->values();

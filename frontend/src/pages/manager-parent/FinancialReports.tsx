@@ -109,6 +109,22 @@ export function FinancialReportsPage() {
   const customersHref = buildScopedCustomersPath(routePaths.managerParent.customers(lang), scope)
   const activeCustomersHref = buildScopedCustomersPath(routePaths.managerParent.customers(lang), scope, { status: 'active' })
 
+  const sellerLabel = (seller?: { reseller?: string; email?: string | null }) => {
+    if (!seller) return ''
+    if (seller.email) {
+      return `${seller.reseller} • ${seller.email}`
+    }
+    return seller.reseller ?? ''
+  }
+
+  const handleSellerClick = (seller?: { id?: number; role?: string | null }) => {
+    if (!seller?.id) return
+    const href = getManagerParentSellerDetailPath(lang, seller.id, seller.role)
+    if (href) {
+      navigate(href)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -148,6 +164,8 @@ export function FinancialReportsPage() {
           showLabels
           series={[{ key: 'revenue', label: t('common.revenue') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+          tooltipLabelFormatter={(value, payload) => sellerLabel(payload)}
+          onEntryClick={(payload) => handleSellerClick(payload)}
         />
         <BarChartWidget
           title={t('managerParent.pages.financialReports.revenueByProgram')}
@@ -178,6 +196,8 @@ export function FinancialReportsPage() {
           showLabels
           series={[{ key: 'still_not_paid', label: t('managerParent.pages.financialReports.columns.stillNotPaid') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+          tooltipLabelFormatter={(value, payload) => sellerLabel(payload as { reseller?: string; email?: string | null })}
+          onEntryClick={(payload) => handleSellerClick(payload as { id?: number; role?: string | null })}
         />
       </div>
 
@@ -213,7 +233,7 @@ function getManagerParentSellerDetailPath(lang: SupportedLanguage, id: number, r
     return undefined
   }
 
-  if (role === 'manager' || role === 'reseller') {
+  if (role === 'manager_parent' || role === 'manager' || role === 'reseller') {
     return routePaths.managerParent.teamMemberDetail(lang, id)
   }
 

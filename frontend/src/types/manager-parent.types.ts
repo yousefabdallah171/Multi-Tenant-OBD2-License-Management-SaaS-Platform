@@ -507,12 +507,13 @@ export interface FinancialReportData {
     active_customers: number
     active_licenses: number
   }
-  revenue_by_reseller: Array<{ reseller: string; revenue: number; activations: number }>
+  revenue_by_reseller: Array<{ id: number; reseller: string; email?: string | null; role?: string | null; revenue: number; activations: number }>
   revenue_by_program: Array<{ program: string; revenue: number; activations: number }>
   monthly_revenue: Array<{ month: string; revenue: number }>
   reseller_balances: Array<{
     id: number
     reseller: string
+    email?: string | null
     role?: string | null
     total_revenue: number
     total_activations: number
