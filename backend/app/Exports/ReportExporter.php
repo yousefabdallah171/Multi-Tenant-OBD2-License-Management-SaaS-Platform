@@ -105,7 +105,7 @@ class ReportExporter
     ): string {
         $spreadsheet = new Spreadsheet();
         $overview = $spreadsheet->getActiveSheet();
-        $overview->setTitle($this->normalizeSheetTitle($lang === 'ar' ? 'ملخص' : 'Overview', 0));
+        $overview->setTitle($this->normalizeSheetTitle($lang === 'ar' ? 'Ù…Ù„Ø®Øµ' : 'Overview', 0));
         $this->writeOverviewSheet($overview, $title, $summary, $dateRange, $lang);
 
         $sheetIndex = 1;
@@ -132,9 +132,9 @@ class ReportExporter
      */
     private function writeCsvIntro($handle, ?string $title, array $summary, ?string $dateRange, string $lang): void
     {
-        $titleLabel = $lang === 'ar' ? 'عنوان التقرير' : 'Report Title';
-        $rangeLabel = $lang === 'ar' ? 'النطاق الزمني' : 'Date Range';
-        $generatedLabel = $lang === 'ar' ? 'تاريخ التصدير' : 'Generated At';
+        $titleLabel = $lang === 'ar' ? 'Ø¹Ù†ÙˆØ§Ù† Ø§Ù„ØªÙ‚Ø±ÙŠØ±' : 'Report Title';
+        $rangeLabel = $lang === 'ar' ? 'Ø§Ù„Ù†Ø·Ø§Ù‚ Ø§Ù„Ø²Ù…Ù†ÙŠ' : 'Date Range';
+        $generatedLabel = $lang === 'ar' ? 'ØªØ§Ø±ÙŠØ® Ø§Ù„ØªØµØ¯ÙŠØ±' : 'Generated At';
 
         if (! empty($title)) {
             fputcsv($handle, [$titleLabel, $title]);
@@ -189,40 +189,40 @@ class ReportExporter
         $labelCol = 1;
         $valueCol = 2;
 
-        $titleLabel = $lang === 'ar' ? 'عنوان التقرير' : 'Report Title';
-        $rangeLabel = $lang === 'ar' ? 'النطاق الزمني' : 'Date Range';
-        $generatedLabel = $lang === 'ar' ? 'تاريخ التصدير' : 'Generated At';
+        $titleLabel = $lang === 'ar' ? 'Ø¹Ù†ÙˆØ§Ù† Ø§Ù„ØªÙ‚Ø±ÙŠØ´' : 'Report Title';
+        $rangeLabel = $lang === 'ar' ? 'Ø§Ù„Ù†Ø·Ø§Ù‚ Ø§Ù„Ø²Ù…Ù†ÙŠ' : 'Date Range';
+        $generatedLabel = $lang === 'ar' ? 'ØªØ§Ø±ÙŠØ® Ø§Ù„ØªØµØ¯ÙŠØ¯' : 'Generated At';
 
         if ($title) {
-            $sheet->setCellValueByColumnAndRow($labelCol, $row, $titleLabel);
-            $sheet->setCellValueByColumnAndRow($valueCol, $row, $title);
+            $this->setCell($sheet, $labelCol, $row, $titleLabel);
+            $this->setCell($sheet, $valueCol, $row, $title);
             $row += 1;
         }
 
         if ($dateRange) {
-            $sheet->setCellValueByColumnAndRow($labelCol, $row, $rangeLabel);
-            $sheet->setCellValueByColumnAndRow($valueCol, $row, $dateRange);
+            $this->setCell($sheet, $labelCol, $row, $rangeLabel);
+            $this->setCell($sheet, $valueCol, $row, $dateRange);
             $row += 1;
         }
 
-        $sheet->setCellValueByColumnAndRow($labelCol, $row, $generatedLabel);
-        $sheet->setCellValueByColumnAndRow($valueCol, $row, now()->toDateTimeString());
+        $this->setCell($sheet, $labelCol, $row, $generatedLabel);
+        $this->setCell($sheet, $valueCol, $row, now()->toDateTimeString());
         $row += 2;
 
         if (! empty($summary)) {
-            $sheet->setCellValueByColumnAndRow($labelCol, $row, $lang === 'ar' ? 'الملخص' : 'Summary');
-            $sheet->mergeCellsByColumnAndRow($labelCol, $row, $valueCol, $row);
-            $sheet->getStyleByColumnAndRow($labelCol, $row, $valueCol, $row)->applyFromArray($this->sectionTitleStyle());
+            $this->setCell($sheet, $labelCol, $row, $lang === 'ar' ? 'Ø§Ù„Ù…Ù„Ø®Øµ' : 'Summary');
+            $sheet->mergeCells($this->cellRange($labelCol, $row, $valueCol, $row));
+            $sheet->getStyle($this->cellRange($labelCol, $row, $valueCol, $row))->applyFromArray($this->sectionTitleStyle());
             $row += 1;
 
             foreach ($summary as $label => $value) {
-                $sheet->setCellValueByColumnAndRow($labelCol, $row, (string) $label);
-                $sheet->setCellValueByColumnAndRow($valueCol, $row, (string) $value);
+                $this->setCell($sheet, $labelCol, $row, (string) $label);
+                $this->setCell($sheet, $valueCol, $row, (string) $value);
                 $row += 1;
             }
         }
 
-        $sheet->getStyleByColumnAndRow($labelCol, 1, $labelCol, max(1, $row))->getFont()->setBold(true);
+        $sheet->getStyle($this->cellRange($labelCol, 1, $labelCol, max(1, $row)))->getFont()->setBold(true);
         $sheet->getColumnDimensionByColumn($labelCol)->setAutoSize(true);
         $sheet->getColumnDimensionByColumn($valueCol)->setAutoSize(true);
     }
@@ -237,23 +237,23 @@ class ReportExporter
         $rows = $section['rows'] ?? [];
 
         if (! empty($section['title'])) {
-            $sheet->setCellValueByColumnAndRow(1, $row, (string) $section['title']);
-            $sheet->mergeCellsByColumnAndRow(1, $row, max(1, count($headers)), $row);
-            $sheet->getStyleByColumnAndRow(1, $row, max(1, count($headers)), $row)->applyFromArray($this->sectionTitleStyle());
+            $this->setCell($sheet, 1, $row, (string) $section['title']);
+            $sheet->mergeCells($this->cellRange(1, $row, max(1, count($headers)), $row));
+            $sheet->getStyle($this->cellRange(1, $row, max(1, count($headers)), $row))->applyFromArray($this->sectionTitleStyle());
             $row += 1;
         }
 
         if (! empty($headers)) {
             foreach ($headers as $index => $header) {
-                $sheet->setCellValueByColumnAndRow($index + 1, $row, $header);
+                $this->setCell($sheet, $index + 1, $row, $header);
             }
-            $sheet->getStyleByColumnAndRow(1, $row, count($headers), $row)->applyFromArray($this->headerStyle());
+            $sheet->getStyle($this->cellRange(1, $row, count($headers), $row))->applyFromArray($this->headerStyle());
             $row += 1;
         }
 
         foreach ($rows as $rowData) {
             foreach ($rowData as $index => $value) {
-                $sheet->setCellValueByColumnAndRow($index + 1, $row, $value ?? '');
+                $this->setCell($sheet, $index + 1, $row, $value ?? '');
             }
             $row += 1;
         }
@@ -262,6 +262,16 @@ class ReportExporter
         for ($col = 1; $col <= $columnCount; $col += 1) {
             $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
         }
+    }
+
+    private function setCell($sheet, int $column, int $row, mixed $value): void
+    {
+        $sheet->setCellValue(Coordinate::stringFromColumnIndex($column).$row, $value);
+    }
+
+    private function cellRange(int $startColumn, int $startRow, int $endColumn, int $endRow): string
+    {
+        return Coordinate::stringFromColumnIndex($startColumn).$startRow.':'.Coordinate::stringFromColumnIndex($endColumn).$endRow;
     }
 
     private function headerStyle(): array
