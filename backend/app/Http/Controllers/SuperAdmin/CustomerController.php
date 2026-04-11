@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -49,12 +50,14 @@ class CustomerController extends BaseSuperAdminController
         }
 
         if (! empty($validated['search'])) {
-            $query->where(function ($builder) use ($validated): void {
+            $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
+            $query->where(function ($builder) use ($validated, $linkedUsernames): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
-                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('bios_id', 'like', '%'.$validated['search'].'%'));
+                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('bios_id', 'like', '%'.$validated['search'].'%'))
+                    ->orWhereIn('username', $linkedUsernames);
             });
         }
 
@@ -72,6 +75,7 @@ class CustomerController extends BaseSuperAdminController
         // Manual pagination on filtered results
         $total = $filtered->count();
         $items = $filtered->slice(($page - 1) * $perPage, $perPage)->values();
+        $biosLinkMap = $this->biosLinkMapForUsers($items, $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
         $lastPage = max(1, (int) ceil($total / $perPage));
 
         // Create paginator object
@@ -84,7 +88,7 @@ class CustomerController extends BaseSuperAdminController
         $customers->lastPage = $lastPage;
 
         return response()->json([
-            'data' => $items->map(fn (User $user): array => $this->serializeCustomer($user, $validated))->values(),
+            'data' => $items->map(fn (User $user): array => $this->serializeCustomer($user, $validated, null, null, $biosLinkMap))->values(),
             'meta' => [
                 'total' => $total,
                 'per_page' => $perPage,
@@ -210,7 +214,7 @@ class CustomerController extends BaseSuperAdminController
 
         return response()->json([
             'data' => [
-                ...$this->serializeCustomer($user),
+            ...$this->serializeCustomer($user, [], null, null, $this->biosLinkMapForUsers(collect([$user]), $user->tenant_id)),
                 'username' => $this->resolveCustomerUsername($user, $displayLicense),
                 'phone' => $user->phone,
                 'tenant' => $user->tenant ? [
@@ -357,7 +361,7 @@ class CustomerController extends BaseSuperAdminController
             ->select($this->licenseListColumns())
             ->with(['program:id,name', 'reseller:id,name,role'])]);
 
-        return response()->json(['data' => $this->serializeCustomer($customer)], 201);
+        return response()->json(['data' => $this->serializeCustomer($customer, [], null, null, $this->biosLinkMapForUsers(collect([$customer]), $customer->tenant_id))], 201);
     }
 
     /**
@@ -387,20 +391,25 @@ class CustomerController extends BaseSuperAdminController
         }
 
         if (! empty($validated['search'])) {
-            $query->where(function ($builder) use ($validated): void {
+            $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
+            $query->where(function ($builder) use ($validated, $linkedUsernames): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
-                        ->where('bios_id', 'like', '%'.$validated['search'].'%'));
+                        ->where('bios_id', 'like', '%'.$validated['search'].'%'))
+                    ->orWhereIn('username', $linkedUsernames);
             });
         }
 
         $allCustomers = $query->get();
-        $rows = $allCustomers
+        $filteredCustomers = $allCustomers
             ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated))
-            ->map(fn (User $user): array => $this->serializeCustomer($user, $validated))
+            ->values();
+        $biosLinkMap = $this->biosLinkMapForUsers($filteredCustomers, $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
+        $rows = $filteredCustomers
+            ->map(fn (User $user): array => $this->serializeCustomer($user, $validated, null, null, $biosLinkMap))
             ->values();
         $notesMap = $this->resolveNotesForExport($rows->pluck('id')->filter()->all());
 
@@ -519,7 +528,7 @@ class CustomerController extends BaseSuperAdminController
             ->select($this->licenseListColumns())
             ->with(['program:id,name', 'reseller:id,name,role'])]);
 
-        return response()->json(['data' => $this->serializeCustomer($user)]);
+        return response()->json(['data' => $this->serializeCustomer($user, [], null, null, $this->biosLinkMapForUsers(collect([$user]), $user->tenant_id))]);
     }
 
     public function destroy(User $user): JsonResponse
@@ -613,9 +622,11 @@ class CustomerController extends BaseSuperAdminController
     /**
      * @param array<string, mixed> $filters
      */
-    private function serializeCustomer(User $user, array $filters = [], ?array $blacklistCache = null, ?array $activeBiosCache = null): array
+    private function serializeCustomer(User $user, array $filters = [], ?array $blacklistCache = null, ?array $activeBiosCache = null, array $biosLinkMap = []): array
     {
         $license = $this->resolveDisplayLicense($user, $filters);
+        $linkedBiosId = $this->resolveLinkedBiosId($user, $biosLinkMap);
+        $displayBiosId = $linkedBiosId ?: $license?->bios_id;
         $hasActiveLicense = $user->customerLicenses->contains(
             fn ($item) => $item->isEffectivelyActive()
         );
@@ -623,20 +634,20 @@ class CustomerController extends BaseSuperAdminController
 
         // Check blacklist from cache instead of database query
         $isBlacklisted = false;
-        if ($license && $blacklistCache !== null) {
-            $cacheKey = strtolower((string) $license->bios_id) . '|' . $license->tenant_id;
+        if ($displayBiosId && $blacklistCache !== null) {
+            $cacheKey = strtolower((string) $displayBiosId) . '|' . $user->tenant_id;
             $isBlacklisted = isset($blacklistCache[$cacheKey]);
-        } elseif ($license) {
-            $isBlacklisted = BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id);
+        } elseif ($displayBiosId) {
+            $isBlacklisted = BiosBlacklist::blocksBios((string) $displayBiosId, (int) $user->tenant_id);
         }
 
         // Check active elsewhere from cache
         $biosActiveElsewhere = false;
-        if ($license && $license->bios_id && $activeBiosCache !== null) {
-            $cacheKey = strtolower((string) $license->bios_id);
+        if ($displayBiosId && $activeBiosCache !== null) {
+            $cacheKey = strtolower((string) $displayBiosId);
             $biosActiveElsewhere = isset($activeBiosCache[$cacheKey]) && $activeBiosCache[$cacheKey] > 1;
-        } elseif ($license && $license->bios_id) {
-            $biosActiveElsewhere = CustomerOwnership::hasBlockingOwnershipElsewhere((string) $license->bios_id, $license->id);
+        } elseif ($displayBiosId) {
+            $biosActiveElsewhere = CustomerOwnership::hasBlockingOwnershipElsewhere((string) $displayBiosId, $license?->id);
         }
 
         return [
@@ -653,7 +664,7 @@ class CustomerController extends BaseSuperAdminController
             'email' => $this->visibleEmail($user->email),
             'phone' => $user->phone,
             'license_id' => $license?->id,
-            'bios_id' => $license?->bios_id,
+            'bios_id' => $displayBiosId,
             'external_username' => $license?->external_username,
             'reseller' => $license?->reseller?->name,
             'reseller_role' => $license?->reseller?->role?->value ?? ($license?->reseller ? (string) $license->reseller->role : null),
@@ -824,6 +835,59 @@ class CustomerController extends BaseSuperAdminController
         }
 
         return sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $tenantId, (string) ($customer->username ?: 'customer-'.$customer->id));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function linkedUsernamesForBiosSearch(string $search, ?int $tenantId): array
+    {
+        $term = strtolower(trim($search));
+        if ($term === '') {
+            return [];
+        }
+
+        return BiosUsernameLink::query()
+            ->when($tenantId !== null, fn ($query) => $query->where('tenant_id', $tenantId))
+            ->whereRaw('LOWER(bios_id) like ?', ['%'.$term.'%'])
+            ->pluck('username')
+            ->filter()
+            ->all();
+    }
+
+    /**
+     * @param Collection<int, User> $users
+     * @return array<string, string>
+     */
+    private function biosLinkMapForUsers(Collection $users, ?int $tenantId): array
+    {
+        $usernames = $users
+            ->pluck('username')
+            ->filter()
+            ->map(fn (string $username): string => strtolower($username))
+            ->unique()
+            ->values();
+
+        if ($usernames->isEmpty()) {
+            return [];
+        }
+
+        return BiosUsernameLink::query()
+            ->when($tenantId !== null, fn ($query) => $query->where('tenant_id', $tenantId))
+            ->whereIn(DB::raw('LOWER(username)'), $usernames->all())
+            ->get(['username', 'bios_id'])
+            ->mapWithKeys(fn (BiosUsernameLink $link): array => [strtolower((string) $link->username) => (string) $link->bios_id])
+            ->all();
+    }
+
+    /**
+     * @param array<string, string> $biosLinkMap
+     */
+    private function resolveLinkedBiosId(User $user, array $biosLinkMap): ?string
+    {
+        $username = strtolower((string) $user->username);
+
+        return $biosLinkMap[$username] ?? null;
     }
 
     private function ensureEmailAvailable(User $customer, string $email): void

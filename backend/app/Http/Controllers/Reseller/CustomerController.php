@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -49,6 +50,7 @@ class CustomerController extends BaseResellerController
             ->latest();
 
         if (! empty($validated['search'])) {
+            $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $this->currentTenantId($request));
             $query->where(function ($builder) use ($validated, $resellerId): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
@@ -56,7 +58,8 @@ class CustomerController extends BaseResellerController
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->where('reseller_id', $resellerId)
-                        ->where('bios_id', 'like', '%'.$validated['search'].'%'));
+                        ->where('bios_id', 'like', '%'.$validated['search'].'%'))
+                    ->orWhereIn('username', $linkedUsernames);
             });
         }
 
@@ -70,10 +73,11 @@ class CustomerController extends BaseResellerController
         // Manual pagination on filtered results
         $total = $filtered->count();
         $items = $filtered->slice(($page - 1) * $perPage, $perPage)->values();
+        $biosLinkMap = $this->biosLinkMapForUsers($items, $this->currentTenantId($request));
         $lastPage = max(1, (int) ceil($total / $perPage));
 
         return response()->json([
-            'data' => $items->map(fn (User $user): array => $this->serializeCustomer($user, $validated, $resellerId))->values(),
+            'data' => $items->map(fn (User $user): array => $this->serializeCustomer($user, $validated, $resellerId, $biosLinkMap))->values(),
             'meta' => [
                 'total' => $total,
                 'per_page' => $perPage,
@@ -272,7 +276,7 @@ class CustomerController extends BaseResellerController
             ->with(['program:id,name'])
             ->latest('activated_at')]);
 
-        return response()->json(['data' => $this->serializeCustomer($customer, [], $this->currentReseller($request)->id)], 201);
+        return response()->json(['data' => $this->serializeCustomer($customer, [], $this->currentReseller($request)->id, $this->biosLinkMapForUsers(collect([$customer]), $this->currentTenantId($request)))], 201);
     }
 
     /**
@@ -297,6 +301,7 @@ class CustomerController extends BaseResellerController
             ->latest();
 
         if (! empty($validated['search'])) {
+            $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $this->currentTenantId($request));
             $query->where(function ($builder) use ($validated, $resellerId): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
@@ -304,14 +309,18 @@ class CustomerController extends BaseResellerController
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->where('reseller_id', $resellerId)
-                        ->where('bios_id', 'like', '%'.$validated['search'].'%'));
+                        ->where('bios_id', 'like', '%'.$validated['search'].'%'))
+                    ->orWhereIn('username', $linkedUsernames);
             });
         }
 
         $allCustomers = $query->get();
-        $rows = $allCustomers
+        $filteredCustomers = $allCustomers
             ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated))
-            ->map(fn (User $user): array => $this->serializeCustomer($user, $validated, $resellerId))
+            ->values();
+        $biosLinkMap = $this->biosLinkMapForUsers($filteredCustomers, $this->currentTenantId($request));
+        $rows = $filteredCustomers
+            ->map(fn (User $user): array => $this->serializeCustomer($user, $validated, $resellerId, $biosLinkMap))
             ->values();
         $notesMap = $this->resolveNotesForExport($rows->pluck('id')->filter()->all());
 
@@ -429,7 +438,7 @@ class CustomerController extends BaseResellerController
             ->with(['program:id,name'])
             ->latest('activated_at')]);
 
-        return response()->json(['data' => $this->serializeCustomer($customer, [], $this->currentReseller($request)->id)]);
+        return response()->json(['data' => $this->serializeCustomer($customer, [], $this->currentReseller($request)->id, $this->biosLinkMapForUsers(collect([$customer]), $this->currentTenantId($request)))]);
     }
 
     public function show(Request $request, User $user): JsonResponse
@@ -444,7 +453,7 @@ class CustomerController extends BaseResellerController
 
         return response()->json([
             'data' => [
-                ...$this->serializeCustomer($customer, [], $resellerId),
+            ...$this->serializeCustomer($customer, [], $resellerId, $this->biosLinkMapForUsers(collect([$customer]), $this->currentTenantId($request))),
                 'licenses' => $customer->customerLicenses->map(fn ($license): array => [
                     'id' => $license->id,
                     'bios_id' => $license->bios_id,
@@ -541,14 +550,16 @@ class CustomerController extends BaseResellerController
     /**
      * @param array<string, mixed> $filters
      */
-    private function serializeCustomer(User $user, array $filters = [], ?int $currentResellerId = null): array
+    private function serializeCustomer(User $user, array $filters = [], ?int $currentResellerId = null, array $biosLinkMap = []): array
     {
         $license = $this->resolveDisplayLicense($user, $filters);
+        $linkedBiosId = $this->resolveLinkedBiosId($user, $biosLinkMap);
+        $displayBiosId = $linkedBiosId ?: $license?->bios_id;
 
         // Check if this customer's BIOS is owned by a DIFFERENT reseller
         // (active, suspended, scheduled, or paused — all block others from taking it)
-        $biosActiveElsewhere = $license && $license->bios_id && $currentResellerId !== null
-            ? CustomerOwnership::hasBlockingOwnershipElsewhere((string) $license->bios_id, $license->id, $currentResellerId)
+        $biosActiveElsewhere = $displayBiosId && $currentResellerId !== null
+            ? CustomerOwnership::hasBlockingOwnershipElsewhere((string) $displayBiosId, $license?->id, $currentResellerId)
             : false;
 
         return [
@@ -559,7 +570,7 @@ class CustomerController extends BaseResellerController
             'email' => $this->visibleEmail($user->email),
             'phone' => $user->phone,
             'license_id' => $license?->id,
-            'bios_id' => $license?->bios_id,
+            'bios_id' => $displayBiosId,
             'external_username' => $license?->external_username,
             'program' => $license?->program?->name,
             'program_id' => $license?->program_id,
@@ -579,7 +590,7 @@ class CustomerController extends BaseResellerController
             'pause_remaining_minutes' => $license?->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'pause_reason' => $license?->pause_reason,
             'paused_by_role' => $license?->paused_by_role ?? null,
-            'is_blacklisted' => $license ? BiosBlacklist::blocksBios((string) $license->bios_id, (int) $license->tenant_id) : false,
+            'is_blacklisted' => $displayBiosId ? BiosBlacklist::blocksBios((string) $displayBiosId, (int) $user->tenant_id) : false,
             'bios_active_elsewhere' => $biosActiveElsewhere,
             'license_count' => $user->customerLicenses->count(),
         ];
@@ -698,6 +709,59 @@ class CustomerController extends BaseResellerController
         }
 
         return sprintf('no-email+tenant%s-%s@obd2sw.local', (string) $tenantId, (string) ($customer->username ?: 'customer-'.$customer->id));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function linkedUsernamesForBiosSearch(string $search, int $tenantId): array
+    {
+        $term = strtolower(trim($search));
+        if ($term === '') {
+            return [];
+        }
+
+        return BiosUsernameLink::query()
+            ->where('tenant_id', $tenantId)
+            ->whereRaw('LOWER(bios_id) like ?', ['%'.$term.'%'])
+            ->pluck('username')
+            ->filter()
+            ->all();
+    }
+
+    /**
+     * @param Collection<int, User> $users
+     * @return array<string, string>
+     */
+    private function biosLinkMapForUsers(Collection $users, int $tenantId): array
+    {
+        $usernames = $users
+            ->pluck('username')
+            ->filter()
+            ->map(fn (string $username): string => strtolower($username))
+            ->unique()
+            ->values();
+
+        if ($usernames->isEmpty()) {
+            return [];
+        }
+
+        return BiosUsernameLink::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn(DB::raw('LOWER(username)'), $usernames->all())
+            ->get(['username', 'bios_id'])
+            ->mapWithKeys(fn (BiosUsernameLink $link): array => [strtolower((string) $link->username) => (string) $link->bios_id])
+            ->all();
+    }
+
+    /**
+     * @param array<string, string> $biosLinkMap
+     */
+    private function resolveLinkedBiosId(User $user, array $biosLinkMap): ?string
+    {
+        $username = strtolower((string) $user->username);
+
+        return $biosLinkMap[$username] ?? null;
     }
 
     private function ensureEmailAvailable(User $customer, string $email): void
