@@ -16,13 +16,14 @@ const cardColors = {
 interface StatsCardProps {
   title: string
   value: string | number
-  /** @deprecated icon is no longer rendered — pass nothing */
+  /** @deprecated icon is no longer rendered â€” pass nothing */
   icon?: unknown
   trend?: number
   color?: keyof typeof cardColors
+  helperText?: string
 }
 
-export function StatsCard({ title, value, trend, color = 'sky' }: StatsCardProps) {
+export function StatsCard({ title, value, trend, color = 'sky', helperText }: StatsCardProps) {
   const hasTrend = typeof trend === 'number'
   const { appearance } = useDashboardAppearance()
   const { primaryColor } = useBranding()
@@ -53,6 +54,9 @@ export function StatsCard({ title, value, trend, color = 'sky' }: StatsCardProps
       <CardContent className="space-y-1.5 p-4 sm:p-5">
         <p className="dashboard-text-label text-xs font-semibold uppercase tracking-wide" style={{ color: palette.color }}>{title}</p>
         <p className="dashboard-text-display tabular-nums text-2xl font-bold text-slate-950 dark:text-white sm:text-3xl">{value}</p>
+        {helperText ? (
+          <p className="text-xs text-slate-500 dark:text-slate-400">{helperText}</p>
+        ) : null}
         {hasTrend ? (
           <div
             className={cn('dashboard-text-helper inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-semibold')}
