@@ -75,7 +75,7 @@ class CustomerController extends BaseSuperAdminController
         // Manual pagination on filtered results
         $total = $filtered->count();
         $items = $filtered->slice(($page - 1) * $perPage, $perPage)->values();
-        $biosLinkMap = $this->biosLinkMapForUsers($items, $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
+        $biosLinkMap = $this->safeBiosLinkMapForUsers($items, $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
         $lastPage = max(1, (int) ceil($total / $perPage));
 
         // Create paginator object
@@ -214,7 +214,7 @@ class CustomerController extends BaseSuperAdminController
 
         return response()->json([
             'data' => [
-            ...$this->serializeCustomer($user, [], null, null, $this->biosLinkMapForUsers(collect([$user]), $user->tenant_id)),
+            ...$this->serializeCustomer($user, [], null, null, $this->safeBiosLinkMapForUsers(collect([$user]), $user->tenant_id)),
                 'username' => $this->resolveCustomerUsername($user, $displayLicense),
                 'phone' => $user->phone,
                 'tenant' => $user->tenant ? [
@@ -361,7 +361,7 @@ class CustomerController extends BaseSuperAdminController
             ->select($this->licenseListColumns())
             ->with(['program:id,name', 'reseller:id,name,role'])]);
 
-        return response()->json(['data' => $this->serializeCustomer($customer, [], null, null, $this->biosLinkMapForUsers(collect([$customer]), $customer->tenant_id))], 201);
+        return response()->json(['data' => $this->serializeCustomer($customer, [], null, null, $this->safeBiosLinkMapForUsers(collect([$customer]), $customer->tenant_id))], 201);
     }
 
     /**
@@ -407,7 +407,7 @@ class CustomerController extends BaseSuperAdminController
         $filteredCustomers = $allCustomers
             ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated))
             ->values();
-        $biosLinkMap = $this->biosLinkMapForUsers($filteredCustomers, $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
+        $biosLinkMap = $this->safeBiosLinkMapForUsers($filteredCustomers, $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
         $rows = $filteredCustomers
             ->map(fn (User $user): array => $this->serializeCustomer($user, $validated, null, null, $biosLinkMap))
             ->values();
@@ -528,7 +528,7 @@ class CustomerController extends BaseSuperAdminController
             ->select($this->licenseListColumns())
             ->with(['program:id,name', 'reseller:id,name,role'])]);
 
-        return response()->json(['data' => $this->serializeCustomer($user, [], null, null, $this->biosLinkMapForUsers(collect([$user]), $user->tenant_id))]);
+        return response()->json(['data' => $this->serializeCustomer($user, [], null, null, $this->safeBiosLinkMapForUsers(collect([$user]), $user->tenant_id))]);
     }
 
     public function destroy(User $user): JsonResponse
@@ -876,6 +876,25 @@ class CustomerController extends BaseSuperAdminController
             ->get(['username', 'bios_id'])
             ->mapWithKeys(fn (BiosUsernameLink $link): array => [strtolower((string) $link->username) => (string) $link->bios_id])
             ->all();
+    }
+
+    /**
+     * @param Collection<int, User> $users
+     * @return array<string, string>
+     */
+    private function safeBiosLinkMapForUsers(Collection $users, ?int $tenantId): array
+    {
+        try {
+            return $this->biosLinkMapForUsers($users, $tenantId);
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to resolve BIOS link map for super admin customers.', [
+                'tenant_id' => $tenantId,
+                'count' => $users->count(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
     }
 
     /**
