@@ -45,12 +45,14 @@ class CustomerController extends BaseSuperAdminController
                 ->with(['program:id,name', 'reseller:id,name,role'])])
             ->latest();
 
-        if (! empty($validated['tenant_id'])) {
-            $query->where('tenant_id', (int) $validated['tenant_id']);
+        $tenantId = isset($validated['tenant_id']) ? (int) $validated['tenant_id'] : null;
+
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
         }
 
         if (! empty($validated['search'])) {
-            $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
+            $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $tenantId);
             $query->where(function ($builder) use ($validated, $linkedUsernames): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
@@ -75,7 +77,7 @@ class CustomerController extends BaseSuperAdminController
         // Manual pagination on filtered results
         $total = $filtered->count();
         $items = $filtered->slice(($page - 1) * $perPage, $perPage)->values();
-        $biosLinkMap = $this->safeBiosLinkMapForUsers($items, $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
+        $biosLinkMap = $this->safeBiosLinkMapForUsers($items, $tenantId);
         $lastPage = max(1, (int) ceil($total / $perPage));
 
         // Create paginator object
@@ -386,12 +388,14 @@ class CustomerController extends BaseSuperAdminController
                 ->with(['program:id,name', 'reseller:id,name,role'])])
             ->latest();
 
-        if (! empty($validated['tenant_id'])) {
-            $query->where('tenant_id', (int) $validated['tenant_id']);
+        $tenantId = isset($validated['tenant_id']) ? (int) $validated['tenant_id'] : null;
+
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
         }
 
         if (! empty($validated['search'])) {
-            $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
+            $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $tenantId);
             $query->where(function ($builder) use ($validated, $linkedUsernames): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
@@ -407,7 +411,7 @@ class CustomerController extends BaseSuperAdminController
         $filteredCustomers = $allCustomers
             ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated))
             ->values();
-        $biosLinkMap = $this->safeBiosLinkMapForUsers($filteredCustomers, $validated['tenant_id'] ? (int) $validated['tenant_id'] : null);
+        $biosLinkMap = $this->safeBiosLinkMapForUsers($filteredCustomers, $tenantId);
         $rows = $filteredCustomers
             ->map(fn (User $user): array => $this->serializeCustomer($user, $validated, null, null, $biosLinkMap))
             ->values();
