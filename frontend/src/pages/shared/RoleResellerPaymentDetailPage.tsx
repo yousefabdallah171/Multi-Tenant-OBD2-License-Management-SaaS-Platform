@@ -28,6 +28,7 @@ interface RoleResellerPaymentDetailPageProps {
   deletePayment?: (paymentId: number) => Promise<{ message?: string }>
   storeCommission: (payload: StoreCommissionPayload) => Promise<{ message?: string }>
   allowPaymentActions?: boolean
+  showPaymentHistory?: boolean
 }
 
 type PaymentDialogState = { mode: 'create' | 'edit'; payment?: ResellerPayment } | null
@@ -45,6 +46,7 @@ export function RoleResellerPaymentDetailPage({
   deletePayment,
   storeCommission,
   allowPaymentActions = true,
+  showPaymentHistory = true,
 }: RoleResellerPaymentDetailPageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
@@ -301,17 +303,19 @@ export function RoleResellerPaymentDetailPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="space-y-2">
-          <CardTitle>{t('payments.sections.history')}</CardTitle>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {t('payments.sections.managerHistoryHint', { defaultValue: 'These are the payments this reseller already paid to you.' })}
-          </p>
-        </CardHeader>
-        <CardContent>
-          <DataTable tableKey={`${queryKeyPrefix}_reseller_payment_detail_payments`} columns={paymentColumns} data={detail?.payments ?? []} rowKey={(row) => row.id} isLoading={query.isLoading} emptyMessage={t('payments.empty.payments')} />
-        </CardContent>
-      </Card>
+      {showPaymentHistory ? (
+        <Card>
+          <CardHeader className="space-y-2">
+            <CardTitle>{t('payments.sections.history')}</CardTitle>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {t('payments.sections.managerHistoryHint', { defaultValue: 'These are the payments this reseller already paid to you.' })}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <DataTable tableKey={`${queryKeyPrefix}_reseller_payment_detail_payments`} columns={paymentColumns} data={detail?.payments ?? []} rowKey={(row) => row.id} isLoading={query.isLoading} emptyMessage={t('payments.empty.payments')} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Dialog open={Boolean(commissionDialog)} onOpenChange={(open) => { if (!open) { setCommissionDialog(null); resetCommissionForm() } }}>
         <DialogContent>

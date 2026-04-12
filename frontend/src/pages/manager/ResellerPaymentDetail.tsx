@@ -16,6 +16,7 @@ export function ResellerPaymentDetailPage() {
       updatePayment={managerService.updatePayment}
       storeCommission={managerService.storeCommission}
       allowPaymentActions={false}
+      showPaymentHistory={false}
     />
   )
 }
