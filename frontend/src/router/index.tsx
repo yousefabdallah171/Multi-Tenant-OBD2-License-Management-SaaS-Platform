@@ -41,6 +41,7 @@ const ManagerReportsPage = lazyNamed(() => import('@/pages/manager/Reports'), 'R
 const ManagerResellerLogsPage = lazyNamed(() => import('@/pages/manager/ResellerLogs'), 'ResellerLogsPage')
 const ManagerTeamPage = lazyNamed(() => import('@/pages/manager/Team'), 'TeamPage')
 const ManagerTeamMemberDetailPage = lazyNamed(() => import('@/pages/manager/TeamMemberDetail'), 'TeamMemberDetailPage')
+const ManagerSoftwarePage = lazyNamed(() => import('@/pages/manager/Software'), 'SoftwarePage')
 
 const ManagerParentActivityPage = lazyNamed(() => import('@/pages/manager-parent/Activity'), 'ActivityPage')
 const ActivateLicensePageForManagerParent = lazyNamed(() => import('@/pages/manager-parent/ActivateLicense'), 'ActivateLicensePageForManagerParent')
@@ -222,6 +223,7 @@ export function AppRouter() {
                   <Route path="reports" element={<ManagerReportsPage />} />
                   <Route path="activity" element={<ManagerActivityPage />} />
                   <Route path="reseller-logs" element={<ManagerResellerLogsPage />} />
+                  <Route path="software" element={<ManagerSoftwarePage />} />
                   <Route path="profile" element={<ManagerProfilePage />} />
                 </Route>
               </Route>

@@ -54,6 +54,7 @@ export const routePaths = {
     team: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/team`,
     teamMemberDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/manager/team/${id}`,
     usernameManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/team`,
+    software: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/software`,
     customers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/customers`,
     customerCreate: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager/customers/create`,
     licenseRenew: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/manager/customers/licenses/${id}/renew`,

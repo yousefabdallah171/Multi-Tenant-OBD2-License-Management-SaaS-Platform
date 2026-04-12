@@ -59,6 +59,7 @@ const managerItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.manager.dashboard, translationKey: 'manager.nav.dashboard' },
   { key: 'team', icon: Users, href: routePaths.manager.team, translationKey: 'manager.nav.team' },
   { key: 'customers', icon: UserRound, href: routePaths.manager.customers, translationKey: 'manager.nav.customers' },
+  { key: 'software', icon: Package, href: routePaths.manager.software, translationKey: 'manager.nav.software' },
   { key: 'biosChangeRequestsTopLevel', icon: ClipboardList, href: routePaths.manager.biosChangeRequests, translationKey: 'manager.nav.biosChangeRequests' },
   { key: 'biosGroup', icon: History, href: routePaths.manager.biosDetails, translationKey: 'manager.nav.biosDetails' },
   { key: 'resellerPayments', icon: BarChart3, href: routePaths.manager.resellerPayments, translationKey: 'manager.nav.resellerPayments' },
