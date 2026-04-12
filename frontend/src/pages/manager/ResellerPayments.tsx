@@ -14,6 +14,7 @@ export function ResellerPaymentsPage() {
       recordPayment={managerService.recordPayment}
       detailPath={(lang, resellerId) => routePaths.manager.resellerPaymentDetail(lang, resellerId)}
       roleSalesRoles={['manager', 'reseller']}
+      allowRecordPayment={false}
     />
   )
 }

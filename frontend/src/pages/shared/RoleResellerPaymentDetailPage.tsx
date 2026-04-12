@@ -27,6 +27,7 @@ interface RoleResellerPaymentDetailPageProps {
   updatePayment: (paymentId: number, payload: RecordPaymentPayload) => Promise<{ message?: string }>
   deletePayment?: (paymentId: number) => Promise<{ message?: string }>
   storeCommission: (payload: StoreCommissionPayload) => Promise<{ message?: string }>
+  allowPaymentActions?: boolean
 }
 
 type PaymentDialogState = { mode: 'create' | 'edit'; payment?: ResellerPayment } | null
@@ -43,6 +44,7 @@ export function RoleResellerPaymentDetailPage({
   updatePayment,
   deletePayment,
   storeCommission,
+  allowPaymentActions = true,
 }: RoleResellerPaymentDetailPageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
@@ -141,8 +143,10 @@ export function RoleResellerPaymentDetailPage({
     { key: 'payment_method', label: t('payments.columns.method'), render: (row) => t(`payments.methods.${row.payment_method}`) },
     { key: 'reference', label: t('payments.columns.reference'), render: (row) => row.reference || '-' },
     { key: 'notes', label: t('payments.columns.notes'), render: (row) => row.notes || '-' },
-    { key: 'actions', label: t('common.actions'), render: (row) => <Button type="button" size="sm" variant="outline" onClick={() => openPaymentDialog('edit', row)}>{t('payments.actions.editPayment')}</Button> },
-  ], [locale, t])
+    ...(allowPaymentActions
+      ? [{ key: 'actions', label: t('common.actions'), render: (row: ResellerPayment) => <Button type="button" size="sm" variant="outline" onClick={() => openPaymentDialog('edit', row)}>{t('payments.actions.editPayment')}</Button> }]
+      : []),
+  ], [allowPaymentActions, locale, t])
 
   function resetPaymentForm() {
     setPaymentForm({
@@ -196,13 +200,15 @@ export function RoleResellerPaymentDetailPage({
         description={detail?.reseller.email ?? t('payments.description')}
       />
 
-      <div className="flex flex-wrap gap-3">
-        <Button type="button" onClick={() => openPaymentDialog('create')}>
-          {t('payments.actions.recordPayment')}
-        </Button>
-      </div>
+      {allowPaymentActions ? (
+        <div className="flex flex-wrap gap-3">
+          <Button type="button" onClick={() => openPaymentDialog('create')}>
+            {t('payments.actions.recordPayment')}
+          </Button>
+        </div>
+      ) : null}
 
-      {paymentDialog ? (
+      {paymentDialog && allowPaymentActions ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="reseller-payment-dialog-title" aria-describedby="reseller-payment-dialog-description">
           <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
             <div className="space-y-2 pe-8">

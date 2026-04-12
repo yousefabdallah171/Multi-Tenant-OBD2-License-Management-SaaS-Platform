@@ -27,6 +27,7 @@ interface RoleResellerPaymentsPageProps {
   recordPayment: (payload: RecordPaymentPayload) => Promise<{ message?: string }>
   detailPath: (lang: 'ar' | 'en', resellerId: number) => string
   roleSalesRoles?: Array<'manager_parent' | 'manager' | 'reseller'>
+  allowRecordPayment?: boolean
 }
 
 export function RoleResellerPaymentsPage({
@@ -36,6 +37,7 @@ export function RoleResellerPaymentsPage({
   recordPayment,
   detailPath,
   roleSalesRoles,
+  allowRecordPayment = true,
 }: RoleResellerPaymentsPageProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -254,9 +256,11 @@ export function RoleResellerPaymentsPage({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <PageHeader eyebrow={eyebrow} title={t('payments.title')} description={t('payments.description')} />
-        <Button type="button" onClick={() => { resetPaymentForm(); setPaymentOpen(true) }}>
-          {t('payments.actions.recordPayment')}
-        </Button>
+        {allowRecordPayment ? (
+          <Button type="button" onClick={() => { resetPaymentForm(); setPaymentOpen(true) }}>
+            {t('payments.actions.recordPayment')}
+          </Button>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
@@ -401,7 +405,7 @@ export function RoleResellerPaymentsPage({
 
       <DataTable tableKey={`${queryKeyPrefix}_reseller_payments`} columns={columns} data={displayedRows} rowKey={(row) => row.reseller_id} isLoading={query.isLoading} emptyMessage={t('payments.empty.resellers')} />
 
-      {paymentOpen ? (
+      {paymentOpen && allowRecordPayment ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="record-payment-title" aria-describedby="record-payment-description">
           <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
             <div className="space-y-2 pe-8">

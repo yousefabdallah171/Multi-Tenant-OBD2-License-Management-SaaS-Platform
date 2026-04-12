@@ -127,6 +127,8 @@ class ResellerPaymentController extends BaseManagerController
 
     public function storePayment(Request $request, ResellerCommissionService $commissionService): JsonResponse
     {
+        abort(403, 'Managers cannot record payments.');
+
         $validated = $request->validate([
             'commission_id' => ['nullable', 'integer', 'exists:reseller_commissions,id'],
             'reseller_id' => ['required', 'integer', 'exists:users,id'],
@@ -175,6 +177,8 @@ class ResellerPaymentController extends BaseManagerController
 
     public function updatePayment(Request $request, ResellerPayment $resellerPayment, ResellerCommissionService $commissionService): JsonResponse
     {
+        abort(403, 'Managers cannot record payments.');
+
         $payment = $this->resolvePayment($request, $resellerPayment);
 
         $validated = $request->validate([
