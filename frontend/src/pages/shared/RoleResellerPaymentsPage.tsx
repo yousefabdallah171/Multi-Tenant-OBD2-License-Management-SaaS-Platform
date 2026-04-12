@@ -26,9 +26,17 @@ interface RoleResellerPaymentsPageProps {
   fetchList: (filters?: ResellerPaymentFilters) => Promise<ResellerPaymentListData>
   recordPayment: (payload: RecordPaymentPayload) => Promise<{ message?: string }>
   detailPath: (lang: 'ar' | 'en', resellerId: number) => string
+  roleSalesRoles?: Array<'manager_parent' | 'manager' | 'reseller'>
 }
 
-export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, recordPayment, detailPath }: RoleResellerPaymentsPageProps) {
+export function RoleResellerPaymentsPage({
+  eyebrow,
+  queryKeyPrefix,
+  fetchList,
+  recordPayment,
+  detailPath,
+  roleSalesRoles,
+}: RoleResellerPaymentsPageProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -44,6 +52,7 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
   const scopeName = searchParams.get('scope_name') || ''
   const scopeRole = normalizeScopeRole(searchParams.get('scope_role'))
   const roleFilter = normalizeRoleFilter(searchParams.get('role'))
+  const allowedRoleSales = roleSalesRoles ?? ['manager_parent', 'manager', 'reseller']
   const [paymentForm, setPaymentForm] = useState({
     reseller_id: 0,
     amount: '',
@@ -71,6 +80,12 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
 
     setSearchParams(next, { replace: true })
   }, [managerId, managerParentId, period, resellerId, balanceFilter, roleFilter, scopeName, scopeRole, setSearchParams])
+
+  useEffect(() => {
+    if (roleFilter && !allowedRoleSales.includes(roleFilter)) {
+      setSearchParams((current) => updateRoleFilter(current, ''), { replace: true })
+    }
+  }, [allowedRoleSales, roleFilter, setSearchParams])
 
   const query = useQuery({
     queryKey: [queryKeyPrefix, 'reseller-payments', listFilters],
@@ -296,53 +311,61 @@ export function RoleResellerPaymentsPage({ eyebrow, queryKeyPrefix, fetchList, r
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <button
-          type="button"
-          className="h-full text-start"
-          onClick={() => handleRoleToggle('manager_parent')}
-        >
-          <StatsCard
-            title={t('payments.summary.totalSalesManagerParent')}
-            value={formatCurrency(totalsByRole.manager_parent, 'USD', locale)}
-            icon={WalletCards}
-            color={roleFilter === 'manager_parent' ? 'sky' : 'amber'}
-            helperText={t('payments.summary.totalSalesManagerParentHint')}
-            density="compact"
-            className={roleFilter === 'manager_parent' ? 'ring-2 ring-sky-400/60 dark:ring-sky-500/60' : undefined}
-          />
-        </button>
-        <button
-          type="button"
-          className="h-full text-start"
-          onClick={() => handleRoleToggle('manager')}
-        >
-          <StatsCard
-            title={t('payments.summary.totalSalesManager')}
-            value={formatCurrency(totalsByRole.manager, 'USD', locale)}
-            icon={WalletCards}
-            color={roleFilter === 'manager' ? 'emerald' : 'amber'}
-            helperText={t('payments.summary.totalSalesManagerHint')}
-            density="compact"
-            className={roleFilter === 'manager' ? 'ring-2 ring-emerald-400/60 dark:ring-emerald-500/60' : undefined}
-          />
-        </button>
-        <button
-          type="button"
-          className="h-full text-start"
-          onClick={() => handleRoleToggle('reseller')}
-        >
-          <StatsCard
-            title={t('payments.summary.totalSalesReseller')}
-            value={formatCurrency(totalsByRole.reseller, 'USD', locale)}
-            icon={WalletCards}
-            color={roleFilter === 'reseller' ? 'amber' : 'amber'}
-            helperText={t('payments.summary.totalSalesResellerHint')}
-            density="compact"
-            className={roleFilter === 'reseller' ? 'ring-2 ring-amber-400/60 dark:ring-amber-500/60' : undefined}
-          />
-        </button>
-      </div>
+      {allowedRoleSales.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {allowedRoleSales.includes('manager_parent') ? (
+            <button
+              type="button"
+              className="h-full text-start"
+              onClick={() => handleRoleToggle('manager_parent')}
+            >
+              <StatsCard
+                title={t('payments.summary.totalSalesManagerParent')}
+                value={formatCurrency(totalsByRole.manager_parent, 'USD', locale)}
+                icon={WalletCards}
+                color={roleFilter === 'manager_parent' ? 'sky' : 'amber'}
+                helperText={t('payments.summary.totalSalesManagerParentHint')}
+                density="compact"
+                className={roleFilter === 'manager_parent' ? 'ring-2 ring-sky-400/60 dark:ring-sky-500/60' : undefined}
+              />
+            </button>
+          ) : null}
+          {allowedRoleSales.includes('manager') ? (
+            <button
+              type="button"
+              className="h-full text-start"
+              onClick={() => handleRoleToggle('manager')}
+            >
+              <StatsCard
+                title={t('payments.summary.totalSalesManager')}
+                value={formatCurrency(totalsByRole.manager, 'USD', locale)}
+                icon={WalletCards}
+                color={roleFilter === 'manager' ? 'emerald' : 'amber'}
+                helperText={t('payments.summary.totalSalesManagerHint')}
+                density="compact"
+                className={roleFilter === 'manager' ? 'ring-2 ring-emerald-400/60 dark:ring-emerald-500/60' : undefined}
+              />
+            </button>
+          ) : null}
+          {allowedRoleSales.includes('reseller') ? (
+            <button
+              type="button"
+              className="h-full text-start"
+              onClick={() => handleRoleToggle('reseller')}
+            >
+              <StatsCard
+                title={t('payments.summary.totalSalesReseller')}
+                value={formatCurrency(totalsByRole.reseller, 'USD', locale)}
+                icon={WalletCards}
+                color={roleFilter === 'reseller' ? 'amber' : 'amber'}
+                helperText={t('payments.summary.totalSalesResellerHint')}
+                density="compact"
+                className={roleFilter === 'reseller' ? 'ring-2 ring-amber-400/60 dark:ring-amber-500/60' : undefined}
+              />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
