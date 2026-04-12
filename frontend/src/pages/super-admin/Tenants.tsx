@@ -174,6 +174,13 @@ export function TenantsPage() {
       setForm(emptyTenantForm)
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] })
     },
+    onError: (err: unknown) => {
+      const fallback = t('common.error')
+      const data = (err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data
+      const message = data?.message
+      const fieldErrors = data?.errors ? Object.values(data.errors).flat().filter(Boolean) : []
+      toast.error(fieldErrors[0] ?? message ?? fallback)
+    },
   })
 
   const statusMutation = useMutation({
@@ -416,7 +423,17 @@ export function TenantsPage() {
             <Button type="button" variant="ghost" onClick={() => setFormOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="button" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!editingTenant && form.manager_password.trim().length < 8) {
+                  toast.error(t('superAdmin.pages.tenants.passwordMin', { defaultValue: 'Password must be at least 8 characters.' }))
+                  return
+                }
+                saveMutation.mutate()
+              }}
+              disabled={saveMutation.isPending}
+            >
               {saveMutation.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
