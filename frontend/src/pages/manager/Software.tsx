@@ -15,6 +15,8 @@ export function SoftwarePage() {
       title={t('manager.pages.software.title')}
       description={t('manager.pages.software.description')}
       translationPrefix="manager.pages.software"
+      showBasePrice={false}
+      showLicensesSold={false}
       onActivate={(program) =>
         navigate(`${routePaths.manager.customerCreate(lang)}?program_id=${program.id}`)
       }
