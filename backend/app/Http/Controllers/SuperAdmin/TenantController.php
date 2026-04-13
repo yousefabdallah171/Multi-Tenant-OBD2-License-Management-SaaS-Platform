@@ -201,8 +201,9 @@ class TenantController extends BaseSuperAdminController
                 ->delete();
         });
 
-        // Invalidate Reports cache
+        // Invalidate Reports cache (both super-admin and manager-parent)
         LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+        LicenseCacheInvalidation::bumpVersion("manager-parent:{$tenant->id}:reports:version");
 
         return response()->json([
             'message' => 'Tenant revenue cleared successfully.',

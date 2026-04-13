@@ -652,6 +652,9 @@ class CustomerController extends BaseSuperAdminController
 
                 // Invalidate Reports cache
                 LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+                if ($deletedCustomer->tenant_id) {
+                    LicenseCacheInvalidation::bumpVersion("manager-parent:{$deletedCustomer->tenant_id}:reports:version");
+                }
             }
 
             return response()->json([
@@ -687,6 +690,9 @@ class CustomerController extends BaseSuperAdminController
 
         // Invalidate Reports cache
         LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+        if ($user->tenant_id) {
+            LicenseCacheInvalidation::bumpVersion("manager-parent:{$user->tenant_id}:reports:version");
+        }
 
         return response()->json([
             'message' => 'Customer revenue deleted successfully.',
