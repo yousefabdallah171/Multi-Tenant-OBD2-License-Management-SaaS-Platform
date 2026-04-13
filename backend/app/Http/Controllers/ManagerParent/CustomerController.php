@@ -1083,7 +1083,7 @@ class CustomerController extends BaseManagerParentController
      */
     private function hasScopedLicenseFilters(array $filters): bool
     {
-        return ! empty($filters['program_id']) || ! empty($filters['reseller_id']);
+        return ! empty($filters['program_id']) || ! empty($filters['reseller_id']) || ! empty($filters['manager_id']) || ! empty($filters['manager_parent_id']);
     }
 
     private function visibleEmail(?string $email): ?string
