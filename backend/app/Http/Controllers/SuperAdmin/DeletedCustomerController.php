@@ -203,7 +203,20 @@ class DeletedCustomerController extends BaseSuperAdminController
                         ->whereIn('id', $activityLogIds)
                         ->delete();
                 }
-                $deletedCustomer->update(['revenue_total' => 0]);
+
+                // Zero out license prices in snapshot so revenue shows $0.00
+                $snapshot = $deletedCustomer->snapshot ?? [];
+                $licenses = $snapshot['licenses'] ?? [];
+                foreach ($licenses as &$license) {
+                    $license['price'] = 0;
+                }
+                unset($license);
+                $snapshot['licenses'] = $licenses;
+
+                $deletedCustomer->update([
+                    'revenue_total' => 0,
+                    'snapshot' => $snapshot,
+                ]);
             });
 
             // Invalidate Reports cache
