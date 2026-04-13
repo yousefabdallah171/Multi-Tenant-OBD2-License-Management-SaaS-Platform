@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, CheckCircle2, ChevronDown, Clock3, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
+import { CheckCircle2, Clock3, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, ShieldOff, Trash2, UserRound, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -13,7 +13,6 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { ExportButtons } from '@/components/shared/ExportButtons'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
-import { RoleBadge } from '@/components/shared/RoleBadge'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,7 +20,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
@@ -32,9 +30,7 @@ import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryS
 import { routePaths } from '@/router/routes'
 import { customerService } from '@/services/customer.service'
 import { licenseService } from '@/services/license.service'
-import { managerParentService } from '@/services/manager-parent.service'
 import { programService } from '@/services/program.service'
-import { teamService } from '@/services/team.service'
 import type { CustomerSummary } from '@/types/manager-parent.types'
 import type { DurationUnit, RenewLicenseData } from '@/types/manager-reseller.types'
 import type { UserRole } from '@/types/user.types'
@@ -87,7 +83,6 @@ function createEmptyActivationForm(defaultTimezone: string): ActivationFormState
 
 export function CustomersPage() {
   const { t } = useTranslation()
-  const { user } = useAuth()
   const { lang } = useLanguage()
   const queryClient = useQueryClient()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
