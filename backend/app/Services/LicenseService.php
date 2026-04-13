@@ -1320,27 +1320,18 @@ class LicenseService
             $customer = new User();
         }
 
-        // If username is taken by a non-customer account, make it unique
+        // If username is taken by anyone else, show a clear error
         $username = $externalUsername;
         if (! $customer->exists || ! $customer->username_locked) {
-            $usernameTakenByNonCustomer = User::query()
+            $usernameTaken = User::query()
                 ->where('username', $username)
-                ->where('role', '!=', UserRole::CUSTOMER->value)
-                ->exists();
-
-            if ($usernameTakenByNonCustomer) {
-                $username = $externalUsername.'_'.strtolower(Str::random(4));
-            }
-
-            // Also check if username taken by a different customer
-            $usernameTakenByOtherCustomer = User::query()
-                ->where('username', $username)
-                ->where('role', UserRole::CUSTOMER->value)
                 ->when($customer->exists, fn ($q) => $q->where('id', '!=', $customer->id))
                 ->exists();
 
-            if ($usernameTakenByOtherCustomer) {
-                $username = $externalUsername.'_'.strtolower(Str::random(4));
+            if ($usernameTaken) {
+                throw ValidationException::withMessages([
+                    'customer_name' => 'This username (API) is already taken. Please choose a different username.',
+                ]);
             }
         }
 
