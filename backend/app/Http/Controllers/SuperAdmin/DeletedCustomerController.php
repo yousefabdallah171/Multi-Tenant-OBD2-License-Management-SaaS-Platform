@@ -119,44 +119,50 @@ class DeletedCustomerController extends BaseSuperAdminController
 
     public function destroyRevenue(DeletedCustomer $deletedCustomer): JsonResponse
     {
-        $snapshot = $deletedCustomer->snapshot;
-        $activityLogIds = $snapshot['activity_log_ids'] ?? [];
+        try {
+            $snapshot = $deletedCustomer->snapshot ?? [];
+            $activityLogIds = $snapshot['activity_log_ids'] ?? [];
 
-        // If we don't have stored activity log IDs, search by customer name/email
-        if (empty($activityLogIds)) {
-            $activityLogIds = DB::table('activity_logs')
-                ->whereIn('action', ['license.activated', 'license.renewed'])
-                ->where(function ($query) use ($deletedCustomer) {
-                    $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$deletedCustomer->original_customer_id])
-                        ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$deletedCustomer->name]);
-                })
-                ->pluck('id')
-                ->toArray();
-        }
+            // If we don't have stored activity log IDs, search by customer name/email
+            if (empty($activityLogIds)) {
+                $activityLogIds = DB::table('activity_logs')
+                    ->whereIn('action', ['license.activated', 'license.renewed'])
+                    ->where(function ($query) use ($deletedCustomer) {
+                        $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$deletedCustomer->original_customer_id])
+                            ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$deletedCustomer->name]);
+                    })
+                    ->pluck('id')
+                    ->toArray();
+            }
 
-        if (empty($activityLogIds)) {
+            if (empty($activityLogIds)) {
+                return response()->json([
+                    'message' => 'No revenue records found for this customer.',
+                ]);
+            }
+
+            DB::transaction(function () use ($deletedCustomer, $activityLogIds): void {
+                DB::table('activity_logs')
+                    ->whereIn('id', $activityLogIds)
+                    ->delete();
+
+                $deletedCustomer->update(['revenue_total' => 0]);
+            });
+
+            // Invalidate Reports cache
+            LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+            if ($deletedCustomer->tenant_id) {
+                LicenseCacheInvalidation::bumpVersion("manager-parent:{$deletedCustomer->tenant_id}:reports:version");
+            }
+
             return response()->json([
-                'message' => 'No revenue records found for this customer.',
+                'message' => 'Revenue records deleted successfully.',
             ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete revenue: '.$e->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        DB::transaction(function () use ($deletedCustomer, $activityLogIds): void {
-            DB::table('activity_logs')
-                ->whereIn('id', $activityLogIds)
-                ->delete();
-
-            $deletedCustomer->update(['revenue_total' => 0]);
-        });
-
-        // Invalidate Reports cache
-        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
-        if ($deletedCustomer->tenant_id) {
-            LicenseCacheInvalidation::bumpVersion("manager-parent:{$deletedCustomer->tenant_id}:reports:version");
-        }
-
-        return response()->json([
-            'message' => 'Revenue records deleted successfully.',
-        ]);
     }
 
     public function destroy(DeletedCustomer $deletedCustomer): JsonResponse
