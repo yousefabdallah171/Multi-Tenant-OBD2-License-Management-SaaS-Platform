@@ -15,11 +15,9 @@ import { RoleBadge } from '@/components/shared/RoleBadge'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
@@ -64,7 +62,6 @@ export function CustomersPage() {
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SuperAdminCustomerSummary | null>(null)
-  const [deleteIncludeRevenue, setDeleteIncludeRevenue] = useState(false)
   const [biosChangeTarget, setBiosChangeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [newBiosId, setNewBiosId] = useState('')
   const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string; linked_username: string | null } | null>(null)
@@ -252,7 +249,6 @@ export function CustomersPage() {
     onSuccess: () => {
       toast.success(t('common.deleted', { defaultValue: 'Deleted successfully.' }))
       setDeleteTarget(null)
-      setDeleteIncludeRevenue(false)
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -781,7 +777,6 @@ export function CustomersPage() {
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => {
         if (!open) {
           setDeleteTarget(null)
-          setDeleteIncludeRevenue(false)
         }
       }}>
         <DialogContent className="max-w-md">
@@ -802,10 +797,7 @@ export function CustomersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => {
-              setDeleteTarget(null)
-              setDeleteIncludeRevenue(false)
-            }}>
+            <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)}>
               {t('common.cancel')}
             </Button>
             <Button
