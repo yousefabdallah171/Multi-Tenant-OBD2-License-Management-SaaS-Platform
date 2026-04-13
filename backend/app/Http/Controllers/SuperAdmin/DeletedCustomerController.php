@@ -125,6 +125,38 @@ class DeletedCustomerController extends BaseSuperAdminController
                     License::query()->create($licenseData);
                 }
 
+                // Recreate activity logs (revenue records) from snapshot
+                if (!empty($snapshot['activity_logs'] ?? [])) {
+                    foreach ($snapshot['activity_logs'] as $activityLog) {
+                        // Recreate activity log with original data
+                        DB::table('activity_logs')->insert([
+                            'user_id' => $activityLog->user_id ?? $activityLog['user_id'],
+                            'tenant_id' => $activityLog->tenant_id ?? $activityLog['tenant_id'],
+                            'action' => $activityLog->action ?? $activityLog['action'],
+                            'description' => $activityLog->description ?? $activityLog['description'],
+                            'metadata' => $activityLog->metadata ?? $activityLog['metadata'],
+                            'created_at' => $activityLog->created_at ?? $activityLog['created_at'],
+                            'updated_at' => $activityLog->updated_at ?? $activityLog['updated_at'],
+                        ]);
+                    }
+                } elseif (!empty($snapshot['activity_log_ids'] ?? [])) {
+                    // Fallback for old snapshots that only have IDs
+                    foreach ($snapshot['activity_log_ids'] as $activityLogId) {
+                        $originalLog = DB::table('activity_logs')->find($activityLogId);
+                        if ($originalLog) {
+                            DB::table('activity_logs')->insert([
+                                'user_id' => $originalLog->user_id,
+                                'tenant_id' => $originalLog->tenant_id,
+                                'action' => $originalLog->action,
+                                'description' => $originalLog->description,
+                                'metadata' => $originalLog->metadata,
+                                'created_at' => $originalLog->created_at,
+                                'updated_at' => $originalLog->updated_at,
+                            ]);
+                        }
+                    }
+                }
+
                 return $user->fresh('tenant');
             });
 

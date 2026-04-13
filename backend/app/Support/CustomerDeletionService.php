@@ -21,15 +21,17 @@ class CustomerDeletionService
                 ->get()
                 ->toArray();
 
-            // Find activity_log IDs for this customer's license activations/renewals
-            $activityLogIds = DB::table('activity_logs')
+            // Find activity logs for this customer's license activations/renewals
+            $activityLogs = DB::table('activity_logs')
                 ->whereIn('action', ['license.activated', 'license.renewed'])
                 ->where(function ($query) use ($customer) {
                     $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$customer->id])
                         ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$customer->name]);
                 })
-                ->pluck('id')
+                ->get()
                 ->toArray();
+
+            $activityLogIds = array_column($activityLogs, 'id');
 
             // Calculate total revenue from those activity logs
             $revenueTotal = DB::table('activity_logs')
@@ -37,11 +39,12 @@ class CustomerDeletionService
                 ->selectRaw('COALESCE(SUM(CAST(JSON_EXTRACT(metadata, "$.price") AS DECIMAL(12,2))), 0) as total')
                 ->value('total');
 
-            // Build snapshot JSON
+            // Build snapshot JSON (include full activity log data for restoration)
             $snapshot = [
                 'user' => $customer->toArray(),
                 'licenses' => $licenses,
                 'activity_log_ids' => $activityLogIds,
+                'activity_logs' => $activityLogs, // Store full activity log data for restoration
             ];
 
             // Create deleted_customers record
