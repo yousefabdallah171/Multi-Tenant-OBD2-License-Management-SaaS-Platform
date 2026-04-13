@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Models\DeletedCustomer;
 use App\Models\License;
 use App\Models\User;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -147,6 +148,9 @@ class DeletedCustomerController extends BaseSuperAdminController
             $deletedCustomer->update(['revenue_total' => 0]);
         });
 
+        // Invalidate Reports cache
+        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+
         return response()->json([
             'message' => 'Revenue records deleted successfully.',
         ]);
@@ -180,6 +184,9 @@ class DeletedCustomerController extends BaseSuperAdminController
             // Then delete the snapshot record
             $deletedCustomer->delete();
         });
+
+        // Invalidate Reports cache
+        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
 
         return response()->json([
             'message' => 'Deleted customer record and revenue permanently removed.',
