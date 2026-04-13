@@ -448,9 +448,14 @@ export function CustomersPage() {
         queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
       ])
     },
-    onError: (error) => {
+    onError: (error: any) => {
       const message = getApiErrorMessage(error, text.validation.requestFailed)
       setActivationError(message)
+      // Auto-clear email if it conflicts with a non-customer account
+      const apiErrors = error?.response?.data?.errors ?? {}
+      if (apiErrors.customer_email) {
+        setActivationForm((current) => ({ ...current, customer_email: '' }))
+      }
     },
   })
 

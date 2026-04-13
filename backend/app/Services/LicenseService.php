@@ -1292,20 +1292,20 @@ class LicenseService
 
     private function upsertCustomer(User $reseller, array $data, string $externalUsername): User
     {
-        $email = $this->resolveCustomerEmail($reseller, $externalUsername, $data['customer_email'] ?? null);
+        $rawEmail = $data['customer_email'] ?? null;
+        $email = $this->resolveCustomerEmail($reseller, $externalUsername, $rawEmail);
 
-        // Check if email is already used by a non-customer account (e.g. reseller using their own email)
-        $emailConflict = User::query()
+        // If email is taken by a non-customer account, silently fall back to auto-generated email
+        $emailTakenByNonCustomer = User::query()
             ->where('email', $email)
             ->where('role', '!=', UserRole::CUSTOMER->value)
-            ->first();
+            ->exists();
 
-        if ($emailConflict) {
-            throw ValidationException::withMessages([
-                'customer_email' => 'This email belongs to a non-customer account. Please use a different email for the customer.',
-            ]);
+        if ($emailTakenByNonCustomer) {
+            $email = $this->resolveCustomerEmail($reseller, $externalUsername, null);
         }
 
+        // Find existing customer by email OR username
         $customer = User::query()
             ->where('tenant_id', $reseller->tenant_id)
             ->where(function ($query) use ($email, $externalUsername): void {
@@ -1320,6 +1320,30 @@ class LicenseService
             $customer = new User();
         }
 
+        // If username is taken by a non-customer account, make it unique
+        $username = $externalUsername;
+        if (! $customer->exists || ! $customer->username_locked) {
+            $usernameTakenByNonCustomer = User::query()
+                ->where('username', $username)
+                ->where('role', '!=', UserRole::CUSTOMER->value)
+                ->exists();
+
+            if ($usernameTakenByNonCustomer) {
+                $username = $externalUsername.'_'.strtolower(Str::random(4));
+            }
+
+            // Also check if username taken by a different customer
+            $usernameTakenByOtherCustomer = User::query()
+                ->where('username', $username)
+                ->where('role', UserRole::CUSTOMER->value)
+                ->when($customer->exists, fn ($q) => $q->where('id', '!=', $customer->id))
+                ->exists();
+
+            if ($usernameTakenByOtherCustomer) {
+                $username = $externalUsername.'_'.strtolower(Str::random(4));
+            }
+        }
+
         $clientName = trim((string) ($data['client_name'] ?? ''));
         $displayName = $clientName !== '' ? $clientName : $data['customer_name'];
 
@@ -1332,7 +1356,7 @@ class LicenseService
             'role' => UserRole::CUSTOMER,
             'status' => 'active',
             'created_by' => $reseller->id,
-            'username' => $customer->username_locked ? $customer->username : $externalUsername,
+            'username' => $customer->username_locked ? $customer->username : $username,
             'username_locked' => true,
         ];
 

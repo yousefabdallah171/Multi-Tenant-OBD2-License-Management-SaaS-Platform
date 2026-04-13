@@ -415,6 +415,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       const normalized = rawMessage.toLowerCase()
       const message = normalized.includes('blacklisted') ? t('activate.biosBlacklisted') : rawMessage
       setSubmitError(message)
+      // Auto-clear email if it conflicts with a non-customer account
+      const apiErrors = (error as any)?.response?.data?.errors ?? {}
+      if (apiErrors.customer_email) {
+        setEmail('')
+      }
     },
   })
 
