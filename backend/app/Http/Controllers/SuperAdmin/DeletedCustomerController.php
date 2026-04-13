@@ -121,6 +121,18 @@ class DeletedCustomerController extends BaseSuperAdminController
         $snapshot = $deletedCustomer->snapshot;
         $activityLogIds = $snapshot['activity_log_ids'] ?? [];
 
+        // If we don't have stored activity log IDs, search by customer name/email
+        if (empty($activityLogIds)) {
+            $activityLogIds = DB::table('activity_logs')
+                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->where(function ($query) use ($deletedCustomer) {
+                    $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$deletedCustomer->original_customer_id])
+                        ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$deletedCustomer->name]);
+                })
+                ->pluck('id')
+                ->toArray();
+        }
+
         if (empty($activityLogIds)) {
             return response()->json([
                 'message' => 'No revenue records found for this customer.',
