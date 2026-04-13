@@ -154,6 +154,10 @@ export function AdminManagementPage() {
 
       toast.error(usernameErrorMessage ?? t('common.partialUsernameUpdate', { defaultValue: 'Account details were saved, but the username could not be updated.' }))
     },
+    onError: (error) => {
+      const errorMessage = getApiErrorMessage(error, t('common.error'))
+      toast.error(errorMessage)
+    },
   })
 
   const statusMutation = useMutation({

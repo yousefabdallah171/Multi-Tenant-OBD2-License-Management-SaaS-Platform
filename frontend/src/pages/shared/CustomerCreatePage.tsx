@@ -437,7 +437,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 <Input
                   value={biosId}
                   onChange={(event) => { setBiosId(event.target.value); setSubmitError('') }}
-                  maxLength={10}
                   data-testid="bios-id"
                 />
               </Field>
