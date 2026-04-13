@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\DeletedCustomer;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\LicenseCacheInvalidation;
 use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -199,6 +200,9 @@ class TenantController extends BaseSuperAdminController
                 ->whereIn('action', ['license.activated', 'license.renewed'])
                 ->delete();
         });
+
+        // Invalidate Reports cache
+        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
 
         return response()->json([
             'message' => 'Tenant revenue cleared successfully.',

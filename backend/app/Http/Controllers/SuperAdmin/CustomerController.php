@@ -12,6 +12,7 @@ use App\Models\Program;
 use App\Models\User;
 use App\Models\UserIpLog;
 use App\Support\CustomerOwnership;
+use App\Support\LicenseCacheInvalidation;
 use App\Services\ExportTaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -648,6 +649,9 @@ class CustomerController extends BaseSuperAdminController
 
                     $deletedCustomer->update(['revenue_total' => 0]);
                 });
+
+                // Invalidate Reports cache
+                LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
             }
 
             return response()->json([
@@ -680,6 +684,9 @@ class CustomerController extends BaseSuperAdminController
                 })
                 ->delete();
         });
+
+        // Invalidate Reports cache
+        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
 
         return response()->json([
             'message' => 'Customer revenue deleted successfully.',
