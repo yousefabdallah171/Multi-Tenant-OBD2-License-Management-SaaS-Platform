@@ -1576,7 +1576,15 @@
     "target": "الهدف",
     "adminIp": "IP المشرف",
     "unblockedEmail": "تم إلغاء القفل عن الحساب.",
-    "unblockedIp": "تم إزالة حظر عنوان IP."
+    "unblockedIp": "تم إزالة حظر عنوان IP.",
+    "quickResetAccount": "إعادة ضبط قفل الحساب",
+    "quickResetAccountHint": "ألغِ قفل تسجيل الدخول فورًا عبر البريد الإلكتروني حتى إذا لم يظهر الصف بعد.",
+    "quickResetIp": "إعادة ضبط حظر عنوان IP",
+    "quickResetIpHint": "أزل حظر عنوان IP أو الجهاز فورًا إذا أدت محاولات الدخول المتكررة إلى فرض انتظار.",
+    "emailPlaceholder": "user@example.com",
+    "ipPlaceholder": "127.0.0.1",
+    "unblockAccountNow": "إعادة ضبط قفل الحساب الآن",
+    "unblockIpNow": "إعادة ضبط حظر IP الآن"
   },
   "software": {
     "externalApiKey": "مفتاح API الخارجي",

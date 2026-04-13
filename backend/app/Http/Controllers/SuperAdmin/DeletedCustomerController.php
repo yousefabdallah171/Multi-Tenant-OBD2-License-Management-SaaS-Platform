@@ -85,6 +85,7 @@ class DeletedCustomerController extends BaseSuperAdminController
                     'username' => User::generateUniqueUsername($snapshot['user']['email'] ?? $deletedCustomer->email),
                     'email' => $snapshot['user']['email'] ?? $deletedCustomer->email,
                     'phone' => $snapshot['user']['phone'] ?? $deletedCustomer->phone,
+                    'country_name' => $snapshot['user']['country_name'] ?? null,
                     'password' => $snapshot['user']['password'] ?? Hash::make(Str::password(12, true, true, true, false)),
                     'role' => 'customer',
                     'status' => $snapshot['user']['status'] ?? 'active',

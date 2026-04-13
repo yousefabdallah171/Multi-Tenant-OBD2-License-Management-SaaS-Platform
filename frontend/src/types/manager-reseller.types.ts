@@ -130,6 +130,7 @@ export interface ManagerCustomerSummary {
   username?: string | null
   email: string | null
   phone?: string | null
+  country_name?: string | null
   license_id?: number | null
   bios_id: string | null
   external_username?: string | null
@@ -226,6 +227,7 @@ export interface ResellerCustomerSummary {
   username: string | null
   email: string | null
   phone: string | null
+  country_name?: string | null
   license_id: number | null
   bios_id: string | null
   external_username: string | null
@@ -376,6 +378,7 @@ export interface ManagerCustomerFilters {
   per_page?: number
   reseller_id?: number | ''
   program_id?: number | ''
+  country_name?: string
   status?: string
   search?: string
 }
@@ -561,6 +564,7 @@ export interface ResellerCustomerFilters {
   status?: string
   search?: string
   program_id?: number | ''
+  country_name?: string
 }
 
 export interface LicenseFilters {

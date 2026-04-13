@@ -86,6 +86,7 @@ export interface SuperAdminCustomerSummary {
   username?: string | null
   email: string | null
   phone?: string | null
+  country_name?: string | null
   license_id?: number | null
   bios_id: string | null
   external_username?: string | null

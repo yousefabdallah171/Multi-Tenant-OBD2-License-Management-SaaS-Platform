@@ -12,6 +12,7 @@ import { RoleOptionPicker } from '@/components/shared/RoleOptionPicker'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { ALL_COUNTRIES, normalizeCountryName } from '@/lib/countries'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -80,6 +81,7 @@ export function CreateCustomerPage() {
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [countryName, setCountryName] = useState('')
   const [tenantId, setTenantId] = useState<number | ''>('')
   const [sellerId, setSellerId] = useState<number | ''>('')
   const [createLicenseNow, setCreateLicenseNow] = useState(true)
@@ -263,6 +265,7 @@ export function CreateCustomerPage() {
       client_name: clientName.trim() || undefined,
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
+      country_name: normalizeCountryName(countryName) || undefined,
       tenant_id: Number(tenantId),
       seller_id: sellerId ? Number(sellerId) : undefined,
       bios_id: biosId.trim() || undefined,
@@ -288,6 +291,7 @@ export function CreateCustomerPage() {
       client_name: clientName.trim() || undefined,
       customer_email: email.trim() || undefined,
       customer_phone: phone.trim() || undefined,
+      country_name: normalizeCountryName(countryName) || undefined,
       bios_id: biosId.trim(),
       program_id: Number(programId),
       duration_days: Number(durationDays.toFixed(6)),
@@ -362,6 +366,18 @@ export function CreateCustomerPage() {
             </Field>
             <Field label={t('common.phone')} error={errors.phone}>
               <Input type="tel" value={phone} onChange={(event) => setPhone(normalizePhoneInput(event.target.value))} placeholder="+966..." />
+            </Field>
+            <Field label={t('common.country', { defaultValue: 'Country' })}>
+              <select
+                value={countryName}
+                onChange={(event) => setCountryName(event.target.value)}
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="">{t('common.country', { defaultValue: 'Country' })}</option>
+                {ALL_COUNTRIES.map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
             </Field>
           </div>
 

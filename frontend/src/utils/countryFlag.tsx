@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 
-export function FlagImage({ code, country }: { code: string; country: string }): JSX.Element {
-  const normalized = code.trim().toLowerCase()
+export function FlagImage({ code, country }: { code: string | null | undefined; country: string | null | undefined }): JSX.Element {
+  const normalized = typeof code === 'string' ? code.trim().toLowerCase() : ''
   const valid = normalized.length === 2 && /^[a-z]{2}$/.test(normalized)
 
   if (!valid) {
@@ -14,14 +14,14 @@ export function FlagImage({ code, country }: { code: string; country: string }):
       srcSet={`https://flagcdn.com/w40/${normalized}.png 2x`}
       width={20}
       height={15}
-      alt={country}
+      alt={country || 'Unknown flag'}
       className="inline-block shrink-0 rounded-sm object-cover"
       style={{ verticalAlign: 'middle' }}
     />
   )
 }
 
-export function IpLocationCell({ country, city, countryCode }: { country: string; city: string; countryCode: string }): JSX.Element {
+export function IpLocationCell({ country, city, countryCode }: { country: string | null | undefined; city: string | null | undefined; countryCode: string | null | undefined }): JSX.Element {
   const label = country && country !== 'Unknown'
     ? `${country}${city ? ` / ${city}` : ''}`
     : 'Unknown'
@@ -34,7 +34,11 @@ export function IpLocationCell({ country, city, countryCode }: { country: string
   )
 }
 
-export function isPrivateOrLocalIp(ip: string): boolean {
+export function isPrivateOrLocalIp(ip: string | null | undefined): boolean {
+  if (typeof ip !== 'string' || ip.length === 0) {
+    return false
+  }
+
   return (
     ip === '127.0.0.1'
     || ip === '::1'

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { ALL_COUNTRIES, normalizeCountryName } from '@/lib/countries'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -25,7 +26,7 @@ interface CustomerCreatePageProps {
   title: string
   description: string
   backPath: (lang: 'ar' | 'en') => string
-  createCustomer: (payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number; notes?: string }) => Promise<unknown>
+  createCustomer: (payload: { name: string; client_name?: string; email?: string; phone?: string; country_name?: string; bios_id?: string; program_id?: number; notes?: string }) => Promise<unknown>
 }
 
 type DurationUnit = 'minutes' | 'hours' | 'days'
@@ -92,6 +93,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const [clientName, setClientName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [countryName, setCountryName] = useState('')
   const [notes, setNotes] = useState('')
   const [createLicenseNow, setCreateLicenseNow] = useState(true)
   const [biosId, setBiosId] = useState('')
@@ -363,6 +365,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       client_name: clientName.trim() || undefined,
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
+      country_name: normalizeCountryName(countryName) || undefined,
       bios_id: biosId.trim() || undefined,
       program_id: programId ? Number(programId) : undefined,
       notes: notes.trim() || undefined,
@@ -387,6 +390,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
       client_name: clientName.trim() || undefined,
       customer_email: email.trim() || undefined,
       customer_phone: phone.trim() || undefined,
+      country_name: normalizeCountryName(countryName) || undefined,
       bios_id: biosId.trim(),
       program_id: Number(programId),
       preset_id: (isPresetSeller || mode === 'preset') ? selectedPreset?.id : undefined,
@@ -536,6 +540,18 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
             </Field>
             <Field label={t('common.phone')} error={errors.phone}>
               <Input type="tel" value={phone} onChange={(event) => setPhone(normalizeStrictPhoneInput(event.target.value))} placeholder="+966..." />
+            </Field>
+            <Field label={t('common.country', { defaultValue: 'Country' })}>
+              <select
+                value={countryName}
+                onChange={(event) => setCountryName(event.target.value)}
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="">{t('common.country', { defaultValue: 'Country' })}</option>
+                {ALL_COUNTRIES.map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
             </Field>
           </div>
 

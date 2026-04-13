@@ -37,6 +37,7 @@ class CustomerController extends BaseResellerController
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'program_id' => ['nullable', 'integer', 'min:1'],
+            'country_name' => ['nullable', 'string', 'max:120'],
         ]);
 
         $resellerId = $this->currentReseller($request)->id;
@@ -56,11 +57,16 @@ class CustomerController extends BaseResellerController
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('country_name', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->where('reseller_id', $resellerId)
                         ->where('bios_id', 'like', '%'.$validated['search'].'%'))
                     ->orWhereIn('username', $linkedUsernames);
             });
+        }
+
+        if (! empty($validated['country_name'])) {
+            $query->where('country_name', $validated['country_name']);
         }
 
         // Apply pagination at database level first
@@ -85,6 +91,53 @@ class CustomerController extends BaseResellerController
                 'last_page' => $lastPage,
             ],
         ]);
+    }
+
+    public function countries(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
+            'search' => ['nullable', 'string'],
+            'program_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $resellerId = $this->currentReseller($request)->id;
+
+        $query = $this->customerQuery($request)
+            ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
+                ->where('reseller_id', $resellerId)
+                ->select($this->licenseColumns())
+                ->with(['program:id,name'])
+                ->latest('activated_at')])
+            ->latest();
+
+        if (! empty($validated['search'])) {
+            $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $this->currentTenantId($request));
+            $query->where(function ($builder) use ($validated, $resellerId, $linkedUsernames): void {
+                $builder
+                    ->where('name', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('username', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('email', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('country_name', 'like', '%'.$validated['search'].'%')
+                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
+                        ->where('reseller_id', $resellerId)
+                        ->where('bios_id', 'like', '%'.$validated['search'].'%'))
+                    ->orWhereIn('username', $linkedUsernames);
+            });
+        }
+
+        $countries = $query->get()
+            ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated))
+            ->filter(fn (User $user): bool => filled($user->country_name))
+            ->groupBy(fn (User $user): string => trim((string) $user->country_name))
+            ->map(fn (Collection $group, string $country): array => [
+                'country_name' => $country,
+                'count' => $group->unique('id')->count(),
+            ])
+            ->sortBy('country_name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+
+        return response()->json(['data' => $countries]);
     }
 
     public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
@@ -168,6 +221,7 @@ class CustomerController extends BaseResellerController
             'client_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
+            'country_name' => ['nullable', 'string', 'max:120'],
             'bios_id' => ['nullable', 'string', 'min:3', 'required_with:program_id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id'],
             'notes' => ['nullable', 'string', 'max:5000'],
@@ -217,6 +271,7 @@ class CustomerController extends BaseResellerController
             'client_name' => trim((string) ($validated['client_name'] ?? '')) !== '' ? trim((string) $validated['client_name']) : null,
             'email' => $email,
             'phone' => $validated['phone'] ?? null,
+            'country_name' => isset($validated['country_name']) ? trim((string) $validated['country_name']) ?: null : null,
             'role' => UserRole::CUSTOMER,
             'status' => 'active',
             'created_by' => $this->currentReseller($request)->id,
@@ -288,6 +343,7 @@ class CustomerController extends BaseResellerController
             'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
             'search' => ['nullable', 'string'],
             'program_id' => ['nullable', 'integer', 'min:1'],
+            'country_name' => ['nullable', 'string', 'max:120'],
         ]);
 
         $resellerId = $this->currentReseller($request)->id;
@@ -307,6 +363,7 @@ class CustomerController extends BaseResellerController
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
                     ->orWhere('email', 'like', '%'.$validated['search'].'%')
+                    ->orWhere('country_name', 'like', '%'.$validated['search'].'%')
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->where('reseller_id', $resellerId)
                         ->where('bios_id', 'like', '%'.$validated['search'].'%'))
@@ -332,6 +389,7 @@ class CustomerController extends BaseResellerController
                     'Username',
                     'Email',
                     'Phone',
+                    'Country',
                     'BIOS ID',
                     'Program',
                     'Duration (Days)',
@@ -346,6 +404,7 @@ class CustomerController extends BaseResellerController
                     $row['username'] ?? '',
                     $row['email'] ?? '',
                     $row['phone'] ?? '',
+                    $row['country_name'] ?? '',
                     $row['bios_id'] ?? '',
                     $row['program'] ?? '',
                     $this->resolveExportDurationDays($row['duration_days'] ?? null, $row['start_at'] ?? null, $row['expiry'] ?? null),
@@ -569,6 +628,7 @@ class CustomerController extends BaseResellerController
             'username' => $user->username,
             'email' => $this->visibleEmail($user->email),
             'phone' => $user->phone,
+            'country_name' => $user->country_name,
             'license_id' => $license?->id,
             'bios_id' => $displayBiosId,
             'external_username' => $license?->external_username,
@@ -615,6 +675,11 @@ class CustomerController extends BaseResellerController
     {
         $status = isset($filters['status']) && is_string($filters['status']) ? $filters['status'] : '';
         $license = $this->resolveDisplayLicense($user, $filters);
+        $countryName = isset($filters['country_name']) && is_string($filters['country_name']) ? trim($filters['country_name']) : '';
+
+        if ($countryName !== '' && $user->country_name !== $countryName) {
+            return false;
+        }
 
         if (! $license) {
             return in_array($status, ['', 'all', 'pending'], true) && ! $this->hasScopedLicenseFilters($filters);

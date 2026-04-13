@@ -34,6 +34,7 @@ class LicenseController extends Controller
             'client_name' => ['nullable', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
+            'country_name' => ['nullable', 'string', 'max:120'],
             'bios_id' => ['required', 'string', 'max:255'],
             'preset_id' => [
                 Rule::requiredIf($isReseller),

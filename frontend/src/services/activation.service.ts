@@ -7,6 +7,7 @@ export interface ActivationPayload {
   client_name?: string
   customer_email?: string
   customer_phone?: string
+  country_name?: string
   bios_id: string
   preset_id?: number
   duration_days?: number

@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { getCountryCodeByName } from '@/lib/countries'
 import { availabilityService } from '@/services/availability.service'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { canDeleteCustomerRow, canReactivateLicense, canRetryScheduledLicense, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getStatusMeaning, isPausedPendingLicense, isPlainPendingLicense, resolveLicenseDurationDays, shouldRenewLicense } from '@/lib/utils'
@@ -32,6 +33,7 @@ import { tenantService } from '@/services/tenant.service'
 import { userService } from '@/services/user.service'
 import type { ManagedUser, SuperAdminCustomerSummary } from '@/types/super-admin.types'
 import type { UserRole } from '@/types/user.types'
+import { FlagImage } from '@/utils/countryFlag'
 
 const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 const SELLER_ROLES: UserRole[] = ['manager_parent', 'manager', 'reseller']
@@ -54,6 +56,7 @@ export function CustomersPage() {
   const [tenantId, setTenantId] = useState<number | ''>(searchParams.get('tenant_id') ? Number(searchParams.get('tenant_id')) : '')
   const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
   const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
+  const [countryName, setCountryName] = useState(searchParams.get('country_name') || '')
   const [editTarget, setEditTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [notesCustomerId, setNotesCustomerId] = useState<number | null>(null)
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
@@ -70,8 +73,9 @@ export function CustomersPage() {
       tenant_id: tenantId || undefined,
       reseller_id: resellerId || undefined,
       program_id: programId || undefined,
+      country_name: countryName || undefined,
     }),
-    [programId, resellerId, search, tenantId],
+    [countryName, programId, resellerId, search, tenantId],
   )
   const exportParams = useMemo(
     () => ({
@@ -91,7 +95,7 @@ export function CustomersPage() {
   }, [debouncedNewBiosId])
 
   const customersQuery = useQuery({
-    queryKey: ['super-admin', 'customers', page, perPage, search, status, tenantId, resellerId, programId],
+    queryKey: ['super-admin', 'customers', page, perPage, search, status, tenantId, resellerId, programId, countryName],
     queryFn: () =>
       superAdminCustomerService.getAll({
         page,
@@ -121,6 +125,16 @@ export function CustomersPage() {
     queryFn: () => programService.getAll({ per_page: 100 }),
     staleTime: 15 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+  })
+  const countryOptionsQuery = useQuery({
+    queryKey: ['super-admin', 'customers', 'countries', search, status, tenantId, resellerId, programId],
+    queryFn: () => superAdminCustomerService.getCountries({
+      search: search || undefined,
+      status: status === 'all' ? '' : status,
+      tenant_id: tenantId || undefined,
+      reseller_id: resellerId || undefined,
+      program_id: programId || undefined,
+    }),
   })
 
   const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
@@ -168,6 +182,7 @@ export function CustomersPage() {
       setTenantId('')
       setResellerId('')
       setProgramId('')
+      setCountryName('')
     }
   }, [searchParams])
 
@@ -180,8 +195,9 @@ export function CustomersPage() {
     if (tenantId) next.set('tenant_id', String(tenantId))
     if (resellerId) next.set('reseller_id', String(resellerId))
     if (programId) next.set('program_id', String(programId))
+    if (countryName) next.set('country_name', countryName)
     setSearchParams(next, { replace: true })
-  }, [page, perPage, programId, resellerId, search, setSearchParams, status, tenantId])
+  }, [countryName, page, perPage, programId, resellerId, search, setSearchParams, status, tenantId])
 
   const editMutation = useMutation({
     mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
@@ -318,6 +334,19 @@ export function CustomersPage() {
       },
       { key: 'tenant', label: t('common.tenant'), sortable: true, defaultHidden: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? '-' },
       { key: 'phone', label: t('common.phone'), sortable: true, defaultHidden: true, sortValue: (row) => row.phone ?? '', render: (row) => row.phone ?? '-' },
+      {
+        key: 'country',
+        label: t('common.country', { defaultValue: 'Country' }),
+        sortable: true,
+        defaultHidden: true,
+        sortValue: (row) => row.country_name ?? '',
+        render: (row) => row.country_name ? (
+          <span className="inline-flex items-center gap-2">
+            <FlagImage code={getCountryCodeByName(row.country_name)} country={row.country_name} />
+            <span>{row.country_name}</span>
+          </span>
+        ) : '-',
+      },
       {
         key: 'bios',
         label: t('superAdmin.pages.customers.biosId'),
@@ -588,6 +617,10 @@ export function CustomersPage() {
             <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
               <option value="">{t('superAdmin.pages.customers.allPrograms', { defaultValue: 'All programs' })}</option>
               {programsQuery.data?.data.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}
+            </select>
+            <select value={countryName} onChange={(event) => { setCountryName(event.target.value); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+              <option value="">{t('common.allCountries', { defaultValue: 'All countries' })}</option>
+              {(countryOptionsQuery.data?.data ?? []).map((country) => <option key={country.country_name} value={country.country_name}>{country.country_name} ({country.count})</option>)}
             </select>
           </div>
         </CardContent>

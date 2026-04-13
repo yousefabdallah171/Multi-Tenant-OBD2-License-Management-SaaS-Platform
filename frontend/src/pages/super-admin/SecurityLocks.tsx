@@ -6,6 +6,7 @@ import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { securityService } from '@/services/security.service'
 import { IpLocationCell } from '@/utils/countryFlag'
 import { formatActivityActionLabel, formatDate } from '@/lib/utils'
@@ -18,6 +19,8 @@ export function SecurityLocksPage() {
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [tab, setTab] = useState<'locked' | 'blocked' | 'audit'>('locked')
+  const [manualEmail, setManualEmail] = useState('')
+  const [manualIp, setManualIp] = useState('')
 
   const locksQuery = useQuery({
     queryKey: ['super-admin', 'security-locks'],
@@ -35,6 +38,7 @@ export function SecurityLocksPage() {
     mutationFn: (email: string) => securityService.unblockEmail(email),
     onSuccess: () => {
       toast.success(t('security.unblockedEmail'))
+      setManualEmail('')
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'security-locks'] })
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'security-audit-log'] })
     },
@@ -44,6 +48,7 @@ export function SecurityLocksPage() {
     mutationFn: (ip: string) => securityService.unblockIp(ip),
     onSuccess: () => {
       toast.success(t('security.unblockedIp'))
+      setManualIp('')
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'security-locks'] })
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'security-audit-log'] })
     },
@@ -105,6 +110,56 @@ export function SecurityLocksPage() {
       <div className="space-y-2">
         <h2 className="text-3xl font-semibold">{t('superAdmin.pages.securityLocks.title')}</h2>
         <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.securityLocks.description')}</p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('security.quickResetAccount', { defaultValue: 'Quick Reset Account Lock' })}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {t('security.quickResetAccountHint', { defaultValue: 'Clear a locked login immediately by email, even if the row is not visible yet.' })}
+            </p>
+            <Input
+              type="email"
+              value={manualEmail}
+              onChange={(event) => setManualEmail(event.target.value)}
+              placeholder={t('security.emailPlaceholder', { defaultValue: 'user@example.com' })}
+            />
+            <Button
+              type="button"
+              onClick={() => unblockEmailMutation.mutate(manualEmail.trim())}
+              disabled={unblockEmailMutation.isPending || manualEmail.trim().length === 0}
+            >
+              {t('security.unblockAccountNow', { defaultValue: 'Reset Account Lock Now' })}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('security.quickResetIp', { defaultValue: 'Quick Reset IP Block' })}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {t('security.quickResetIpHint', { defaultValue: 'Remove an IP or device block immediately if repeated login attempts triggered a wait.' })}
+            </p>
+            <Input
+              value={manualIp}
+              onChange={(event) => setManualIp(event.target.value)}
+              placeholder={t('security.ipPlaceholder', { defaultValue: '127.0.0.1' })}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => unblockIpMutation.mutate(manualIp.trim())}
+              disabled={unblockIpMutation.isPending || manualIp.trim().length === 0}
+            >
+              {t('security.unblockIpNow', { defaultValue: 'Reset IP Block Now' })}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as 'locked' | 'blocked' | 'audit')}>

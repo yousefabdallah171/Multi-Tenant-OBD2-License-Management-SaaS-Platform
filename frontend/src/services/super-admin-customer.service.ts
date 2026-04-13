@@ -8,6 +8,7 @@ export interface SuperAdminCustomerParams {
   tenant_id?: number | ''
   reseller_id?: number | ''
   program_id?: number | ''
+  country_name?: string
   status?: string
   search?: string
 }
@@ -17,13 +18,17 @@ export const superAdminCustomerService = {
     const { data } = await api.get<{ data: SuperAdminCustomerSummary[]; meta: PaginationMeta }>('/super-admin/customers', { params })
     return data
   },
+  async getCountries(params: Omit<SuperAdminCustomerParams, 'page' | 'per_page' | 'country_name'>) {
+    const { data } = await api.get<{ data: Array<{ country_name: string; count: number }> }>('/super-admin/customers/countries', { params })
+    return data
+  },
   async exportXlsx(params: SuperAdminCustomerParams) {
     await downloadFile('/super-admin/customers/export/csv', 'super-admin-customers.xlsx', params)
   },
   async exportPdf(params: SuperAdminCustomerParams) {
     await downloadFile('/super-admin/customers/export/pdf', 'super-admin-customers.pdf', params)
   },
-  async create(payload: { name: string; client_name?: string; email?: string; phone?: string; tenant_id: number; seller_id?: number; bios_id?: string; program_id?: number }) {
+  async create(payload: { name: string; client_name?: string; email?: string; phone?: string; country_name?: string; tenant_id: number; seller_id?: number; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: SuperAdminCustomerSummary }>('/super-admin/customers', payload)
     return data
   },

@@ -182,6 +182,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/reseller-logs', [ManagerParentResellerLogController::class, 'index']);
 
         Route::get('/customers', [ManagerParentCustomerController::class, 'index']);
+        Route::get('/customers/countries', [ManagerParentCustomerController::class, 'countries']);
         Route::get('/customers/export/csv', [ManagerParentCustomerController::class, 'exportCsv']);
         Route::get('/customers/export/pdf', [ManagerParentCustomerController::class, 'exportPdf']);
         Route::post('/customers', [ManagerParentCustomerController::class, 'store']);
@@ -259,6 +260,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/username-management/{user}/reset-password', [ManagerUsernameManagementController::class, 'resetPassword']);
 
         Route::get('/customers', [ManagerCustomerController::class, 'index']);
+        Route::get('/customers/countries', [ManagerCustomerController::class, 'countries']);
         Route::get('/customers/export/csv', [ManagerCustomerController::class, 'exportCsv']);
         Route::get('/customers/export/pdf', [ManagerCustomerController::class, 'exportPdf']);
         Route::post('/customers', [ManagerCustomerController::class, 'store']);
@@ -312,6 +314,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/payment-status', [ResellerPaymentStatusController::class, 'index']);
 
         Route::get('/customers', [ResellerCustomerController::class, 'index']);
+        Route::get('/customers/countries', [ResellerCustomerController::class, 'countries']);
         Route::get('/customers/export/csv', [ResellerCustomerController::class, 'exportCsv']);
         Route::get('/customers/export/pdf', [ResellerCustomerController::class, 'exportPdf']);
         Route::post('/customers', [ResellerCustomerController::class, 'store']);
@@ -394,6 +397,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::put('/username-management/{user}/username', [\App\Http\Controllers\SuperAdmin\UsernameManagementController::class, 'changeUsername']);
         Route::post('/username-management/{user}/reset-password', [\App\Http\Controllers\SuperAdmin\UsernameManagementController::class, 'resetPassword']);
         Route::get('/customers', [SuperAdminCustomerController::class, 'index']);
+        Route::get('/customers/countries', [SuperAdminCustomerController::class, 'countries']);
         Route::get('/customers/export/csv', [SuperAdminCustomerController::class, 'exportCsv']);
         Route::get('/customers/export/pdf', [SuperAdminCustomerController::class, 'exportPdf']);
         Route::post('/customers', [SuperAdminCustomerController::class, 'store']);

@@ -10,6 +10,7 @@ export interface CustomerParams {
   manager_id?: number | ''
   reseller_id?: number | ''
   program_id?: number | ''
+  country_name?: string
   status?: string
   search?: string
 }
@@ -19,13 +20,17 @@ export const customerService = {
     const { data } = await api.get<PaginatedResponse<CustomerSummary>>('/customers', { params })
     return data
   },
+  async getCountries(params: Omit<CustomerParams, 'page' | 'per_page' | 'country_name'>) {
+    const { data } = await api.get<{ data: Array<{ country_name: string; count: number }> }>('/customers/countries', { params })
+    return data
+  },
   async exportXlsx(params: CustomerParams) {
     await downloadFile('/customers/export/csv', 'manager-parent-customers.xlsx', params)
   },
   async exportPdf(params: CustomerParams) {
     await downloadFile('/customers/export/pdf', 'manager-parent-customers.pdf', params)
   },
-  async create(payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) {
+  async create(payload: { name: string; client_name?: string; email?: string; phone?: string; country_name?: string; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: CustomerSummary }>('/customers', payload)
     return data
   },

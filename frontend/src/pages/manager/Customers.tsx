@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { getCountryCodeByName } from '@/lib/countries'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
 import { canDeleteCustomerRow, canDeleteLicense, canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, resolveLicenseDurationDays, shouldRenewLicense } from '@/lib/utils'
@@ -33,6 +34,7 @@ import { programService } from '@/services/program.service'
 import type { ManagerCustomerSummary, RenewLicenseData } from '@/types/manager-reseller.types'
 import type { UserRole } from '@/types/user.types'
 import { formatUsername } from '@/utils/biosId'
+import { FlagImage } from '@/utils/countryFlag'
 
 const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
 
@@ -96,6 +98,7 @@ export function CustomersPage() {
   )
   const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
   const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
+  const [countryName, setCountryName] = useState(searchParams.get('country_name') || '')
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
@@ -113,8 +116,9 @@ export function CustomersPage() {
       search: search || undefined,
       reseller_id: resellerId || undefined,
       program_id: programId || undefined,
+      country_name: countryName || undefined,
     }),
-    [programId, resellerId, search],
+    [countryName, programId, resellerId, search],
   )
   const exportParams = useMemo(
     () => ({
@@ -125,7 +129,7 @@ export function CustomersPage() {
   )
 
   const customersQuery = useQuery({
-    queryKey: ['manager', 'customers', page, perPage, search, status, resellerId, programId],
+    queryKey: ['manager', 'customers', page, perPage, search, status, resellerId, programId, countryName],
     queryFn: () =>
       managerService.getCustomers({
         page,
@@ -144,6 +148,15 @@ export function CustomersPage() {
   const programsQuery = useQuery({
     queryKey: ['manager', 'customers', 'programs'],
     queryFn: () => programService.getAll({ per_page: 100 }),
+  })
+  const countryOptionsQuery = useQuery({
+    queryKey: ['manager', 'customers', 'countries', search, status, resellerId, programId],
+    queryFn: () => managerService.getCustomerCountries({
+      search: search || undefined,
+      status: status === 'all' ? '' : status,
+      reseller_id: resellerId || undefined,
+      program_id: programId || undefined,
+    }),
   })
 
   const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
@@ -373,6 +386,19 @@ export function CustomersPage() {
       render: (row) => (row.phone && row.phone.length > 20 ? '—' : row.phone ?? '-'),
     },
     {
+      key: 'country',
+      label: t('common.country', { defaultValue: 'Country' }),
+      sortable: true,
+      defaultHidden: true,
+      sortValue: (row) => row.country_name ?? '',
+      render: (row) => row.country_name ? (
+        <span className="inline-flex items-center gap-2">
+          <FlagImage code={getCountryCodeByName(row.country_name)} country={row.country_name} />
+          <span>{row.country_name}</span>
+        </span>
+      ) : '-',
+    },
+    {
       key: 'bios',
       label: t('manager.pages.customers.biosId'),
       sortable: true,
@@ -531,6 +557,7 @@ export function CustomersPage() {
       setStatus('all')
       setResellerId('')
       setProgramId('')
+      setCountryName('')
     }
   }, [searchParams])
 
@@ -542,8 +569,9 @@ export function CustomersPage() {
     if (status !== 'all') next.set('status', status)
     if (resellerId) next.set('reseller_id', String(resellerId))
     if (programId) next.set('program_id', String(programId))
+    if (countryName) next.set('country_name', countryName)
     setSearchParams(next, { replace: true })
-  }, [page, perPage, programId, resellerId, search, setSearchParams, status])
+  }, [countryName, page, perPage, programId, resellerId, search, setSearchParams, status])
 
   return (
     <div className="space-y-6">
@@ -635,7 +663,7 @@ export function CustomersPage() {
 
       <div className="space-y-4">
             <Card>
-              <CardContent className="grid gap-2 p-3 lg:grid-cols-[minmax(0,1fr)_180px_180px]">
+              <CardContent className="grid gap-2 p-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_220px]">
                 <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('manager.pages.customers.searchPlaceholder')} className="h-9 text-sm" />
                 <select value={resellerId} onChange={(event) => { setResellerId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                   <option value="">{t('manager.pages.customers.allResellers')}</option>
@@ -644,13 +672,19 @@ export function CustomersPage() {
                 ))}
               </select>
                 <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                <option value="">{t('manager.pages.customers.allPrograms')}</option>
-                {(programsQuery.data?.data ?? []).map((program) => (
-                  <option key={program.id} value={program.id}>{program.name}</option>
-                ))}
-              </select>
-            </CardContent>
-          </Card>
+                  <option value="">{t('manager.pages.customers.allPrograms')}</option>
+                  {(programsQuery.data?.data ?? []).map((program) => (
+                    <option key={program.id} value={program.id}>{program.name}</option>
+                  ))}
+                </select>
+                <select value={countryName} onChange={(event) => { setCountryName(event.target.value); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  <option value="">{t('common.allCountries', { defaultValue: 'All countries' })}</option>
+                  {(countryOptionsQuery.data?.data ?? []).map((country) => (
+                    <option key={country.country_name} value={country.country_name}>{country.country_name} ({country.count})</option>
+                  ))}
+                </select>
+              </CardContent>
+            </Card>
           {selectedLicenseIds.length > 0 ? (
             <Card>
               <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">

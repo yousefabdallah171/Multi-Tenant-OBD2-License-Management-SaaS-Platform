@@ -1570,7 +1570,15 @@
     "target": "Target",
     "adminIp": "Admin IP",
     "unblockedEmail": "Account unlocked successfully.",
-    "unblockedIp": "IP unblocked successfully."
+    "unblockedIp": "IP unblocked successfully.",
+    "quickResetAccount": "Quick Reset Account Lock",
+    "quickResetAccountHint": "Clear a locked login immediately by email, even if the row is not visible yet.",
+    "quickResetIp": "Quick Reset IP Block",
+    "quickResetIpHint": "Remove an IP or device block immediately if repeated login attempts triggered a wait.",
+    "emailPlaceholder": "user@example.com",
+    "ipPlaceholder": "127.0.0.1",
+    "unblockAccountNow": "Reset Account Lock Now",
+    "unblockIpNow": "Reset IP Block Now"
   },
   "software": {
     "externalApiKey": "External API Key",

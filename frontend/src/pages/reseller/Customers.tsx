@@ -29,6 +29,7 @@ import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { useLanguage } from '@/hooks/useLanguage'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { getCountryCodeByName } from '@/lib/countries'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone } from '@/lib/timezones'
 import { canReactivateLicense, canRetryScheduledLicense, formatCurrency, formatDate, formatLicenseDurationDays, getLicenseDisplayStatus, getLicenseStartDate, getStatusMeaning, isLikelyBios, isPausedPendingLicense, isPlainPendingLicense, resolveLicenseDurationDays, shouldRenewLicense } from '@/lib/utils'
@@ -37,6 +38,7 @@ import { licenseService } from '@/services/license.service'
 import { programService } from '@/services/program.service'
 import { resellerService } from '@/services/reseller.service'
 import { formatUsername, rawBiosId } from '@/utils/biosId'
+import { FlagImage } from '@/utils/countryFlag'
 import type { RenewLicenseData, ResellerCustomerSummary } from '@/types/manager-reseller.types'
 
 const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
@@ -311,6 +313,7 @@ export function CustomersPage() {
     STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
   )
   const [programFilter, setProgramFilter] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
+  const [countryName, setCountryName] = useState(searchParams.get('country_name') || '')
   const [editTarget, setEditTarget] = useState<ResellerCustomerSummary | null>(null)
   const [notesCustomerId, setNotesCustomerId] = useState<number | null>(null)
   const [activationOpen, setActivationOpen] = useState(false)
@@ -327,8 +330,9 @@ export function CustomersPage() {
     () => ({
       search: search || undefined,
       program_id: programFilter || undefined,
+      country_name: countryName || undefined,
     }),
-    [programFilter, search],
+    [countryName, programFilter, search],
   )
   const exportParams = useMemo(
     () => ({
@@ -339,7 +343,7 @@ export function CustomersPage() {
   )
 
   const customersQuery = useQuery({
-    queryKey: ['reseller', 'customers', page, perPage, search, status, programFilter],
+    queryKey: ['reseller', 'customers', page, perPage, search, status, programFilter, countryName],
     queryFn: () =>
       resellerService.getCustomers({
         page,
@@ -353,6 +357,14 @@ export function CustomersPage() {
   const programsQuery = useQuery({
     queryKey: ['reseller', 'customers', 'programs'],
     queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
+  })
+  const countryOptionsQuery = useQuery({
+    queryKey: ['reseller', 'customers', 'countries', search, status, programFilter],
+    queryFn: () => resellerService.getCustomerCountries({
+      search: search || undefined,
+      status: status === 'all' ? '' : status,
+      program_id: programFilter || undefined,
+    }),
   })
 
   const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
@@ -602,6 +614,19 @@ export function CustomersPage() {
           render: (row) => row.phone ?? '-',
         },
         {
+          key: 'country',
+          label: t('common.country', { defaultValue: 'Country' }),
+          sortable: true,
+          defaultHidden: true,
+          sortValue: (row) => row.country_name ?? '',
+          render: (row) => row.country_name ? (
+            <span className="inline-flex items-center gap-2">
+              <FlagImage code={getCountryCodeByName(row.country_name)} country={row.country_name} />
+              <span>{row.country_name}</span>
+            </span>
+          ) : '-',
+        },
+        {
           key: 'duration',
           label: t('common.duration'),
           sortable: true,
@@ -772,6 +797,7 @@ export function CustomersPage() {
       setSearch('')
       setStatus('all')
       setProgramFilter('')
+      setCountryName('')
     }
   }, [searchParams])
 
@@ -782,8 +808,9 @@ export function CustomersPage() {
     if (search) next.set('search', search)
     if (status !== 'all') next.set('status', status)
     if (programFilter) next.set('program_id', String(programFilter))
+    if (countryName) next.set('country_name', countryName)
     setSearchParams(next, { replace: true })
-  }, [page, perPage, programFilter, search, setSearchParams, status])
+  }, [countryName, page, perPage, programFilter, search, setSearchParams, status])
   return (
     <div className="space-y-6">
       <PageHeader
@@ -874,7 +901,7 @@ export function CustomersPage() {
 
       <div className="space-y-4">
           <Card>
-            <CardContent className="grid gap-2 p-3 md:grid-cols-[minmax(0,1fr)_180px]">
+            <CardContent className="grid gap-2 p-3 md:grid-cols-[minmax(0,1fr)_180px_220px]">
               <Input
                 value={search}
                 onChange={(event) => {
@@ -895,6 +922,19 @@ export function CustomersPage() {
                 <option value="">{lang === 'ar' ? 'كل البرامج' : 'All Programs'}</option>
                 {(programsQuery.data?.data ?? []).map((program) => (
                   <option key={program.id} value={program.id}>{program.name}</option>
+                ))}
+              </select>
+              <select
+                value={countryName}
+                onChange={(event) => {
+                  setCountryName(event.target.value)
+                  setPage(1)
+                }}
+                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <option value="">{t('common.allCountries', { defaultValue: 'All countries' })}</option>
+                {(countryOptionsQuery.data?.data ?? []).map((country) => (
+                  <option key={country.country_name} value={country.country_name}>{country.country_name} ({country.count})</option>
                 ))}
               </select>
             </CardContent>

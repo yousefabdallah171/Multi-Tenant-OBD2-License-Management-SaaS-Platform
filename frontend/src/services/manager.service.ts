@@ -131,13 +131,17 @@ export const managerService = {
     const { data } = await api.get<PaginatedResponse<ManagerCustomerSummary>>('/manager/customers', { params })
     return data
   },
+  async getCustomerCountries(params: Omit<ManagerCustomerFilters, 'page' | 'per_page' | 'country_name'>) {
+    const { data } = await api.get<{ data: Array<{ country_name: string; count: number }> }>('/manager/customers/countries', { params })
+    return data
+  },
   async exportCustomersXlsx(params: ManagerCustomerFilters) {
     await downloadFile('/manager/customers/export/csv', 'manager-customers.xlsx', params)
   },
   async exportCustomersPdf(params: ManagerCustomerFilters) {
     await downloadFile('/manager/customers/export/pdf', 'manager-customers.pdf', params)
   },
-  async createCustomer(payload: { name: string; client_name?: string; email?: string; phone?: string; bios_id?: string; program_id?: number }) {
+  async createCustomer(payload: { name: string; client_name?: string; email?: string; phone?: string; country_name?: string; bios_id?: string; program_id?: number }) {
     const { data } = await api.post<{ data: ManagerCustomerSummary }>('/manager/customers', payload)
     // Invalidate cache after mutation
     apiCache.clearPattern(/^manager:dashboard:/)

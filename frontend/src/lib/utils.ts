@@ -30,12 +30,12 @@ export function formatCurrency(value: number, currency = 'USD', locale = 'en-US'
   }).format(value)
 }
 
-export function formatActivityActionLabel(action: string, t?: TFunction) {
-  if (!action) {
+export function formatActivityActionLabel(action: string | null | undefined, t?: TFunction) {
+  if (typeof action !== 'string' || action.trim().length === 0) {
     return '-'
   }
 
-  const normalized = action.toLowerCase()
+  const normalized = action.trim().toLowerCase()
 
   if (normalized.includes('license.activated') || normalized.includes('license.activate')) {
     return t ? t('common.activityActions.activation', { defaultValue: 'Activation' }) : 'Activation'
@@ -222,12 +222,12 @@ export function formatReadableActivityDescription(description: string | null | u
   return description
 }
 
-export function isCustomerLicenseHistoryAction(action: string) {
-  if (!action) {
+export function isCustomerLicenseHistoryAction(action: string | null | undefined) {
+  if (typeof action !== 'string' || action.trim().length === 0) {
     return false
   }
 
-  const normalized = action.toLowerCase()
+  const normalized = action.trim().toLowerCase()
   return normalized.startsWith('customer.') || normalized.startsWith('license.')
 }
 

@@ -1316,6 +1316,7 @@ class LicenseService
             'name' => $displayName,
             'email' => $email,
             'phone' => $data['customer_phone'] ?? null,
+            'country_name' => isset($data['country_name']) ? trim((string) $data['country_name']) ?: null : null,
             'role' => UserRole::CUSTOMER,
             'status' => 'active',
             'created_by' => $reseller->id,
