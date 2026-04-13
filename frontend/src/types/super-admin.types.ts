@@ -53,6 +53,7 @@ export interface TenantStats {
   licenses: number
   active_licenses: number
   revenue: number
+  deleted_customers: number
 }
 
 export interface ManagedUser {
@@ -430,4 +431,26 @@ export interface SecurityAuditLog {
 export interface SecurityLocksData {
   locked_accounts: LockedAccount[]
   blocked_ips: BlockedIp[]
+}
+
+export interface DeletedCustomer {
+  id: number
+  original_customer_id: number | null
+  name: string
+  email: string
+  username: string | null
+  phone: string | null
+  tenant: { id: number; name: string } | null
+  deleted_by: { id: number; name: string; email: string } | null
+  deleted_at: string
+  licenses_count: number
+  revenue_total: number
+}
+
+export interface DeletedCustomerDetail extends DeletedCustomer {
+  snapshot: {
+    user: Record<string, unknown>
+    licenses: Record<string, unknown>[]
+    activity_log_ids: number[]
+  }
 }

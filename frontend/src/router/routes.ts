@@ -103,6 +103,7 @@ export const routePaths = {
     customerCreate: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/customers/create`,
     licenseRenew: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/super-admin/customers/licenses/${id}/renew`,
     customerDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/super-admin/customers/${id}`,
+    deletedCustomers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/deleted-customers`,
     users: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/users`,
     userDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/super-admin/users/${id}`,
     adminManagement: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/admin-management`,

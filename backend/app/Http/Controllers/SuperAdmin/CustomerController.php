@@ -553,11 +553,7 @@ class CustomerController extends BaseSuperAdminController
             ], 422);
         }
 
-        foreach ($licenses as $license) {
-            $license->delete();
-        }
-
-        $user->delete();
+        \App\Support\CustomerDeletionService::snapshotAndDelete($user, auth()->user());
 
         return response()->json([
             'message' => 'Customer deleted successfully.',

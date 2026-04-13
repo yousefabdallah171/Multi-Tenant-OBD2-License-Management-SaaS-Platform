@@ -589,11 +589,7 @@ class CustomerController extends BaseManagerParentController
         $customerId = $customer->id;
         $licensesCount = $licenses->count();
 
-        foreach ($licenses as $license) {
-            $license->delete();
-        }
-
-        $customer->delete();
+        \App\Support\CustomerDeletionService::snapshotAndDelete($customer, $request->user());
 
         $this->logActivity(
             $request,

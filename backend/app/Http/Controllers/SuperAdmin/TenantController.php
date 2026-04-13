@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Enums\UserRole;
+use App\Models\DeletedCustomer;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\RevenueAnalytics;
@@ -155,6 +156,7 @@ class TenantController extends BaseSuperAdminController
                 'licenses' => $tenant->licenses()->count(),
                 'active_licenses' => $tenant->licenses()->where('status', 'active')->count(),
                 'revenue' => RevenueAnalytics::totalRevenue([], $tenant->id),
+                'deleted_customers' => DeletedCustomer::query()->where('tenant_id', $tenant->id)->count(),
             ],
         ]);
     }

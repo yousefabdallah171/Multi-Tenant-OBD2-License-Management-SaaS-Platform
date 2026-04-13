@@ -296,6 +296,7 @@
       "dashboard": "Dashboard",
       "tenants": "Tenants",
       "customers": "Customers",
+      "deletedCustomers": "Deleted Customers",
       "users": "Users",
       "adminManagement": "Admin Mgmt",
       "biosBlacklist": "BIOS Blacklist",
@@ -344,6 +345,17 @@
         "biosId": "BIOS ID",
         "addCustomer": "Add Customer"
       },
+      "deletedCustomers": {
+        "title": "Deleted Customers",
+        "description": "View and manage deleted customers. Restore, delete revenue records, or permanently remove snapshots.",
+        "deletedBy": "Deleted By",
+        "deletedAt": "Deleted At",
+        "revenue": "Revenue",
+        "deleteRevenue": "Delete Revenue",
+        "deleteRevenueConfirm": "Delete Revenue",
+        "restore": "Restore Customer",
+        "restoreWarning": "This will recreate the customer and their licenses. Existing revenue history may not be re-linked."
+      },
       "tenants": {
         "title": "Tenant Management",
         "description": "Create tenants, provision their manager parent account, and monitor revenue and activation counts.",
@@ -377,6 +389,7 @@
         "managers": "Managers",
         "resellers": "Resellers",
         "customers": "Customers",
+        "deletedCustomers": "Deleted Customers",
         "activeLicenses": "Active licenses",
         "add": "Add tenant",
         "editTitle": "Edit tenant",

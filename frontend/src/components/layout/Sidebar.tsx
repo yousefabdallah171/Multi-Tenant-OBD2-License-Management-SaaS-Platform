@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Network, Package, ScrollText, Settings, ShieldBan, User, UserRound, Users } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Network, Package, ScrollText, Settings, ShieldBan, Trash2, User, UserRound, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -28,6 +28,7 @@ const superAdminItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: routePaths.superAdmin.dashboard, translationKey: 'superAdmin.nav.dashboard' },
   { key: 'tenants', icon: Building2, href: routePaths.superAdmin.tenants, translationKey: 'superAdmin.nav.tenants' },
   { key: 'customers', icon: UserRound, href: routePaths.superAdmin.customers, translationKey: 'superAdmin.nav.customers' },
+  { key: 'deletedCustomers', icon: Trash2, href: routePaths.superAdmin.deletedCustomers, translationKey: 'superAdmin.nav.deletedCustomers' },
   { key: 'adminManagementGroup', icon: Users, href: routePaths.superAdmin.adminManagement, translationKey: 'superAdmin.nav.adminManagement' },
   { key: 'biosChangeRequestsTopLevel', icon: ClipboardList, href: routePaths.superAdmin.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
   { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },

@@ -1,4 +1,5 @@
 import { useRef, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BarChart3, Download, History, MoreHorizontal, Plus, RotateCcw, Search, Trash2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
@@ -31,6 +32,7 @@ export function TenantsPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
@@ -478,36 +480,54 @@ export function TenantsPage() {
             <LoadingSpinner fullPage label={t('common.loading')} />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t('common.users')}</CardTitle>
-                </CardHeader>
-                <CardContent>{tenantStatsQuery.data?.data.users ?? 0}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t('superAdmin.pages.tenants.managers')}</CardTitle>
-                </CardHeader>
-                <CardContent>{tenantStatsQuery.data?.data.managers ?? 0}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t('superAdmin.pages.tenants.resellers')}</CardTitle>
-                </CardHeader>
-                <CardContent>{tenantStatsQuery.data?.data.resellers ?? 0}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t('superAdmin.pages.tenants.customers')}</CardTitle>
-                </CardHeader>
-                <CardContent>{tenantStatsQuery.data?.data.customers ?? 0}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t('common.revenue')}</CardTitle>
-                </CardHeader>
-                <CardContent>{formatCurrency(tenantStatsQuery.data?.data.revenue ?? 0, 'USD', locale)}</CardContent>
-              </Card>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/admin-management?tenant_id=${selectedTenantId}`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('common.users')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.users ?? 0}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/admin-management?tenant_id=${selectedTenantId}&role=manager_parent,manager`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('superAdmin.pages.tenants.managers')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.managers ?? 0}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/admin-management?tenant_id=${selectedTenantId}&role=reseller`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('superAdmin.pages.tenants.resellers')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.resellers ?? 0}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/customers?tenant_id=${selectedTenantId}`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('superAdmin.pages.tenants.customers')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.customers ?? 0}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/reports?tenant_id=${selectedTenantId}`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('common.revenue')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{formatCurrency(tenantStatsQuery.data?.data.revenue ?? 0, 'USD', locale)}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/deleted-customers?tenant_id=${selectedTenantId}`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('superAdmin.pages.tenants.deletedCustomers')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.deleted_customers ?? 0}</CardContent>
+                </Card>
+              </button>
             </div>
           )}
         </DialogContent>

@@ -81,6 +81,7 @@ const SuperAdminBiosHistoryPage = lazyNamed(() => import('@/pages/super-admin/Bi
 const SuperAdminCustomersPage = lazyNamed(() => import('@/pages/super-admin/Customers'), 'CustomersPage')
 const SuperAdminCreateCustomerPage = lazyNamed(() => import('@/pages/super-admin/CreateCustomer'), 'CreateCustomerPage')
 const SuperAdminCustomerDetailPage = lazyNamed(() => import('@/pages/super-admin/CustomerDetail'), 'CustomerDetailPage')
+const DeletedCustomersPage = lazyNamed(() => import('@/pages/super-admin/DeletedCustomers'), 'DeletedCustomersPage')
 const SuperAdminRenewLicensePage = lazyNamed(() => import('@/pages/super-admin/RenewLicense'), 'RenewLicensePageForSuperAdmin')
 const DashboardPage = lazyNamed(() => import('@/pages/super-admin/Dashboard'), 'DashboardPage')
 const LogsPage = lazyNamed(() => import('@/pages/super-admin/Logs'), 'LogsPage')
@@ -142,6 +143,7 @@ export function AppRouter() {
                   <Route path="customers/licenses/:id/renew" element={<SuperAdminRenewLicensePage />} />
                   <Route path="licenses/:id/renew" element={<SuperAdminRenewLicensePage />} />
                   <Route path="customers/:id" element={<SuperAdminCustomerDetailPage />} />
+                  <Route path="deleted-customers" element={<DeletedCustomersPage />} />
                   <Route path="users" element={<UsersPage />} />
                   <Route path="users/:id" element={<UserDetailPage />} />
                   <Route path="admin-management" element={<AdminManagementPage />} />

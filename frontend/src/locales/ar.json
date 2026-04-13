@@ -296,6 +296,7 @@
       "dashboard": "الرئيسية",
       "tenants": "الشركاء",
       "customers": "العملاء",
+      "deletedCustomers": "العملاء المحذوفون",
       "users": "المستخدمون",
       "adminManagement": "إدارة المشرفين",
       "biosChangeRequests": "طلبات تغيير BIOS",
@@ -344,6 +345,17 @@
         "biosId": "معرّف BIOS",
         "addCustomer": "إضافة عميل"
       },
+      "deletedCustomers": {
+        "title": "العملاء المحذوفون",
+        "description": "عرض وإدارة العملاء المحذوفين. استعد أو احذف سجلات الإيرادات أو احذف اللقطات بشكل نهائي.",
+        "deletedBy": "محذوف بواسطة",
+        "deletedAt": "محذوف في",
+        "revenue": "الإيرادات",
+        "deleteRevenue": "حذف الإيرادات",
+        "deleteRevenueConfirm": "حذف الإيرادات",
+        "restore": "استعادة العميل",
+        "restoreWarning": "سيتم إعادة إنشاء العميل والتراخيص الخاصة به. قد لا يتم إعادة ربط سجل الإيرادات الموجود."
+      },
       "tenants": {
         "title": "إدارة الشركاء",
         "description": "أنشئ شركاء جدد، جهز حساب المدير الرئيسي، وراقب الإيرادات والتفعيلات.",
@@ -377,6 +389,7 @@
         "managers": "المديرون",
         "resellers": "الموزعون",
         "customers": "العملاء",
+        "deletedCustomers": "العملاء المحذوفون",
         "activeLicenses": "التراخيص النشطة",
         "add": "إضافة شريك",
         "editTitle": "تعديل الشريك",
