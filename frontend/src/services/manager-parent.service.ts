@@ -239,31 +239,31 @@ export const managerParentService = {
       return data
     },
     async getCustomerBiosChangeHistory(id: number) {
-      const { data } = await api.get<{ data: Array<{ id: number; old_bios_id: string; new_bios_id: string; reason: string; status: string; requested_by: string | null; reviewed_by: string | null; created_at: string; reviewed_at: string | null }> }>(`/manager-parent/customers/${id}/bios-change-history`)
+      const { data } = await api.get<{ data: Array<{ id: number; old_bios_id: string; new_bios_id: string; reason: string; status: string; requested_by: string | null; reviewed_by: string | null; created_at: string; reviewed_at: string | null }> }>(`/customers/${id}/bios-change-history`)
       return data
     },
   async submitBiosChangeRequest(payload: SubmitBiosChangeRequestData) {
-    const { data } = await api.post<{ data: unknown; message: string }>('/manager-parent/bios-change-requests', payload)
+    const { data } = await api.post<{ data: unknown; message: string }>('/bios-change-requests', payload)
     return data
   },
   async directChangeBiosId(licenseId: number, newBiosId: string) {
-    const { data } = await api.post<{ success: boolean; message: string }>('/manager-parent/bios-change-requests/direct', { license_id: licenseId, new_bios_id: newBiosId })
+    const { data } = await api.post<{ success: boolean; message: string }>('/bios-change-requests/direct', { license_id: licenseId, new_bios_id: newBiosId })
     return data
   },
   async getBiosChangeRequests(params?: { page?: number; per_page?: number; status?: '' | 'pending' | 'approved' | 'rejected'; count_only?: boolean }) {
-    const { data } = await api.get<PaginatedResponse<ManagerParentBiosChangeRequest>>('/manager-parent/bios-change-requests', { params })
+    const { data } = await api.get<PaginatedResponse<ManagerParentBiosChangeRequest>>('/bios-change-requests', { params })
     return data
   },
   async getPendingBiosChangeRequestCount() {
-    const { data } = await api.get<{ count: number }>('/manager-parent/bios-change-requests', { params: { status: 'pending', count_only: true } })
+    const { data } = await api.get<{ count: number }>('/bios-change-requests', { params: { status: 'pending', count_only: true } })
     return data
   },
   async approveBiosChangeRequest(id: number) {
-    const { data } = await api.put<{ data: ManagerParentBiosChangeRequest; message: string }>(`/manager-parent/bios-change-requests/${id}/approve`)
+    const { data } = await api.put<{ data: ManagerParentBiosChangeRequest; message: string }>(`/bios-change-requests/${id}/approve`)
     return data
   },
   async rejectBiosChangeRequest(id: number, reviewerNotes: string) {
-    const { data } = await api.put<{ data: ManagerParentBiosChangeRequest; message: string }>(`/manager-parent/bios-change-requests/${id}/reject`, { reviewer_notes: reviewerNotes })
+    const { data } = await api.put<{ data: ManagerParentBiosChangeRequest; message: string }>(`/bios-change-requests/${id}/reject`, { reviewer_notes: reviewerNotes })
     return data
   },
   async getResellerPayments(filters?: ResellerPaymentFilters) {
