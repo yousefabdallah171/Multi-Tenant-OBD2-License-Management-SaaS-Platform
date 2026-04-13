@@ -50,7 +50,6 @@ class CustomerController extends BaseManagerParentController
 
         $query = User::query()
             ->where('tenant_id', $tenantId)
-            ->where('role', UserRole::CUSTOMER->value)
             ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $scope['seller_ids'])
@@ -417,7 +416,6 @@ class CustomerController extends BaseManagerParentController
 
         $query = User::query()
             ->where('tenant_id', $tenantId)
-            ->where('role', UserRole::CUSTOMER->value)
             ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $scope['seller_ids'])
@@ -732,7 +730,7 @@ class CustomerController extends BaseManagerParentController
             $existingCustomer = User::query()
                 ->where('tenant_id', $this->currentTenantId($request))
                 ->whereRaw('LOWER(username) = ?', [$usernameLower])
-                ->where('role', UserRole::CUSTOMER->value)
+
                 ->first();
 
             // BIOS → username: this BIOS must not be linked to a different username

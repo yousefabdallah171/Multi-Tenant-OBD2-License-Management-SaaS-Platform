@@ -95,6 +95,44 @@ class TenantResetController extends BaseSuperAdminController
     }
 
     /**
+     * Create a backup of current tenant data without resetting.
+     */
+    public function create(Request $request, Tenant $tenant): JsonResponse
+    {
+        $validated = $request->validate([
+            'label' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        try {
+            $backup = DB::transaction(function () use ($request, $tenant, $validated): TenantBackup {
+                $customerIds   = $this->customerIds($tenant->id);
+                $commissionIds = $this->commissionIds($tenant->id);
+
+                [$payload, $stats] = $this->buildPayloadJson($tenant->id, $customerIds, $commissionIds);
+                $storedPayload = $this->encodePayloadForStorage($payload);
+
+                $backup = TenantBackup::query()->create([
+                    'tenant_id'  => $tenant->id,
+                    'created_by' => $request->user()->id,
+                    'label'      => $validated['label'] ?? null,
+                    'stats'      => $stats,
+                    'payload'    => $storedPayload,
+                ]);
+
+                return $backup;
+            });
+        } catch (Throwable $e) {
+            Log::error('Backup creation failed', ['tenant_id' => $tenant->id, 'error' => $e->getMessage()]);
+            throw $e;
+        }
+
+        return response()->json([
+            'message' => 'Backup created successfully.',
+            'data'    => $this->serializeBackup($backup->load('creator:id,name,email')),
+        ]);
+    }
+
+    /**
      * Restore tenant from a stored backup.
      */
     public function restore(Request $request, Tenant $tenant, TenantBackup $backup): JsonResponse

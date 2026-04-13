@@ -376,6 +376,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/tenants/{tenant}/stats', [SuperAdminTenantController::class, 'stats']);
         Route::get('/tenants/{tenant}/backups', [SuperAdminTenantResetController::class, 'index']);
         Route::post('/tenants/{tenant}/reset', [SuperAdminTenantResetController::class, 'reset']);
+        Route::post('/tenants/{tenant}/backups/create', [SuperAdminTenantResetController::class, 'create']);
         Route::post('/tenants/{tenant}/backups/import', [SuperAdminTenantResetController::class, 'import']);
         Route::get('/tenants/{tenant}/backups/{backup}/download', [SuperAdminTenantResetController::class, 'download']);
         Route::post('/tenants/{tenant}/backups/{backup}/restore', [SuperAdminTenantResetController::class, 'restore']);

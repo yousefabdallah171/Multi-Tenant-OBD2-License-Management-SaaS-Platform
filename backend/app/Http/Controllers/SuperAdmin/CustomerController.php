@@ -36,9 +36,15 @@ class CustomerController extends BaseSuperAdminController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
+        // Get all users that have licenses (customer role was removed in Phase 11)
+        $customerIds = License::query()
+            ->whereNotNull('customer_id')
+            ->distinct()
+            ->pluck('customer_id');
+
         $query = User::query()
             ->with('tenant')
-            ->where('role', UserRole::CUSTOMER->value)
+            ->whereIn('id', $customerIds)
             ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->select($this->licenseListColumns())

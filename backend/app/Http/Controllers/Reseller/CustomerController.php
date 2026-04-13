@@ -51,7 +51,7 @@ class CustomerController extends BaseResellerController
 
         if (! empty($validated['search'])) {
             $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $this->currentTenantId($request));
-            $query->where(function ($builder) use ($validated, $resellerId): void {
+            $query->where(function ($builder) use ($validated, $resellerId, $linkedUsernames): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
@@ -302,7 +302,7 @@ class CustomerController extends BaseResellerController
 
         if (! empty($validated['search'])) {
             $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $this->currentTenantId($request));
-            $query->where(function ($builder) use ($validated, $resellerId): void {
+            $query->where(function ($builder) use ($validated, $resellerId, $linkedUsernames): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
@@ -911,10 +911,10 @@ class CustomerController extends BaseResellerController
             $usernameLower = strtolower($username);
 
             // Check if this customer already exists in the system (re-activation scenario)
+            // Customer role was removed in Phase 11, just check for any user with this username
             $existingCustomer = User::query()
                 ->where('tenant_id', $this->currentTenantId($request))
                 ->whereRaw('LOWER(username) = ?', [$usernameLower])
-                ->where('role', UserRole::CUSTOMER->value)
                 ->first();
 
             // BIOS → username: this BIOS must not be linked to a different username

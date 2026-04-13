@@ -49,6 +49,8 @@ export function TenantsPage() {
   const [resetConfirmName, setResetConfirmName] = useState('')
   const [resetLabel, setResetLabel] = useState('')
   const [backupsTarget, setBackupsTarget] = useState<TenantSummary | null>(null)
+  const [createBackupTarget, setCreateBackupTarget] = useState<TenantSummary | null>(null)
+  const [backupName, setBackupName] = useState('')
   const [restoreTarget, setRestoreTarget] = useState<TenantBackup | null>(null)
   const [restoreConfirmName, setRestoreConfirmName] = useState('')
   const [deleteBackupTarget, setDeleteBackupTarget] = useState<TenantBackup | null>(null)
@@ -115,6 +117,23 @@ export function TenantsPage() {
       toast.success('Backup deleted.')
       setDeleteBackupTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenant-backups', backupsTarget?.id] })
+    },
+  })
+
+  const createBackupMutation = useMutation({
+    mutationFn: () =>
+      tenantService.createBackup(createBackupTarget!.id, {
+        label: backupName || undefined,
+      }),
+    onSuccess: (data) => {
+      toast.success(data.message || t('superAdmin.pages.tenants.backupCreatedSuccess', { defaultValue: 'Backup created successfully.' }))
+      setCreateBackupTarget(null)
+      setBackupName('')
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenant-backups', createBackupTarget?.id] })
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? t('superAdmin.pages.tenants.backupCreateError', { defaultValue: 'Failed to create backup. Please try again.' }))
     },
   })
 
@@ -273,7 +292,16 @@ export function TenantsPage() {
                 }}
               >
                 <History className="me-2 h-4 w-4" />
-                {t('superAdmin.pages.tenants.backupsAction', { defaultValue: 'Backups' })}
+                {t('superAdmin.pages.tenants.backupHistory', { defaultValue: 'Backup History' })}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  setCreateBackupTarget(row)
+                  setBackupName('')
+                }}
+              >
+                <Plus className="me-2 h-4 w-4" />
+                {t('superAdmin.pages.tenants.createBackupAction', { defaultValue: 'Create Backup' })}
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-orange-600 focus:text-orange-600 dark:text-orange-400 dark:focus:text-orange-400"
@@ -775,6 +803,61 @@ export function TenantsPage() {
           if (deleteBackupTarget) deleteBackupMutation.mutate(deleteBackupTarget)
         }}
       />
+
+      {/* Create Backup Dialog */}
+      <Dialog
+        open={createBackupTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreateBackupTarget(null)
+            setBackupName('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('superAdmin.pages.tenants.createBackupTitle', { defaultValue: 'Create Backup' })}</DialogTitle>
+            <DialogDescription>
+              {t('superAdmin.pages.tenants.createBackupDescription', { defaultValue: 'Create a new backup of {{tenantName}} tenant.', tenantName: createBackupTarget?.name })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="backup-name">{t('superAdmin.pages.tenants.backupNameLabel', { defaultValue: 'Backup Name (Optional)' })}</Label>
+              <Input
+                id="backup-name"
+                value={backupName}
+                onChange={(e) => setBackupName(e.target.value)}
+                placeholder={t('superAdmin.pages.tenants.backupNamePlaceholder', { defaultValue: 'e.g. Pre-Update Backup' })}
+                maxLength={100}
+                disabled={createBackupMutation.isPending}
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {t('superAdmin.pages.tenants.backupNameHint', { defaultValue: 'Add a descriptive name to identify this backup later.' })}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateBackupTarget(null)
+                setBackupName('')
+              }}
+              disabled={createBackupMutation.isPending}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={() => createBackupMutation.mutate()}
+              disabled={createBackupMutation.isPending}
+            >
+              {createBackupMutation.isPending && <span className="me-2">⏳</span>}
+              {t('superAdmin.pages.tenants.createBackupButton', { defaultValue: 'Create Backup' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

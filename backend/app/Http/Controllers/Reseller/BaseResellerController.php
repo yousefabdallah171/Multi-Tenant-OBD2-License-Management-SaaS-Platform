@@ -40,7 +40,6 @@ abstract class BaseResellerController extends Controller
 
         return User::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('role', UserRole::CUSTOMER->value)
             ->whereIn('id', $customerIds);
     }
 

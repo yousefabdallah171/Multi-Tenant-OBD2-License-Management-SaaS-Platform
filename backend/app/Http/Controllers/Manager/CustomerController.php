@@ -415,9 +415,16 @@ class CustomerController extends BaseManagerController
             'reseller_id' => ! empty($validated['reseller_id']) ? (int) $validated['reseller_id'] : null,
         ]);
 
+        // Get all users that have licenses (customer role was removed in Phase 11)
+        $customerIds = License::query()
+            ->whereIn('reseller_id', $scope['seller_ids'])
+            ->whereNotNull('customer_id')
+            ->distinct()
+            ->pluck('customer_id');
+
         $query = User::query()
             ->where('tenant_id', $tenantId)
-            ->where('role', UserRole::CUSTOMER->value)
+            ->whereIn('id', $customerIds)
             ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'])
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $scope['seller_ids'])
@@ -730,10 +737,10 @@ class CustomerController extends BaseManagerController
             $usernameLower = $derivedUsername;
 
             // Check if customer already exists (re-activation)
+            // Customer role was removed in Phase 11, just check for any user with this username
             $existingCustomer = User::query()
                 ->where('tenant_id', $this->currentTenantId($request))
                 ->whereRaw('LOWER(username) = ?', [$usernameLower])
-                ->where('role', UserRole::CUSTOMER->value)
                 ->first();
 
             // BIOS → username: this BIOS must not be linked to a different username

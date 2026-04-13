@@ -76,6 +76,10 @@ export const tenantService = {
     const { data } = await api.delete<{ message: string }>(`/super-admin/tenants/${tenantId}/backups/${backupId}`)
     return data
   },
+  async createBackup(tenantId: number, payload: { label?: string }) {
+    const { data } = await api.post<{ message: string; data: TenantBackup }>(`/super-admin/tenants/${tenantId}/backups/create`, payload)
+    return data
+  },
   async downloadBackup(tenantId: number, backupId: number): Promise<{ blob: Blob; filename: string }> {
     const response = await api.get(`/super-admin/tenants/${tenantId}/backups/${backupId}/download`, { responseType: 'blob' })
     const disposition = response.headers['content-disposition'] as string | undefined
