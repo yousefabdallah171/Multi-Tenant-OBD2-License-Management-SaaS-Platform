@@ -71,7 +71,7 @@ class LicenseCacheInvalidation
         return max(1, (int) Cache::get($scope, 1));
     }
 
-    private static function bumpVersion(string $key): void
+    public static function bumpVersion(string $key): void
     {
         Cache::forever($key, self::reportVersion($key) + 1);
     }
