@@ -97,8 +97,8 @@ class DeletedCustomerController extends BaseSuperAdminController
             }
 
             $restoredUser = DB::transaction(function () use ($deletedCustomer, $snapshot, $validated): User {
-                // Use provided username or generate one
-                $username = $validated['username'] ?? User::generateUniqueUsername($snapshot['user']['email'] ?? $deletedCustomer->email);
+                // Priority: provided username > original username from snapshot > generate new one
+                $username = $validated['username'] ?? $snapshot['user']['username'] ?? User::generateUniqueUsername($snapshot['user']['email'] ?? $deletedCustomer->email);
 
                 // Create user with new ID (can't reuse deleted ID)
                 $user = User::query()->create([
@@ -115,11 +115,11 @@ class DeletedCustomerController extends BaseSuperAdminController
                 ]);
 
                 // Recreate licenses (with new customer_id)
-                foreach ($snapshot['licenses'] ?? [] as $licenseData) {
+                foreach ($snapshot['licenses'] ?? [] as $index => $licenseData) {
                     unset($licenseData['id']);
                     $licenseData['customer_id'] = $user->id;
-                    // Update BIOS ID if provided
-                    if ($validated['bios_id'] ?? false) {
+                    // Update BIOS ID if provided (only for first license if multiple)
+                    if ($index === 0 && ($validated['bios_id'] ?? false)) {
                         $licenseData['bios_id'] = $validated['bios_id'];
                     }
                     License::query()->create($licenseData);
