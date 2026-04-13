@@ -285,6 +285,14 @@ class DeletedCustomerController extends BaseSuperAdminController
      */
     private function serialize(DeletedCustomer $deletedCustomer): array
     {
+        // Calculate revenue from licenses in snapshot
+        $snapshot = $deletedCustomer->snapshot ?? [];
+        $revenueTotal = 0;
+
+        foreach ($snapshot['licenses'] ?? [] as $license) {
+            $revenueTotal += (float) ($license['price'] ?? 0);
+        }
+
         return [
             'id' => $deletedCustomer->id,
             'original_customer_id' => $deletedCustomer->original_customer_id,
@@ -303,7 +311,7 @@ class DeletedCustomerController extends BaseSuperAdminController
             ] : null,
             'deleted_at' => $deletedCustomer->deleted_at?->toIso8601String(),
             'licenses_count' => $deletedCustomer->licenses_count,
-            'revenue_total' => round((float) $deletedCustomer->revenue_total, 2),
+            'revenue_total' => round($revenueTotal, 2),
         ];
     }
 }
