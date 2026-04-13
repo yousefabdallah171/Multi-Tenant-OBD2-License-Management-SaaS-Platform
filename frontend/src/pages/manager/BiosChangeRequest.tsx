@@ -133,7 +133,7 @@ export function BiosChangeRequestPageForManager() {
                       toast.error(t('common.error'))
                       return
                     }
-                    if (newBiosId.trim().length < 3 || newBiosId.trim().length > 10) {
+                    if (newBiosId.trim().length < 3 || newBiosId.trim().length > 255) {
                       toast.error(t('biosChangeRequests.newBiosValidation'))
                       return
                     }

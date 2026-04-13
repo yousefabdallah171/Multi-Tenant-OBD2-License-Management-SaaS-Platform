@@ -1052,7 +1052,7 @@ export function CustomersPage() {
             {activationStep === 1 ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField label={text.activationDialog.biosId} htmlFor="bios-id">
-                  <Input id="bios-id" value={activationForm.bios_id} maxLength={10} onChange={(event) => setActivationForm((current) => ({ ...current, bios_id: event.target.value }))} />
+                  <Input id="bios-id" value={activationForm.bios_id} maxLength={255} onChange={(event) => setActivationForm((current) => ({ ...current, bios_id: event.target.value }))} />
                 </FormField>
                 <FormField label={text.activationDialog.program} htmlFor="program-id">
                   <select

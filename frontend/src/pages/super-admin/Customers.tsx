@@ -684,7 +684,7 @@ export function CustomersPage() {
             <div className="space-y-1">
               <Input
                 value={newBiosId}
-                maxLength={10}
+                maxLength={255}
                 onChange={(event) => {
                   setNewBiosId(event.target.value)
                   setBiosCheckResult(null)
@@ -716,7 +716,7 @@ export function CustomersPage() {
               disabled={directBiosChangeMutation.isPending}
               onClick={() => {
                 const bios = newBiosId.trim()
-                if (bios.length < 3 || bios.length > 10) {
+                if (bios.length < 3 || bios.length > 255) {
                   toast.error(t('biosChangeRequests.newBiosValidation'))
                   return
                 }

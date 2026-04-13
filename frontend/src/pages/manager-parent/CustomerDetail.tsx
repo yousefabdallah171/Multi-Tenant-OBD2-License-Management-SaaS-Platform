@@ -291,7 +291,7 @@ export function CustomerDetailPage() {
             <div className="space-y-1">
               <Input
                 value={newBiosId}
-                maxLength={10}
+                maxLength={255}
                 onChange={(event) => {
                   setNewBiosId(event.target.value)
                   setBiosCheckResult(null)
@@ -327,7 +327,7 @@ export function CustomerDetailPage() {
                   toast.error(t('common.error'))
                   return
                 }
-                if (newBiosId.trim().length < 3 || newBiosId.trim().length > 10) {
+                if (newBiosId.trim().length < 3 || newBiosId.trim().length > 255) {
                   toast.error(t('biosChangeRequests.newBiosValidation'))
                   return
                 }
