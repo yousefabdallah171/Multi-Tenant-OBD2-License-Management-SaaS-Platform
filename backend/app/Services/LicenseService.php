@@ -1294,6 +1294,18 @@ class LicenseService
     {
         $email = $this->resolveCustomerEmail($reseller, $externalUsername, $data['customer_email'] ?? null);
 
+        // Check if email is already used by a non-customer account (e.g. reseller using their own email)
+        $emailConflict = User::query()
+            ->where('email', $email)
+            ->where('role', '!=', UserRole::CUSTOMER->value)
+            ->first();
+
+        if ($emailConflict) {
+            throw ValidationException::withMessages([
+                'customer_email' => 'This email belongs to a non-customer account. Please use a different email for the customer.',
+            ]);
+        }
+
         $customer = User::query()
             ->where('tenant_id', $reseller->tenant_id)
             ->where(function ($query) use ($email, $externalUsername): void {
