@@ -19,6 +19,8 @@ export interface DeletedCustomerResponse {
 
 export interface RestorePayload {
   confirm_name: string
+  username?: string
+  bios_id?: string
 }
 
 export interface RestoreResponse {

@@ -20,6 +20,7 @@ import type { DeletedCustomer } from '@/types/super-admin.types'
 
 type PendingAction =
   | { type: 'restore'; row: DeletedCustomer }
+  | { type: 'restoreWithConflict'; row: DeletedCustomer; conflictField: string; conflictValue: string }
   | { type: 'deleteRevenue'; row: DeletedCustomer }
   | { type: 'destroy'; row: DeletedCustomer }
   | null
@@ -40,6 +41,8 @@ export function DeletedCustomersPage() {
   const [detailId, setDetailId] = useState<number | null>(null)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [confirmName, setConfirmName] = useState('')
+  const [restoreUsername, setRestoreUsername] = useState('')
+  const [restoreBiosId, setRestoreBiosId] = useState('')
 
   const deletedCustomersQuery = useQuery({
     queryKey: ['super-admin', 'deleted-customers', page, perPage, search, tenantId],
@@ -64,16 +67,29 @@ export function DeletedCustomersPage() {
   })
 
   const restoreMutation = useMutation({
-    mutationFn: ({ id, name }: { id: number; name: string }) => deletedCustomerService.restore(id, { confirm_name: name }),
+    mutationFn: ({ id, name, username, bios_id }: { id: number; name: string; username?: string; bios_id?: string }) =>
+      deletedCustomerService.restore(id, { confirm_name: name, username, bios_id }),
     onSuccess: (data) => {
       toast.success(data.message)
       setPendingAction(null)
       setConfirmName('')
+      setRestoreUsername('')
+      setRestoreBiosId('')
       setDetailId(null)
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'deleted-customers'] })
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'customers'] })
     },
-    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
+    onError: (error: any) => {
+      const apiError = error?.response?.data
+      if (apiError?.data?.needs_update) {
+        // Show conflict dialog instead of error
+        if (pendingAction?.type === 'restore') {
+          setPendingAction({ type: 'restoreWithConflict', row: pendingAction.row, conflictField: apiError.data.conflict_field, conflictValue: apiError.data.conflict_value })
+        }
+      } else {
+        toast.error(resolveApiErrorMessage(error, t('common.error')))
+      }
+    },
   })
 
   const deleteRevenueMutation = useMutation({
@@ -382,29 +398,30 @@ export function DeletedCustomersPage() {
           }
         }}
         title={
-          pendingAction?.type === 'restore'
+          pendingAction?.type === 'restore' || pendingAction?.type === 'restoreWithConflict'
             ? t('superAdmin.pages.deletedCustomers.restore')
             : pendingAction?.type === 'deleteRevenue'
               ? t('superAdmin.pages.deletedCustomers.deleteRevenueConfirm')
               : t('common.delete')
         }
         description={
-          pendingAction?.type === 'restore'
+          pendingAction?.type === 'restore' || pendingAction?.type === 'restoreWithConflict'
             ? t('superAdmin.pages.deletedCustomers.restoreWarning')
             : pendingAction?.row
               ? `${pendingAction.row.name} - ${pendingAction.row.email || '-'}`
               : undefined
         }
         confirmLabel={
-          pendingAction?.type === 'restore'
+          pendingAction?.type === 'restore' || pendingAction?.type === 'restoreWithConflict'
             ? t('superAdmin.pages.deletedCustomers.restore')
             : pendingAction?.type === 'deleteRevenue'
               ? t('superAdmin.pages.deletedCustomers.deleteRevenue')
               : t('common.delete')
         }
-        isDestructive={pendingAction?.type !== 'restore'}
+        isDestructive={pendingAction?.type !== 'restore' && pendingAction?.type !== 'restoreWithConflict'}
         confirmDisabled={
           (pendingAction?.type === 'restore' && confirmName.trim() !== pendingAction.row.name)
+          || (pendingAction?.type === 'restoreWithConflict' && (confirmName.trim() !== pendingAction.row.name || !restoreUsername.trim()))
           || restoreMutation.isPending
           || deleteRevenueMutation.isPending
           || destroyMutation.isPending
@@ -416,6 +433,11 @@ export function DeletedCustomersPage() {
 
           if (pendingAction.type === 'restore') {
             restoreMutation.mutate({ id: pendingAction.row.id, name: confirmName.trim() })
+            return
+          }
+
+          if (pendingAction.type === 'restoreWithConflict') {
+            restoreMutation.mutate({ id: pendingAction.row.id, name: confirmName.trim(), username: restoreUsername.trim(), bios_id: restoreBiosId.trim() || undefined })
             return
           }
 
@@ -433,6 +455,32 @@ export function DeletedCustomersPage() {
               Type <span className="font-medium">{pendingAction.row.name}</span> to confirm.
             </p>
             <Input value={confirmName} onChange={(event) => setConfirmName(event.target.value)} />
+          </div>
+        ) : pendingAction?.type === 'restoreWithConflict' ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Name confirmation</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Type <span className="font-medium">{pendingAction.row.name}</span> to confirm.
+              </p>
+              <Input value={confirmName} onChange={(event) => setConfirmName(event.target.value)} placeholder="Confirm customer name" />
+            </div>
+            {pendingAction.conflictField === 'email' && (
+              <div className="space-y-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900 dark:bg-yellow-950">
+                <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">Email Conflict</p>
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  Email <span className="font-mono">{pendingAction.conflictValue}</span> already exists. Please provide a new username below.
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">New Username (required)</p>
+              <Input value={restoreUsername} onChange={(event) => setRestoreUsername(event.target.value)} placeholder="e.g., sameh_restored" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">BIOS ID (optional)</p>
+              <Input value={restoreBiosId} onChange={(event) => setRestoreBiosId(event.target.value)} placeholder="e.g., SMAFOQ" />
+            </div>
           </div>
         ) : null}
       </ConfirmDialog>

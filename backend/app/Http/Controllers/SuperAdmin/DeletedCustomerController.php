@@ -66,6 +66,8 @@ class DeletedCustomerController extends BaseSuperAdminController
     {
         $validated = $request->validate([
             'confirm_name' => ['required', 'string'],
+            'username' => ['nullable', 'string', 'unique:users,username'],
+            'bios_id' => ['nullable', 'string'],
         ]);
 
         if ($validated['confirm_name'] !== $deletedCustomer->name) {
@@ -75,15 +77,34 @@ class DeletedCustomerController extends BaseSuperAdminController
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $snapshot = $deletedCustomer->snapshot;
+        $snapshot = $deletedCustomer->snapshot ?? [];
 
         try {
-            $restoredUser = DB::transaction(function () use ($deletedCustomer, $snapshot): User {
+            // Check if email already exists
+            $email = $snapshot['user']['email'] ?? $deletedCustomer->email;
+            $existingUser = User::query()->where('email', $email)->first();
+
+            if ($existingUser) {
+                return response()->json([
+                    'message' => 'Email already exists. Please restore with a different email or contact support.',
+                    'errors' => ['email' => ['Email already in use']],
+                    'data' => [
+                        'conflict_field' => 'email',
+                        'conflict_value' => $email,
+                        'needs_update' => true,
+                    ],
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $restoredUser = DB::transaction(function () use ($deletedCustomer, $snapshot, $validated): User {
+                // Use provided username or generate one
+                $username = $validated['username'] ?? User::generateUniqueUsername($snapshot['user']['email'] ?? $deletedCustomer->email);
+
                 // Create user with new ID (can't reuse deleted ID)
                 $user = User::query()->create([
                     'tenant_id' => $snapshot['user']['tenant_id'] ?? $deletedCustomer->tenant_id,
                     'name' => $snapshot['user']['name'] ?? $deletedCustomer->name,
-                    'username' => User::generateUniqueUsername($snapshot['user']['email'] ?? $deletedCustomer->email),
+                    'username' => $username,
                     'email' => $snapshot['user']['email'] ?? $deletedCustomer->email,
                     'phone' => $snapshot['user']['phone'] ?? $deletedCustomer->phone,
                     'country_name' => $snapshot['user']['country_name'] ?? null,
@@ -97,6 +118,10 @@ class DeletedCustomerController extends BaseSuperAdminController
                 foreach ($snapshot['licenses'] ?? [] as $licenseData) {
                     unset($licenseData['id']);
                     $licenseData['customer_id'] = $user->id;
+                    // Update BIOS ID if provided
+                    if ($validated['bios_id'] ?? false) {
+                        $licenseData['bios_id'] = $validated['bios_id'];
+                    }
                     License::query()->create($licenseData);
                 }
 
@@ -110,6 +135,24 @@ class DeletedCustomerController extends BaseSuperAdminController
                 'message' => 'Customer restored successfully.',
                 'data' => ['customer_id' => $restoredUser->id],
             ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if (str_contains($e->getMessage(), 'Duplicate entry')) {
+                if (str_contains($e->getMessage(), 'users_email_unique')) {
+                    return response()->json([
+                        'message' => 'Email already exists.',
+                        'errors' => ['email' => ['Email already in use']],
+                    ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                }
+                if (str_contains($e->getMessage(), 'users_username_unique')) {
+                    return response()->json([
+                        'message' => 'Username already exists. Please provide a different username.',
+                        'errors' => ['username' => ['Username already in use']],
+                    ], Response::HTTP_UNPROCESSABLE_ENTITY);
+                }
+            }
+            return response()->json([
+                'message' => 'Failed to restore customer: '.$e->getMessage(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to restore customer: '.$e->getMessage(),
