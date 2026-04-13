@@ -154,10 +154,35 @@ class DeletedCustomerController extends BaseSuperAdminController
 
     public function destroy(DeletedCustomer $deletedCustomer): JsonResponse
     {
-        $deletedCustomer->delete();
+        $snapshot = $deletedCustomer->snapshot;
+        $activityLogIds = $snapshot['activity_log_ids'] ?? [];
+
+        // If we don't have stored activity log IDs, search by customer name/email
+        if (empty($activityLogIds)) {
+            $activityLogIds = DB::table('activity_logs')
+                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->where(function ($query) use ($deletedCustomer) {
+                    $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$deletedCustomer->original_customer_id])
+                        ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$deletedCustomer->name]);
+                })
+                ->pluck('id')
+                ->toArray();
+        }
+
+        DB::transaction(function () use ($deletedCustomer, $activityLogIds): void {
+            // Delete activity logs (revenue) first
+            if (!empty($activityLogIds)) {
+                DB::table('activity_logs')
+                    ->whereIn('id', $activityLogIds)
+                    ->delete();
+            }
+
+            // Then delete the snapshot record
+            $deletedCustomer->delete();
+        });
 
         return response()->json([
-            'message' => 'Deleted customer record permanently removed.',
+            'message' => 'Deleted customer record and revenue permanently removed.',
         ]);
     }
 
