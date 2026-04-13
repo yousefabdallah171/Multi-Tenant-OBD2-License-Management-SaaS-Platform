@@ -38,6 +38,7 @@ import { formatUsername } from '@/utils/biosId'
 import { FlagImage } from '@/utils/countryFlag'
 
 const STATUS_OPTIONS = ['all', 'active', 'suspended', 'scheduled', 'expired', 'cancelled', 'pending'] as const
+const SELLER_ROLE_ORDER: UserRole[] = ['manager_parent', 'manager', 'reseller']
 
 interface ActivationFormState {
   customer_name: string
@@ -148,6 +149,15 @@ export function CustomersPage() {
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
   })
 
+  const resellerQuery = useQuery({
+    queryKey: ['manager-parent', 'customers', 'resellers'],
+    queryFn: () => teamService.getAll({ role: 'reseller', per_page: 100 }),
+  })
+
+  const userOptionsQuery = useQuery({
+    queryKey: ['manager-parent', 'customers', 'user-options'],
+    queryFn: () => managerParentService.getUsernameManagement({ per_page: 100 }),
+  })
 
   const programsQuery = useQuery({
     queryKey: ['manager-parent', 'customers', 'programs'],
@@ -165,6 +175,78 @@ export function CustomersPage() {
     }),
   })
 
+  const allSellerOptions = useMemo(() => {
+    const fromUserOptions = (userOptionsQuery.data?.data ?? [])
+      .filter((m) => m.role === 'manager_parent' || m.role === 'manager')
+      .map((m) => ({ id: m.id, name: m.name, role: m.role as UserRole }))
+
+    if (user && user.role === 'manager_parent' && !fromUserOptions.some((m) => m.id === user.id)) {
+      fromUserOptions.unshift({ id: user.id, name: user.name, role: 'manager_parent' as UserRole })
+    }
+
+    const fromResellers = (resellerQuery.data?.data ?? [])
+      .map((r) => ({ id: r.id, name: r.name, role: 'reseller' as UserRole }))
+
+    return [...fromUserOptions, ...fromResellers].sort((a, b) => {
+      const roleDiff = SELLER_ROLE_ORDER.indexOf(a.role) - SELLER_ROLE_ORDER.indexOf(b.role)
+      return roleDiff !== 0 ? roleDiff : a.name.localeCompare(b.name)
+    })
+  }, [resellerQuery.data?.data, user, userOptionsQuery.data?.data])
+
+  const selectedSeller = useMemo(
+    () =>
+      managerParentId ? (allSellerOptions.find((s) => s.id === managerParentId && s.role === 'manager_parent') ?? null)
+      : managerId ? (allSellerOptions.find((s) => s.id === managerId && s.role === 'manager') ?? null)
+      : resellerId ? (allSellerOptions.find((s) => s.id === resellerId && s.role === 'reseller') ?? null)
+      : null,
+    [allSellerOptions, managerId, managerParentId, resellerId],
+  )
+
+  const sellerCountFilterParams = useMemo(
+    () => ({
+      search: search || undefined,
+      program_id: programId || undefined,
+      status: status === 'all' ? '' : status,
+    }),
+    [programId, search, status],
+  )
+
+  const sellerCountQueries = useQueries({
+    queries: allSellerOptions.map((seller) => ({
+      queryKey: ['manager-parent', 'customers', 'seller-count', seller.id, sellerCountFilterParams],
+      queryFn: () =>
+        customerService.getAll({
+          page: 1,
+          per_page: 1,
+          ...sellerCountFilterParams,
+          ...(seller.role === 'manager_parent'
+            ? { manager_parent_id: seller.id }
+            : seller.role === 'manager'
+              ? { manager_id: seller.id }
+              : { reseller_id: seller.id }),
+        }),
+      ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_COUNTS),
+    })),
+  })
+
+  const sellerCountMap = useMemo(
+    () =>
+      Object.fromEntries(
+        allSellerOptions.map((seller, index) => [seller.id, sellerCountQueries[index]?.data?.meta.total ?? 0]),
+      ) as Record<number, number>,
+    [allSellerOptions, sellerCountQueries],
+  )
+
+  const handleSellerChange = (seller: (typeof allSellerOptions)[0] | null) => {
+    setManagerParentId('')
+    setManagerId('')
+    setResellerId('')
+    setPage(1)
+    if (!seller) return
+    if (seller.role === 'manager_parent') setManagerParentId(seller.id)
+    else if (seller.role === 'manager') setManagerId(seller.id)
+    else setResellerId(seller.id)
+  }
 
   const [allCountQuery, activeCountQuery, scheduledCountQuery, expiredCountQuery, cancelledCountQuery, pendingCountQuery] = useQueries({
     queries: [
@@ -682,8 +764,43 @@ export function CustomersPage() {
 
       <div className="space-y-4">
             <Card>
-              <CardContent className="grid gap-2 p-3 lg:grid-cols-[minmax(0,1fr)_220px_180px]">
+              <CardContent className="grid gap-2 p-3 lg:grid-cols-[minmax(0,1fr)_220px_180px_220px]">
                 <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('managerParent.pages.customers.searchPlaceholder')} className="h-9 text-sm" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" className="h-9 w-full justify-between overflow-hidden rounded-lg border-slate-200 px-3 text-sm font-normal text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                      {selectedSeller ? (
+                        <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden whitespace-nowrap">
+                          <span className="min-w-0 truncate">{selectedSeller.name}</span>
+                          <span className="shrink-0"><RoleBadge role={selectedSeller.role} /></span>
+                        </span>
+                      ) : (
+                        <span className="truncate">{t('common.allRoles', { defaultValue: 'All roles' })}</span>
+                      )}
+                      <ChevronDown className="ms-2 h-4 w-4 shrink-0 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-64">
+                    <DropdownMenuItem onSelect={() => handleSellerChange(null)}>
+                      <div className="flex w-full items-center justify-between gap-3">
+                        <span>{t('common.allRoles', { defaultValue: 'All roles' })}</span>
+                        {!selectedSeller ? <Check className="h-4 w-4 text-brand-600 dark:text-brand-400" /> : null}
+                      </div>
+                    </DropdownMenuItem>
+                    {allSellerOptions.map((seller) => (
+                      <DropdownMenuItem key={`${seller.role}-${seller.id}`} onSelect={() => handleSellerChange(seller)}>
+                        <div className="flex w-full min-w-0 items-center justify-between gap-3">
+                          <span className="min-w-0 truncate">{seller.name}</span>
+                          <span className="flex shrink-0 items-center gap-2">
+                            <span className="text-sm text-slate-500 dark:text-slate-400">{sellerCountMap[seller.id] ?? 0}</span>
+                            <RoleBadge role={seller.role} />
+                            {selectedSeller?.id === seller.id && selectedSeller?.role === seller.role ? <Check className="h-4 w-4 text-brand-600 dark:text-brand-400" /> : null}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <select value={programId} onChange={(event) => { setProgramId(event.target.value ? Number(event.target.value) : ''); setPage(1) }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                   <option value="">{t('managerParent.pages.customers.allPrograms')}</option>
                   {(programsQuery.data?.data ?? []).map((program) => (
