@@ -985,7 +985,6 @@ export function CustomersPage() {
                     onChange={(event) => setActivationForm((current) => ({ ...current, customer_name: event.target.value }))}
                     onBlur={() => setActivationForm((current) => ({ ...current, customer_name: formatUsername(current.customer_name) }))}
                     placeholder={text.activationDialog.usernameHint}
-                    maxLength={10}
                   />
                 </FormField>
                 <FormField label={text.activationDialog.clientName} htmlFor="client-name">

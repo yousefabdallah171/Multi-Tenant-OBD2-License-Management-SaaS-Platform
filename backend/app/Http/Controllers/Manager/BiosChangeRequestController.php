@@ -53,7 +53,7 @@ class BiosChangeRequestController extends BaseManagerController
     {
         $validated = $request->validate([
             'license_id' => ['required', 'integer'],
-            'new_bios_id' => ['required', 'string', 'min:3', 'max:10'],
+            'new_bios_id' => ['required', 'string', 'min:3'],
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -134,7 +134,7 @@ class BiosChangeRequestController extends BaseManagerController
     {
         $validated = $request->validate([
             'license_id' => ['required', 'integer'],
-            'new_bios_id' => ['required', 'string', 'min:3', 'max:10'],
+            'new_bios_id' => ['required', 'string', 'min:3'],
         ]);
 
         $license = $this->resolveTeamLicense($request, License::query()->findOrFail((int) $validated['license_id']));

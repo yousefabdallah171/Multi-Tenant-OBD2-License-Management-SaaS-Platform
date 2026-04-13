@@ -334,7 +334,7 @@ export function CreateCustomerPage() {
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={t('activate.username', { defaultValue: 'Username (API)' })} hint={t('activate.usernameHint', { defaultValue: 'API username — auto-formatted (no spaces)' })} error={errors.customerName}>
-              <Input value={customerName} placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })} maxLength={10} onChange={(event) => setCustomerName(event.target.value)} onBlur={(event) => setCustomerName(formatUsername(event.target.value))} />
+              <Input value={customerName} placeholder={t('activate.usernamePlaceholder', { defaultValue: 'e.g. john_doe' })}  onChange={(event) => setCustomerName(event.target.value)} onBlur={(event) => setCustomerName(formatUsername(event.target.value))} />
             </Field>
             <Field label={t('activate.clientName', { defaultValue: 'Client Display Name' })} hint={t('activate.clientNameHint', { defaultValue: 'Human-readable name for display in your dashboard' })}>
               <Input value={clientName} placeholder={t('activate.clientNamePlaceholder', { defaultValue: 'Full client name (optional)' })} onChange={(event) => setClientName(event.target.value)} />
@@ -373,7 +373,7 @@ export function CreateCustomerPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
-              <Input value={biosId} maxLength={10} onChange={(event) => setBiosId(event.target.value)} />
+              <Input value={biosId}  onChange={(event) => setBiosId(event.target.value)} />
             </Field>
             <Field label={t('common.program')} error={errors.programId}>
               <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">

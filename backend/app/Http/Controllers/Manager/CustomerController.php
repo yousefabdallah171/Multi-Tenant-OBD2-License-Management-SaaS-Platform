@@ -302,11 +302,11 @@ class CustomerController extends BaseManagerController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:10'],
+            'name' => ['required', 'string', 'min:2'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
-            'bios_id' => ['nullable', 'string', 'min:3', 'max:10', 'required_with:program_id'],
+            'bios_id' => ['nullable', 'string', 'min:3', 'required_with:program_id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ]);

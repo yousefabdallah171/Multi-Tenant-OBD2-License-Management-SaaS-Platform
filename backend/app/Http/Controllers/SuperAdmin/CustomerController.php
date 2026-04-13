@@ -273,13 +273,13 @@ class CustomerController extends BaseSuperAdminController
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:10'],
+            'name' => ['required', 'string', 'min:2'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
             'tenant_id' => ['required', 'integer', 'exists:tenants,id'],
             'seller_id' => ['nullable', 'integer', 'exists:users,id', 'required_with:bios_id,program_id'],
-            'bios_id' => ['nullable', 'string', 'min:3', 'max:10', 'required_with:program_id,seller_id'],
+            'bios_id' => ['nullable', 'string', 'min:3', 'required_with:program_id,seller_id'],
             'program_id' => ['nullable', 'integer', 'exists:programs,id', 'required_with:bios_id,seller_id'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ]);

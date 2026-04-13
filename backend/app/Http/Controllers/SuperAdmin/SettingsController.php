@@ -34,7 +34,7 @@ class SettingsController extends BaseSuperAdminController
             'api.url' => ['sometimes', 'url'],
             'api.key' => ['sometimes', 'string'],
             'api.timeout' => ['sometimes', 'integer', 'min:1', 'max:60'],
-            'api.retries' => ['sometimes', 'integer', 'min:0', 'max:10'],
+            'api.retries' => ['sometimes', 'integer', 'min:0'],
             'notifications' => ['sometimes', 'array'],
             'notifications.email_enabled' => ['sometimes', 'boolean'],
             'notifications.pusher_enabled' => ['sometimes', 'boolean'],

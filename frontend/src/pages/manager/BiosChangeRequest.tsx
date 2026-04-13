@@ -99,7 +99,7 @@ export function BiosChangeRequestPageForManager() {
                 <label className="text-sm font-medium text-slate-950 dark:text-white">{t('biosChangeRequests.newBiosPlaceholder')}</label>
                 <Input
                   value={newBiosId}
-                  maxLength={10}
+                  
                   onChange={(event) => {
                     setNewBiosId(event.target.value)
                     setBiosCheckResult(null)
