@@ -81,7 +81,7 @@ class CustomerController extends BaseManagerParentController
 
         $allCustomers = $query->get();
         $customers = $this->paginateCollection(
-            $allCustomers->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated)),
+            $allCustomers->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated, $scope['seller_ids'])),
             (int) $request->integer('page', 1),
             (int) ($validated['per_page'] ?? 25),
         );
@@ -90,7 +90,7 @@ class CustomerController extends BaseManagerParentController
         $biosLinkMap = $this->biosLinkMapForUsers($customerItems, $tenantId);
 
         return response()->json([
-            'data' => $customerItems->map(fn (User $user): array => $this->serializeCustomer($user, $validated, $biosLinkMap))->values(),
+            'data' => $customerItems->map(fn (User $user): array => $this->serializeCustomer($user, $validated, $biosLinkMap, $scope['seller_ids']))->values(),
             'meta' => $this->paginationMeta($customers),
         ]);
     }
@@ -139,7 +139,7 @@ class CustomerController extends BaseManagerParentController
         }
 
         $countries = $query->get()
-            ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated))
+            ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated, $scope['seller_ids']))
             ->filter(fn (User $user): bool => filled($user->country_name))
             ->groupBy(fn (User $user): string => trim((string) $user->country_name))
             ->map(fn (Collection $group, string $country): array => [
@@ -508,7 +508,7 @@ class CustomerController extends BaseManagerParentController
 
         $allCustomers = $query->get();
         $filteredCustomers = $allCustomers
-            ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated))
+            ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated, $scope['seller_ids']))
             ->values();
         $biosLinkMap = $this->biosLinkMapForUsers($filteredCustomers, $tenantId);
         $rows = $filteredCustomers
@@ -918,10 +918,11 @@ class CustomerController extends BaseManagerParentController
 
     /**
      * @param array<string, mixed> $filters
+     * @param array<int> $scopeSellerIds
      */
-    private function serializeCustomer(User $user, array $filters = [], array $biosLinkMap = []): array
+    private function serializeCustomer(User $user, array $filters = [], array $biosLinkMap = [], array $scopeSellerIds = []): array
     {
-        $license = $this->resolveDisplayLicense($user, $filters);
+        $license = $this->resolveDisplayLicense($user, $filters, $scopeSellerIds);
         $linkedBiosId = $this->resolveLinkedBiosId($user, $biosLinkMap);
         $displayBiosId = $linkedBiosId ?: $license?->bios_id;
         $hasActiveLicense = $user->customerLicenses->contains(
@@ -991,22 +992,23 @@ class CustomerController extends BaseManagerParentController
     /**
      * @param array<string, mixed> $filters
      */
-    private function resolveDisplayLicense(User $user, array $filters = []): ?License
+    private function resolveDisplayLicense(User $user, array $filters = [], array $scopeSellerIds = []): ?License
     {
         return CustomerOwnership::resolveDisplayLicense(
             $user->customerLicenses,
-            fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters),
+            fn (License $license): bool => $this->licenseMatchesScopeFilters($license, $filters, $scopeSellerIds),
             $this->hasScopedLicenseFilters($filters),
         );
     }
 
     /**
      * @param array<string, mixed> $filters
+     * @param array<int> $scopeSellerIds
      */
-    private function customerMatchesDisplayFilters(User $user, array $filters): bool
+    private function customerMatchesDisplayFilters(User $user, array $filters, array $scopeSellerIds = []): bool
     {
         $status = isset($filters['status']) && is_string($filters['status']) ? $filters['status'] : '';
-        $license = $this->resolveDisplayLicense($user, $filters);
+        $license = $this->resolveDisplayLicense($user, $filters, $scopeSellerIds);
         $countryName = isset($filters['country_name']) && is_string($filters['country_name']) ? trim($filters['country_name']) : '';
 
         if ($countryName !== '' && $user->country_name !== $countryName) {
@@ -1035,8 +1037,9 @@ class CustomerController extends BaseManagerParentController
 
     /**
      * @param array<string, mixed> $filters
+     * @param array<int> $scopeSellerIds
      */
-    private function licenseMatchesScopeFilters(License $license, array $filters): bool
+    private function licenseMatchesScopeFilters(License $license, array $filters, array $scopeSellerIds = []): bool
     {
         $resellerId = isset($filters['reseller_id']) ? (int) $filters['reseller_id'] : null;
         if ($resellerId) {
@@ -1050,6 +1053,11 @@ class CustomerController extends BaseManagerParentController
             if ((int) $license->program_id !== $programId) {
                 return false;
             }
+        }
+
+        // Check against scope seller IDs if provided (for manager_parent_id / manager_id filters)
+        if (! empty($scopeSellerIds) && ! in_array((int) $license->reseller_id, $scopeSellerIds, true)) {
+            return false;
         }
 
         return true;
