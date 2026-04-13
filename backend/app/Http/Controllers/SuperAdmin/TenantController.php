@@ -180,6 +180,31 @@ class TenantController extends BaseSuperAdminController
         ]);
     }
 
+    public function resetRevenue(Request $request, Tenant $tenant): JsonResponse
+    {
+        $validated = $request->validate([
+            'confirm_name' => ['required', 'string'],
+        ]);
+
+        if ($validated['confirm_name'] !== $tenant->name) {
+            return response()->json([
+                'message' => 'Tenant name confirmation does not match.',
+                'errors' => ['confirm_name' => ['Tenant name confirmation does not match.']],
+            ], 422);
+        }
+
+        DB::transaction(function () use ($tenant): void {
+            DB::table('activity_logs')
+                ->where('tenant_id', $tenant->id)
+                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->delete();
+        });
+
+        return response()->json([
+            'message' => 'Tenant revenue cleared successfully.',
+        ]);
+    }
+
     private function resolveUniqueSlug(string $name): string
     {
         $base = Str::slug($name);

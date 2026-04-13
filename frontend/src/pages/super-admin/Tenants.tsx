@@ -50,6 +50,8 @@ export function TenantsPage() {
   const [resetTarget, setResetTarget] = useState<TenantSummary | null>(null)
   const [resetConfirmName, setResetConfirmName] = useState('')
   const [resetLabel, setResetLabel] = useState('')
+  const [resetRevenueTarget, setResetRevenueTarget] = useState<TenantSummary | null>(null)
+  const [resetRevenueConfirmName, setResetRevenueConfirmName] = useState('')
   const [backupsTarget, setBackupsTarget] = useState<TenantSummary | null>(null)
   const [createBackupTarget, setCreateBackupTarget] = useState<TenantSummary | null>(null)
   const [backupName, setBackupName] = useState('')
@@ -93,6 +95,23 @@ export function TenantsPage() {
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(msg ?? 'Reset failed. Please try again.')
+    },
+  })
+
+  const resetRevenueMutation = useMutation({
+    mutationFn: () =>
+      tenantService.resetRevenue(resetRevenueTarget!.id, {
+        confirm_name: resetRevenueConfirmName,
+      }),
+    onSuccess: (data) => {
+      toast.success(data.message)
+      setResetRevenueTarget(null)
+      setResetRevenueConfirmName('')
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] })
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Reset revenue failed. Please try again.')
     },
   })
 
@@ -315,6 +334,16 @@ export function TenantsPage() {
               >
                 <RotateCcw className="me-2 h-4 w-4" />
                 {t('superAdmin.pages.tenants.resetTenant', { defaultValue: 'Reset Tenant' })}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-amber-600 focus:text-amber-600 dark:text-amber-400 dark:focus:text-amber-400"
+                onSelect={() => {
+                  setResetRevenueTarget(row)
+                  setResetRevenueConfirmName('')
+                }}
+              >
+                <RotateCcw className="me-2 h-4 w-4" />
+                {t('superAdmin.pages.tenants.resetRevenue', { defaultValue: 'Reset Revenue' })}
               </DropdownMenuItem>
               <DropdownMenuItem className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400" onSelect={() => setDeleteTarget(row)}>
                 {t('common.delete')}
@@ -613,6 +642,62 @@ export function TenantsPage() {
               onClick={() => resetMutation.mutate()}
             >
               {resetMutation.isPending ? t('superAdmin.pages.tenants.resetting', { defaultValue: 'Resetting...' }) : t('superAdmin.pages.tenants.resetTenant', { defaultValue: 'Reset Tenant' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Revenue Dialog */}
+      <Dialog
+        open={resetRevenueTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetRevenueTarget(null)
+            setResetRevenueConfirmName('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-amber-600 dark:text-amber-400">{t('superAdmin.pages.tenants.resetRevenueTitle', { defaultValue: 'Reset Revenue' })}</DialogTitle>
+            <DialogDescription>
+              This will permanently delete all revenue records (activity logs) for{' '}
+              <span className="font-semibold text-slate-900 dark:text-white">{resetRevenueTarget?.name}</span>. The revenue counter will reset to $0.00.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">What will be deleted:</p>
+              <ul className="mt-1 list-inside list-disc text-sm text-amber-700 dark:text-amber-400">
+                <li>All license activation activity logs</li>
+                <li>All license renewal activity logs</li>
+                <li>Total revenue will reset to $0.00</li>
+              </ul>
+              <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">Customers and licenses will <strong>NOT</strong> be deleted.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reset-revenue-confirm">
+                {t('superAdmin.pages.tenants.typeToConfirm', { defaultValue: 'Type' })} <span className="font-mono font-semibold text-slate-900 dark:text-white">{resetRevenueTarget?.name}</span> {t('superAdmin.pages.tenants.toConfirm', { defaultValue: 'to confirm' })}
+              </Label>
+              <Input
+                id="reset-revenue-confirm"
+                placeholder={resetRevenueTarget?.name ?? ''}
+                value={resetRevenueConfirmName}
+                onChange={(e) => setResetRevenueConfirmName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setResetRevenueTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={resetRevenueConfirmName !== resetRevenueTarget?.name || resetRevenueMutation.isPending}
+              onClick={() => resetRevenueMutation.mutate()}
+            >
+              {resetRevenueMutation.isPending ? t('superAdmin.pages.tenants.resetting', { defaultValue: 'Resetting...' }) : t('superAdmin.pages.tenants.resetRevenue', { defaultValue: 'Reset Revenue' })}
             </Button>
           </DialogFooter>
         </DialogContent>

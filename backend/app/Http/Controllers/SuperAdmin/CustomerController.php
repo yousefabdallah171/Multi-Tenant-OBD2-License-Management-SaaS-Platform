@@ -627,6 +627,65 @@ class CustomerController extends BaseSuperAdminController
         ]);
     }
 
+    public function destroyRevenue(User $user): JsonResponse
+    {
+        abort_unless(($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value, 404);
+
+        $deletedCustomer = \App\Models\DeletedCustomer::query()
+            ->where('original_customer_id', $user->id)
+            ->first();
+
+        // If customer is still in deleted_customers table
+        if ($deletedCustomer) {
+            $snapshot = $deletedCustomer->snapshot;
+            $activityLogIds = $snapshot['activity_log_ids'] ?? [];
+
+            if (! empty($activityLogIds)) {
+                DB::transaction(function () use ($deletedCustomer, $activityLogIds): void {
+                    DB::table('activity_logs')
+                        ->whereIn('id', $activityLogIds)
+                        ->delete();
+
+                    $deletedCustomer->update(['revenue_total' => 0]);
+                });
+            }
+
+            return response()->json([
+                'message' => 'Customer revenue deleted successfully.',
+            ]);
+        }
+
+        // If customer was deleted long ago and not in deleted_customers table,
+        // search for activity logs by customer name from the snapshot or metadata
+        $activityLogCount = DB::table('activity_logs')
+            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->where(function ($query) use ($user) {
+                $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$user->id])
+                    ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$user->name]);
+            })
+            ->count();
+
+        if ($activityLogCount === 0) {
+            return response()->json([
+                'message' => 'No revenue records found for this customer.',
+            ]);
+        }
+
+        DB::transaction(function () use ($user): void {
+            DB::table('activity_logs')
+                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->where(function ($query) use ($user) {
+                    $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$user->id])
+                        ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$user->name]);
+                })
+                ->delete();
+        });
+
+        return response()->json([
+            'message' => 'Customer revenue deleted successfully.',
+        ]);
+    }
+
     private function canDeleteLicense(License $license): bool
     {
         return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);

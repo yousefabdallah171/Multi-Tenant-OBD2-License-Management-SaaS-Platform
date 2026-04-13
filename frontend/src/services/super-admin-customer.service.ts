@@ -44,6 +44,10 @@ export const superAdminCustomerService = {
     const { data } = await api.delete<{ message: string }>(`/super-admin/customers/${id}`)
     return data
   },
+  async removeRevenue(id: number) {
+    const { data } = await api.delete<{ message: string }>(`/super-admin/customers/${id}/revenue`)
+    return data
+  },
   async directChangeBiosId(licenseId: number, newBiosId: string) {
     const { data } = await api.post<{ success: boolean; message: string }>('/super-admin/bios-change-requests/direct', {
       license_id: licenseId,

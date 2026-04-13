@@ -378,6 +378,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/dashboard/recent-activity', [SuperAdminDashboardController::class, 'recentActivity']);
 
         Route::get('/tenants/{tenant}/stats', [SuperAdminTenantController::class, 'stats']);
+        Route::post('/tenants/{tenant}/reset-revenue', [SuperAdminTenantController::class, 'resetRevenue']);
         Route::get('/tenants/{tenant}/backups', [SuperAdminTenantResetController::class, 'index']);
         Route::post('/tenants/{tenant}/reset', [SuperAdminTenantResetController::class, 'reset']);
         Route::post('/tenants/{tenant}/backups/create', [SuperAdminTenantResetController::class, 'create']);
@@ -404,6 +405,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/customers/{user}', [SuperAdminCustomerController::class, 'show']);
         Route::put('/customers/{user}', [SuperAdminCustomerController::class, 'update']);
         Route::delete('/customers/{user}', [SuperAdminCustomerController::class, 'destroy']);
+        Route::delete('/customers/{user}/revenue', [SuperAdminCustomerController::class, 'destroyRevenue']);
         Route::get('/deleted-customers', [SuperAdminDeletedCustomerController::class, 'index']);
         Route::get('/deleted-customers/{deletedCustomer}', [SuperAdminDeletedCustomerController::class, 'show']);
         Route::post('/deleted-customers/{deletedCustomer}/restore', [SuperAdminDeletedCustomerController::class, 'restore']);

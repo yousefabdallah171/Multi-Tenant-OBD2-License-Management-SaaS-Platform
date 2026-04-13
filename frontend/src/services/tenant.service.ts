@@ -68,6 +68,10 @@ export const tenantService = {
     const { data } = await api.post<{ message: string; data: TenantBackup }>(`/super-admin/tenants/${tenantId}/reset`, payload)
     return data
   },
+  async resetRevenue(tenantId: number, payload: { confirm_name: string }) {
+    const { data } = await api.post<{ message: string }>(`/super-admin/tenants/${tenantId}/reset-revenue`, payload)
+    return data
+  },
   async restoreBackup(tenantId: number, backupId: number, payload: { confirm_name: string }) {
     const { data } = await api.post<{ message: string }>(`/super-admin/tenants/${tenantId}/backups/${backupId}/restore`, payload)
     return data

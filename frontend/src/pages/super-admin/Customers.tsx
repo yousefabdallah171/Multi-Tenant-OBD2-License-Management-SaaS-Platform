@@ -15,9 +15,11 @@ import { RoleBadge } from '@/components/shared/RoleBadge'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useLanguage } from '@/hooks/useLanguage'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
@@ -62,6 +64,7 @@ export function CustomersPage() {
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SuperAdminCustomerSummary | null>(null)
+  const [deleteIncludeRevenue, setDeleteIncludeRevenue] = useState(false)
   const [biosChangeTarget, setBiosChangeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [newBiosId, setNewBiosId] = useState('')
   const [biosCheckResult, setBiosCheckResult] = useState<{ available: boolean; is_blacklisted: boolean; message: string; linked_username: string | null } | null>(null)
@@ -241,10 +244,15 @@ export function CustomersPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (customerId: number) => superAdminCustomerService.remove(customerId),
+    mutationFn: async (customerId: number) => {
+      await superAdminCustomerService.remove(customerId)
+      // Always delete revenue when customer is deleted
+      await superAdminCustomerService.removeRevenue(customerId)
+    },
     onSuccess: () => {
       toast.success(t('common.deleted', { defaultValue: 'Deleted successfully.' }))
       setDeleteTarget(null)
+      setDeleteIncludeRevenue(false)
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
@@ -769,7 +777,48 @@ export function CustomersPage() {
         confirmLabel={isPausedPendingLicense(resumeTarget) ? t('common.continue', { defaultValue: 'Continue' }) : t('common.resume')}
         onConfirm={() => resumeTarget?.license_id && resumeMutation.mutate(resumeTarget.license_id)}
       />
-      <ConfirmDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)} title={t('common.delete')} description={deleteTarget?.name ?? ''} confirmLabel={t('common.delete')} isDestructive onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} />
+      {/* Delete Customer Dialog */}
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteTarget(null)
+          setDeleteIncludeRevenue(false)
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 dark:text-red-400">{t('common.delete')}</DialogTitle>
+            <DialogDescription>
+              {t('common.deleteCustomer', { defaultValue: 'Delete customer' })} <span className="font-semibold text-slate-900 dark:text-white">{deleteTarget?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
+              <p className="text-sm font-medium text-red-800 dark:text-red-300">Will be deleted:</p>
+              <ul className="mt-1 list-inside list-disc text-sm text-red-700 dark:text-red-400">
+                <li>Customer record</li>
+                <li>All licenses</li>
+                <li>All revenue records (activity logs)</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => {
+              setDeleteTarget(null)
+              setDeleteIncludeRevenue(false)
+            }}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+            >
+              {deleteMutation.isPending ? t('common.deleting', { defaultValue: 'Deleting...' }) : t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CustomerNoteDialog isOpen={notesCustomerId !== null} onClose={() => setNotesCustomerId(null)} customerId={notesCustomerId ?? 0} />
     </div>
