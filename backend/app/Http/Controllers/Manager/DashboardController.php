@@ -153,14 +153,15 @@ class DashboardController extends BaseManagerController
     private function revenueChartData(Request $request): array
     {
         $managerId = $this->currentManager($request)->id;
+        $tenantId = $this->currentTenantId($request);
         $sellerIds = $this->teamSellerIds($request);
 
-        return Cache::remember($this->cacheKey($managerId, 'revenue-chart'), now()->addSeconds(60), function () use ($sellerIds): array {
+        return Cache::remember($this->cacheKey($managerId, 'revenue-chart'), now()->addSeconds(60), function () use ($tenantId, $sellerIds): array {
             if ($sellerIds === []) {
                 return [];
             }
 
-            return RevenueAnalytics::baseQuery([], $this->currentTenantId($request), $sellerIds)
+            return RevenueAnalytics::baseQuery([], $tenantId, $sellerIds)
                 ->join('users as resellers', 'resellers.id', '=', 'activity_logs.user_id')
                 ->where('activity_logs.created_at', '>=', CarbonImmutable::now()->startOfMonth()->subMonths(11))
                 ->selectRaw('activity_logs.user_id as reseller_id, resellers.name as reseller')

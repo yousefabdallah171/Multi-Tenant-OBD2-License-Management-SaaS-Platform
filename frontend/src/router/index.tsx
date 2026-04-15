@@ -74,6 +74,7 @@ const TeamMemberDetailPage = lazyNamed(() => import('@/pages/manager-parent/Team
 
 const ApiStatusPage = lazyNamed(() => import('@/pages/super-admin/ApiStatus'), 'ApiStatusPage')
 const SuperAdminBiosChangeRequestsPage = lazyNamed(() => import('@/pages/super-admin/BiosChangeRequests'), 'BiosChangeRequestsPage')
+const SuperAdminBiosChangeAuditPage = lazyNamed(() => import('@/pages/super-admin/BiosChangeAudit'), 'BiosChangeAuditPage')
 const BiosBlacklistPage = lazyNamed(() => import('@/pages/super-admin/BiosBlacklist'), 'BiosBlacklistPage')
 const SuperAdminBiosConflictsPage = lazyNamed(() => import('@/pages/super-admin/BiosConflicts'), 'BiosConflictsPage')
 const SuperAdminBiosDetailsPage = lazyNamed(() => import('@/pages/super-admin/BiosDetails'), 'BiosDetailsPage')
@@ -84,7 +85,13 @@ const SuperAdminCustomerDetailPage = lazyNamed(() => import('@/pages/super-admin
 const DeletedCustomersPage = lazyNamed(() => import('@/pages/super-admin/DeletedCustomers'), 'DeletedCustomersPage')
 const SuperAdminRenewLicensePage = lazyNamed(() => import('@/pages/super-admin/RenewLicense'), 'RenewLicensePageForSuperAdmin')
 const DashboardPage = lazyNamed(() => import('@/pages/super-admin/Dashboard'), 'DashboardPage')
+const SuperAdminActivityPage = lazyNamed(() => import('@/pages/super-admin/Activity'), 'ActivityPage')
+const SuperAdminIpAnalyticsPage = lazyNamed(() => import('@/pages/super-admin/IpAnalytics'), 'IpAnalyticsPage')
 const LogsPage = lazyNamed(() => import('@/pages/super-admin/Logs'), 'LogsPage')
+const SuperAdminProgramLogsPage = lazyNamed(() => import('@/pages/super-admin/ProgramLogs'), 'ProgramLogsPage')
+const SuperAdminResellerPaymentDetailPage = lazyNamed(() => import('@/pages/super-admin/ResellerPaymentDetail'), 'ResellerPaymentDetailPage')
+const SuperAdminResellerPaymentsPage = lazyNamed(() => import('@/pages/super-admin/ResellerPayments'), 'ResellerPaymentsPage')
+const SuperAdminResellerLogsPage = lazyNamed(() => import('@/pages/super-admin/ResellerLogs'), 'ResellerLogsPage')
 const ReportsPage = lazyNamed(() => import('@/pages/super-admin/Reports'), 'ReportsPage')
 const SettingsPage = lazyNamed(() => import('@/pages/super-admin/Settings'), 'SettingsPage')
 const TenantsPage = lazyNamed(() => import('@/pages/super-admin/Tenants'), 'TenantsPage')
@@ -93,6 +100,7 @@ const UserDetailPage = lazyNamed(() => import('@/pages/super-admin/UserDetail'),
 const AdminManagementPage = lazyNamed(() => import('@/pages/super-admin/AdminManagement'), 'AdminManagementPage')
 const SuperAdminProfilePage = lazyNamed(() => import('@/pages/super-admin/Profile'), 'ProfilePage')
 const SecurityLocksPage = lazyNamed(() => import('@/pages/super-admin/SecurityLocks'), 'SecurityLocksPage')
+const SuperAdminTeamNetworkPage = lazyNamed(() => import('@/pages/super-admin/TeamNetwork'), 'TeamNetworkPage')
 
 const ResellerCustomersPage = lazyNamed(() => import('@/pages/reseller/Customers'), 'CustomersPage')
 const ResellerCreateCustomerPage = lazyNamed(() => import('@/pages/reseller/CreateCustomer'), 'CreateCustomerPageForReseller')
@@ -147,17 +155,25 @@ export function AppRouter() {
                   <Route path="users" element={<UsersPage />} />
                   <Route path="users/:id" element={<UserDetailPage />} />
                   <Route path="admin-management" element={<AdminManagementPage />} />
+                  <Route path="team-network" element={<SuperAdminTeamNetworkPage />} />
                   <Route path="bios-blacklist" element={<BiosBlacklistPage />} />
                   <Route path="bios-history" element={<SuperAdminBiosHistoryPage />} />
                   <Route path="bios-details" element={<SuperAdminBiosDetailsPage />} />
                   <Route path="bios-details/:biosId" element={<SuperAdminBiosDetailsPage />} />
                   <Route path="bios-conflicts" element={<SuperAdminBiosConflictsPage />} />
                   <Route path="bios-change-requests" element={<SuperAdminBiosChangeRequestsPage />} />
+                  <Route path="bios-change-audit" element={<SuperAdminBiosChangeAuditPage />} />
                   <Route path="username-management" element={<Navigate to="../admin-management" replace />} />
                   <Route path="security-locks" element={<SecurityLocksPage />} />
                   <Route path="financial-reports" element={<Navigate to="../reports" replace />} />
                   <Route path="reports" element={<ReportsPage />} />
+                  <Route path="program-logs" element={<SuperAdminProgramLogsPage />} />
+                  <Route path="reseller-payments" element={<SuperAdminResellerPaymentsPage />} />
+                  <Route path="reseller-payments/:resellerId" element={<SuperAdminResellerPaymentDetailPage />} />
+                  <Route path="ip-analytics" element={<SuperAdminIpAnalyticsPage />} />
                   <Route path="logs" element={<LogsPage />} />
+                  <Route path="activity" element={<SuperAdminActivityPage />} />
+                  <Route path="reseller-logs" element={<SuperAdminResellerLogsPage />} />
                   <Route path="api-status" element={<ApiStatusPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<SuperAdminProfilePage />} />

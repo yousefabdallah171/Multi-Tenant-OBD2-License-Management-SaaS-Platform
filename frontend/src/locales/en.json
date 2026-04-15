@@ -290,6 +290,7 @@
   "superAdmin": {
     "layout": {
       "title": "Super Admin Control Center",
+      "eyebrow": "Super Admin",
       "copyright": "Copyright 2025 OBD2SW.com"
     },
     "nav": {
@@ -299,16 +300,24 @@
       "deletedCustomers": "Deleted Customers",
       "users": "Users",
       "adminManagement": "Admin Mgmt",
+      "teamNetwork": "Team Network",
       "biosBlacklist": "BIOS Blacklist",
       "biosHistory": "BIOS History",
       "biosDetails": "BIOS Details",
       "biosChangeRequests": "BIOS Change Requests",
+      "biosChangeAudit": "BIOS Change Audit",
       "biosConflicts": "BIOS Conflicts",
       "usernameManagement": "Username Mgmt",
       "securityLocks": "Security Locks",
       "financialReports": "Financial",
       "reports": "Reports",
+      "programLogs": "Program Logs",
+      "resellerPayments": "Reseller Payments",
+      "ipAnalytics": "IP Analytics",
       "logs": "Logs",
+      "activity": "Panel Activity",
+      "resellerLogs": "Reseller Logs",
+      "apiLogs": "API Logs",
       "apiStatus": "API Status",
       "settings": "Settings",
       "profile": "Profile"
@@ -334,6 +343,12 @@
         "licenseTimelineDescription": "Daily activations across the last 30 days.",
         "ipCountryDistribution": "IP Country Distribution",
         "ipCountryDistributionDescription": "Top login countries across the platform."
+      },
+      "teamNetwork": {
+        "description": "Global platform hierarchy across tenants, manager parents, managers, and resellers."
+      },
+      "activity": {
+        "description": "Platform-wide activity trail across all tenants."
       },
       "customers": {
         "title": "Customers",

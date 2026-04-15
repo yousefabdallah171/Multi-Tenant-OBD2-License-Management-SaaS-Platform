@@ -7,13 +7,14 @@ import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import type { NetworkTenantRootNode } from '@/types/manager-parent.types'
 
-type TenantRootNodeData = NetworkTenantRootNode & { lang: 'ar' | 'en' }
+type TenantRootNodeData = NetworkTenantRootNode & { lang: 'ar' | 'en'; portal?: 'manager_parent' | 'super_admin' }
 
 export const TenantRootNode = memo(function TenantRootNode({ data }: NodeProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const nodeData = data as unknown as TenantRootNodeData
   const locale = nodeData.lang === 'ar' ? 'ar-EG' : 'en-US'
+  const paths = nodeData.portal === 'super_admin' ? routePaths.superAdmin : routePaths.managerParent
 
   const visit = (href: string) => {
     navigate(href)
@@ -42,19 +43,19 @@ export const TenantRootNode = memo(function TenantRootNode({ data }: NodeProps) 
           icon={<Banknote className="size-4 text-sky-600 dark:text-sky-300" />}
           label={t('managerParent.pages.teamNetwork.revenue')}
           value={formatCurrency(nodeData.total_revenue, 'USD', locale)}
-          onClick={() => visit(routePaths.managerParent.financialReports(nodeData.lang))}
+          onClick={() => visit(paths.financialReports(nodeData.lang))}
         />
         <StatButton
           icon={<Users className="size-4 text-sky-600 dark:text-sky-300" />}
           label={t('managerParent.pages.teamNetwork.managerParents', { defaultValue: 'Manager Parents' })}
           value={String(nodeData.manager_parents_count)}
-          onClick={() => visit(`${routePaths.managerParent.teamManagement(nodeData.lang)}?role=manager`)}
+          onClick={() => visit(nodeData.portal === 'super_admin' ? `${routePaths.superAdmin.adminManagement(nodeData.lang)}?role=manager_parent` : `${routePaths.managerParent.teamManagement(nodeData.lang)}?role=manager`)}
         />
         <StatButton
           icon={<Users className="size-4 text-sky-600 dark:text-sky-300" />}
           label={t('managerParent.pages.teamNetwork.customers')}
           value={String(nodeData.total_customers)}
-          onClick={() => visit(routePaths.managerParent.customers(nodeData.lang))}
+          onClick={() => visit(paths.customers(nodeData.lang))}
         />
       </div>
     </div>

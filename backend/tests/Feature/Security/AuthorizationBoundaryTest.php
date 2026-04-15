@@ -327,7 +327,7 @@ class AuthorizationBoundaryTest extends TestCase
             ->assertJsonPath('data.0.id', $resellerA->id);
     }
 
-    public function test_manager_parent_customers_scope_uses_subtree_license_ownership_not_customer_creator(): void
+    public function test_manager_parent_customers_manager_filter_uses_direct_license_ownership(): void
     {
         $tenant = $this->createTenant();
         $managerParent = $this->createUser('manager_parent', $tenant);
@@ -346,11 +346,16 @@ class AuthorizationBoundaryTest extends TestCase
 
         $response = $this->getJson('/api/customers?manager_id='.$managerA->id)
             ->assertOk()
-            ->assertJsonPath('meta.total', 1);
+            ->assertJsonPath('meta.total', 0);
 
         $customerIds = collect($response->json('data'))->pluck('id')->all();
 
-        $this->assertSame([$scopedCustomer->id], $customerIds);
+        $this->assertSame([], $customerIds);
+
+        $this->getJson('/api/customers?reseller_id='.$resellerA->id)
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.id', $scopedCustomer->id);
     }
 
     public function test_reseller_sees_historical_customer_as_expired_after_manager_parent_takeover_and_counts_drop_to_current_owners_only(): void

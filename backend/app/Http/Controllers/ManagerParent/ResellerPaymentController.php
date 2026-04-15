@@ -41,7 +41,7 @@ class ResellerPaymentController extends BaseManagerParentController
 
         $sellers = User::query()
             ->where('tenant_id', $tenantId)
-            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->whereIn('id', $sellerIds)
             ->select(['id', 'tenant_id', 'role', 'name', 'email', 'created_at', 'created_by'])
             ->orderBy('name')
@@ -79,7 +79,7 @@ class ResellerPaymentController extends BaseManagerParentController
 
             $role = $seller?->role?->value ?? (string) $seller?->role;
 
-            if (! $seller || ! in_array($role, [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value], true)) {
+            if (! $seller || ! in_array($role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true)) {
                 throw ValidationException::withMessages(['reseller_id' => 'The selected reseller is invalid for this tenant.']);
             }
 
@@ -141,12 +141,12 @@ class ResellerPaymentController extends BaseManagerParentController
                 ->map(fn ($id): int => (int) $id)
                 ->all();
 
-            return array_values(array_unique([$managerParentId, ...$managedManagerIds, ...$resellerIds]));
+            return array_values(array_unique([...$managedManagerIds, ...$resellerIds]));
         }
 
         return User::query()
             ->where('tenant_id', $tenantId)
-            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->all();
@@ -375,7 +375,7 @@ class ResellerPaymentController extends BaseManagerParentController
 
         abort_unless(
             (int) $user->tenant_id === $this->currentTenantId($request)
-                && in_array($role, [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value], true),
+                && in_array($role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true),
             404,
         );
 
@@ -414,7 +414,7 @@ class ResellerPaymentController extends BaseManagerParentController
 
         abort_unless(
             (int) $payment->reseller?->tenant_id === $this->currentTenantId($request)
-                && in_array($role, [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value], true),
+                && in_array($role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true),
             404,
         );
 

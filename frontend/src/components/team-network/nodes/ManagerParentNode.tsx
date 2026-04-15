@@ -8,13 +8,14 @@ import { formatCurrency, cn } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import type { NetworkManagerParentNode } from '@/types/manager-parent.types'
 
-type ManagerParentNodeData = NetworkManagerParentNode & { lang: 'ar' | 'en' }
+type ManagerParentNodeData = NetworkManagerParentNode & { lang: 'ar' | 'en'; portal?: 'manager_parent' | 'super_admin' }
 
 export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const nodeData = data as unknown as ManagerParentNodeData
   const locale = nodeData.lang === 'ar' ? 'ar-EG' : 'en-US'
+  const paths = nodeData.portal === 'super_admin' ? routePaths.superAdmin : routePaths.managerParent
 
   const visit = (href: string) => {
     navigate(href)
@@ -32,7 +33,7 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
           event.preventDefault()
           event.stopPropagation()
           if (nodeData.is_current) {
-            visit(routePaths.managerParent.profile(nodeData.lang))
+            visit(paths.profile(nodeData.lang))
           }
         }}
       >
@@ -54,7 +55,7 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
           icon={<Banknote className="size-4 text-purple-600 dark:text-purple-300" />}
           label={t('managerParent.pages.teamNetwork.revenue')}
           value={formatCurrency(nodeData.revenue, 'USD', locale)}
-          onClick={() => visit(buildScopedHref(routePaths.managerParent.financialReports(nodeData.lang), {
+          onClick={() => visit(buildScopedHref(paths.financialReports(nodeData.lang), {
             manager_parent_id: nodeData.id,
             scope_name: nodeData.name,
             scope_role: 'manager_parent',
@@ -64,7 +65,7 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
           icon={<Users className="size-4 text-purple-600 dark:text-purple-300" />}
           label={t('managerParent.pages.teamNetwork.managers')}
           value={String(nodeData.managers_count)}
-          onClick={() => visit(buildScopedHref(routePaths.managerParent.teamManagement(nodeData.lang), {
+          onClick={() => visit(buildScopedHref(nodeData.portal === 'super_admin' ? routePaths.superAdmin.adminManagement(nodeData.lang) : routePaths.managerParent.teamManagement(nodeData.lang), {
             role: 'manager',
             manager_parent_id: nodeData.id,
             scope_name: nodeData.name,
@@ -75,7 +76,7 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
           icon={<Users className="size-4 text-purple-600 dark:text-purple-300" />}
           label={t('managerParent.pages.teamNetwork.resellers')}
           value={String(nodeData.resellers_count)}
-          onClick={() => visit(buildScopedHref(routePaths.managerParent.teamManagement(nodeData.lang), {
+          onClick={() => visit(buildScopedHref(nodeData.portal === 'super_admin' ? routePaths.superAdmin.adminManagement(nodeData.lang) : routePaths.managerParent.teamManagement(nodeData.lang), {
             role: 'reseller',
             manager_parent_id: nodeData.id,
             scope_name: nodeData.name,
@@ -86,7 +87,7 @@ export const ManagerParentNode = memo(function ManagerParentNode({ data }: NodeP
           icon={<Users className="size-4 text-purple-600 dark:text-purple-300" />}
           label={t('managerParent.pages.teamNetwork.customers')}
           value={String(nodeData.customers_count)}
-          onClick={() => visit(buildScopedHref(routePaths.managerParent.customers(nodeData.lang), {
+          onClick={() => visit(buildScopedHref(paths.customers(nodeData.lang), {
             manager_parent_id: nodeData.id,
             scope_name: nodeData.name,
             scope_role: 'manager_parent',

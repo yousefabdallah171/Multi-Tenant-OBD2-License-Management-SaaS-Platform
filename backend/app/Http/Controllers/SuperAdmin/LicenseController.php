@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Models\BiosUsernameLink;
+use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
 use App\Services\ExternalApiService;
 use App\Services\LicenseService;
 use App\Support\CustomerOwnership;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class LicenseController extends BaseSuperAdminController
@@ -171,5 +174,77 @@ class LicenseController extends BaseSuperAdminController
             'message' => 'License activated successfully',
             'data' => $license,
         ], 201);
+    }
+
+    public function forceExpire(Request $request, License $license): JsonResponse
+    {
+        $license->loadMissing(['program', 'customer', 'reseller']);
+        $program = $license->program;
+        $apiKey = $program?->getDecryptedApiKey();
+        $externalResponse = 'Local-only force expiration.';
+
+        if ($apiKey !== null && $license->external_username) {
+            try {
+                $response = $this->externalApiService->deactivateUser(
+                    $apiKey,
+                    (string) $license->external_username,
+                    $program?->external_api_base_url,
+                );
+                $externalResponse = (string) ($response['data']['response'] ?? $externalResponse);
+            } catch (\Throwable $exception) {
+                Log::warning('Super admin force-expire external deactivation failed.', [
+                    'license_id' => $license->id,
+                    'bios_id' => $license->bios_id,
+                    'message' => $exception->getMessage(),
+                ]);
+                $externalResponse = 'External deactivation failed; license expired locally.';
+            }
+        }
+
+        $expired = DB::transaction(function () use ($license, $request, $externalResponse): License {
+            $previousStatus = (string) $license->status;
+
+            $license->forceFill([
+                'status' => 'expired',
+                'expires_at' => now(),
+                'external_deletion_response' => $externalResponse,
+                'scheduled_at' => null,
+                'scheduled_timezone' => null,
+                'scheduled_last_attempt_at' => null,
+                'scheduled_failed_at' => null,
+                'scheduled_failure_message' => null,
+                'is_scheduled' => false,
+                'paused_at' => null,
+                'pause_remaining_minutes' => null,
+                'pause_reason' => null,
+            ])->save();
+
+            ActivityLog::create([
+                'tenant_id' => $license->tenant_id,
+                'user_id' => $request->user()?->id,
+                'action' => 'license.force_expired',
+                'description' => sprintf('Super admin marked license for BIOS %s as expired.', $license->bios_id),
+                'metadata' => [
+                    'license_id' => $license->id,
+                    'customer_id' => $license->customer_id,
+                    'program_id' => $license->program_id,
+                    'bios_id' => $license->bios_id,
+                    'external_username' => $license->external_username,
+                    'previous_status' => $previousStatus,
+                ],
+                'ip_address' => $request->ip(),
+            ]);
+
+            $license->load(['customer', 'program', 'reseller']);
+
+            return $license;
+        });
+
+        LicenseCacheInvalidation::invalidateForLicense($expired);
+
+        return response()->json([
+            'message' => 'License marked as expired successfully.',
+            'data' => $expired,
+        ]);
     }
 }

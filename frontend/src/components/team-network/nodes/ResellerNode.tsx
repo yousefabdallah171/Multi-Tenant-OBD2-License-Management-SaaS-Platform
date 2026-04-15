@@ -8,13 +8,14 @@ import { formatCurrency, cn } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import type { NetworkResellerNode } from '@/types/manager-parent.types'
 
-type ResellerNodeData = NetworkResellerNode & { lang: 'ar' | 'en' }
+type ResellerNodeData = NetworkResellerNode & { lang: 'ar' | 'en'; portal?: 'manager_parent' | 'super_admin' }
 
 export const ResellerNode = memo(function ResellerNode({ data }: NodeProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const nodeData = data as unknown as ResellerNodeData
   const locale = nodeData.lang === 'ar' ? 'ar-EG' : 'en-US'
+  const paths = nodeData.portal === 'super_admin' ? routePaths.superAdmin : routePaths.managerParent
 
   const visit = (href: string) => {
     navigate(href)
@@ -30,7 +31,7 @@ export const ResellerNode = memo(function ResellerNode({ data }: NodeProps) {
         onClick={(event) => {
           event.preventDefault()
           event.stopPropagation()
-          visit(routePaths.managerParent.teamMemberDetail(nodeData.lang, nodeData.id))
+          visit(nodeData.portal === 'super_admin' ? routePaths.superAdmin.userDetail(nodeData.lang, nodeData.id) : routePaths.managerParent.teamMemberDetail(nodeData.lang, nodeData.id))
         }}
       >
         <div className="flex size-10 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold uppercase text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200">
@@ -51,13 +52,13 @@ export const ResellerNode = memo(function ResellerNode({ data }: NodeProps) {
           icon={<Banknote className="size-4 text-emerald-600 dark:text-emerald-300" />}
           label={t('managerParent.pages.teamNetwork.revenue')}
           value={formatCurrency(nodeData.revenue, 'USD', locale)}
-          onClick={() => visit(routePaths.managerParent.resellerPaymentDetail(nodeData.lang, nodeData.id))}
+          onClick={() => visit(paths.resellerPaymentDetail(nodeData.lang, nodeData.id))}
         />
 <StatButton
           icon={<Users className="size-4 text-emerald-600 dark:text-emerald-300" />}
           label={t('managerParent.pages.teamNetwork.customers')}
           value={String(nodeData.customers_count)}
-          onClick={() => visit(buildScopedHref(routePaths.managerParent.customers(nodeData.lang), {
+          onClick={() => visit(buildScopedHref(paths.customers(nodeData.lang), {
             reseller_id: nodeData.id,
             scope_name: nodeData.name,
             scope_role: 'reseller',

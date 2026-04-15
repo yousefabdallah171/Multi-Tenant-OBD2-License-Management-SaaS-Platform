@@ -89,16 +89,20 @@ export function CustomersPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const initialStatus = searchParams.get('status')
-  const [page, setPage] = useState(Number(searchParams.get('page') || 1))
-  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 25))
-  const [search, setSearch] = useState(searchParams.get('search') || '')
-  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
-    STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
-  )
-  const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
-  const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
-  const [countryName, setCountryName] = useState(searchParams.get('country_name') || '')
+  const urlPage = parsePositiveIntegerParam(searchParams.get('page')) || 1
+  const urlPerPage = parsePositiveIntegerParam(searchParams.get('per_page')) || 25
+  const urlSearch = normalizeSearchParam(searchParams.get('search'))
+  const urlStatus = parseCustomerStatusParam(searchParams.get('status'))
+  const urlResellerId = parsePositiveIntegerParam(searchParams.get('reseller_id'))
+  const urlProgramId = parsePositiveIntegerParam(searchParams.get('program_id'))
+  const urlCountryName = normalizeSearchParam(searchParams.get('country_name'))
+  const [page, setPage] = useState(urlPage)
+  const [perPage, setPerPage] = useState(urlPerPage)
+  const [search, setSearch] = useState(urlSearch)
+  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(urlStatus)
+  const [resellerId, setResellerId] = useState<number | ''>(urlResellerId)
+  const [programId, setProgramId] = useState<number | ''>(urlProgramId)
+  const [countryName, setCountryName] = useState(urlCountryName)
   const [activationOpen, setActivationOpen] = useState(false)
   const [activationStep, setActivationStep] = useState(0)
   const [activationForm, setActivationForm] = useState<ActivationFormState>(() => createEmptyActivationForm(displayTimezone))
@@ -123,7 +127,7 @@ export function CustomersPage() {
   const exportParams = useMemo(
     () => ({
       ...customerFilterParams,
-      status: status === 'all' ? '' : status,
+      status: status === 'all' ? undefined : status,
     }),
     [customerFilterParams, status],
   )
@@ -135,7 +139,7 @@ export function CustomersPage() {
         page,
         per_page: perPage,
         ...customerFilterParams,
-        status: status === 'all' ? '' : status,
+        status: status === 'all' ? undefined : status,
       }),
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
   })
@@ -153,7 +157,7 @@ export function CustomersPage() {
     queryKey: ['manager', 'customers', 'countries', search, status, resellerId, programId],
     queryFn: () => managerService.getCustomerCountries({
       search: search || undefined,
-      status: status === 'all' ? '' : status,
+      status: status === 'all' ? undefined : status,
       reseller_id: resellerId || undefined,
       program_id: programId || undefined,
     }),
@@ -548,18 +552,15 @@ export function CustomersPage() {
     },
   ], [allVisibleSelected, lang, locale, location.pathname, location.search, navigate, selectableIds, selectedLicenseIds, someVisibleSelected, t, retryScheduledMutation.isPending, cancelPendingMutation.isPending])
 
-  // Reset all filters when navigating to clean URL (e.g. sidebar click)
   useEffect(() => {
-    if (searchParams.toString() === '') {
-      setPage(1)
-      setPerPage(25)
-      setSearch('')
-      setStatus('all')
-      setResellerId('')
-      setProgramId('')
-      setCountryName('')
-    }
-  }, [searchParams])
+    setPage(urlPage)
+    setPerPage(urlPerPage)
+    setSearch(urlSearch)
+    setStatus(urlStatus)
+    setResellerId(urlResellerId)
+    setProgramId(urlProgramId)
+    setCountryName(urlCountryName)
+  }, [urlCountryName, urlPage, urlPerPage, urlProgramId, urlResellerId, urlSearch, urlStatus])
 
   useEffect(() => {
     const next = new URLSearchParams()
@@ -570,8 +571,10 @@ export function CustomersPage() {
     if (resellerId) next.set('reseller_id', String(resellerId))
     if (programId) next.set('program_id', String(programId))
     if (countryName) next.set('country_name', countryName)
-    setSearchParams(next, { replace: true })
-  }, [countryName, page, perPage, programId, resellerId, search, setSearchParams, status])
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [countryName, page, perPage, programId, resellerId, search, searchParams, setSearchParams, status])
 
   return (
     <div className="space-y-6">
@@ -999,6 +1002,38 @@ export function CustomersPage() {
 
 function resolveCustomerApiUsername(row: ManagerCustomerSummary) {
   return row.external_username || row.username || '-'
+}
+
+function parsePositiveIntegerParam(value: string | null): number | '' {
+  if (!value || value === 'null' || value === 'undefined') {
+    return ''
+  }
+
+  const parsed = Number(value)
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return ''
+  }
+
+  return parsed
+}
+
+function normalizeSearchParam(value: string | null): string {
+  if (!value || value === 'null' || value === 'undefined') {
+    return ''
+  }
+
+  return value
+}
+
+function parseCustomerStatusParam(value: string | null): (typeof STATUS_OPTIONS)[number] {
+  if (!value || value === 'null' || value === 'undefined') {
+    return 'all'
+  }
+
+  return STATUS_OPTIONS.includes(value as (typeof STATUS_OPTIONS)[number])
+    ? (value as (typeof STATUS_OPTIONS)[number])
+    : 'all'
 }
 
 function resolveUserRole(role?: string | null): UserRole | null {

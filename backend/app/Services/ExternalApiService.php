@@ -133,6 +133,7 @@ class ExternalApiService
                 'data' => ['raw' => $body],
                 'status_code' => $statusCode,
             ],
+            $this->fastFailOptions(),
         );
     }
 

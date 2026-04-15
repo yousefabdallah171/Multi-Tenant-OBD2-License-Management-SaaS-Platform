@@ -55,6 +55,10 @@ export const superAdminCustomerService = {
     })
     return data
   },
+  async forceExpireLicense(licenseId: number) {
+    const { data } = await api.post<{ message: string }>(`/super-admin/licenses/${licenseId}/force-expire`)
+    return data
+  },
   async getExpiring() {
     const { data } = await api.get<{ data: { day1: number; day3: number; day7: number; expired: number } }>('/super-admin/licenses/expiring')
     return data

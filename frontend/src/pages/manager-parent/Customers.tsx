@@ -143,7 +143,7 @@ export function CustomersPage() {
   const exportParams = useMemo(
     () => ({
       ...customerFilterParams,
-      status: status === 'all' ? '' : status,
+      status: status === 'all' ? undefined : status,
     }),
     [customerFilterParams, status],
   )
@@ -155,7 +155,7 @@ export function CustomersPage() {
         page,
         per_page: perPage,
         ...customerFilterParams,
-        status: status === 'all' ? '' : status,
+        status: status === 'all' ? undefined : status,
       }),
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
   })
@@ -178,7 +178,7 @@ export function CustomersPage() {
     queryKey: ['manager-parent', 'customers', 'countries', search, status, managerParentId, managerId, resellerId, programId],
     queryFn: () => customerService.getCountries({
       search: search || undefined,
-      status: status === 'all' ? '' : status,
+      status: status === 'all' ? undefined : status,
       manager_parent_id: managerParentId || undefined,
       manager_id: managerId || undefined,
       reseller_id: resellerId || undefined,

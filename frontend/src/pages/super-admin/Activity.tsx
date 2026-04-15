@@ -1,0 +1,133 @@
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Download, UserRound } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
+import { useLanguage } from '@/hooks/useLanguage'
+import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
+import { superAdminPlatformService } from '@/services/super-admin-platform.service'
+
+export function ActivityPage() {
+  const { t } = useTranslation()
+  const { lang } = useLanguage()
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(12)
+  const [action, setAction] = useState('')
+  const [range, setRange] = useState<DateRangeValue>({ from: '', to: '' })
+
+  const activityQuery = useQuery({
+    queryKey: ['super-admin', 'activity', page, perPage, action, range.from, range.to],
+    queryFn: () => superAdminPlatformService.getActivity({ page, per_page: perPage, action, from: range.from, to: range.to }),
+  })
+
+  const meta = activityQuery.data?.meta
+  const entries = useMemo(() => activityQuery.data?.data ?? [], [activityQuery.data?.data])
+  const totalPages = useMemo(() => meta?.last_page ?? 1, [meta?.last_page])
+  const actionOptions = useMemo(() => Array.from(new Set(entries.map((entry) => entry.action))).sort(), [entries])
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={t('superAdmin.nav.activity')}
+        description={t('superAdmin.pages.activity.description')}
+        actions={
+          <Button type="button" onClick={() => void superAdminPlatformService.exportActivity({ action, from: range.from, to: range.to, per_page: perPage, page })}>
+            <Download className="me-2 h-4 w-4" />
+            {t('managerParent.pages.activity.export')}
+          </Button>
+        }
+      />
+
+      <Card>
+        <CardContent className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+          <select
+            value={action}
+            onChange={(event) => {
+              setAction(event.target.value)
+              setPage(1)
+            }}
+            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+          >
+            <option value="">{t('managerParent.pages.activity.allActions')}</option>
+            {actionOptions.map((option) => (
+              <option key={option} value={option}>
+                {formatActivityActionLabel(option, t)}
+              </option>
+            ))}
+          </select>
+          <DateRangePicker value={range} onChange={setRange} />
+        </CardContent>
+      </Card>
+
+      <div className="space-y-4">
+        {entries.map((entry) => (
+          <Card key={entry.id}>
+            <CardContent className="flex gap-4 p-6">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+                <UserRound className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-slate-950 dark:text-white">{entry.user?.name ?? t('managerParent.pages.activity.system')}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{formatActivityActionLabel(entry.action, t)}</p>
+                    {entry.tenant_name ? <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{entry.tenant_name}</p> : null}
+                    {entry.description ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p> : null}
+                  </div>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(entry.metadata ?? {}).slice(0, 6).map(([key, value]) => (
+                    <span key={key} className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      {key}: {String(value)}
+                    </span>
+                  ))}
+                  {entry.ip_address ? <span className="rounded-full bg-sky-100 px-3 py-1 text-sm text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">{entry.ip_address}</span> : null}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {!activityQuery.isLoading && entries.length === 0 ? (
+          <EmptyState title={t('common.noData')} description={t('managerParent.pages.activity.noMatches')} />
+        ) : null}
+      </div>
+
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-slate-500 dark:text-slate-400">
+          <span>{t('managerParent.pages.activity.totalEntries', { count: meta?.total ?? 0 })}</span>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2">
+              <span>{t('common.rowsPerPage')}</span>
+              <select
+                value={perPage}
+                onChange={(event) => {
+                  setPerPage(Number(event.target.value))
+                  setPage(1)
+                }}
+                className="h-9 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value={12}>12</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </label>
+            <Button type="button" variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>
+              {t('common.previous')}
+            </Button>
+            <span>{page} / {totalPages}</span>
+            <Button type="button" variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>
+              {t('common.next')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

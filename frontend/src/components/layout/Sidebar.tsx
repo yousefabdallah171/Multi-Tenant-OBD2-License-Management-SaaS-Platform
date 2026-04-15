@@ -30,12 +30,15 @@ const superAdminItems: NavItem[] = [
   { key: 'customers', icon: UserRound, href: routePaths.superAdmin.customers, translationKey: 'superAdmin.nav.customers' },
   { key: 'deletedCustomers', icon: Trash2, href: routePaths.superAdmin.deletedCustomers, translationKey: 'superAdmin.nav.deletedCustomers' },
   { key: 'adminManagementGroup', icon: Users, href: routePaths.superAdmin.adminManagement, translationKey: 'superAdmin.nav.adminManagement' },
+  { key: 'teamNetwork', icon: Network, href: routePaths.superAdmin.teamNetwork, translationKey: 'superAdmin.nav.teamNetwork' },
   { key: 'biosChangeRequestsTopLevel', icon: ClipboardList, href: routePaths.superAdmin.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
   { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },
   { key: 'securityLocks', icon: ShieldBan, href: routePaths.superAdmin.securityLocks, translationKey: 'superAdmin.nav.securityLocks' },
   { key: 'reports', icon: BarChart3, href: routePaths.superAdmin.reports, translationKey: 'superAdmin.nav.reports' },
-  { key: 'logs', icon: ScrollText, href: routePaths.superAdmin.logs, translationKey: 'superAdmin.nav.logs' },
-  { key: 'apiStatus', icon: Activity, href: routePaths.superAdmin.apiStatus, translationKey: 'superAdmin.nav.apiStatus' },
+  { key: 'programLogs', icon: FileText, href: routePaths.superAdmin.programLogs, translationKey: 'superAdmin.nav.programLogs' },
+  { key: 'resellerPayments', icon: BarChart3, href: routePaths.superAdmin.resellerPayments, translationKey: 'superAdmin.nav.resellerPayments' },
+  { key: 'ipAnalytics', icon: Activity, href: routePaths.superAdmin.ipAnalytics, translationKey: 'superAdmin.nav.ipAnalytics' },
+  { key: 'logsGroup', icon: ScrollText, href: routePaths.superAdmin.activity, translationKey: 'superAdmin.nav.logs' },
   { key: 'settingsGroup', icon: Settings, href: routePaths.superAdmin.settings, translationKey: 'superAdmin.nav.settings' },
 ]
 
@@ -102,6 +105,12 @@ export function Sidebar() {
     routePaths.managerParent.resellerLogs(lang),
     routePaths.managerParent.apiStatus(lang),
   ]), [lang])
+  const superAdminLogsChildPaths = useMemo(() => ([
+    routePaths.superAdmin.activity(lang),
+    routePaths.superAdmin.resellerLogs(lang),
+    routePaths.superAdmin.logs(lang),
+    routePaths.superAdmin.apiStatus(lang),
+  ]), [lang])
   const settingsChildPaths = useMemo(() => ([
     routePaths.superAdmin.settings(lang),
     routePaths.superAdmin.profile(lang),
@@ -130,6 +139,7 @@ export function Sidebar() {
     routePaths.superAdmin.biosDetails(lang),
     routePaths.superAdmin.biosConflicts(lang),
     routePaths.superAdmin.biosChangeRequests(lang),
+    routePaths.superAdmin.biosChangeAudit(lang),
   ]), [lang])
   const isIos = useMemo(() => {
     if (typeof navigator === 'undefined') {
@@ -158,6 +168,8 @@ export function Sidebar() {
 
   const shouldExpandLogs = user?.role === 'manager_parent' && logsChildPaths.some((path) => location.pathname.startsWith(path))
   const [logsOpen, setLogsOpen] = useState(shouldExpandLogs)
+  const shouldExpandSuperAdminLogs = user?.role === 'super_admin' && superAdminLogsChildPaths.some((path) => location.pathname.startsWith(path))
+  const [superAdminLogsOpen, setSuperAdminLogsOpen] = useState(shouldExpandSuperAdminLogs)
   const shouldExpandSettings =
     (user?.role === 'super_admin' || user?.role === 'manager_parent') &&
     settingsChildPaths.some((path) => location.pathname.startsWith(path))
@@ -176,6 +188,12 @@ export function Sidebar() {
       setLogsOpen(true)
     }
   }, [shouldExpandLogs])
+
+  useEffect(() => {
+    if (shouldExpandSuperAdminLogs) {
+      setSuperAdminLogsOpen(true)
+    }
+  }, [shouldExpandSuperAdminLogs])
 
   useEffect(() => {
     if (shouldExpandSettings) {
@@ -225,6 +243,12 @@ export function Sidebar() {
     { key: 'resellerLogs', icon: ScrollText, href: routePaths.managerParent.resellerLogs, translationKey: 'managerParent.nav.resellerLogs' },
     { key: 'apiStatus', icon: Activity, href: routePaths.managerParent.apiStatus, translationKey: 'managerParent.nav.apiStatus' },
   ]
+  const superAdminLogsChildren: NavItem[] = [
+    { key: 'activity', icon: ScrollText, href: routePaths.superAdmin.activity, translationKey: 'superAdmin.nav.activity' },
+    { key: 'resellerLogs', icon: ScrollText, href: routePaths.superAdmin.resellerLogs, translationKey: 'superAdmin.nav.resellerLogs' },
+    { key: 'logs', icon: ScrollText, href: routePaths.superAdmin.logs, translationKey: 'superAdmin.nav.apiLogs' },
+    { key: 'apiStatus', icon: Activity, href: routePaths.superAdmin.apiStatus, translationKey: 'superAdmin.nav.apiStatus' },
+  ]
   const managerParentBiosChildren: NavItem[] = [
     { key: 'biosBlacklist', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
     { key: 'biosHistory', icon: History, href: routePaths.managerParent.biosHistory, translationKey: 'managerParent.nav.biosHistory' },
@@ -251,6 +275,7 @@ export function Sidebar() {
     { key: 'biosDetails', icon: History, href: routePaths.superAdmin.biosDetails, translationKey: 'superAdmin.nav.biosDetails' },
     { key: 'biosConflicts', icon: AlertTriangle, href: routePaths.superAdmin.biosConflicts, translationKey: 'superAdmin.nav.biosConflicts' },
     { key: 'biosChangeRequests', icon: ClipboardList, href: routePaths.superAdmin.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
+    { key: 'biosChangeAudit', icon: History, href: routePaths.superAdmin.biosChangeAudit, translationKey: 'superAdmin.nav.biosChangeAudit' },
   ]
   const managerParentSettingsChildren: NavItem[] = [
     { key: 'settings', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },
@@ -329,9 +354,12 @@ export function Sidebar() {
       </div>
     <nav className="flex-1 space-y-0.5">
       {items.map((item) => {
-        if (user?.role === 'manager_parent' && item.key === 'logsGroup') {
+        if ((user?.role === 'manager_parent' || user?.role === 'super_admin') && item.key === 'logsGroup') {
           const Icon = item.icon
           const label = t(item.translationKey)
+          const logsChildren = user.role === 'super_admin' ? superAdminLogsChildren : managerParentLogsChildren
+          const isOpen = user.role === 'super_admin' ? superAdminLogsOpen : logsOpen
+          const toggleOpen = user.role === 'super_admin' ? setSuperAdminLogsOpen : setLogsOpen
 
           return (
             <div key={item.key} className="space-y-1">
@@ -342,13 +370,13 @@ export function Sidebar() {
                   'font-medium text-slate-600 hover:bg-slate-100/60 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/40 dark:hover:text-slate-200',
                   collapsed && 'justify-center lg:px-0',
                 )}
-                onClick={() => setLogsOpen((prev) => !prev)}
+                onClick={() => toggleOpen((prev) => !prev)}
               >
                 <Icon className="h-[18px] w-[18px] shrink-0" />
                 <span className={cn(collapsed ? 'lg:hidden' : 'inline')}>{label}</span>
-                <ChevronDown className={cn('ms-auto h-3.5 w-3.5 opacity-50 transition-transform', logsOpen && 'rotate-180', collapsed && 'lg:hidden')} />
+                <ChevronDown className={cn('ms-auto h-3.5 w-3.5 opacity-50 transition-transform', isOpen && 'rotate-180', collapsed && 'lg:hidden')} />
               </button>
-              {logsOpen ? managerParentLogsChildren.map((child) => {
+              {isOpen ? logsChildren.map((child) => {
                 const ChildIcon = child.icon
                 const childLabel = t(child.translationKey)
 

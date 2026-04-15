@@ -425,19 +425,24 @@ class CustomerController extends BaseManagerParentController
         $clientName = trim((string) ($validated['client_name'] ?? ''));
         $displayName = $clientName !== '' ? $clientName : $validated['name'];
 
-        $customer->fill([
+        $customerPayload = [
             'tenant_id' => $this->currentTenantId($request),
             'name' => $displayName,
             'client_name' => $clientName !== '' ? $clientName : null,
             'email' => $email,
             'phone' => $validated['phone'] ?? null,
-            'country_name' => isset($validated['country_name']) ? trim((string) $validated['country_name']) ?: null : null,
             'role' => UserRole::CUSTOMER,
             'status' => 'active',
             'created_by' => $this->currentManagerParent($request)->id,
             'username' => $customer->username_locked ? $customer->username : $username,
             'username_locked' => true,
-        ]);
+        ];
+
+        if ($this->supportsUserCountryName()) {
+            $customerPayload['country_name'] = isset($validated['country_name']) ? trim((string) $validated['country_name']) ?: null : null;
+        }
+
+        $customer->fill($customerPayload);
 
         if (! $customer->exists) {
             $customer->password = Hash::make(Str::password(16));

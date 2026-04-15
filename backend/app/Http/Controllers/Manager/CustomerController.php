@@ -26,6 +26,8 @@ use Illuminate\Validation\ValidationException;
 
 class CustomerController extends BaseManagerController
 {
+    private ?bool $supportsUserCountryName = null;
+
     public function __construct(private readonly LicenseService $licenseService)
     {
     }
@@ -44,7 +46,7 @@ class CustomerController extends BaseManagerController
         $sellerIds = $this->teamSellerIds($request);
 
         $query = $this->teamCustomersQuery($request)
-            ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'country_name', 'role', 'created_at'])
+            ->select($this->customerUserListColumns())
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
                 ->select($this->licenseListColumns())
@@ -53,20 +55,25 @@ class CustomerController extends BaseManagerController
 
         if (! empty($validated['search'])) {
             $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $this->currentTenantId($request));
-            $query->where(function ($builder) use ($validated, $sellerIds, $linkedUsernames): void {
+            $supportsCountryName = $this->supportsUserCountryName();
+            $query->where(function ($builder) use ($validated, $sellerIds, $linkedUsernames, $supportsCountryName): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
-                    ->orWhere('email', 'like', '%'.$validated['search'].'%')
-                    ->orWhere('country_name', 'like', '%'.$validated['search'].'%')
-                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
+                    ->orWhere('email', 'like', '%'.$validated['search'].'%');
+
+                if ($supportsCountryName) {
+                    $builder->orWhere('country_name', 'like', '%'.$validated['search'].'%');
+                }
+
+                $builder->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->whereIn('reseller_id', $sellerIds)
                         ->where('bios_id', 'like', '%'.$validated['search'].'%'))
                     ->orWhereIn('username', $linkedUsernames);
             });
         }
 
-        if (! empty($validated['country_name'])) {
+        if ($this->supportsUserCountryName() && ! empty($validated['country_name'])) {
             $query->where('country_name', $validated['country_name']);
         }
 
@@ -106,7 +113,7 @@ class CustomerController extends BaseManagerController
         $sellerIds = $this->teamSellerIds($request);
 
         $query = $this->teamCustomersQuery($request)
-            ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'country_name', 'role', 'created_at'])
+            ->select($this->customerUserListColumns())
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $sellerIds)
                 ->select($this->licenseListColumns())
@@ -115,13 +122,18 @@ class CustomerController extends BaseManagerController
 
         if (! empty($validated['search'])) {
             $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $this->currentTenantId($request));
-            $query->where(function ($builder) use ($validated, $sellerIds, $linkedUsernames): void {
+            $supportsCountryName = $this->supportsUserCountryName();
+            $query->where(function ($builder) use ($validated, $sellerIds, $linkedUsernames, $supportsCountryName): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
-                    ->orWhere('email', 'like', '%'.$validated['search'].'%')
-                    ->orWhere('country_name', 'like', '%'.$validated['search'].'%')
-                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
+                    ->orWhere('email', 'like', '%'.$validated['search'].'%');
+
+                if ($supportsCountryName) {
+                    $builder->orWhere('country_name', 'like', '%'.$validated['search'].'%');
+                }
+
+                $builder->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->whereIn('reseller_id', $sellerIds)
                         ->where('bios_id', 'like', '%'.$validated['search'].'%'))
                     ->orWhereIn('username', $linkedUsernames);
@@ -130,7 +142,7 @@ class CustomerController extends BaseManagerController
 
         $countries = $query->get()
             ->filter(fn (User $user): bool => $this->customerMatchesDisplayFilters($user, $validated))
-            ->filter(fn (User $user): bool => filled($user->country_name))
+            ->filter(fn (User $user): bool => $this->supportsUserCountryName() && filled($user->country_name))
             ->groupBy(fn (User $user): string => trim((string) $user->country_name))
             ->map(fn (Collection $group, string $country): array => [
                 'country_name' => $country,
@@ -406,19 +418,24 @@ class CustomerController extends BaseManagerController
         $clientName = trim((string) ($validated['client_name'] ?? ''));
         $displayName = $clientName !== '' ? $clientName : $validated['name'];
 
-        $customer->fill([
+        $customerPayload = [
             'tenant_id' => $this->currentTenantId($request),
             'name' => $displayName,
             'client_name' => $clientName !== '' ? $clientName : null,
             'email' => $email,
             'phone' => $validated['phone'] ?? null,
-            'country_name' => isset($validated['country_name']) ? trim((string) $validated['country_name']) ?: null : null,
             'role' => UserRole::CUSTOMER,
             'status' => 'active',
             'created_by' => $this->currentManager($request)->id,
             'username' => $customer->username_locked ? $customer->username : $username,
             'username_locked' => true,
-        ]);
+        ];
+
+        if ($this->supportsUserCountryName()) {
+            $customerPayload['country_name'] = isset($validated['country_name']) ? trim((string) $validated['country_name']) ?: null : null;
+        }
+
+        $customer->fill($customerPayload);
 
         if (! $customer->exists) {
             $customer->password = Hash::make(Str::password(16));
@@ -482,7 +499,7 @@ class CustomerController extends BaseManagerController
         $query = User::query()
             ->where('tenant_id', $tenantId)
             ->whereIn('id', $customerIds)
-            ->select(['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'country_name', 'role', 'created_at'])
+            ->select($this->customerUserListColumns())
             ->with(['customerLicenses' => fn ($licenseQuery) => $licenseQuery
                 ->whereIn('reseller_id', $scope['seller_ids'])
                 ->select($this->licenseListColumns())
@@ -493,13 +510,18 @@ class CustomerController extends BaseManagerController
 
         if (! empty($validated['search'])) {
             $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $tenantId);
-            $query->where(function ($builder) use ($validated, $scope, $linkedUsernames): void {
+            $supportsCountryName = $this->supportsUserCountryName();
+            $query->where(function ($builder) use ($validated, $scope, $linkedUsernames, $supportsCountryName): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
-                    ->orWhere('email', 'like', '%'.$validated['search'].'%')
-                    ->orWhere('country_name', 'like', '%'.$validated['search'].'%')
-                    ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
+                    ->orWhere('email', 'like', '%'.$validated['search'].'%');
+
+                if ($supportsCountryName) {
+                    $builder->orWhere('country_name', 'like', '%'.$validated['search'].'%');
+                }
+
+                $builder->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->whereIn('reseller_id', $scope['seller_ids'])
                         ->where('bios_id', 'like', '%'.$validated['search'].'%'))
                     ->orWhereIn('username', $linkedUsernames);
@@ -922,6 +944,25 @@ class CustomerController extends BaseManagerController
     }
 
     /**
+     * @return list<string>
+     */
+    private function customerUserListColumns(): array
+    {
+        $columns = ['id', 'tenant_id', 'name', 'client_name', 'username', 'email', 'phone', 'role', 'created_at'];
+
+        if ($this->supportsUserCountryName()) {
+            $columns[] = 'country_name';
+        }
+
+        return $columns;
+    }
+
+    private function supportsUserCountryName(): bool
+    {
+        return $this->supportsUserCountryName ??= Schema::hasColumn('users', 'country_name');
+    }
+
+    /**
      * @param array<string, mixed> $filters
      */
     private function serializeCustomer(User $user, array $filters = [], array $biosLinkMap = []): array
@@ -940,7 +981,7 @@ class CustomerController extends BaseManagerController
             'username' => $license?->external_username ?: $user->username,
             'email' => $this->visibleEmail($user->email),
             'phone' => $user->phone,
-            'country_name' => $user->country_name,
+            'country_name' => $this->supportsUserCountryName() ? $user->country_name : null,
             'license_id' => $license?->id,
             'bios_id' => $displayBiosId,
             'external_username' => $license?->external_username,
@@ -1015,7 +1056,7 @@ class CustomerController extends BaseManagerController
         $license = $this->resolveDisplayLicense($user, $filters);
         $countryName = isset($filters['country_name']) && is_string($filters['country_name']) ? trim($filters['country_name']) : '';
 
-        if ($countryName !== '' && $user->country_name !== $countryName) {
+        if ($countryName !== '' && $this->supportsUserCountryName() && $user->country_name !== $countryName) {
             return false;
         }
 

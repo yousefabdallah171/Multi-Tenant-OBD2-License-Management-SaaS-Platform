@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class DeletedCustomerController extends BaseSuperAdminController
@@ -24,6 +25,18 @@ class DeletedCustomerController extends BaseSuperAdminController
         ]);
 
         $perPage = (int) ($validated['per_page'] ?? 10);
+
+        if (! Schema::hasTable('deleted_customers')) {
+            return response()->json([
+                'data' => [],
+                'meta' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => $perPage,
+                    'total' => 0,
+                ],
+            ]);
+        }
 
         $query = DeletedCustomer::query()
             ->with('tenant:id,name', 'deletedBy:id,name,email')

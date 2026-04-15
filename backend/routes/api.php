@@ -59,7 +59,9 @@ use App\Http\Controllers\Reseller\ResellerLogController as ResellerResellerLogCo
 use App\Http\Controllers\Reseller\SoftwareController as ResellerSoftwareController;
 use App\Http\Middleware\ActiveRoleMiddleware;
 use App\Http\Controllers\SuperAdmin\ApiStatusController;
+use App\Http\Controllers\SuperAdmin\ActivityController as SuperAdminActivityController;
 use App\Http\Controllers\SuperAdmin\BiosBlacklistController as SuperAdminBiosBlacklistController;
+use App\Http\Controllers\SuperAdmin\BiosChangeAuditController as SuperAdminBiosChangeAuditController;
 use App\Http\Controllers\SuperAdmin\BiosConflictController as SuperAdminBiosConflictController;
 use App\Http\Controllers\SuperAdmin\BiosHistoryController;
 use App\Http\Controllers\SuperAdmin\BiosDetailsController as SuperAdminBiosDetailsController;
@@ -67,9 +69,14 @@ use App\Http\Controllers\SuperAdmin\CustomerController as SuperAdminCustomerCont
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\DeletedCustomerController as SuperAdminDeletedCustomerController;
 use App\Http\Controllers\SuperAdmin\FinancialReportController;
+use App\Http\Controllers\SuperAdmin\IpAnalyticsController as SuperAdminIpAnalyticsController;
 use App\Http\Controllers\SuperAdmin\LogController;
 use App\Http\Controllers\SuperAdmin\LicenseController as SuperAdminLicenseController;
+use App\Http\Controllers\SuperAdmin\NetworkController as SuperAdminNetworkController;
+use App\Http\Controllers\SuperAdmin\ProgramLogsController as SuperAdminProgramLogsController;
 use App\Http\Controllers\SuperAdmin\ReportController;
+use App\Http\Controllers\SuperAdmin\ResellerLogController as SuperAdminResellerLogController;
+use App\Http\Controllers\SuperAdmin\ResellerPaymentController as SuperAdminResellerPaymentController;
 use App\Http\Controllers\SuperAdmin\SecurityController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
@@ -413,12 +420,14 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::delete('/deleted-customers/{deletedCustomer}', [SuperAdminDeletedCustomerController::class, 'destroy']);
         Route::get('/licenses/expiring', [SuperAdminLicenseController::class, 'expiring']);
         Route::post('/licenses/force-activate', [SuperAdminLicenseController::class, 'forceActivate']);
+        Route::post('/licenses/{license}/force-expire', [SuperAdminLicenseController::class, 'forceExpire']);
         Route::get('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'index']);
         Route::get('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'show']);
         Route::post('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'store']);
         Route::put('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'update']);
         Route::delete('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'destroy']);
         Route::post('/admin-management/{user}/reset-password', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'resetPassword']);
+        Route::get('/team/network', [SuperAdminNetworkController::class, 'index']);
         Route::get('/security/locks', [SecurityController::class, 'index']);
         Route::post('/security/unblock-email', [SecurityController::class, 'unblockEmail']);
         Route::post('/security/unblock-ip', [SecurityController::class, 'unblockIp']);
@@ -462,6 +471,24 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/financial-reports/export/csv', [FinancialReportController::class, 'exportCsv']);
         Route::get('/financial-reports/export/pdf', [FinancialReportController::class, 'exportPdf']);
 
+        Route::get('/programs', [SuperAdminProgramLogsController::class, 'programs']);
+        Route::get('/sellers', [SuperAdminProgramLogsController::class, 'sellers']);
+        Route::get('/programs/{program}/logs', [SuperAdminProgramLogsController::class, 'show']);
+        Route::get('/programs/{program}/active-users', [SuperAdminProgramLogsController::class, 'activeUsers']);
+        Route::get('/programs/{program}/stats', [SuperAdminProgramLogsController::class, 'stats']);
+        Route::get('/reseller-payments', [SuperAdminResellerPaymentController::class, 'index']);
+        Route::get('/reseller-payments/{user}', [SuperAdminResellerPaymentController::class, 'show']);
+        Route::post('/reseller-payments', [SuperAdminResellerPaymentController::class, 'storePayment']);
+        Route::put('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'updatePayment']);
+        Route::delete('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'destroyPayment']);
+        Route::post('/reseller-commissions', [SuperAdminResellerPaymentController::class, 'storeCommission']);
+        Route::get('/ip-analytics', [SuperAdminIpAnalyticsController::class, 'index']);
+        Route::get('/ip-analytics/stats', [SuperAdminIpAnalyticsController::class, 'stats']);
+        Route::get('/bios-change-audit', [SuperAdminBiosChangeAuditController::class, 'index']);
+        Route::get('/bios-change-audit/summary', [SuperAdminBiosChangeAuditController::class, 'summary']);
+        Route::get('/activity', [SuperAdminActivityController::class, 'index']);
+        Route::get('/activity/export', [SuperAdminActivityController::class, 'export']);
+        Route::get('/reseller-logs', [SuperAdminResellerLogController::class, 'index']);
         Route::get('/logs', [LogController::class, 'index']);
         Route::get('/logs/{log}', [LogController::class, 'show']);
 

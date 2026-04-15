@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
+import { Check, CheckCircle2, ChevronDown, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -46,21 +46,27 @@ export function CustomersPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const initialStatus = searchParams.get('status')
-  const [page, setPage] = useState(Number(searchParams.get('page') || 1))
-  const [perPage, setPerPage] = useState(Number(searchParams.get('per_page') || 25))
-  const [search, setSearch] = useState(searchParams.get('search') || '')
-  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(
-    STATUS_OPTIONS.includes((initialStatus ?? 'all') as (typeof STATUS_OPTIONS)[number]) ? (initialStatus as (typeof STATUS_OPTIONS)[number]) : 'all',
-  )
-  const [tenantId, setTenantId] = useState<number | ''>(searchParams.get('tenant_id') ? Number(searchParams.get('tenant_id')) : '')
-  const [resellerId, setResellerId] = useState<number | ''>(searchParams.get('reseller_id') ? Number(searchParams.get('reseller_id')) : '')
-  const [programId, setProgramId] = useState<number | ''>(searchParams.get('program_id') ? Number(searchParams.get('program_id')) : '')
-  const [countryName, setCountryName] = useState(searchParams.get('country_name') || '')
+  const urlPage = parsePositiveIntegerParam(searchParams.get('page')) || 1
+  const urlPerPage = parsePositiveIntegerParam(searchParams.get('per_page')) || 25
+  const urlSearch = normalizeSearchParam(searchParams.get('search'))
+  const urlStatus = parseCustomerStatusParam(searchParams.get('status'))
+  const urlTenantId = parsePositiveIntegerParam(searchParams.get('tenant_id'))
+  const urlResellerId = parsePositiveIntegerParam(searchParams.get('reseller_id'))
+  const urlProgramId = parsePositiveIntegerParam(searchParams.get('program_id'))
+  const urlCountryName = normalizeSearchParam(searchParams.get('country_name'))
+  const [page, setPage] = useState(urlPage)
+  const [perPage, setPerPage] = useState(urlPerPage)
+  const [search, setSearch] = useState(urlSearch)
+  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>(urlStatus)
+  const [tenantId, setTenantId] = useState<number | ''>(urlTenantId)
+  const [resellerId, setResellerId] = useState<number | ''>(urlResellerId)
+  const [programId, setProgramId] = useState<number | ''>(urlProgramId)
+  const [countryName, setCountryName] = useState(urlCountryName)
   const [editTarget, setEditTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [notesCustomerId, setNotesCustomerId] = useState<number | null>(null)
   const [pauseTarget, setPauseTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [resumeTarget, setResumeTarget] = useState<SuperAdminCustomerSummary | null>(null)
+  const [forceExpireTarget, setForceExpireTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [biosChangeTarget, setBiosChangeTarget] = useState<SuperAdminCustomerSummary | null>(null)
   const [newBiosId, setNewBiosId] = useState('')
@@ -80,7 +86,7 @@ export function CustomersPage() {
   const exportParams = useMemo(
     () => ({
       ...customerFilterParams,
-      status: status === 'all' ? '' : status,
+      status: status === 'all' ? undefined : status,
     }),
     [customerFilterParams, status],
   )
@@ -101,7 +107,7 @@ export function CustomersPage() {
         page,
         per_page: perPage,
         ...customerFilterParams,
-        status: status === 'all' ? '' : status,
+        status: status === 'all' ? undefined : status,
       }),
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_LIST),
   })
@@ -130,7 +136,7 @@ export function CustomersPage() {
     queryKey: ['super-admin', 'customers', 'countries', search, status, tenantId, resellerId, programId],
     queryFn: () => superAdminCustomerService.getCountries({
       search: search || undefined,
-      status: status === 'all' ? '' : status,
+      status: status === 'all' ? undefined : status,
       tenant_id: tenantId || undefined,
       reseller_id: resellerId || undefined,
       program_id: programId || undefined,
@@ -172,19 +178,16 @@ export function CustomersPage() {
     ],
   })
 
-  // Reset all filters when navigating to clean URL (e.g. sidebar click)
   useEffect(() => {
-    if (searchParams.toString() === '') {
-      setPage(1)
-      setPerPage(25)
-      setSearch('')
-      setStatus('all')
-      setTenantId('')
-      setResellerId('')
-      setProgramId('')
-      setCountryName('')
-    }
-  }, [searchParams])
+    setPage(urlPage)
+    setPerPage(urlPerPage)
+    setSearch(urlSearch)
+    setStatus(urlStatus)
+    setTenantId(urlTenantId)
+    setResellerId(urlResellerId)
+    setProgramId(urlProgramId)
+    setCountryName(urlCountryName)
+  }, [urlCountryName, urlPage, urlPerPage, urlProgramId, urlResellerId, urlSearch, urlStatus, urlTenantId])
 
   useEffect(() => {
     const next = new URLSearchParams()
@@ -196,8 +199,10 @@ export function CustomersPage() {
     if (resellerId) next.set('reseller_id', String(resellerId))
     if (programId) next.set('program_id', String(programId))
     if (countryName) next.set('country_name', countryName)
-    setSearchParams(next, { replace: true })
-  }, [countryName, page, perPage, programId, resellerId, search, setSearchParams, status, tenantId])
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [countryName, page, perPage, programId, resellerId, search, searchParams, setSearchParams, status, tenantId])
 
   const editMutation = useMutation({
     mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
@@ -238,6 +243,16 @@ export function CustomersPage() {
       invalidate(queryClient)
     },
     onError: () => toast.error(t('common.error')),
+  })
+
+  const forceExpireMutation = useMutation({
+    mutationFn: (licenseId: number) => superAdminCustomerService.forceExpireLicense(licenseId),
+    onSuccess: () => {
+      toast.success(t('common.expired', { defaultValue: 'Expired' }))
+      setForceExpireTarget(null)
+      invalidate(queryClient)
+    },
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
   })
 
   const deleteMutation = useMutation({
@@ -284,7 +299,7 @@ export function CustomersPage() {
       search: search || undefined,
       tenant_id: tenantId || undefined,
       program_id: programId || undefined,
-      status: status === 'all' ? '' : status,
+      status: status === 'all' ? undefined : status,
     }),
     [programId, search, status, tenantId],
   )
@@ -456,6 +471,12 @@ export function CustomersPage() {
                   <DropdownMenuItem onSelect={() => void retryScheduledMutation.mutate(row.license_id!)}>
                     <RotateCw className="me-2 h-4 w-4" />
                     {t('common.retry')}
+                  </DropdownMenuItem>
+                ) : null}
+                {row.license_id ? (
+                  <DropdownMenuItem onSelect={() => setForceExpireTarget(row)}>
+                    <CheckCircle2 className="me-2 h-4 w-4" />
+                    {t('common.doneExpire', { defaultValue: 'Done / Expire' })}
                   </DropdownMenuItem>
                 ) : null}
                 {canDeleteRow ? (
@@ -773,6 +794,14 @@ export function CustomersPage() {
         confirmLabel={isPausedPendingLicense(resumeTarget) ? t('common.continue', { defaultValue: 'Continue' }) : t('common.resume')}
         onConfirm={() => resumeTarget?.license_id && resumeMutation.mutate(resumeTarget.license_id)}
       />
+      <ConfirmDialog
+        open={forceExpireTarget !== null}
+        onOpenChange={(open) => !open && setForceExpireTarget(null)}
+        title={t('common.doneExpire', { defaultValue: 'Done / Expire' })}
+        description={forceExpireTarget?.name ?? ''}
+        confirmLabel={t('common.doneExpire', { defaultValue: 'Done / Expire' })}
+        onConfirm={() => forceExpireTarget?.license_id && forceExpireMutation.mutate(forceExpireTarget.license_id)}
+      />
       {/* Delete Customer Dialog */}
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => {
         if (!open) {
@@ -823,6 +852,38 @@ function resolveUserRole(role?: string | null): UserRole | null {
   }
 
   return null
+}
+
+function parsePositiveIntegerParam(value: string | null): number | '' {
+  if (!value || value === 'null' || value === 'undefined') {
+    return ''
+  }
+
+  const parsed = Number(value)
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return ''
+  }
+
+  return parsed
+}
+
+function normalizeSearchParam(value: string | null): string {
+  if (!value || value === 'null' || value === 'undefined') {
+    return ''
+  }
+
+  return value
+}
+
+function parseCustomerStatusParam(value: string | null): (typeof STATUS_OPTIONS)[number] {
+  if (!value || value === 'null' || value === 'undefined') {
+    return 'all'
+  }
+
+  return STATUS_OPTIONS.includes(value as (typeof STATUS_OPTIONS)[number])
+    ? (value as (typeof STATUS_OPTIONS)[number])
+    : 'all'
 }
 
 function invalidate(queryClient: ReturnType<typeof useQueryClient>) {

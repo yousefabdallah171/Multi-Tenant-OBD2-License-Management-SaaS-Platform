@@ -290,6 +290,7 @@
   "superAdmin": {
     "layout": {
       "title": "مركز تحكم المدير العام",
+      "eyebrow": "المدير العام",
       "copyright": "حقوق النشر 2025 OBD2SW.com"
     },
     "nav": {
@@ -299,13 +300,21 @@
       "deletedCustomers": "العملاء المحذوفون",
       "users": "المستخدمون",
       "adminManagement": "إدارة المشرفين",
+      "teamNetwork": "شبكة الفريق",
       "biosChangeRequests": "طلبات تغيير BIOS",
+      "biosChangeAudit": "تدقيق تغيير BIOS",
       "biosBlacklist": "قائمة BIOS السوداء",
       "usernameManagement": "إدارة اسم المستخدم",
       "securityLocks": "الأمان والقفل",
       "financialReports": "المالية",
       "reports": "التقارير",
+      "programLogs": "سجلات البرامج",
+      "resellerPayments": "مدفوعات البائعين",
+      "ipAnalytics": "تحليلات IP",
       "logs": "السجلات",
+      "activity": "نشاط اللوحة",
+      "resellerLogs": "سجلات البائعين",
+      "apiLogs": "سجلات API",
       "apiStatus": "حالة API",
       "settings": "الإعدادات",
       "profile": "الملف الشخصي",
@@ -334,6 +343,12 @@
         "licenseTimelineDescription": "التفعيلات اليومية خلال آخر 30 يومًا.",
         "ipCountryDistribution": "توزيع الدول حسب IP",
         "ipCountryDistributionDescription": "أكثر دول تسجيل الدخول عبر المنصة."
+      },
+      "teamNetwork": {
+        "description": "هيكل المنصة العام عبر الشركاء والمدراء الرئيسيين والمدراء والبائعين."
+      },
+      "activity": {
+        "description": "سجل نشاط عام عبر كل الشركاء."
       },
       "customers": {
         "title": "العملاء",
