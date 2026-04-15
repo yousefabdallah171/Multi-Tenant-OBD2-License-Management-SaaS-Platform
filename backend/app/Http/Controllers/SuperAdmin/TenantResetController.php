@@ -13,11 +13,14 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 use Illuminate\Validation\ValidationException;
 
 class TenantResetController extends BaseSuperAdminController
 {
+    private const DB_PAYLOAD_MAX_BYTES = 1048576;
+
     public function __construct(
         private readonly ExternalApiService $externalApiService,
     ) {
@@ -69,7 +72,7 @@ class TenantResetController extends BaseSuperAdminController
                 $commissionIds = $this->commissionIds($tenant->id);
 
                 [$payload, $stats] = $this->buildPayloadJson($tenant->id, $customerIds, $commissionIds);
-                $storedPayload = $this->encodePayloadForStorage($payload);
+                $storedPayload = $this->storePayloadReference($this->encodePayloadForStorage($payload), $tenant->id);
 
                 $backup = TenantBackup::query()->create([
                     'tenant_id'  => $tenant->id,
@@ -109,7 +112,7 @@ class TenantResetController extends BaseSuperAdminController
                 $commissionIds = $this->commissionIds($tenant->id);
 
                 [$payload, $stats] = $this->buildPayloadJson($tenant->id, $customerIds, $commissionIds);
-                $storedPayload = $this->encodePayloadForStorage($payload);
+                $storedPayload = $this->storePayloadReference($this->encodePayloadForStorage($payload), $tenant->id);
 
                 $backup = TenantBackup::query()->create([
                     'tenant_id'  => $tenant->id,
@@ -217,7 +220,7 @@ class TenantResetController extends BaseSuperAdminController
             $backup->created_at?->format('Ymd-His') ?? 'unknown'
         );
 
-        return response(json_encode($export, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 200, [
+        return response($this->encodeJson($export, JSON_PRETTY_PRINT), 200, [
             'Content-Type'        => 'application/json',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
@@ -275,7 +278,10 @@ class TenantResetController extends BaseSuperAdminController
             ?? ($decoded['backup']['label'] ?? null)
             ?? 'Imported backup';
 
-        $encodedPayload = $this->encodePayloadForStorage(json_encode($payload, JSON_UNESCAPED_UNICODE));
+        $encodedPayload = $this->storePayloadReference(
+            $this->encodePayloadForStorage($this->encodeJson($payload)),
+            $tenant->id,
+        );
 
         $backup = TenantBackup::query()->create([
             'tenant_id'  => $tenant->id,
@@ -300,6 +306,7 @@ class TenantResetController extends BaseSuperAdminController
             return response()->json(['message' => 'Backup does not belong to this tenant.'], 403);
         }
 
+        $this->deleteStoredPayloadFile($backup->payload);
         $backup->delete();
 
         return response()->json(['message' => 'Backup deleted.']);
@@ -426,7 +433,7 @@ class TenantResetController extends BaseSuperAdminController
                 }
 
                 $firstSection = false;
-                fwrite($handle, json_encode($key, JSON_UNESCAPED_UNICODE) . ':[');
+                fwrite($handle, $this->encodeJson($key) . ':[');
 
                 $query = $spec['query']();
                 $count = 0;
@@ -441,7 +448,7 @@ class TenantResetController extends BaseSuperAdminController
                         }
 
                         $firstRow = false;
-                        fwrite($handle, json_encode((array) $row, JSON_UNESCAPED_UNICODE));
+                        fwrite($handle, $this->encodeJson((array) $row));
                         $count++;
                     }
                 }
@@ -491,14 +498,10 @@ class TenantResetController extends BaseSuperAdminController
             throw new \RuntimeException('Could not compress the tenant backup payload.');
         }
 
-        $envelope = json_encode([
+        $envelope = $this->encodeJson([
             'encoding' => 'gzip_base64',
             'data' => base64_encode($compressed),
-        ], JSON_UNESCAPED_UNICODE);
-
-        if ($envelope === false) {
-            throw new \RuntimeException('Could not encode the compressed tenant backup payload.');
-        }
+        ]);
 
         Log::info('tenant-backup payload compressed', [
             'raw_bytes' => strlen($payload),
@@ -506,6 +509,35 @@ class TenantResetController extends BaseSuperAdminController
         ]);
 
         return $envelope;
+    }
+
+    private function storePayloadReference(string $storedPayload, int $tenantId): string
+    {
+        if (strlen($storedPayload) <= self::DB_PAYLOAD_MAX_BYTES) {
+            return $storedPayload;
+        }
+
+        $path = sprintf(
+            'tenant-backups/%d/%s.json',
+            $tenantId,
+            bin2hex(random_bytes(16)),
+        );
+
+        if (! Storage::disk('local')->put($path, $storedPayload)) {
+            throw new \RuntimeException('Could not write tenant backup payload to storage.');
+        }
+
+        Log::info('tenant-backup payload stored as file', [
+            'tenant_id' => $tenantId,
+            'path' => $path,
+            'bytes' => strlen($storedPayload),
+        ]);
+
+        return $this->encodeJson([
+            'encoding' => 'file_json',
+            'disk' => 'local',
+            'path' => $path,
+        ]);
     }
 
     /**
@@ -532,6 +564,22 @@ class TenantResetController extends BaseSuperAdminController
             throw new \RuntimeException('Stored tenant backup payload is not valid JSON.');
         }
 
+        if (($decoded['encoding'] ?? null) === 'file_json' && isset($decoded['path']) && is_string($decoded['path'])) {
+            $path = $decoded['path'];
+
+            if (! Storage::disk('local')->exists($path)) {
+                throw new \RuntimeException('Stored tenant backup file is missing.');
+            }
+
+            $filePayload = Storage::disk('local')->get($path);
+
+            if (! is_string($filePayload)) {
+                throw new \RuntimeException('Stored tenant backup file could not be read.');
+            }
+
+            return $this->decodeStoredPayload($filePayload);
+        }
+
         if (($decoded['encoding'] ?? null) === 'gzip_base64' && isset($decoded['data']) && is_string($decoded['data'])) {
             $binary = base64_decode($decoded['data'], true);
 
@@ -555,6 +603,20 @@ class TenantResetController extends BaseSuperAdminController
         }
 
         return $decoded;
+    }
+
+    private function deleteStoredPayloadFile(string $storedPayload): void
+    {
+        $decoded = json_decode($storedPayload, true);
+
+        if (! is_array($decoded)
+            || ($decoded['encoding'] ?? null) !== 'file_json'
+            || ! isset($decoded['path'])
+            || ! is_string($decoded['path'])) {
+            return;
+        }
+
+        Storage::disk('local')->delete($decoded['path']);
     }
 
     /**
@@ -631,7 +693,7 @@ class TenantResetController extends BaseSuperAdminController
         $rows = array_map(function (array $row): array {
             foreach ($row as $key => $value) {
                 if (is_array($value)) {
-                    $row[$key] = json_encode($value, JSON_UNESCAPED_UNICODE);
+                    $row[$key] = $this->encodeJson($value);
                 } elseif (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $value)) {
                     // Convert ISO 8601 (from old Eloquent-based backups) → MySQL datetime
                     try {
@@ -656,8 +718,7 @@ class TenantResetController extends BaseSuperAdminController
         $inserted = 0;
 
         foreach ($rows as $row) {
-            $rowJson = json_encode($row, JSON_UNESCAPED_UNICODE);
-            $rowBytes = is_string($rowJson) ? strlen($rowJson) : 0;
+            $rowBytes = strlen($this->encodeJson($row));
 
             if (! empty($chunk)
                 && (count($chunk) >= $settings['max_rows'] || ($chunkBytes + $rowBytes) > $settings['max_bytes'])) {
@@ -1077,5 +1138,13 @@ class TenantResetController extends BaseSuperAdminController
             ] : null,
             'created_at' => $backup->created_at?->toIso8601String(),
         ];
+    }
+
+    private function encodeJson(mixed $value, int $flags = 0): string
+    {
+        return json_encode(
+            $value,
+            JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR | $flags,
+        );
     }
 }
