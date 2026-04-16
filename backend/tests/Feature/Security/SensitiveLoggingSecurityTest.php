@@ -80,4 +80,32 @@ class SensitiveLoggingSecurityTest extends TestCase
 
         $this->assertNull($log->response_body);
     }
+
+    public function test_super_admin_can_create_tenant_backup_snapshot(): void
+    {
+        $superAdmin = $this->createUser('super_admin');
+        $tenant = $this->createTenant();
+        $reseller = $this->createUser('reseller', $tenant);
+        $customer = $this->createUser('customer', $tenant, $reseller);
+        $program = $this->createProgram($tenant);
+
+        $this->createLicense($reseller, $program, $customer, [
+            'tenant_id' => $tenant->id,
+        ]);
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->postJson('/api/super-admin/tenants/'.$tenant->id.'/backups/create', [
+            'label' => 'Smoke backup',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.label', 'Smoke backup')
+            ->assertJsonPath('data.stats.customers', 1)
+            ->assertJsonPath('data.stats.licenses', 1);
+
+        $backup = TenantBackup::query()->latest('id')->firstOrFail();
+
+        $this->assertSame($tenant->id, $backup->tenant_id);
+        $this->assertNotEmpty($backup->payload);
+    }
 }

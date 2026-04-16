@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 use Illuminate\Validation\ValidationException;
+use Laravel\Telescope\Telescope;
 
 class TenantResetController extends BaseSuperAdminController
 {
@@ -35,6 +36,8 @@ class TenantResetController extends BaseSuperAdminController
      */
     public function index(Tenant $tenant): JsonResponse
     {
+        $this->disableTelescopeRecording();
+
         $backups = TenantBackup::query()
             ->where('tenant_id', $tenant->id)
             ->with('creator:id,name,email')
@@ -50,6 +53,8 @@ class TenantResetController extends BaseSuperAdminController
      */
     public function reset(Request $request, Tenant $tenant): JsonResponse
     {
+        $this->disableTelescopeRecording();
+
         $validated = $request->validate([
             'label'        => ['nullable', 'string', 'max:255'],
             'confirm_name' => ['required', 'string'],
@@ -102,6 +107,8 @@ class TenantResetController extends BaseSuperAdminController
      */
     public function create(Request $request, Tenant $tenant): JsonResponse
     {
+        $this->disableTelescopeRecording();
+
         $validated = $request->validate([
             'label' => ['nullable', 'string', 'max:255'],
         ]);
@@ -140,6 +147,8 @@ class TenantResetController extends BaseSuperAdminController
      */
     public function restore(Request $request, Tenant $tenant, TenantBackup $backup): JsonResponse
     {
+        $this->disableTelescopeRecording();
+
         if ($backup->tenant_id !== $tenant->id) {
             return response()->json(['message' => 'Backup does not belong to this tenant.'], 403);
         }
@@ -190,6 +199,8 @@ class TenantResetController extends BaseSuperAdminController
      */
     public function download(Tenant $tenant, TenantBackup $backup): Response
     {
+        $this->disableTelescopeRecording();
+
         if ($backup->tenant_id !== $tenant->id) {
             abort(403, 'Backup does not belong to this tenant.');
         }
@@ -231,6 +242,8 @@ class TenantResetController extends BaseSuperAdminController
      */
     public function import(Request $request, Tenant $tenant): JsonResponse
     {
+        $this->disableTelescopeRecording();
+
         $request->validate([
             'file'  => ['required', 'file', 'mimetypes:application/json,text/plain,application/octet-stream', 'max:102400'],
             'label' => ['nullable', 'string', 'max:255'],
@@ -302,6 +315,8 @@ class TenantResetController extends BaseSuperAdminController
      */
     public function destroy(Tenant $tenant, TenantBackup $backup): JsonResponse
     {
+        $this->disableTelescopeRecording();
+
         if ($backup->tenant_id !== $tenant->id) {
             return response()->json(['message' => 'Backup does not belong to this tenant.'], 403);
         }
@@ -315,6 +330,13 @@ class TenantResetController extends BaseSuperAdminController
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    private function disableTelescopeRecording(): void
+    {
+        if (config('telescope.enabled')) {
+            Telescope::stopRecording();
+        }
+    }
 
     /** @return list<int> */
     private function customerIds(int $tenantId): array
