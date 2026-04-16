@@ -425,7 +425,7 @@
       },
       "impersonation": {
         "title": "Secure Impersonation",
-        "description": "Open a separate tab as manager parent, manager, or reseller for support and verification. Sessions are one-time and expire after 10 minutes.",
+        "description": "Open a separate tab as manager parent, manager, or reseller for support and verification. Sessions are one-time and expire after 10 hours.",
         "searchPlaceholder": "Search by name, email, or username",
         "lastSeen": "Last Seen",
         "loginAs": "Login",

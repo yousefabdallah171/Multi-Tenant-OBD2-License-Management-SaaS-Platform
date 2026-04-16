@@ -47,7 +47,7 @@ class SuperAdminImpersonationTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_impersonation_ticket_has_ten_minute_expiry(): void
+    public function test_impersonation_ticket_has_ten_hour_expiry(): void
     {
         $tenant = $this->createTenant();
         $superAdmin = $this->createUser('super_admin');
@@ -66,7 +66,7 @@ class SuperAdminImpersonationTest extends TestCase
         $this->assertNotNull($ticket);
         $this->assertNotNull($ticket?->expires_at);
         $this->assertEqualsWithDelta(
-            now()->addMinutes(10)->timestamp,
+            now()->addHours(10)->timestamp,
             $ticket?->expires_at?->timestamp ?? 0,
             5,
         );
@@ -156,4 +156,3 @@ class SuperAdminImpersonationTest extends TestCase
         $this->assertContains('impersonation.stop', $actions);
     }
 }
-

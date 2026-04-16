@@ -14,9 +14,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ImpersonationController extends BaseSuperAdminController
 {
-    private const TICKET_TTL_MINUTES = 10;
+    private const TICKET_TTL_HOURS = 10;
 
-    private const SESSION_TTL_MINUTES = 10;
+    private const SESSION_TTL_HOURS = 10;
 
     public function targets(Request $request): JsonResponse
     {
@@ -129,7 +129,7 @@ class ImpersonationController extends BaseSuperAdminController
             'actor_token_fingerprint' => $actorTokenFingerprint,
             'target_user_id' => $target->id,
             'secret_hash' => hash('sha256', $launchToken),
-            'expires_at' => now()->addMinutes(self::TICKET_TTL_MINUTES),
+            'expires_at' => now()->addHours(self::TICKET_TTL_HOURS),
         ]);
 
         $this->logImpersonation($request, 'impersonation.start', sprintf('Started impersonation launch ticket for %s.', $target->email), [
@@ -273,21 +273,23 @@ class ImpersonationController extends BaseSuperAdminController
         $impersonationToken = $target->createToken(
             'impersonation-session',
             ['impersonation:session'],
-            now()->addMinutes(self::SESSION_TTL_MINUTES),
+            now()->addHours(self::SESSION_TTL_HOURS),
         );
+
+        $sessionExpiresAt = now()->addHours(self::SESSION_TTL_HOURS)->toIso8601String();
 
         $this->logImpersonation($request, 'impersonation.exchange', sprintf('Super admin exchanged impersonation session for %s.', $target->email), [
             'ticket_id' => $ticket->id,
             'target_user_id' => $target->id,
             'target_role' => $targetRole,
             'target_tenant_id' => $target->tenant_id,
-            'session_expires_at' => now()->addMinutes(self::SESSION_TTL_MINUTES)->toIso8601String(),
+            'session_expires_at' => $sessionExpiresAt,
         ]);
 
         return response()->json([
             'data' => [
                 'token' => $impersonationToken->plainTextToken,
-                'expires_at' => now()->addMinutes(self::SESSION_TTL_MINUTES)->toIso8601String(),
+                'expires_at' => $sessionExpiresAt,
                 'user' => $target->fresh('tenant'),
                 'impersonation' => [
                     'active' => true,
@@ -303,7 +305,7 @@ class ImpersonationController extends BaseSuperAdminController
                         'role' => $targetRole,
                     ],
                     'started_at' => now()->toIso8601String(),
-                    'expires_at' => now()->addMinutes(self::SESSION_TTL_MINUTES)->toIso8601String(),
+                    'expires_at' => $sessionExpiresAt,
                 ],
             ],
         ]);
