@@ -12,6 +12,14 @@ export interface ProgramDurationPreset {
   price: number
   sort_order: number
   is_active: boolean
+  country_prices?: ProgramDurationPresetCountryPrice[]
+}
+
+export interface ProgramDurationPresetCountryPrice {
+  id?: number
+  country_name: string
+  price: number
+  is_active: boolean
 }
 
 export interface DashboardSeriesPoint {
@@ -284,6 +292,7 @@ export interface LicenseSummary {
   customer_id: number | null
   customer_name: string | null
   customer_email: string | null
+  customer_country_name?: string | null
   bios_id: string
   external_username?: string | null
   program: string | null
@@ -344,6 +353,7 @@ export interface ActivateLicenseData {
 }
 
 export interface RenewLicenseData {
+  preset_id?: number
   duration_days: number
   price: number
   is_scheduled?: boolean
@@ -507,6 +517,11 @@ export interface ResellerPaymentListData {
     total_outstanding: number
     total_collectible: number
     total_collected?: number
+    sales_by_role?: {
+      manager_parent?: number
+      manager?: number
+      reseller?: number
+    }
     period: string
   }
 }

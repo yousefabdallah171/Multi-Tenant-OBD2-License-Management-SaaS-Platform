@@ -5,6 +5,7 @@ namespace Tests\Feature\Security;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\ProgramDurationPreset;
+use App\Models\ProgramDurationPresetCountryPrice;
 use App\Models\UserBalance;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -597,6 +598,116 @@ class AuthorizationBoundaryTest extends TestCase
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('price');
+    }
+
+    public function test_reseller_activation_uses_country_override_preset_price(): void
+    {
+        $tenant = $this->createTenant();
+        $reseller = $this->createUser('reseller', $tenant);
+        $program = $this->createProgram($tenant);
+        $preset = ProgramDurationPreset::query()->create([
+            'program_id' => $program->id,
+            'label' => 'Month',
+            'duration_days' => 30,
+            'price' => 250,
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+        ProgramDurationPresetCountryPrice::query()->create([
+            'program_duration_preset_id' => $preset->id,
+            'country_name' => 'Nigeria',
+            'country_key' => 'nigeria',
+            'price' => 90,
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($reseller);
+
+        $response = $this->postJson('/api/licenses/activate', [
+            'program_id' => $program->id,
+            'customer_name' => 'Override Customer',
+            'bios_id' => 'OVERRIDE-ACT-1',
+            'preset_id' => $preset->id,
+            'country_name' => 'Nigeria',
+            'is_scheduled' => true,
+            'scheduled_date_time' => now()->addDay()->toIso8601String(),
+            'scheduled_timezone' => 'UTC',
+        ])->assertCreated();
+
+        $license = License::query()->findOrFail((int) $response->json('data.id'));
+
+        $this->assertSame(90.0, (float) $license->price);
+        $this->assertSame(30.0, (float) $license->duration_days);
+
+        $activity = ActivityLog::query()
+            ->where('action', 'license.scheduled')
+            ->where('user_id', $reseller->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame('country_override', data_get($activity->metadata, 'price_source'));
+        $this->assertSame(250.0, (float) data_get($activity->metadata, 'base_preset_price'));
+        $this->assertSame(90.0, (float) data_get($activity->metadata, 'country_override_price'));
+        $this->assertSame(90.0, (float) data_get($activity->metadata, 'effective_price'));
+    }
+
+    public function test_reseller_renewal_with_preset_uses_country_override_price(): void
+    {
+        $tenant = $this->createTenant();
+        $reseller = $this->createUser('reseller', $tenant);
+        $customer = $this->createUser('customer', $tenant, $reseller, [
+            'country_name' => 'Nigeria',
+        ]);
+        $program = $this->createProgram($tenant);
+        $preset = ProgramDurationPreset::query()->create([
+            'program_id' => $program->id,
+            'label' => 'Week',
+            'duration_days' => 7,
+            'price' => 140,
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+        ProgramDurationPresetCountryPrice::query()->create([
+            'program_duration_preset_id' => $preset->id,
+            'country_name' => 'Nigeria',
+            'country_key' => 'nigeria',
+            'price' => 75,
+            'is_active' => true,
+        ]);
+        $license = $this->createLicense($reseller, $program, $customer, [
+            'bios_id' => 'OVERRIDE-REN-1',
+            'status' => 'active',
+            'duration_days' => 1,
+            'price' => 10,
+            'activated_at' => now()->subDay(),
+            'expires_at' => now()->addDay(),
+        ]);
+
+        Sanctum::actingAs($reseller);
+
+        $this->postJson('/api/licenses/'.$license->id.'/renew', [
+            'preset_id' => $preset->id,
+            'is_scheduled' => true,
+            'scheduled_date_time' => now()->addDays(2)->toIso8601String(),
+            'scheduled_timezone' => 'UTC',
+        ])->assertOk();
+
+        $renewed = $license->fresh();
+
+        $this->assertSame(75.0, (float) $renewed->price);
+        $this->assertSame(7.0, (float) $renewed->duration_days);
+
+        $activity = ActivityLog::query()
+            ->where('action', 'license.renewed')
+            ->where('user_id', $reseller->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame($license->id, (int) data_get($activity->metadata, 'license_id'));
+        $this->assertSame('country_override', data_get($activity->metadata, 'price_source'));
+        $this->assertSame(140.0, (float) data_get($activity->metadata, 'base_preset_price'));
+        $this->assertSame(75.0, (float) data_get($activity->metadata, 'country_override_price'));
+        $this->assertSame(75.0, (float) data_get($activity->metadata, 'effective_price'));
     }
 
     public function test_super_admin_force_activate_assigns_the_selected_seller_as_owner(): void

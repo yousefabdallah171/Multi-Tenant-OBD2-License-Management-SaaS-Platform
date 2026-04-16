@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ManagerParent;
 
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
+use App\Models\ProgramDurationPresetCountryPrice;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\ExternalApiSecurity;
@@ -28,7 +29,7 @@ class ProgramController extends BaseManagerParentController
         $query = Program::query()->withCount([
             'licenses as active_licenses_count' => fn ($builder) => $builder->where('status', 'active'),
             'licenses as total_licenses_count',
-        ])->with('durationPresets')->latest();
+        ])->with('durationPresets.countryPrices')->latest();
 
         if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
@@ -90,6 +91,11 @@ class ProgramController extends BaseManagerParentController
             'presets.*.price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'presets.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'presets.*.is_active' => ['nullable', 'boolean'],
+            'presets.*.country_prices' => ['nullable', 'array'],
+            'presets.*.country_prices.*.id' => ['nullable', 'integer'],
+            'presets.*.country_prices.*.country_name' => ['required', 'string', 'max:120'],
+            'presets.*.country_prices.*.price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'presets.*.country_prices.*.is_active' => ['nullable', 'boolean'],
         ]);
 
         $iconPath = $request->hasFile('icon')
@@ -122,7 +128,7 @@ class ProgramController extends BaseManagerParentController
 
             $this->syncDurationPresets($program, $validated['presets'] ?? null);
 
-            return $program->load('durationPresets');
+            return $program->load('durationPresets.countryPrices');
         });
 
         $this->logActivity($request, 'program.create', sprintf('Created program %s.', $program->name), [
@@ -136,7 +142,7 @@ class ProgramController extends BaseManagerParentController
     {
         $this->abortIfProgramHidden($program, $request);
 
-        return response()->json(['data' => $this->serializeProgram($program->loadCount('licenses')->load('durationPresets'), $request)]);
+        return response()->json(['data' => $this->serializeProgram($program->loadCount('licenses')->load('durationPresets.countryPrices'), $request)]);
     }
 
     public function update(Request $request, Program $program): JsonResponse
@@ -175,6 +181,11 @@ class ProgramController extends BaseManagerParentController
             'presets.*.price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'presets.*.sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'presets.*.is_active' => ['nullable', 'boolean'],
+            'presets.*.country_prices' => ['nullable', 'array'],
+            'presets.*.country_prices.*.id' => ['nullable', 'integer'],
+            'presets.*.country_prices.*.country_name' => ['required', 'string', 'max:120'],
+            'presets.*.country_prices.*.price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'presets.*.country_prices.*.is_active' => ['nullable', 'boolean'],
         ]);
 
         if ($request->hasFile('icon')) {
@@ -218,7 +229,7 @@ class ProgramController extends BaseManagerParentController
             'program_id' => $program->id,
         ]);
 
-        return response()->json(['data' => $this->serializeProgram($program->fresh()->load('durationPresets'), $request)]);
+        return response()->json(['data' => $this->serializeProgram($program->fresh()->load('durationPresets.countryPrices'), $request)]);
     }
 
     public function destroy(Request $request, Program $program): JsonResponse
@@ -356,10 +367,47 @@ class ProgramController extends BaseManagerParentController
 
             if ($presetId > 0) {
                 $program->durationPresets()->whereKey($presetId)->update($payload);
+                $resolvedPreset = $program->durationPresets()->find($presetId);
+                if ($resolvedPreset) {
+                    $this->syncPresetCountryPrices($resolvedPreset, $preset['country_prices'] ?? null);
+                }
                 continue;
             }
 
-            $program->durationPresets()->create($payload);
+            $createdPreset = $program->durationPresets()->create($payload);
+            $this->syncPresetCountryPrices($createdPreset, $preset['country_prices'] ?? null);
+        }
+    }
+
+    /**
+     * @param array<int, array<string, mixed>>|null $countryPrices
+     */
+    private function syncPresetCountryPrices(ProgramDurationPreset $preset, ?array $countryPrices): void
+    {
+        $normalizedRows = $this->normalizeCountryPricePayload($countryPrices);
+        $existingIds = $preset->countryPrices()->pluck('id');
+        $incomingIds = $normalizedRows->pluck('id')->filter()->map(fn ($id) => (int) $id);
+        $idsToDelete = $existingIds->diff($incomingIds);
+
+        if ($idsToDelete->isNotEmpty()) {
+            $preset->countryPrices()->whereIn('id', $idsToDelete)->delete();
+        }
+
+        foreach ($normalizedRows->values() as $row) {
+            $payload = [
+                'country_name' => (string) $row['country_name'],
+                'country_key' => (string) $row['country_key'],
+                'price' => (float) $row['price'],
+                'is_active' => (bool) ($row['is_active'] ?? true),
+            ];
+
+            $rowId = isset($row['id']) ? (int) $row['id'] : 0;
+            if ($rowId > 0) {
+                $preset->countryPrices()->whereKey($rowId)->update($payload);
+                continue;
+            }
+
+            $preset->countryPrices()->create($payload);
         }
     }
 
@@ -378,7 +426,28 @@ class ProgramController extends BaseManagerParentController
                 'price' => round((float) $preset['price'], 2),
                 'sort_order' => isset($preset['sort_order']) ? (int) $preset['sort_order'] : null,
                 'is_active' => array_key_exists('is_active', $preset) ? filter_var($preset['is_active'], FILTER_VALIDATE_BOOLEAN) : true,
+                'country_prices' => $this->normalizeCountryPricePayload(is_array($preset['country_prices'] ?? null) ? $preset['country_prices'] : null)->values()->all(),
             ]);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>>|null $countryPrices
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function normalizeCountryPricePayload(?array $countryPrices): Collection
+    {
+        return collect($countryPrices ?? [])
+            ->filter(fn ($item) => is_array($item) && ProgramDurationPresetCountryPrice::normalizeCountryName((string) ($item['country_name'] ?? '')) !== null)
+            ->map(fn (array $item): ?array => [
+                'id' => isset($item['id']) ? (int) $item['id'] : null,
+                'country_name' => ProgramDurationPresetCountryPrice::normalizeCountryName((string) ($item['country_name'] ?? '')),
+                'country_key' => ProgramDurationPresetCountryPrice::normalizeCountryKey((string) ($item['country_name'] ?? '')),
+                'price' => round((float) $item['price'], 2),
+                'is_active' => array_key_exists('is_active', $item) ? filter_var($item['is_active'], FILTER_VALIDATE_BOOLEAN) : true,
+            ])
+            ->filter(fn (?array $item): bool => $item !== null && $item['country_name'] !== null && $item['country_key'] !== null)
+            ->keyBy(fn (array $item): string => (string) $item['country_key'])
+            ->values();
     }
 
     /**
@@ -412,6 +481,15 @@ class ProgramController extends BaseManagerParentController
                 'price' => (float) $preset->price,
                 'sort_order' => (int) $preset->sort_order,
                 'is_active' => (bool) $preset->is_active,
+                'country_prices' => ($preset->relationLoaded('countryPrices') ? $preset->countryPrices : $preset->countryPrices()->get())
+                    ->map(fn (ProgramDurationPresetCountryPrice $countryPrice): array => [
+                        'id' => $countryPrice->id,
+                        'country_name' => $countryPrice->country_name,
+                        'price' => (float) $countryPrice->price,
+                        'is_active' => (bool) $countryPrice->is_active,
+                    ])
+                    ->values()
+                    ->all(),
             ])
             ->values()
             ->all();

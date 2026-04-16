@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Reseller;
 
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
+use App\Models\ProgramDurationPresetCountryPrice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,7 @@ class SoftwareController extends BaseResellerController
         $resellerId = $this->currentReseller($request)->id;
 
         $programs = Program::query()
-            ->with('activeDurationPresets')
+            ->with('activeDurationPresets.countryPrices')
             ->where('tenant_id', $this->currentTenantId($request))
             ->where('status', 'active')
             ->orderBy('name')
@@ -36,6 +37,15 @@ class SoftwareController extends BaseResellerController
                     'price' => (float) $preset->price,
                     'sort_order' => (int) $preset->sort_order,
                     'is_active' => (bool) $preset->is_active,
+                    'country_prices' => ($preset->relationLoaded('countryPrices') ? $preset->countryPrices : $preset->countryPrices()->get())
+                        ->map(fn (ProgramDurationPresetCountryPrice $countryPrice): array => [
+                            'id' => $countryPrice->id,
+                            'country_name' => $countryPrice->country_name,
+                            'price' => (float) $countryPrice->price,
+                            'is_active' => (bool) $countryPrice->is_active,
+                        ])
+                        ->values()
+                        ->all(),
                 ])->values()->all(),
             ])
             ->values();

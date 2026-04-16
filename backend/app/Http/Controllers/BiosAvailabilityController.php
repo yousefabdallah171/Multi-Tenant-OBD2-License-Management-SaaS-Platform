@@ -32,8 +32,9 @@ class BiosAvailabilityController extends Controller
         $tenantId = $user?->tenant_id;
 
         // Always resolve the linked username for this BIOS (needed for locking even when unavailable)
+        // Scoped to current tenant to prevent cross-tenant data leakage
         $linkedUsernameForBios = null;
-        $biosLink = BiosUsernameLink::where('bios_id', $biosId)->first();
+        $biosLink = BiosUsernameLink::where('tenant_id', $tenantId)->where('bios_id', $biosId)->first();
         if ($biosLink) {
             $linkedUsernameForBios = $biosLink->username;
         } else {
@@ -106,7 +107,10 @@ class BiosAvailabilityController extends Controller
         }
 
         // Check if username is permanently linked to a BIOS ID via BiosUsernameLink
-        $biosLink = BiosUsernameLink::whereRaw('LOWER(username) = ?', [$username])->first();
+        // Scoped to current tenant to prevent cross-tenant data leakage
+        $user = Auth::user();
+        $tenantId = $user?->tenant_id;
+        $biosLink = BiosUsernameLink::where('tenant_id', $tenantId)->whereRaw('LOWER(username) = ?', [$username])->first();
         $linkedBios = $biosLink?->bios_id;
 
         // If not in the permanent link table, check historical licenses for a BIOS association

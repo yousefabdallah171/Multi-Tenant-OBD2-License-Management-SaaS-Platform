@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { ALL_COUNTRIES, normalizeCountryName } from '@/lib/countries'
+import { resolvePresetEffectivePrice } from '@/lib/preset-pricing'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -212,6 +213,10 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     () => availablePresets.find((preset) => preset.id === selectedPresetId) ?? availablePresets[0] ?? null,
     [availablePresets, selectedPresetId],
   )
+  const selectedPresetPricing = useMemo(
+    () => resolvePresetEffectivePrice(selectedPreset, countryName),
+    [countryName, selectedPreset],
+  )
 
   useEffect(() => {
     if (!isPresetSeller && mode !== 'preset') {
@@ -258,11 +263,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
   const autoPrice = useMemo(() => {
     if (!selectedProgram || !createLicenseNow) return 0
-    if (isPresetSeller || mode === 'preset') return Number((selectedPreset?.price ?? 0).toFixed(2))
+    if (isPresetSeller || mode === 'preset') return Number(selectedPresetPricing.effectivePrice.toFixed(2))
     // Round to nearest 0.01 day (~14 min) to avoid floating-point drift (e.g. 0.999 × $25 = $24.99)
     const roundedDays = Math.round(Math.max(durationDays, 0) * 100) / 100
     return Number((roundedDays * Number(selectedProgram.base_price ?? 0)).toFixed(2))
-  }, [createLicenseNow, durationDays, isPresetSeller, mode, selectedPreset?.price, selectedProgram])
+  }, [createLicenseNow, durationDays, isPresetSeller, mode, selectedPresetPricing.effectivePrice, selectedProgram])
 
   useEffect(() => {
     if (priceMode === 'auto') {
@@ -676,7 +681,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                     </div>
                     {selectedPreset ? (
                       <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • {t('activate.presetPriceSummary', { price: selectedPreset.price.toFixed(2), defaultValue: '$ {{price}}' })}
+                        {t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • {t('activate.presetPriceSummary', { price: selectedPresetPricing.effectivePrice.toFixed(2), defaultValue: '$ {{price}}' })}
                       </p>
                     ) : null}
                   </div>
@@ -707,7 +712,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                         </div>
                         {selectedPreset ? (
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            {t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • {formatCurrency(selectedPreset.price, 'USD', locale)}
+                            {t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • {formatCurrency(selectedPresetPricing.effectivePrice, 'USD', locale)}
                           </p>
                         ) : null}
                       </div>

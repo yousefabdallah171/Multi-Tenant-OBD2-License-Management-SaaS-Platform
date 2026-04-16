@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
+import { ALL_COUNTRIES } from '@/lib/countries'
+import { resolvePresetEffectivePrice } from '@/lib/preset-pricing'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { formatDate } from '@/lib/utils'
 import { activateLicense } from '@/services/activation.service'
@@ -64,6 +66,7 @@ function createEmptyForm(defaultTimezone: string) {
   client_name: '',
   customer_email: '',
   customer_phone: '',
+  country_name: '',
   bios_id: '',
   duration_value: '30',
   duration_unit: 'days' as 'minutes' | 'hours' | 'days',
@@ -133,6 +136,10 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     () => program.duration_presets?.find((preset) => preset.id === selectedPresetId) ?? program.duration_presets?.[0] ?? null,
     [program.duration_presets, selectedPresetId],
   )
+  const selectedPresetPricing = useMemo(
+    () => resolvePresetEffectivePrice(selectedPreset, form.country_name),
+    [form.country_name, selectedPreset],
+  )
 
   const durationDays = useMemo(() => {
     if (isReseller) {
@@ -171,11 +178,11 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
 
   const autoPrice = useMemo(() => {
     if (isReseller) {
-      return Number((selectedPreset?.price ?? 0).toFixed(2))
+      return Number(selectedPresetPricing.effectivePrice.toFixed(2))
     }
 
     return Number((Math.max(durationDays, 0) * program.price_per_day).toFixed(2))
-  }, [durationDays, isReseller, program.price_per_day, selectedPreset?.price])
+  }, [durationDays, isReseller, program.price_per_day, selectedPresetPricing.effectivePrice])
 
   useEffect(() => {
     if (!isReseller) {
@@ -367,6 +374,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         client_name: form.client_name.trim() || undefined,
         customer_email: form.customer_email.trim() || undefined,
         customer_phone: form.customer_phone.trim() || undefined,
+        country_name: form.country_name.trim() || undefined,
         bios_id: form.bios_id.trim(),
         preset_id: isReseller ? selectedPreset?.id : undefined,
         duration_days: isReseller ? undefined : Number(durationDays.toFixed(3)),
@@ -554,6 +562,20 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
         {errors.customer_phone ? <p className="text-sm text-rose-600 dark:text-rose-400">{errors.customer_phone}</p> : null}
       </div>
       <div className="space-y-2">
+        <Label htmlFor="activate-country">{t('common.country', { defaultValue: 'Country' })}</Label>
+        <select
+          id="activate-country"
+          value={form.country_name}
+          onChange={(event) => setForm((current) => ({ ...current, country_name: event.target.value }))}
+          className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+        >
+          <option value="">{t('common.country', { defaultValue: 'Country' })}</option>
+          {ALL_COUNTRIES.map((country) => (
+            <option key={country} value={country}>{country}</option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="activate-bios-id">{t('activate.biosId')}</Label>
         <Input id="activate-bios-id" value={form.bios_id} onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))} data-testid="bios-id" />
         <p className="text-sm text-slate-500 dark:text-slate-400">{t('activate.biosIdHint')}</p>
@@ -732,7 +754,7 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
                   <div className="mt-2 text-sm font-medium">
                     {t('activate.presetPriceSummary', {
                       defaultValue: '${{price}}',
-                      price: preset.price.toFixed(2),
+                      price: resolvePresetEffectivePrice(preset, form.country_name).effectivePrice.toFixed(2),
                     })}
                   </div>
                 </button>

@@ -1638,7 +1638,10 @@
     "presetLabel": "Label",
     "presetLabelPlaceholder": "e.g. Week",
     "presetDurationDays": "Days",
-    "addPreset": "Add Preset"
+    "addPreset": "Add Preset",
+    "countryPricingTitle": "Country Pricing Overrides",
+    "addCountryPricing": "Add Country Price",
+    "countryPricingHint": "Optional override prices by customer country. Default preset price is used when no country match exists."
   },
   "programLogs": {
     "title": "User Logs",

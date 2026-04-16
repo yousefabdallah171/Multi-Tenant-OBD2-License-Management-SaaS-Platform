@@ -1,6 +1,6 @@
 import { api } from '@/services/api'
 import type { PaginatedResponse, ProgramStats, ProgramSummary } from '@/types/manager-parent.types'
-import type { ProgramDurationPreset } from '@/types/manager-reseller.types'
+import type { ProgramDurationPreset, ProgramDurationPresetCountryPrice } from '@/types/manager-reseller.types'
 
 export interface ProgramListParams {
   page?: number
@@ -25,7 +25,12 @@ export interface ProgramPayload {
   external_api_base_url?: string | null
   external_logs_endpoint?: string | null
   status?: 'active' | 'inactive'
-  presets?: Array<Partial<ProgramDurationPreset> & { label: string; duration_days: number; price: number }>
+  presets?: Array<Partial<ProgramDurationPreset> & {
+    label: string
+    duration_days: number
+    price: number
+    country_prices?: Array<Partial<ProgramDurationPresetCountryPrice> & { country_name: string; price: number }>
+  }>
 }
 
 function buildProgramPayload(payload: Partial<ProgramPayload>, includeEmptyKeys: string[] = []) {
@@ -63,6 +68,23 @@ function buildProgramPayload(payload: Partial<ProgramPayload>, includeEmptyKeys:
             typeof presetValue === 'boolean' ? (presetValue ? '1' : '0') : String(presetValue),
           )
           })
+
+        if (Array.isArray((preset as any).country_prices)) {
+          ;(preset as any).country_prices.forEach((countryPrice: Record<string, unknown>, countryIndex: number) => {
+            Object.entries(countryPrice)
+              .filter(([priceKey]) => ['id', 'country_name', 'price', 'is_active'].includes(priceKey))
+              .forEach(([priceKey, priceValue]) => {
+                if (priceValue === undefined || priceValue === null || priceValue === '') {
+                  return
+                }
+
+                formData.append(
+                  `presets[${index}][country_prices][${countryIndex}][${priceKey}]`,
+                  typeof priceValue === 'boolean' ? (priceValue ? '1' : '0') : String(priceValue),
+                )
+              })
+          })
+        }
       })
       continue
     }

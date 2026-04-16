@@ -14,7 +14,10 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        cleanupOutdatedCaches: true,
+        // Keep long-term cache for hashed assets, but do not precache HTML.
+        // This lets clients fetch fresh index/app shell on each navigation.
+        globPatterns: ['**/*.{js,css,ico,png,svg,webmanifest}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,

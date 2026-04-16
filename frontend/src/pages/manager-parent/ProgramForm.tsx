@@ -120,6 +120,14 @@ export function ProgramFormPage() {
             price: Number(preset.price),
             sort_order: index + 1,
             is_active: preset.is_active,
+            country_prices: preset.country_prices
+              .filter((countryPrice) => countryPrice.country_name.trim() !== '')
+              .map((countryPrice) => ({
+                id: countryPrice.id,
+                country_name: countryPrice.country_name.trim(),
+                price: Number(countryPrice.price),
+                is_active: countryPrice.is_active,
+              })),
           })),
       }
 

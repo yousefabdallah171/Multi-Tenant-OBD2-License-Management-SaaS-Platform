@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
+import { resolvePresetEffectivePrice } from '@/lib/preset-pricing'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { formatDate } from '@/lib/utils'
 import type { ProgramDurationPreset, RenewLicenseData } from '@/types/manager-reseller.types'
@@ -33,6 +34,7 @@ interface RenewLicenseFormProps {
   presetOptions?: ProgramDurationPreset[]
   allowScheduleControls?: boolean
   requireScheduled?: boolean
+  customerCountryName?: string | null
 }
 
 const MIN_DURATION_DAYS = 1 / 1440
@@ -131,6 +133,7 @@ export function RenewLicenseForm({
   presetOptions = [],
   allowScheduleControls = !presetOnly,
   requireScheduled = false,
+  customerCountryName = null,
 }: RenewLicenseFormProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
@@ -161,6 +164,10 @@ export function RenewLicenseForm({
   const selectedPreset = useMemo(
     () => activePresetOptions.find((preset) => preset.id === selectedPresetId) ?? activePresetOptions[0] ?? null,
     [activePresetOptions, selectedPresetId],
+  )
+  const selectedPresetPricing = useMemo(
+    () => resolvePresetEffectivePrice(selectedPreset, customerCountryName),
+    [customerCountryName, selectedPreset],
   )
 
   useEffect(() => {
@@ -227,24 +234,24 @@ export function RenewLicenseForm({
 
   useEffect(() => {
     if (presetOnly && selectedPreset) {
-      setPriceInput(selectedPreset.price.toFixed(2))
+      setPriceInput(selectedPresetPricing.effectivePrice.toFixed(2))
       return
     }
 
     if (priceMode === 'auto') {
       setPriceInput(autoPrice.toFixed(2))
     }
-  }, [autoPrice, presetOnly, priceMode, selectedPreset])
+  }, [autoPrice, presetOnly, priceMode, selectedPreset, selectedPresetPricing.effectivePrice])
 
   const totalPrice = useMemo(() => {
     if (presetOnly && selectedPreset) {
-      return selectedPreset.price
+      return selectedPresetPricing.effectivePrice
     }
 
     if (priceMode === 'auto') return autoPrice
     const parsed = Number(priceInput)
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
-  }, [autoPrice, priceInput, priceMode])
+  }, [autoPrice, priceInput, priceMode, presetOnly, selectedPreset, selectedPresetPricing.effectivePrice])
 
   const errors = useMemo(() => {
     const next: Record<string, string> = {}
@@ -427,7 +434,7 @@ export function RenewLicenseForm({
                       {t('activate.presetDurationSummary', {
                         defaultValue: '{{days}} days',
                         days: preset.duration_days,
-                      })} • ${preset.price.toFixed(2)}
+                      })} • ${resolvePresetEffectivePrice(preset, customerCountryName).effectivePrice.toFixed(2)}
                     </div>
                   </button>
                 ))}
@@ -498,6 +505,7 @@ export function RenewLicenseForm({
           type="button"
           disabled={Object.keys(errors).length > 0 || isPending}
           onClick={() => onSubmit({
+            preset_id: presetOnly ? selectedPreset?.id : undefined,
             duration_days: Number(durationDays.toFixed(6)),
             price: totalPrice,
             is_scheduled: allowScheduleControls ? (scheduleEnabled || undefined) : undefined,

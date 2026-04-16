@@ -113,13 +113,21 @@ export function RoleResellerPaymentsPage({
   }, [balanceFilter, rows])
   const summary = query.data?.summary
   const totalsByRole = useMemo(() => {
+    if (summary?.sales_by_role) {
+      return {
+        reseller: summary.sales_by_role.reseller ?? 0,
+        manager: summary.sales_by_role.manager ?? 0,
+        manager_parent: summary.sales_by_role.manager_parent ?? 0,
+      }
+    }
+
     const initial = {
       reseller: 0,
       manager: 0,
       manager_parent: 0,
     }
 
-    return rows.reduce((acc, row) => {
+      return rows.reduce((acc, row) => {
       if (row.reseller_role === 'reseller') {
         acc.reseller += row.total_sales ?? 0
       } else if (row.reseller_role === 'manager') {
@@ -129,7 +137,7 @@ export function RoleResellerPaymentsPage({
       }
       return acc
     }, initial)
-  }, [rows])
+  }, [rows, summary?.sales_by_role])
   const balanceAvailability = useMemo(() => ({
     positive: rows.some((row) => row.outstanding > 0),
     negative: rows.some((row) => row.outstanding < 0),
@@ -144,7 +152,7 @@ export function RoleResellerPaymentsPage({
     name: row.reseller_name,
     role: row.reseller_role ?? null,
     secondary: row.reseller_email,
-  }))
+  })).filter((row) => row.role !== 'manager_parent')
 
   const paymentMutation = useMutation({
     mutationFn: (payload: RecordPaymentPayload) => recordPayment(payload),
@@ -205,10 +213,14 @@ export function RoleResellerPaymentsPage({
       key: 'actions',
       label: t('common.actions'),
       render: (row) => (
-        <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
-          {t('payments.actions.view')}
-          <ArrowRight className="h-4 w-4" />
-        </button>
+        row.reseller_role === 'manager_parent'
+          ? <span className="text-sm text-slate-500 dark:text-slate-400">-</span>
+          : (
+            <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+              {t('payments.actions.view')}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            )
       ),
     },
   ], [detailPath, lang, locale, navigate, t])

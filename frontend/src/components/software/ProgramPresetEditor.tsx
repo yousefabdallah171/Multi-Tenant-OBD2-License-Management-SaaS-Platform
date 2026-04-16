@@ -3,7 +3,15 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ALL_COUNTRIES } from '@/lib/countries'
 import type { ProgramDurationPreset } from '@/types/manager-reseller.types'
+
+export interface EditableProgramPresetCountryPrice {
+  id?: number
+  country_name: string
+  price: string
+  is_active: boolean
+}
 
 export interface EditableProgramPreset {
   id?: number
@@ -14,6 +22,7 @@ export interface EditableProgramPreset {
   price: string
   sort_order: number
   is_active: boolean
+  country_prices: EditableProgramPresetCountryPrice[]
 }
 
 interface ProgramPresetEditorProps {
@@ -22,10 +31,10 @@ interface ProgramPresetEditorProps {
 }
 
 const DEFAULT_PRESETS: EditableProgramPreset[] = [
-  { label: '2 Hours', duration_days: 2 / 24, duration_value: '2', duration_unit: 'hours', price: '60.00', sort_order: 1, is_active: true },
-  { label: 'Day', duration_days: 1, duration_value: '1', duration_unit: 'days', price: '85.00', sort_order: 2, is_active: true },
-  { label: 'Week', duration_days: 7, duration_value: '7', duration_unit: 'days', price: '150.00', sort_order: 3, is_active: true },
-  { label: 'Month', duration_days: 30, duration_value: '1', duration_unit: 'months', price: '250.00', sort_order: 4, is_active: true },
+  { label: '2 Hours', duration_days: 2 / 24, duration_value: '2', duration_unit: 'hours', price: '60.00', sort_order: 1, is_active: true, country_prices: [] },
+  { label: 'Day', duration_days: 1, duration_value: '1', duration_unit: 'days', price: '85.00', sort_order: 2, is_active: true, country_prices: [] },
+  { label: 'Week', duration_days: 7, duration_value: '7', duration_unit: 'days', price: '150.00', sort_order: 3, is_active: true, country_prices: [] },
+  { label: 'Month', duration_days: 30, duration_value: '1', duration_unit: 'months', price: '250.00', sort_order: 4, is_active: true, country_prices: [] },
 ]
 
 function formatDurationValue(value: number) {
@@ -93,6 +102,12 @@ export function mapProgramPresetsToEditable(presets?: ProgramDurationPreset[]): 
     price: preset.price.toFixed(2),
     sort_order: preset.sort_order || index + 1,
     is_active: preset.is_active,
+    country_prices: (preset.country_prices ?? []).map((countryPrice) => ({
+      id: countryPrice.id,
+      country_name: countryPrice.country_name,
+      price: Number(countryPrice.price).toFixed(2),
+      is_active: Boolean(countryPrice.is_active),
+    })),
   }))
 }
 
@@ -124,6 +139,7 @@ export function ProgramPresetEditor({ presets, onChange }: ProgramPresetEditorPr
         price: '0.00',
         sort_order: presets.length + 1,
         is_active: true,
+        country_prices: [],
       },
     ])
   }
@@ -133,6 +149,56 @@ export function ProgramPresetEditor({ presets, onChange }: ProgramPresetEditorPr
       presets
         .filter((_, currentIndex) => currentIndex !== index)
         .map((preset, currentIndex) => ({ ...preset, sort_order: currentIndex + 1 })),
+    )
+  }
+
+  function addCountryPrice(presetIndex: number) {
+    onChange(
+      presets.map((preset, currentIndex) => (
+        currentIndex === presetIndex
+          ? {
+            ...preset,
+            country_prices: [
+              ...preset.country_prices,
+              {
+                country_name: '',
+                price: preset.price,
+                is_active: true,
+              },
+            ],
+          }
+          : preset
+      )),
+    )
+  }
+
+  function updateCountryPrice(presetIndex: number, countryIndex: number, patch: Partial<EditableProgramPresetCountryPrice>) {
+    onChange(
+      presets.map((preset, currentIndex) => (
+        currentIndex === presetIndex
+          ? {
+            ...preset,
+            country_prices: preset.country_prices.map((countryPrice, currentCountryIndex) => (
+              currentCountryIndex === countryIndex
+                ? { ...countryPrice, ...patch }
+                : countryPrice
+            )),
+          }
+          : preset
+      )),
+    )
+  }
+
+  function removeCountryPrice(presetIndex: number, countryIndex: number) {
+    onChange(
+      presets.map((preset, currentIndex) => (
+        currentIndex === presetIndex
+          ? {
+            ...preset,
+            country_prices: preset.country_prices.filter((_, currentCountryIndex) => currentCountryIndex !== countryIndex),
+          }
+          : preset
+      )),
     )
   }
 
@@ -149,7 +215,8 @@ export function ProgramPresetEditor({ presets, onChange }: ProgramPresetEditorPr
 
       <div className="space-y-3">
         {presets.map((preset, index) => (
-          <div key={`${preset.id ?? 'new'}-${index}`} className="grid gap-3 rounded-2xl border border-slate-200 p-3 dark:border-slate-800 md:grid-cols-[minmax(0,1.4fr)_120px_140px_120px_auto_auto]">
+          <div key={`${preset.id ?? 'new'}-${index}`} className="space-y-3 rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_120px_140px_120px_auto_auto]">
             <div className="space-y-2">
               <Label>{t('software.presetLabel', { defaultValue: 'Label' })}</Label>
               <Input
@@ -202,6 +269,57 @@ export function ProgramPresetEditor({ presets, onChange }: ProgramPresetEditorPr
               <Button type="button" variant="ghost" size="icon" onClick={() => removePreset(index)} disabled={presets.length <= 1}>
                 <Minus className="h-4 w-4" />
               </Button>
+            </div>
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+              <div className="flex items-center justify-between gap-2">
+                <Label>{t('software.countryPricingTitle', { defaultValue: 'Country Pricing Overrides' })}</Label>
+                <Button type="button" size="sm" variant="outline" onClick={() => addCountryPrice(index)}>
+                  <Plus className="me-2 h-4 w-4" />
+                  {t('software.addCountryPricing', { defaultValue: 'Add Country Price' })}
+                </Button>
+              </div>
+              {preset.country_prices.length === 0 ? (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('software.countryPricingHint', { defaultValue: 'Optional override prices by customer country. Default preset price is used when no country match exists.' })}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {preset.country_prices.map((countryPrice, countryIndex) => (
+                    <div key={`${countryPrice.id ?? 'new-country'}-${countryIndex}`} className="grid gap-2 md:grid-cols-[minmax(0,1.4fr)_120px_auto_auto]">
+                      <select
+                        value={countryPrice.country_name}
+                        onChange={(event) => updateCountryPrice(index, countryIndex, { country_name: event.target.value })}
+                        className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                      >
+                        <option value="">{t('common.country', { defaultValue: 'Country' })}</option>
+                        {ALL_COUNTRIES.map((country) => (
+                          <option key={country} value={country}>{country}</option>
+                        ))}
+                      </select>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={countryPrice.price}
+                        onChange={(event) => updateCountryPrice(index, countryIndex, { price: event.target.value })}
+                      />
+                      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={countryPrice.is_active}
+                          onChange={(event) => updateCountryPrice(index, countryIndex, { is_active: event.target.checked })}
+                        />
+                        {t('common.active')}
+                      </label>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeCountryPrice(index, countryIndex)}>
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}

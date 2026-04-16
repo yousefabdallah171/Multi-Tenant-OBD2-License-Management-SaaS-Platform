@@ -14,6 +14,7 @@ use App\Models\BiosUsernameLink;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
+use App\Models\ProgramDurationPresetCountryPrice;
 use App\Models\User;
 use App\Support\CustomerOwnership;
 use Carbon\Carbon;
@@ -113,9 +114,11 @@ class LicenseService
 
             $customer = $this->upsertCustomer($reseller, $data, $externalUsername);
             $preset = $this->resolveActivationPreset($actor, $program, $data);
+            $countryName = ProgramDurationPresetCountryPrice::normalizeCountryName((string) ($data['country_name'] ?? $customer->country_name ?? ''));
+            $presetPricing = $preset ? $this->resolvePresetEffectivePricing($preset, $countryName) : null;
             $durationDays = $preset ? (float) $preset->duration_days : (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
-            $price = $preset ? (float) $preset->price : (float) $data['price'];
+            $price = $preset ? (float) ($presetPricing['effective_price'] ?? $preset->price) : (float) $data['price'];
             $this->assertReasonablePrice($price);
             $activationAnchor = $scheduledAt ?? $this->currentMinute();
             $activatedAt = $isScheduled ? null : $this->currentMinute();
@@ -161,6 +164,11 @@ class LicenseService
                     'external_username' => $externalUsername,
                     'price' => (float) $license->price,
                     'preset_id' => $preset?->id,
+                    'country_name' => $countryName,
+                    'price_source' => $presetPricing['price_source'] ?? null,
+                    'base_preset_price' => $presetPricing['base_preset_price'] ?? null,
+                    'country_override_price' => $presetPricing['country_override_price'] ?? null,
+                    'effective_price' => $preset ? (float) $license->price : null,
                     'is_scheduled' => $isScheduled,
                 ],
             );
@@ -190,6 +198,9 @@ class LicenseService
         $actor = $this->currentActor();
         $reseller = $this->resolveReseller($actor, $license->reseller);
         $license->loadMissing(['program', 'customer', 'reseller']);
+        $preset = $this->resolveRenewalPreset($license, $data);
+        $countryName = ProgramDurationPresetCountryPrice::normalizeCountryName((string) ($license->customer?->country_name ?? ''));
+        $presetPricing = $preset ? $this->resolvePresetEffectivePricing($preset, $countryName) : null;
         $renewalOwner = $this->resolveRenewalOwner($actor, $license, $reseller);
         $shouldCreateTakeover = $this->shouldCreateRenewalTakeover($actor, $license);
 
@@ -242,7 +253,7 @@ class LicenseService
             'is_scheduled' => $isScheduled,
         ]);
 
-        $renewedLicense = DB::transaction(function () use ($actor, $license, $data, $renewalOwner, $apiResponse, $isScheduled, $renewBiosLower, $shouldCreateTakeover): License {
+        $renewedLicense = DB::transaction(function () use ($actor, $license, $data, $renewalOwner, $apiResponse, $isScheduled, $renewBiosLower, $shouldCreateTakeover, $preset, $countryName, $presetPricing): License {
             // Locked re-check inside transaction to close the race window
             if (! $isScheduled) {
                 $renewRaceConflict = License::query()
@@ -259,13 +270,14 @@ class LicenseService
             }
 
             $anchor = $license->expires_at && $license->expires_at->isFuture() ? $this->normalizeToMinute($license->expires_at->copy()) : $this->currentMinute();
-            $durationDays = (float) $data['duration_days'];
+            $durationDays = $preset ? (float) $preset->duration_days : (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
             $scheduledTimezone = $this->normalizeTimezone((string) ($data['scheduled_timezone'] ?? config('app.timezone', 'UTC')));
             $scheduledAt = $isScheduled ? $this->normalizeToMinute(Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc()) : null;
             $expiresAt = ($scheduledAt?->copy() ?? $anchor->copy())->addMinutes($durationMinutes);
             $activatedAt = $license->activated_at;
-            $this->assertReasonablePrice((float) $data['price']);
+            $price = $preset ? (float) ($presetPricing['effective_price'] ?? $preset->price) : (float) $data['price'];
+            $this->assertReasonablePrice($price);
 
             if ($isScheduled) {
                 if ($license->status !== 'active' || ! $license->activated_at) {
@@ -285,7 +297,7 @@ class LicenseService
                     'external_username' => $license->external_username,
                     'external_activation_response' => (string) ($apiResponse['data']['response'] ?? 'Renewed under new owner.'),
                     'duration_days' => $durationDays,
-                    'price' => (float) $data['price'],
+                    'price' => $price,
                     'activated_at' => $activatedAt,
                     'expires_at' => $expiresAt,
                     'scheduled_at' => $scheduledAt,
@@ -300,10 +312,10 @@ class LicenseService
                     'pause_reason' => null,
                     'status' => $isScheduled ? 'pending' : 'active',
                 ])
-                : tap($license, function (License $license) use ($data, $durationDays, $activatedAt, $expiresAt, $apiResponse, $isScheduled, $scheduledAt, $scheduledTimezone): void {
+                : tap($license, function (License $license) use ($price, $durationDays, $activatedAt, $expiresAt, $apiResponse, $isScheduled, $scheduledAt, $scheduledTimezone): void {
                     $license->forceFill([
                         'duration_days' => $durationDays,
-                        'price' => (float) $data['price'],
+                        'price' => $price,
                         'activated_at' => $activatedAt,
                         'expires_at' => $expiresAt,
                         'external_activation_response' => (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
@@ -341,6 +353,12 @@ class LicenseService
                     'external_username' => $renewed->external_username,
                     'duration_days' => $durationDays,
                     'price' => (float) $renewed->price,
+                    'preset_id' => $preset?->id,
+                    'country_name' => $countryName,
+                    'price_source' => $presetPricing['price_source'] ?? null,
+                    'base_preset_price' => $presetPricing['base_preset_price'] ?? null,
+                    'country_override_price' => $presetPricing['country_override_price'] ?? null,
+                    'effective_price' => $preset ? (float) $renewed->price : null,
                     'actor_id' => $attribution['actor_id'],
                     'actor_role' => $attribution['actor_role'],
                     'owner_user_id' => $attribution['owner_user_id'],
@@ -1343,7 +1361,7 @@ class LicenseService
             'name' => $displayName,
             'email' => $email,
             'phone' => $data['customer_phone'] ?? null,
-            'country_name' => isset($data['country_name']) ? trim((string) $data['country_name']) ?: null : null,
+            'country_name' => ProgramDurationPresetCountryPrice::normalizeCountryName((string) ($data['country_name'] ?? '')),
             'role' => UserRole::CUSTOMER,
             'status' => 'active',
             'created_by' => $reseller->id,
@@ -1520,15 +1538,15 @@ class LicenseService
         $message = $response['data']['message'] ?? $response['data']['error'] ?? $response['data']['response'] ?? null;
         $statusCode = (int) ($response['status_code'] ?? 0);
 
+        if ($statusCode >= 500) {
+            return 'this software not working right now plesae contact your MANGER';
+        }
+
         if (is_string($message) && $message !== '') {
             $cleaned = trim(strip_tags($message));
             if ($cleaned !== '') {
                 return Str::limit($cleaned, 220, '...');
             }
-        }
-
-        if ($statusCode >= 500) {
-            return 'The external license server returned an internal error. Check External API Base URL, API Key, and the generated username format.';
         }
 
         return $fallback;
@@ -1720,7 +1738,7 @@ class LicenseService
         $role = $actor->role?->value ?? (string) $actor->role;
 
         $isRequiredPresetRole = in_array($role, [UserRole::RESELLER->value, UserRole::MANAGER->value], true);
-        $isOptionalPresetRole = $role === UserRole::MANAGER_PARENT->value;
+        $isOptionalPresetRole = in_array($role, [UserRole::MANAGER_PARENT->value, UserRole::SUPER_ADMIN->value], true);
 
         if (! $isRequiredPresetRole && ! $isOptionalPresetRole) {
             return null;
@@ -1734,7 +1752,7 @@ class LicenseService
                     'preset_id' => 'A valid duration preset is required.',
                 ]);
             }
-            return null; // preset is optional for manager_parent
+            return null; // preset is optional for manager_parent and super_admin
         }
 
         $preset = ProgramDurationPreset::query()
@@ -1749,6 +1767,47 @@ class LicenseService
         }
 
         return $preset;
+    }
+
+    private function resolveRenewalPreset(License $license, array $data): ?ProgramDurationPreset
+    {
+        $presetId = (int) ($data['preset_id'] ?? 0);
+        if ($presetId <= 0) {
+            return null;
+        }
+
+        $preset = ProgramDurationPreset::query()
+            ->where('program_id', (int) $license->program_id)
+            ->where('is_active', true)
+            ->find($presetId);
+
+        if (! $preset) {
+            throw ValidationException::withMessages([
+                'preset_id' => 'The selected duration preset is invalid.',
+            ]);
+        }
+
+        return $preset;
+    }
+
+    /**
+     * @return array{
+     *   effective_price: float,
+     *   price_source: 'country_override'|'preset_default',
+     *   base_preset_price: float,
+     *   country_override_price: float|null
+     * }
+     */
+    private function resolvePresetEffectivePricing(ProgramDurationPreset $preset, ?string $countryName): array
+    {
+        $resolved = $preset->resolveEffectivePriceByCountry($countryName);
+
+        return [
+            'effective_price' => (float) $resolved['price'],
+            'price_source' => $resolved['source'],
+            'base_preset_price' => (float) $preset->price,
+            'country_override_price' => isset($resolved['country_override_price']) ? (float) $resolved['country_override_price'] : null,
+        ];
     }
 
     /**

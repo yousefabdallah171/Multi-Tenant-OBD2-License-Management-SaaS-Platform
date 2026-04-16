@@ -1644,7 +1644,10 @@
     "presetLabel": "العنوان",
     "presetLabelPlaceholder": "مثال: شهر",
     "presetDurationDays": "عدد الأيام",
-    "addPreset": "إضافة مدة"
+    "addPreset": "إضافة مدة",
+    "countryPricingTitle": "تسعير مخصص حسب الدولة",
+    "addCountryPricing": "إضافة سعر دولة",
+    "countryPricingHint": "يمكنك تعيين أسعار خاصة لدول محددة. عند عدم وجود سعر مخصص سيتم استخدام سعر الإعداد الافتراضي."
   },
   "programLogs": {
     "title": "سجلات المستخدمين",

@@ -177,7 +177,7 @@ class IpAnalyticsController extends BaseResellerController
             try {
                 $payload = array_map(static fn (string $ip): array => ['query' => $ip], $chunk);
                 $response = Http::timeout(8)
-                    ->post('http://ip-api.com/batch?fields=status,country,countryCode,city,isp,org,proxy,hosting,query', $payload);
+                    ->post('http://ip-api.com/batch?fields=status,country,countryCode,city,isp,org,proxy,hosting,mobile,query', $payload);
 
                 if (! $response->successful()) {
                     foreach ($chunk as $ip) {
@@ -197,13 +197,18 @@ class IpAnalyticsController extends BaseResellerController
                         continue;
                     }
 
+                    $isHosting = (bool) ($item['hosting'] ?? false);
+                    $isProxy = (bool) ($item['proxy'] ?? false);
+
                     $geo = [
                         'country' => (string) ($item['country'] ?? 'Unknown'),
                         'country_code' => (string) ($item['countryCode'] ?? ''),
                         'city' => (string) ($item['city'] ?? ''),
                         'isp' => (string) (($item['org'] ?? '') !== '' ? ($item['org'] ?? '') : ($item['isp'] ?? '')),
-                        'proxy' => (bool) (($item['proxy'] ?? false) || ($item['hosting'] ?? false)),
-                        'hosting' => (bool) ($item['hosting'] ?? false),
+                        // Strict mode: flag only high-confidence VPN/proxy signals.
+                        // This minimizes false positives for mobile/carrier networks.
+                        'proxy' => $isProxy && $isHosting,
+                        'hosting' => $isHosting,
                     ];
 
                     $result[$ip] = $geo;

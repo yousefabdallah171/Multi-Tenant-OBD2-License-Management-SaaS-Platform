@@ -67,6 +67,7 @@ class LicenseController extends Controller
                 'customer_id' => $license->customer_id,
                 'customer_name' => $license->customer?->name,
                 'customer_email' => $this->visibleEmail($license->customer?->email),
+                'customer_country_name' => $license->customer?->country_name,
                 'customer_phone' => $license->customer?->phone,
                 'bios_id' => $license->bios_id,
                 'program' => $license->program?->name,
@@ -100,9 +101,19 @@ class LicenseController extends Controller
 
     public function renew(Request $request, License $license): JsonResponse
     {
+        $durationNullable = ! empty($request->input('preset_id'));
         $validated = $request->validate([
-            'duration_days' => ['required', 'numeric', 'min:0.0001', 'max:36500'],
-            'price' => ['required', 'numeric', 'min:0', 'max:'.CustomerOwnership::MAX_REASONABLE_PRICE],
+            'preset_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('program_duration_presets', 'id')->where(function ($query) use ($license): void {
+                    $query
+                        ->where('program_id', (int) $license->program_id)
+                        ->where('is_active', true);
+                }),
+            ],
+            'duration_days' => [$durationNullable ? 'nullable' : 'required', 'numeric', 'min:0.0001', 'max:36500'],
+            'price' => [$durationNullable ? 'nullable' : 'required', 'numeric', 'min:0', 'max:'.CustomerOwnership::MAX_REASONABLE_PRICE],
             'is_scheduled' => ['nullable', 'boolean'],
             'scheduled_date_time' => ['required_if:is_scheduled,true', 'date'],
             'scheduled_timezone' => ['nullable', 'string', 'max:64', Rule::in(timezone_identifiers_list())],
@@ -321,6 +332,7 @@ class LicenseController extends Controller
             'customer_id' => $license->customer_id,
             'customer_name' => $license->customer?->name,
             'customer_email' => $this->visibleEmail($license->customer?->email),
+            'customer_country_name' => $license->customer?->country_name,
             'bios_id' => $license->bios_id,
             'external_username' => $license->external_username ?: $license->customer?->username,
             'program' => $license->program?->name,

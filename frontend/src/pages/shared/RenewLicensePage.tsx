@@ -181,6 +181,7 @@ export function RenewLicensePage({
               resetKey={license.id}
               presetOnly={presetOnly}
               presetOptions={resellerPresetOptions}
+              customerCountryName={license.customer_country_name ?? null}
               allowScheduleControls={allowScheduleControls}
               requireScheduled={isScheduleEdit}
             />

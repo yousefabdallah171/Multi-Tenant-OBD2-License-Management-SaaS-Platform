@@ -41,7 +41,7 @@ class ResellerPaymentController extends BaseManagerParentController
 
         $sellers = User::query()
             ->where('tenant_id', $tenantId)
-            ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->whereIn('id', $sellerIds)
             ->select(['id', 'tenant_id', 'role', 'name', 'email', 'created_at', 'created_by'])
             ->orderBy('name')
@@ -58,6 +58,11 @@ class ResellerPaymentController extends BaseManagerParentController
                 'total_outstanding' => round((float) $rows->sum(fn (array $row): float => min((float) ($row['outstanding'] ?? 0), 0)), 2),
                 'total_collectible' => round((float) $rows->sum(fn (array $row): float => max((float) ($row['outstanding'] ?? 0), 0)), 2),
                 'total_collected' => round(max(0, (float) $rows->sum('commission_owed') - (float) $rows->sum(fn (array $row): float => max((float) ($row['outstanding'] ?? 0), 0))), 2),
+                'sales_by_role' => [
+                    'manager_parent' => round((float) $rows->where('reseller_role', UserRole::MANAGER_PARENT->value)->sum('total_sales'), 2),
+                    'manager' => round((float) $rows->where('reseller_role', UserRole::MANAGER->value)->sum('total_sales'), 2),
+                    'reseller' => round((float) $rows->where('reseller_role', UserRole::RESELLER->value)->sum('total_sales'), 2),
+                ],
                 'period' => $period ?? 'all',
             ],
         ]);
@@ -141,12 +146,12 @@ class ResellerPaymentController extends BaseManagerParentController
                 ->map(fn ($id): int => (int) $id)
                 ->all();
 
-            return array_values(array_unique([...$managedManagerIds, ...$resellerIds]));
+            return array_values(array_unique([$managerParentId, ...$managedManagerIds, ...$resellerIds]));
         }
 
         return User::query()
             ->where('tenant_id', $tenantId)
-            ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->all();
@@ -505,7 +510,12 @@ class ResellerPaymentController extends BaseManagerParentController
             $amountPaid = round((float) ($accounting['total_paid'] ?? 0), 2);
             $outstanding = round((float) $accounting['still_not_paid'], 2);
 
-            if ($role !== UserRole::RESELLER->value) {
+            if ($role === UserRole::MANAGER_PARENT->value) {
+                $commissionRate = 0.0;
+                $amountPaid = 0.0;
+                $commissionOwed = 0.0;
+                $outstanding = 0.0;
+            } elseif ($role !== UserRole::RESELLER->value) {
                 $commissionRate = 0.0;
                 $amountPaid = round((float) ($paymentsBySeller->get($seller->id, 0) ?? 0), 2);
                 $commissionOwed = $totalSales;
@@ -563,7 +573,11 @@ class ResellerPaymentController extends BaseManagerParentController
             $commissionOwed = round((float) ($commission?->commission_owed ?? $totalSales), 2);
             $outstanding = round((float) ($commission?->outstanding ?? ($commissionOwed - $amountPaid)), 2);
 
-            if ($role !== UserRole::RESELLER->value) {
+            if ($role === UserRole::MANAGER_PARENT->value) {
+                $amountPaid = 0.0;
+                $commissionOwed = 0.0;
+                $outstanding = 0.0;
+            } elseif ($role !== UserRole::RESELLER->value) {
                 $amountPaid = round((float) ($paymentsByReseller->get($seller->id, 0) ?? 0), 2);
                 $commissionOwed = $totalSales;
                 $outstanding = round($commissionOwed - $amountPaid, 2);
