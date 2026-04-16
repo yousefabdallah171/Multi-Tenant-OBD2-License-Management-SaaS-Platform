@@ -70,6 +70,7 @@ use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardCo
 use App\Http\Controllers\SuperAdmin\DeletedCustomerController as SuperAdminDeletedCustomerController;
 use App\Http\Controllers\SuperAdmin\FinancialReportController;
 use App\Http\Controllers\SuperAdmin\IpAnalyticsController as SuperAdminIpAnalyticsController;
+use App\Http\Controllers\SuperAdmin\ImpersonationController as SuperAdminImpersonationController;
 use App\Http\Controllers\SuperAdmin\LogController;
 use App\Http\Controllers\SuperAdmin\LicenseController as SuperAdminLicenseController;
 use App\Http\Controllers\SuperAdmin\NetworkController as SuperAdminNetworkController;
@@ -178,6 +179,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
             Route::get('/export/pdf', [ManagerParentReportController::class, 'exportPdf']);
         });
         Route::get('/reseller-payments', [ManagerParentResellerPaymentController::class, 'index']);
+        Route::get('/reseller-payments/manager-parent/{user}/customers', [ManagerParentResellerPaymentController::class, 'managerParentCustomers']);
         Route::get('/reseller-payments/{user}', [ManagerParentResellerPaymentController::class, 'show']);
         Route::post('/reseller-payments', [ManagerParentResellerPaymentController::class, 'storePayment']);
         Route::put('/reseller-payments/{resellerPayment}', [ManagerParentResellerPaymentController::class, 'updatePayment']);
@@ -400,6 +402,10 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/users/{user}', [SuperAdminUserController::class, 'show']);
         Route::put('/users/{user}/status', [SuperAdminUserController::class, 'updateStatus']);
         Route::delete('/users/{user}', [SuperAdminUserController::class, 'destroy']);
+        Route::get('/impersonation/targets', [SuperAdminImpersonationController::class, 'targets']);
+        Route::post('/impersonation/start', [SuperAdminImpersonationController::class, 'start'])->middleware('throttle:20,1');
+        Route::post('/impersonation/exchange', [SuperAdminImpersonationController::class, 'exchange'])->middleware('throttle:20,1');
+        Route::post('/impersonation/stop', [SuperAdminImpersonationController::class, 'stop']);
         Route::get('/username-management', [\App\Http\Controllers\SuperAdmin\UsernameManagementController::class, 'index']);
         Route::post('/username-management/{user}/unlock', [\App\Http\Controllers\SuperAdmin\UsernameManagementController::class, 'unlock']);
         Route::put('/username-management/{user}/username', [\App\Http\Controllers\SuperAdmin\UsernameManagementController::class, 'changeUsername']);
@@ -477,6 +483,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/programs/{program}/active-users', [SuperAdminProgramLogsController::class, 'activeUsers']);
         Route::get('/programs/{program}/stats', [SuperAdminProgramLogsController::class, 'stats']);
         Route::get('/reseller-payments', [SuperAdminResellerPaymentController::class, 'index']);
+        Route::get('/reseller-payments/manager-parent/{user}/customers', [SuperAdminResellerPaymentController::class, 'managerParentCustomers']);
         Route::get('/reseller-payments/{user}', [SuperAdminResellerPaymentController::class, 'show']);
         Route::post('/reseller-payments', [SuperAdminResellerPaymentController::class, 'storePayment']);
         Route::put('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'updatePayment']);

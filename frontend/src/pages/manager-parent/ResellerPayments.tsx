@@ -13,6 +13,7 @@ export function ResellerPaymentsPage() {
       fetchList={managerParentService.getResellerPayments}
       recordPayment={managerParentService.recordPayment}
       detailPath={(lang, resellerId) => routePaths.managerParent.resellerPaymentDetail(lang, resellerId)}
+      managerParentDetailPath={(lang, managerParentId) => routePaths.managerParent.resellerPaymentsManagerParentCustomers(lang, managerParentId)}
     />
   )
 }

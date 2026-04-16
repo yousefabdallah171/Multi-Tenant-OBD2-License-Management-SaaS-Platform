@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { AUTH_SESSION_STORAGE_KEY, AUTH_STORAGE_KEY } from '@/lib/constants'
+import { AUTH_SESSION_STORAGE_KEY, AUTH_STORAGE_KEY, IMPERSONATION_AUTH_STORAGE_KEY } from '@/lib/constants'
+import { isImpersonationActive } from '@/lib/impersonation'
 import type { User } from '@/types/user.types'
 
 interface AuthState {
@@ -16,6 +17,18 @@ function readStoredAuth(): Pick<AuthState, 'user' | 'remember'> {
   }
 
   try {
+    if (isImpersonationActive()) {
+      const impersonationRaw = window.sessionStorage.getItem(IMPERSONATION_AUTH_STORAGE_KEY)
+      if (impersonationRaw) {
+        const parsed = JSON.parse(impersonationRaw) as { user?: User | null }
+
+        return {
+          user: parsed.user ?? null,
+          remember: false,
+        }
+      }
+    }
+
     const localRaw = window.localStorage.getItem(AUTH_STORAGE_KEY)
     const sessionRaw = window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY)
     const raw = localRaw ?? sessionRaw
@@ -37,6 +50,16 @@ function readStoredAuth(): Pick<AuthState, 'user' | 'remember'> {
 
 function persistAuth(user: User | null, remember = true) {
   if (typeof window === 'undefined') {
+    return
+  }
+
+  if (isImpersonationActive()) {
+    if (!user) {
+      window.sessionStorage.removeItem(IMPERSONATION_AUTH_STORAGE_KEY)
+      return
+    }
+
+    window.sessionStorage.setItem(IMPERSONATION_AUTH_STORAGE_KEY, JSON.stringify({ user }))
     return
   }
 

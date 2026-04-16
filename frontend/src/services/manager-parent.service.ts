@@ -33,7 +33,7 @@ import type {
   UsernameManagedUser,
 } from '@/types/manager-parent.types'
 import type { LicenseFilters, LicenseSummary, SubmitBiosChangeRequestData } from '@/types/manager-reseller.types'
-import type { RecordPaymentPayload, ResellerPaymentDetailData, ResellerPaymentFilters, ResellerPaymentListData, StoreCommissionPayload } from '@/types/manager-reseller.types'
+import type { ManagerParentSalesCustomerFilters, ManagerParentSalesCustomerListResponse, RecordPaymentPayload, ResellerPaymentDetailData, ResellerPaymentFilters, ResellerPaymentListData, StoreCommissionPayload } from '@/types/manager-reseller.types'
 import { downloadFile } from '@/utils/download'
 
 /**
@@ -272,6 +272,10 @@ export const managerParentService = {
   },
   async getResellerPaymentDetail(resellerId: number) {
     const { data } = await api.get<{ data: ResellerPaymentDetailData }>(`/reseller-payments/${resellerId}`)
+    return data
+  },
+  async getManagerParentSalesCustomers(managerParentId: number, filters?: ManagerParentSalesCustomerFilters) {
+    const { data } = await api.get<ManagerParentSalesCustomerListResponse>(`/reseller-payments/manager-parent/${managerParentId}/customers`, { params: filters })
     return data
   },
   async recordPayment(payload: RecordPaymentPayload) {

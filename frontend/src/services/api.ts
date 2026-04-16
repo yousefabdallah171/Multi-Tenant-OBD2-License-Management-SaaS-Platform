@@ -4,6 +4,7 @@ import type { SupportedLanguage } from '@/hooks/useLanguage'
   import i18n from '@/i18n'
 import { extractAccountDisabledState, storeAccountDisabledState } from '@/lib/account-disabled'
 import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY } from '@/lib/constants'
+import { getImpersonationState, isImpersonationActive } from '@/lib/impersonation'
 import { getDashboardPath, routePaths } from '@/router/routes'
 import { useAuthStore } from '@/stores/authStore'
 import type { DashboardStats, HealthResponse } from '@/types/api.types'
@@ -72,6 +73,14 @@ async function fetchCurrentUserSnapshot(): Promise<User | null> {
 api.interceptors.request.use((config) => {
   config.baseURL ??= resolveApiBaseUrl()
   config.headers['Accept-Language'] = resolveCurrentLanguage()
+
+  if (isImpersonationActive()) {
+    const state = getImpersonationState()
+    if (state?.token) {
+      config.headers.Authorization = `Bearer ${state.token}`
+    }
+  }
+
   return config
 })
 

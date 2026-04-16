@@ -15,7 +15,8 @@ import type {
   SellerLogEntry,
   SellerLogSummary,
 } from '@/types/manager-parent.types'
-import type { RecordPaymentPayload, ResellerPaymentDetailData, ResellerPaymentFilters, ResellerPaymentListData, StoreCommissionPayload } from '@/types/manager-reseller.types'
+import type { ManagerParentSalesCustomerFilters, ManagerParentSalesCustomerListResponse, RecordPaymentPayload, ResellerPaymentDetailData, ResellerPaymentFilters, ResellerPaymentListData, StoreCommissionPayload } from '@/types/manager-reseller.types'
+import type { ImpersonationStartResponse, ImpersonationTargetListResponse } from '@/types/super-admin.types'
 
 export const superAdminPlatformService = {
   async getSellers(params?: { role?: 'manager_parent' | 'manager' | 'reseller'; tenant_id?: number | ''; per_page?: number }) {
@@ -50,6 +51,10 @@ export const superAdminPlatformService = {
   },
   async getResellerPaymentDetail(resellerId: number) {
     const { data } = await api.get<{ data: ResellerPaymentDetailData }>(`/super-admin/reseller-payments/${resellerId}`)
+    return data
+  },
+  async getManagerParentSalesCustomers(managerParentId: number, filters?: ManagerParentSalesCustomerFilters) {
+    const { data } = await api.get<ManagerParentSalesCustomerListResponse>(`/super-admin/reseller-payments/manager-parent/${managerParentId}/customers`, { params: filters })
     return data
   },
   async recordPayment(payload: RecordPaymentPayload) {
@@ -104,6 +109,48 @@ export const superAdminPlatformService = {
   },
   async getSellerLogs(params?: { page?: number; per_page?: number; seller_id?: number | ''; action?: string; from?: string; to?: string; tenant_id?: number | '' }) {
     const { data } = await api.get<{ data: SellerLogEntry[]; summary: SellerLogSummary; meta: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }>('/super-admin/reseller-logs', { params })
+    return data
+  },
+  async getImpersonationTargets(params?: { page?: number; per_page?: number; search?: string; role?: 'manager_parent' | 'manager' | 'reseller' | ''; tenant_id?: number | ''; status?: 'active' | 'suspended' | 'inactive' | '' }) {
+    const { data } = await api.get<ImpersonationTargetListResponse>('/super-admin/impersonation/targets', { params })
+    return data
+  },
+  async startImpersonation(targetUserId: number) {
+    const { data } = await api.post<ImpersonationStartResponse>('/super-admin/impersonation/start', { target_user_id: targetUserId })
+    return data
+  },
+  async exchangeImpersonation(token: string) {
+    const { data } = await api.post<{
+      data: {
+        token: string
+        expires_at: string
+        user: {
+          id: number
+          tenant_id: number | null
+          name: string
+          username: string | null
+          email: string
+          phone: string | null
+          timezone?: string | null
+          role: 'super_admin' | 'manager_parent' | 'manager' | 'reseller' | 'customer'
+          status: 'active' | 'suspended' | 'inactive'
+          created_by: number | null
+          username_locked: boolean
+          tenant?: { id: number; name: string; slug: string; status: string } | null
+        }
+        impersonation: {
+          active: true
+          actor: { id: number; name: string; email: string }
+          target: { id: number; name: string; email: string; role: 'manager_parent' | 'manager' | 'reseller' }
+          started_at: string
+          expires_at: string
+        }
+      }
+    }>('/super-admin/impersonation/exchange', { token })
+    return data
+  },
+  async stopImpersonation(payload?: { target_user_id?: number; target_role?: string }) {
+    const { data } = await api.post<{ message: string }>('/super-admin/impersonation/stop', payload ?? {})
     return data
   },
 }

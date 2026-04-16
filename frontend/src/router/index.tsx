@@ -57,6 +57,7 @@ const ManagerParentCreateCustomerPage = lazyNamed(() => import('@/pages/manager-
 const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-parent/CustomerDetail'), 'CustomerDetailPage')
 const ManagerParentResellerPaymentDetailPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPaymentDetail'), 'ResellerPaymentDetailPage')
 const ManagerParentResellerPaymentsPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPayments'), 'ResellerPaymentsPage')
+const ManagerParentSalesCustomersPage = lazyNamed(() => import('@/pages/manager-parent/ManagerParentSalesCustomers'), 'ManagerParentSalesCustomersPage')
 const ManagerParentRenewLicensePage = lazyNamed(() => import('@/pages/manager-parent/RenewLicense'), 'RenewLicensePageForManagerParent')
 const ManagerParentDashboardPage = lazyNamed(() => import('@/pages/manager-parent/Dashboard'), 'DashboardPage')
 const ManagerParentFinancialReportsPage = lazyNamed(() => import('@/pages/manager-parent/FinancialReports'), 'FinancialReportsPage')
@@ -79,6 +80,8 @@ const BiosBlacklistPage = lazyNamed(() => import('@/pages/super-admin/BiosBlackl
 const SuperAdminBiosConflictsPage = lazyNamed(() => import('@/pages/super-admin/BiosConflicts'), 'BiosConflictsPage')
 const SuperAdminBiosDetailsPage = lazyNamed(() => import('@/pages/super-admin/BiosDetails'), 'BiosDetailsPage')
 const SuperAdminBiosHistoryPage = lazyNamed(() => import('@/pages/super-admin/BiosHistory'), 'BiosHistoryPage')
+const SuperAdminImpersonationPage = lazyNamed(() => import('@/pages/super-admin/Impersonation'), 'ImpersonationPage')
+const SuperAdminImpersonationLaunchPage = lazyNamed(() => import('@/pages/super-admin/ImpersonationLaunch'), 'ImpersonationLaunchPage')
 const SuperAdminCustomersPage = lazyNamed(() => import('@/pages/super-admin/Customers'), 'CustomersPage')
 const SuperAdminCreateCustomerPage = lazyNamed(() => import('@/pages/super-admin/CreateCustomer'), 'CreateCustomerPage')
 const SuperAdminCustomerDetailPage = lazyNamed(() => import('@/pages/super-admin/CustomerDetail'), 'CustomerDetailPage')
@@ -91,6 +94,7 @@ const LogsPage = lazyNamed(() => import('@/pages/super-admin/Logs'), 'LogsPage')
 const SuperAdminProgramLogsPage = lazyNamed(() => import('@/pages/super-admin/ProgramLogs'), 'ProgramLogsPage')
 const SuperAdminResellerPaymentDetailPage = lazyNamed(() => import('@/pages/super-admin/ResellerPaymentDetail'), 'ResellerPaymentDetailPage')
 const SuperAdminResellerPaymentsPage = lazyNamed(() => import('@/pages/super-admin/ResellerPayments'), 'ResellerPaymentsPage')
+const SuperAdminManagerParentSalesCustomersPage = lazyNamed(() => import('@/pages/super-admin/ManagerParentSalesCustomers'), 'ManagerParentSalesCustomersPage')
 const SuperAdminResellerLogsPage = lazyNamed(() => import('@/pages/super-admin/ResellerLogs'), 'ResellerLogsPage')
 const ReportsPage = lazyNamed(() => import('@/pages/super-admin/Reports'), 'ReportsPage')
 const SettingsPage = lazyNamed(() => import('@/pages/super-admin/Settings'), 'SettingsPage')
@@ -153,6 +157,8 @@ export function AppRouter() {
                   <Route path="customers/:id" element={<SuperAdminCustomerDetailPage />} />
                   <Route path="deleted-customers" element={<DeletedCustomersPage />} />
                   <Route path="users" element={<UsersPage />} />
+                  <Route path="impersonation" element={<SuperAdminImpersonationPage />} />
+                  <Route path="impersonation/launch" element={<SuperAdminImpersonationLaunchPage />} />
                   <Route path="users/:id" element={<UserDetailPage />} />
                   <Route path="admin-management" element={<AdminManagementPage />} />
                   <Route path="team-network" element={<SuperAdminTeamNetworkPage />} />
@@ -169,6 +175,7 @@ export function AppRouter() {
                   <Route path="reports" element={<ReportsPage />} />
                   <Route path="program-logs" element={<SuperAdminProgramLogsPage />} />
                   <Route path="reseller-payments" element={<SuperAdminResellerPaymentsPage />} />
+                  <Route path="reseller-payments/manager-parent/:managerParentId/customers" element={<SuperAdminManagerParentSalesCustomersPage />} />
                   <Route path="reseller-payments/:resellerId" element={<SuperAdminResellerPaymentDetailPage />} />
                   <Route path="ip-analytics" element={<SuperAdminIpAnalyticsPage />} />
                   <Route path="logs" element={<LogsPage />} />
@@ -198,6 +205,7 @@ export function AppRouter() {
                   <Route path="bios-change-requests" element={<ManagerParentBiosChangeRequestsPage />} />
                   <Route path="bios-change-audit" element={<ManagerParentBiosChangeAuditPage />} />
                   <Route path="reseller-payments" element={<ManagerParentResellerPaymentsPage />} />
+                  <Route path="reseller-payments/manager-parent/:managerParentId/customers" element={<ManagerParentSalesCustomersPage />} />
                   <Route path="reseller-payments/:resellerId" element={<ManagerParentResellerPaymentDetailPage />} />
                   <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
                   <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />

@@ -30,6 +30,7 @@ const superAdminItems: NavItem[] = [
   { key: 'customers', icon: UserRound, href: routePaths.superAdmin.customers, translationKey: 'superAdmin.nav.customers' },
   { key: 'deletedCustomers', icon: Trash2, href: routePaths.superAdmin.deletedCustomers, translationKey: 'superAdmin.nav.deletedCustomers' },
   { key: 'adminManagementGroup', icon: Users, href: routePaths.superAdmin.adminManagement, translationKey: 'superAdmin.nav.adminManagement' },
+  { key: 'impersonation', icon: UserRound, href: routePaths.superAdmin.impersonation, translationKey: 'superAdmin.nav.impersonation' },
   { key: 'teamNetwork', icon: Network, href: routePaths.superAdmin.teamNetwork, translationKey: 'superAdmin.nav.teamNetwork' },
   { key: 'biosChangeRequestsTopLevel', icon: ClipboardList, href: routePaths.superAdmin.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
   { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.superAdmin.biosBlacklist, translationKey: 'superAdmin.nav.biosBlacklist' },

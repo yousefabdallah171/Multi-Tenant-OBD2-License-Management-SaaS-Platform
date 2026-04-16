@@ -455,3 +455,32 @@ export interface DeletedCustomerDetail extends DeletedCustomer {
     activity_log_ids: number[]
   }
 }
+
+export interface ImpersonationTargetSummary {
+  id: number
+  name: string
+  email: string | null
+  role: 'manager_parent' | 'manager' | 'reseller'
+  status: 'active' | 'suspended' | 'inactive'
+  tenant: { id: number; name: string } | null
+  last_seen_at: string | null
+}
+
+export interface ImpersonationTargetListResponse {
+  data: ImpersonationTargetSummary[]
+  meta: PaginationMeta
+}
+
+export interface ImpersonationStartResponse {
+  data: {
+    token: string
+    expires_at: string
+    target: {
+      id: number
+      name: string
+      email: string | null
+      role: 'manager_parent' | 'manager' | 'reseller'
+      tenant_id: number | null
+    }
+  }
+}

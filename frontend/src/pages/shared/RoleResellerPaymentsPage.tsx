@@ -26,6 +26,7 @@ interface RoleResellerPaymentsPageProps {
   fetchList: (filters?: ResellerPaymentFilters) => Promise<ResellerPaymentListData>
   recordPayment: (payload: RecordPaymentPayload) => Promise<{ message?: string }>
   detailPath: (lang: 'ar' | 'en', resellerId: number) => string
+  managerParentDetailPath?: (lang: 'ar' | 'en', managerParentId: number) => string
   roleSalesRoles?: Array<'manager_parent' | 'manager' | 'reseller'>
   allowRecordPayment?: boolean
 }
@@ -36,6 +37,7 @@ export function RoleResellerPaymentsPage({
   fetchList,
   recordPayment,
   detailPath,
+  managerParentDetailPath,
   roleSalesRoles,
   allowRecordPayment = true,
 }: RoleResellerPaymentsPageProps) {
@@ -212,18 +214,29 @@ export function RoleResellerPaymentsPage({
     {
       key: 'actions',
       label: t('common.actions'),
-      render: (row) => (
-        row.reseller_role === 'manager_parent'
-          ? <span className="text-sm text-slate-500 dark:text-slate-400">-</span>
-          : (
-            <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
-              {t('payments.actions.view')}
+      render: (row) => {
+        if (row.reseller_role === 'manager_parent') {
+          if (!managerParentDetailPath) {
+            return <span className="text-sm text-slate-500 dark:text-slate-400">-</span>
+          }
+
+          return (
+            <button type="button" onClick={() => navigate(managerParentDetailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+              {t('payments.actions.viewSalesCustomers', { defaultValue: 'View Sales Customers' })}
               <ArrowRight className="h-4 w-4" />
             </button>
-            )
-      ),
+          )
+        }
+
+        return (
+          <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+            {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        )
+      },
     },
-  ], [detailPath, lang, locale, navigate, t])
+  ], [detailPath, lang, locale, managerParentDetailPath, navigate, t])
 
   const displayedRows = useMemo(() => {
     if (roleFilter) {

@@ -299,6 +299,7 @@
       "customers": "Customers",
       "deletedCustomers": "Deleted Customers",
       "users": "Users",
+      "impersonation": "Impersonation",
       "adminManagement": "Admin Mgmt",
       "teamNetwork": "Team Network",
       "biosBlacklist": "BIOS Blacklist",
@@ -421,6 +422,24 @@
         "statusUpdated": "User status updated successfully.",
         "deleteSuccess": "User deleted successfully.",
         "deleteTitle": "Delete user"
+      },
+      "impersonation": {
+        "title": "Secure Impersonation",
+        "description": "Open a separate tab as manager parent, manager, or reseller for support and verification. Sessions are one-time and expire after 10 minutes.",
+        "searchPlaceholder": "Search by name, email, or username",
+        "lastSeen": "Last Seen",
+        "loginAs": "Login",
+        "launching": "Launching...",
+        "popupBlocked": "Popup was blocked. Please allow popups for this site and try again.",
+        "launchWaitingTitle": "Waiting for secure launch token",
+        "launchWaitingDescription": "Keep this tab open. It will continue automatically when launch data arrives.",
+        "launchProcessingTitle": "Creating impersonation session",
+        "launchProcessingDescription": "Finalizing secure token exchange...",
+        "launchFailedTitle": "Impersonation launch failed",
+        "launchFailedDescription": "The launch token is invalid, expired, or already used.",
+        "bannerText": "You are impersonating {{target}} ({{role}}) as {{actor}}.",
+        "stop": "Stop Impersonation",
+        "stopSuccess": "Impersonation session ended."
       },
       "reports": {
         "title": "Cross-Tenant Reports",
@@ -1993,7 +2012,7 @@
       "totalSalesManagerHint": "Total sales recorded for manager accounts in this view. Click to filter the table by this role.",
       "totalSalesReseller": "Reseller Sales",
       "totalSalesResellerHint": "Total sales recorded for resellers in this view. Click to filter the table by this role.",
-      "totalOwedHint": "Total outstanding that sellers still owe you (positive balances only).",
+      "totalOwedHint": "Total outstanding that sellers still owe you (positive balances only). not calc parent manger",
       "totalCollectedHint": "Money already collected from reseller sales (total owed minus amount still collectible). Click to filter rows with collected amounts.",
       "outstandingHint": "Sum of negative outstanding values only (advance payments not yet covered by sales).",
       "amountToCollectHint": "Sum of positive outstanding values only (what you can collect now).",
@@ -2009,6 +2028,26 @@
       "monthHint": "Showing reseller balances for the selected month only.",
       "reportsDifferenceHint": "This page shows reseller commission balances only. Reports includes manager parent, manager, and reseller revenue, so totals here can be lower.",
       "scopeHint": "Showing reseller balances for {{name}} only."
+    },
+    "managerParentCustomers": {
+      "title": "Manager Parent Sales Customers",
+      "description": "Customers and sales events recorded for {{managerParent}}.",
+      "unknownManagerParent": "Unknown manager parent",
+      "searchPlaceholder": "Search by customer, username, BIOS, or program",
+      "empty": "No sales-customer rows found for the current filters.",
+      "summary": {
+        "totalCustomers": "Total Customers",
+        "totalSales": "Total Sales",
+        "totalEvents": "Total Sales Events"
+      },
+      "columns": {
+        "customer": "Customer",
+        "biosId": "BIOS ID",
+        "program": "Program",
+        "country": "Country",
+        "saleAmount": "Sale Amount",
+        "saleDate": "Sale Date"
+      }
     },
     "scopeRoles": {
       "manager_parent": "the selected manager parent subtree",
@@ -2045,6 +2084,8 @@
     },
     "actions": {
       "view": "View",
+      "viewDetails": "View Details",
+      "viewSalesCustomers": "Sales Customers",
       "recordPayment": "Record Payment",
       "addCommission": "Add Commission",
       "editCommission": "Edit Commission",

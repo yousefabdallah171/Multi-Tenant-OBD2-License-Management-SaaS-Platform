@@ -554,6 +554,53 @@ export interface ResellerPaymentFilters {
   scope_role?: 'manager_parent' | 'manager' | 'reseller' | ''
 }
 
+export interface ManagerParentSalesCustomerFilters {
+  from?: string
+  to?: string
+  search?: string
+  program_id?: number | ''
+  country_name?: string
+  page?: number
+  per_page?: number
+}
+
+export interface ManagerParentSalesCustomerEventRow {
+  customer_id: number | null
+  customer_name: string | null
+  customer_username: string | null
+  bios_id: string
+  program_id: number | null
+  program_name: string | null
+  country_name: string | null
+  sale_amount: number
+  sale_date: string | null
+  license_id: number | null
+}
+
+export interface ManagerParentSalesCustomerSummary {
+  total_sales: number
+  total_events: number
+  total_customers: number
+  manager_parent: {
+    id: number
+    name: string
+    email: string
+  }
+}
+
+export interface ManagerParentSalesCustomerListResponse {
+  data: ManagerParentSalesCustomerEventRow[]
+  summary: ManagerParentSalesCustomerSummary
+  meta: {
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+    from: number | null
+    to: number | null
+  }
+}
+
 export interface RecordPaymentPayload {
   commission_id?: number
   reseller_id: number
