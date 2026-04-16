@@ -329,6 +329,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     const requiresPendingLicenseFields = createLicenseNow || biosId.trim().length > 0 || Boolean(programId)
     if (!programId) next.programId = t('validation.required', { defaultValue: 'Field required' })
     if (customerName.trim().length < 2) next.customerName = t('validation.required', { defaultValue: 'Field required' })
+    if (!normalizeCountryName(countryName)) next.countryName = t('validation.required', { defaultValue: 'Field required' })
     // When username is auto-filled from BIOS link, skip the availability error —
     // the backend allows the same customer to be re-activated with their linked BIOS
     if (usernameCheckResult && !usernameCheckResult.available && !usernameIsLocked) next.customerName = usernameCheckResult.message
@@ -362,7 +363,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     }
 
     return next
-  }, [availablePresets, biosCheckResult, biosId, createLicenseNow, customerName, durationDays, email, isPresetSeller, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, usernameCheckResult, usernameIsLocked])
+  }, [availablePresets, biosCheckResult, biosId, countryName, createLicenseNow, customerName, durationDays, email, isPresetSeller, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, t, usernameCheckResult, usernameIsLocked])
 
   const createOnlyMutation = useMutation({
     mutationFn: () => createCustomer({
@@ -542,6 +543,19 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                 ))}
               </select>
             </Field>
+            <Field label={t('common.country', { defaultValue: 'Country' })} error={errors.countryName}>
+              <select
+                value={countryName}
+                onChange={(event) => setCountryName(event.target.value)}
+                required
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="">{t('common.country', { defaultValue: 'Country' })}</option>
+                {ALL_COUNTRIES.map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </Field>
             <Field label={t('activate.clientName', { defaultValue: 'Client Display Name' })} hint={t('activate.clientNameHint', { defaultValue: 'Human-readable name for display in your dashboard' })}>
               <Input value={clientName} placeholder={t('activate.clientNamePlaceholder', { defaultValue: 'Full client name (optional)' })} onChange={(event) => setClientName(event.target.value)} />
             </Field>
@@ -550,18 +564,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
             </Field>
             <Field label={t('common.phone')} error={errors.phone}>
               <Input type="tel" value={phone} onChange={(event) => setPhone(normalizeStrictPhoneInput(event.target.value))} placeholder="+966..." />
-            </Field>
-            <Field label={t('common.country', { defaultValue: 'Country' })}>
-              <select
-                value={countryName}
-                onChange={(event) => setCountryName(event.target.value)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-              >
-                <option value="">{t('common.country', { defaultValue: 'Country' })}</option>
-                {ALL_COUNTRIES.map((country) => (
-                  <option key={country} value={country}>{country}</option>
-                ))}
-              </select>
             </Field>
           </div>
 

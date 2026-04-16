@@ -275,6 +275,7 @@ export function CreateCustomerPage() {
     const next: Record<string, string> = {}
     if (customerName.trim().length < 2) next.customerName = t('validation.required', { defaultValue: 'Field required' })
     if (!tenantId) next.tenantId = t('validation.required', { defaultValue: 'Field required' })
+    if (!normalizeCountryName(countryName)) next.countryName = t('validation.required', { defaultValue: 'Field required' })
     if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) next.email = t('validation.invalidEmail', { defaultValue: 'Invalid email format' })
     if (phone.trim() && !/^\+?\d{6,20}$/.test(phone.trim())) next.phone = t('validation.invalidPhone', { defaultValue: 'Invalid phone number' })
     if (biosId.trim().length < 3) next.biosId = t('validation.required', { defaultValue: 'Field required' })
@@ -296,7 +297,7 @@ export function CreateCustomerPage() {
     }
 
     return next
-  }, [biosId, createLicenseNow, customerName, durationDays, email, mode, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, sellerId, t, tenantId])
+  }, [biosId, countryName, createLicenseNow, customerName, durationDays, email, mode, phone, programId, scheduleAt, scheduleEnabled, scheduleTimezone, selectedPreset, sellerId, t, tenantId])
 
   const createOnlyMutation = useMutation({
     mutationFn: () => superAdminCustomerService.create({
@@ -401,33 +402,6 @@ export function CreateCustomerPage() {
                 disabled={!tenantId || sellersQuery.isLoading}
               />
             </Field>
-            <Field label={t('activate.customerEmail', { defaultValue: 'Customer Email' })} error={errors.email}>
-              <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
-            </Field>
-            <Field label={t('common.phone')} error={errors.phone}>
-              <Input type="tel" value={phone} onChange={(event) => setPhone(normalizePhoneInput(event.target.value))} placeholder="+966..." />
-            </Field>
-            <Field label={t('common.country', { defaultValue: 'Country' })}>
-              <select
-                value={countryName}
-                onChange={(event) => setCountryName(event.target.value)}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-              >
-                <option value="">{t('common.country', { defaultValue: 'Country' })}</option>
-                {ALL_COUNTRIES.map((country) => (
-                  <option key={country} value={country}>{country}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
-
-          {submitError ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
-              {submitError}
-            </div>
-          ) : null}
-
-          <div className="grid gap-4 md:grid-cols-2">
             <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
               <Input value={biosId}  onChange={(event) => setBiosId(event.target.value)} />
             </Field>
@@ -439,7 +413,32 @@ export function CreateCustomerPage() {
                 ))}
               </select>
             </Field>
+            <Field label={t('common.country', { defaultValue: 'Country' })} error={errors.countryName}>
+              <select
+                value={countryName}
+                onChange={(event) => setCountryName(event.target.value)}
+                required
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="">{t('common.country', { defaultValue: 'Country' })}</option>
+                {ALL_COUNTRIES.map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label={t('activate.customerEmail', { defaultValue: 'Customer Email' })} error={errors.email}>
+              <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+            </Field>
+            <Field label={t('common.phone')} error={errors.phone}>
+              <Input type="tel" value={phone} onChange={(event) => setPhone(normalizePhoneInput(event.target.value))} placeholder="+966..." />
+            </Field>
           </div>
+
+          {submitError ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+              {submitError}
+            </div>
+          ) : null}
 
           <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
             <div className="grid gap-3 md:grid-cols-2">
