@@ -6,6 +6,10 @@ import type { User } from '@/types/user.types'
 import type { SupportedLanguage } from '@/hooks/useLanguage'
 import type { UserRole } from '@/types/user.types'
 
+function hasUserChanged(currentUser: User | null, nextUser: User | null) {
+  return JSON.stringify(currentUser) !== JSON.stringify(nextUser)
+}
+
 export function useAuth() {
   const user = useAuthStore((state) => state.user)
   const setSession = useAuthStore((state) => state.setSession)
@@ -37,7 +41,10 @@ export function useAuth() {
       return currentUser
     }
 
-    setUser(result.user)
+    if (hasUserChanged(currentUser, result.user)) {
+      setUser(result.user)
+    }
+
     return result.user
   }, [setUser])
 

@@ -9,6 +9,7 @@ import { primeDashboardAppearanceFromStorage } from './lib/dashboard-appearance'
 
 const VITE_CHUNK_RELOAD_KEY = 'vite:chunk-reload'
 const VITE_CACHE_RESET_KEY = 'vite:cache-reset'
+const ASSET_URL_PATTERN = /\/assets\/.+\.(css|js)(\?|$)/i
 
 async function clearRuntimeCaches() {
   if (typeof window === 'undefined') {
@@ -48,6 +49,28 @@ function recoverFromStaleAssets(reason: string) {
   })
 }
 
+function shouldRecoverFromWorkboxRejection(message: string) {
+  const urlMatch = message.match(/"url":"([^"]+)"/i)
+  const rawUrl = urlMatch?.[1] ?? ''
+
+  if (!rawUrl) {
+    return false
+  }
+
+  const normalizedUrl = rawUrl.toLowerCase()
+
+  // HTML/app-shell navigations are intentionally not precached in this app.
+  if (
+    normalizedUrl === 'index.html'
+    || normalizedUrl.endsWith('/index.html')
+    || normalizedUrl === '/'
+  ) {
+    return false
+  }
+
+  return ASSET_URL_PATTERN.test(rawUrl)
+}
+
 function installChunkRecovery() {
   if (typeof window === 'undefined') {
     return
@@ -77,7 +100,7 @@ function installChunkRecovery() {
 
       const source = target instanceof HTMLLinkElement ? target.href : target.src
 
-      if (!source || !/\/assets\/.+\.(css|js)(\?|$)/i.test(source)) {
+      if (!source || !ASSET_URL_PATTERN.test(source)) {
         return
       }
 
@@ -98,7 +121,13 @@ function installChunkRecovery() {
       return
     }
 
+    // Ignore expected HTML navigation fallbacks; only recover when a real JS/CSS asset is missing.
     event.preventDefault()
+
+    if (!shouldRecoverFromWorkboxRejection(message)) {
+      return
+    }
+
     recoverFromStaleAssets('workbox-non-precached-url')
   })
 }
