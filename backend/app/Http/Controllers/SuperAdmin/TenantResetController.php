@@ -16,11 +16,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 use Illuminate\Validation\ValidationException;
-use Laravel\Telescope\Telescope;
 
 class TenantResetController extends BaseSuperAdminController
 {
     private const DB_PAYLOAD_MAX_BYTES = 1048576;
+    private const API_LOG_BACKUP_ROW_LIMIT = 10000;
 
     public function __construct(
         private readonly ExternalApiService $externalApiService,
@@ -333,11 +333,31 @@ class TenantResetController extends BaseSuperAdminController
 
     private function disableTelescopeRecording(): void
     {
-        if (config('telescope.enabled')) {
-            Telescope::stopRecording();
-            Telescope::$entriesQueue = [];
-            Telescope::$updatesQueue = [];
+        $telescope = '\\Laravel\\Telescope\\Telescope';
+
+        if (config('telescope.enabled') && class_exists($telescope)) {
+            $telescope::stopRecording();
+            $telescope::$entriesQueue = [];
+            $telescope::$updatesQueue = [];
         }
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function sanitizeBackupRow(string $section, array $row): array
+    {
+        if ($section !== 'api_logs') {
+            return $row;
+        }
+
+        // API log bodies can contain very large serialized responses; keeping
+        // them makes production tenant backups exceed PHP memory limits.
+        $row['request_body'] = null;
+        $row['response_body'] = null;
+
+        return $row;
     }
 
     /** @return list<int> */
@@ -409,7 +429,10 @@ class TenantResetController extends BaseSuperAdminController
                 'order' => 'id',
             ],
             'api_logs' => [
-                'query' => fn () => DB::table('api_logs')->where('tenant_id', $tenantId),
+                'query' => fn () => DB::table('api_logs')
+                    ->where('tenant_id', $tenantId)
+                    ->orderByDesc('id')
+                    ->limit(self::API_LOG_BACKUP_ROW_LIMIT),
                 'order' => 'id',
             ],
             'user_ip_logs' => [
@@ -472,7 +495,7 @@ class TenantResetController extends BaseSuperAdminController
                         }
 
                         $firstRow = false;
-                        fwrite($handle, $this->encodeJson((array) $row));
+                        fwrite($handle, $this->encodeJson($this->sanitizeBackupRow($key, (array) $row)));
                         $count++;
                     }
                 }
