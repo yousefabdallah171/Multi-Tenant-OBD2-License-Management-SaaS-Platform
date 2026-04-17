@@ -31,6 +31,7 @@ export function BiosBlacklistPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [formOpen, setFormOpen] = useState(false)
+  const [editingReasonFor, setEditingReasonFor] = useState<BiosBlacklistEntry | null>(null)
   const [form, setForm] = useState({ bios_id: '', reason: '' })
   const [submitError, setSubmitError] = useState('')
 
@@ -48,6 +49,7 @@ export function BiosBlacklistPage() {
       setSubmitError('')
       toast.success(t('managerParent.pages.biosBlacklist.saveSuccess'))
       setFormOpen(false)
+      setEditingReasonFor(null)
       setForm({ bios_id: '', reason: '' })
       void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'bios-blacklist'] })
     },
@@ -81,6 +83,20 @@ export function BiosBlacklistPage() {
             <Button type="button" size="sm" variant="ghost" onClick={() => navigate(routePaths.managerParent.biosDetail(lang, row.bios_id))}>
               {t('managerParent.pages.biosBlacklist.history')}
             </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={row.status === 'removed'}
+              onClick={() => {
+                setSubmitError('')
+                setEditingReasonFor(row)
+                setForm({ bios_id: row.bios_id, reason: row.reason ?? '' })
+                setFormOpen(true)
+              }}
+            >
+              {t('managerParent.pages.biosBlacklist.editReason', { defaultValue: 'Edit reason' })}
+            </Button>
             <Button type="button" size="sm" variant="ghost" disabled={row.status === 'removed'} onClick={() => removeMutation.mutate(row.id)}>
               {t('managerParent.pages.biosBlacklist.remove')}
             </Button>
@@ -107,7 +123,15 @@ export function BiosBlacklistPage() {
         title={t('managerParent.pages.biosBlacklist.title')}
         description={t('managerParent.pages.biosBlacklist.description')}
         actions={
-          <Button type="button" onClick={() => setFormOpen(true)}>
+          <Button
+            type="button"
+            onClick={() => {
+              setSubmitError('')
+              setEditingReasonFor(null)
+              setForm({ bios_id: '', reason: '' })
+              setFormOpen(true)
+            }}
+          >
             <Plus className="me-2 h-4 w-4" />
             {t('managerParent.pages.biosBlacklist.add')}
           </Button>
@@ -165,25 +189,41 @@ export function BiosBlacklistPage() {
           setFormOpen(open)
           if (!open) {
             setSubmitError('')
+            setEditingReasonFor(null)
             setForm({ bios_id: '', reason: '' })
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('managerParent.pages.biosBlacklist.addTitle')}</DialogTitle>
-            <DialogDescription>{t('managerParent.pages.biosBlacklist.formDescription')}</DialogDescription>
+            <DialogTitle>
+              {editingReasonFor
+                ? t('managerParent.pages.biosBlacklist.editReasonTitle', { defaultValue: 'Edit blacklist reason' })
+                : t('managerParent.pages.biosBlacklist.addTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {editingReasonFor
+                ? t('managerParent.pages.biosBlacklist.editReasonDescription', { defaultValue: 'Update the reason stored for this blocked BIOS identifier.' })
+                : t('managerParent.pages.biosBlacklist.formDescription')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {submitError ? (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+              <div aria-live="polite" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
                 {submitError}
               </div>
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="blacklist-bios-id">{t('managerParent.pages.biosBlacklist.biosId')}</Label>
-              <Input id="blacklist-bios-id" value={form.bios_id} onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))} />
-              {formErrors.bios_id ? <p className="text-sm text-rose-600 dark:text-rose-400">{formErrors.bios_id}</p> : null}
+              <Input
+                id="blacklist-bios-id"
+                value={form.bios_id}
+                readOnly={editingReasonFor !== null}
+                aria-invalid={Boolean(formErrors.bios_id)}
+                aria-describedby={formErrors.bios_id ? 'blacklist-bios-id-error' : undefined}
+                onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))}
+              />
+              {formErrors.bios_id ? <p id="blacklist-bios-id-error" className="text-sm text-rose-600 dark:text-rose-400">{formErrors.bios_id}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="blacklist-reason">{t('common.reason')}</Label>
