@@ -335,6 +335,8 @@ class TenantResetController extends BaseSuperAdminController
     {
         if (config('telescope.enabled')) {
             Telescope::stopRecording();
+            Telescope::$entriesQueue = [];
+            Telescope::$updatesQueue = [];
         }
     }
 
