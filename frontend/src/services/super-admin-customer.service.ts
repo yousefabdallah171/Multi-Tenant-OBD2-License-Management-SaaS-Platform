@@ -36,7 +36,7 @@ export const superAdminCustomerService = {
     const { data } = await api.get<{ data: SuperAdminCustomerDetails }>(`/super-admin/customers/${id}`)
     return data
   },
-  async update(id: number, payload: { client_name: string; email?: string; phone?: string }) {
+  async update(id: number, payload: { client_name: string; email?: string; phone?: string; country_name?: string; price?: number; license_id?: number }) {
     const { data } = await api.put<{ data: SuperAdminCustomerSummary }>(`/super-admin/customers/${id}`, payload)
     return data
   },

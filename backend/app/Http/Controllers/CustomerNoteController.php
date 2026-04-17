@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\CustomerNote;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -14,15 +15,14 @@ class CustomerNoteController extends Controller
      */
     public function index(Request $request, int $customerId): JsonResponse
     {
-        $tenantId = auth()->user()->tenant_id;
+        $tenantId = $this->resolveCustomerTenantId($customerId);
         $userId = auth()->id();
 
-        // Query only needed columns for performance
         $notes = CustomerNote::query()
             ->where('tenant_id', $tenantId)
             ->where('customer_id', $customerId)
             ->where('user_id', $userId)
-            ->select(['id', 'note', 'created_at', 'updated_at']) // Only fetch needed columns
+            ->select(['id', 'user_id', 'customer_id', 'note', 'created_at', 'updated_at'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -41,7 +41,7 @@ class CustomerNoteController extends Controller
                 'note' => ['required', 'string', 'max:5000'],
             ]);
 
-            $tenantId = auth()->user()->tenant_id;
+            $tenantId = $this->resolveCustomerTenantId($customerId);
             $userId = auth()->id();
 
             \Log::debug('Creating note', [
@@ -51,7 +51,6 @@ class CustomerNoteController extends Controller
                 'note_length' => strlen($validated['note']),
             ]);
 
-            // Verify customer exists in this tenant
             $customer = User::where('tenant_id', $tenantId)
                 ->where('id', $customerId)
                 ->first();
@@ -97,10 +96,7 @@ class CustomerNoteController extends Controller
             'note' => ['required', 'string', 'max:5000'],
         ]);
 
-        $note = CustomerNote::where('id', $noteId)
-            ->where('user_id', auth()->id())
-            ->where('tenant_id', auth()->user()->tenant_id)
-            ->first();
+        $note = $this->resolveOwnedNote($noteId);
 
         if (!$note) {
             return response()->json(['message' => 'Note not found or you do not have permission to edit it'], 404);
@@ -127,10 +123,7 @@ class CustomerNoteController extends Controller
                 'tenant_id' => $tenantId,
             ]);
 
-            $note = CustomerNote::where('id', $noteId)
-                ->where('user_id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->first();
+            $note = $this->resolveOwnedNote($noteId);
 
             if (!$note) {
                 \Log::warning('Note not found for deletion', [
@@ -157,5 +150,31 @@ class CustomerNoteController extends Controller
 
             return response()->json(['message' => 'Failed to delete note'], 500);
         }
+    }
+
+    private function resolveCustomerTenantId(int $customerId): int
+    {
+        $actor = auth()->user();
+        $customer = User::query()->findOrFail($customerId);
+
+        if (($actor->role?->value ?? (string) $actor->role) !== UserRole::SUPER_ADMIN->value) {
+            abort_unless((int) $actor->tenant_id === (int) $customer->tenant_id, 403);
+        }
+
+        return (int) $customer->tenant_id;
+    }
+
+    private function resolveOwnedNote(int $noteId): ?CustomerNote
+    {
+        $actor = auth()->user();
+        $query = CustomerNote::query()
+            ->where('id', $noteId)
+            ->where('user_id', auth()->id());
+
+        if (($actor->role?->value ?? (string) $actor->role) !== UserRole::SUPER_ADMIN->value) {
+            $query->where('tenant_id', $actor->tenant_id);
+        }
+
+        return $query->first();
     }
 }

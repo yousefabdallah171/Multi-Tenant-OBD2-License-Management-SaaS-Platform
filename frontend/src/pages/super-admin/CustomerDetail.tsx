@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Lock, FileText } from 'lucide-react'
+import { ArrowLeft, FileText, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
@@ -15,7 +16,7 @@ import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { superAdminCustomerService } from '@/services/super-admin-customer.service'
-import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
+import type { SuperAdminCustomerDetails } from '@/types/super-admin.types'
 import type { UserRole } from '@/types/user.types'
 import { IpLocationCell } from '@/utils/countryFlag'
 
@@ -36,6 +37,7 @@ export function CustomerDetailPage() {
   })
 
   const customer = query.data?.data
+  const groupedLicenses = groupLicensesByReseller(customer)
 
   return (
     <div className="space-y-6">
@@ -54,7 +56,9 @@ export function CustomerDetailPage() {
         <>
           <div className="space-y-2">
             <h2 className="text-3xl font-semibold">{customer.name}</h2>
-            <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{resolveCustomerDetailUsername(customer) ?? customer.tenant?.name ?? '-'}</p>
+            <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">
+              {resolveCustomerDetailUsername(customer) ?? customer.tenant?.name ?? '-'}
+            </p>
           </div>
 
           <Card>
@@ -70,18 +74,12 @@ export function CustomerDetailPage() {
               <Info label={t('common.tenant')} value={customer.tenant?.name ?? '-'} />
               <Info label={t('common.email')} value={customer.email ?? '-'} />
               <Info label={t('common.phone')} value={customer.phone ?? '-'} />
-              <Info label={t('common.status')} value={customer.status ? <LicenseStatusBadges status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(customer.is_blacklisted)} /> : '-'} />
-              <Info label={t('common.createdAt')} value={customer.created_at ? formatDate(customer.created_at, locale) : '-'} />
+              <Info label={t('common.country', { defaultValue: 'Country' })} value={customer.country_name ?? '-'} />
               <Info
-                label={t('common.reseller')}
-                value={
-                  <RoleIdentity
-                    name={customer.resellers_summary?.[0]?.reseller_name}
-                    role={resolveUserRole(customer.resellers_summary?.[0]?.reseller_role)}
-                    href={customer.resellers_summary?.[0]?.reseller_id ? routePaths.superAdmin.userDetail(lang, customer.resellers_summary[0].reseller_id) : undefined}
-                  />
-                }
+                label={t('common.status')}
+                value={customer.status ? <LicenseStatusBadges status={customer.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(customer.is_blacklisted)} /> : '-'}
               />
+              <Info label={t('common.createdAt')} value={customer.created_at ? formatDate(customer.created_at, locale) : '-'} />
             </CardContent>
           </Card>
 
@@ -90,33 +88,60 @@ export function CustomerDetailPage() {
               <TabsTrigger value="licenses">{t('managerParent.pages.customers.licenseHistory')}</TabsTrigger>
               <TabsTrigger value="bios">{t('managerParent.pages.customers.biosId')}</TabsTrigger>
               <TabsTrigger value="ips">{t('managerParent.pages.ipAnalytics.title')}</TabsTrigger>
-              <TabsTrigger value="activity">{t('superAdmin.pages.dashboard.recentActivity')}</TabsTrigger>
+              <TabsTrigger value="activity">{t('managerParent.nav.activity', { defaultValue: 'Panel Activity' })}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="licenses">
               <Card>
                 <CardHeader><CardTitle>{t('managerParent.pages.customers.licenseHistory')}</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  {(customer.licenses ?? []).map((license) => (
-                    <div key={license.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                      <div className="grid gap-2 md:grid-cols-4">
-                        <Info label={t('common.program')} value={license.program ?? '-'} />
-                        <Info label={t('managerParent.pages.customers.biosId')} value={<Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link>} />
-                        <Info label={t('common.username')} value={resolveLicenseUsername(customer, license.external_username) ?? '-'} />
-                        <Info
-                          label={t('common.reseller')}
-                          value={
-                            <RoleIdentity
-                              name={license.reseller}
-                              role={resolveUserRole(license.reseller_role)}
-                              href={license.reseller_id ? routePaths.superAdmin.userDetail(lang, license.reseller_id) : undefined}
-                            />
-                          }
-                        />
-                        <Info label={t('common.status')} value={<LicenseStatusBadges status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(license.is_blacklisted)} />} />
-                      </div>
-                    </div>
-                  ))}
+                  {groupedLicenses.length === 0 ? (
+                    <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} />
+                  ) : (
+                    groupedLicenses.map((group) => (
+                      <details key={group.key} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800" open>
+                        <summary className="cursor-pointer list-none">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="font-medium">{t('customerDetail.resellerTimeline', { defaultValue: 'Reseller Timeline' })}: {group.name}</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400">
+                                {group.items.length} {t('common.activations', { defaultValue: 'Activations' })} | {group.period}
+                              </p>
+                            </div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{group.email}</p>
+                          </div>
+                        </summary>
+                        <div className="mt-4 space-y-3">
+                          {group.items.map((license) => (
+                            <div key={license.id} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40">
+                              <div className="grid gap-3 md:grid-cols-5">
+                                <Info label={t('common.program')} value={license.program ?? '-'} />
+                                <Info
+                                  label={t('customerDetail.soldBy', { defaultValue: 'Sold by' })}
+                                  value={(
+                                    <RoleIdentity
+                                      name={group.name}
+                                      role={resolveUserRole(group.role)}
+                                      href={group.id ? routePaths.superAdmin.userDetail(lang, group.id) : undefined}
+                                    />
+                                  )}
+                                />
+                                <Info label={t('customerDetail.period', { defaultValue: 'Period' })} value={formatLicensePeriod(license, locale)} />
+                                <Info label={t('common.price', { defaultValue: 'Price' })} value={`$${Number(license.price ?? 0).toFixed(2)}`} />
+                                <Info label={t('common.status')} value={<LicenseStatusBadges status={license.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'cancelled'} isBlocked={Boolean(license.is_blacklisted)} />} />
+                              </div>
+                              <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
+                                <span>
+                                  {t('managerParent.pages.customers.biosId')}: <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, license.bios_id)}>{license.bios_id}</Link>
+                                </span>
+                                <span>{t('common.username')}: {resolveLicenseUsername(customer, license.external_username) ?? '-'}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -154,16 +179,22 @@ export function CustomerDetailPage() {
 
             <TabsContent value="activity">
               <Card>
-                <CardHeader><CardTitle>{t('superAdmin.pages.dashboard.recentActivity')}</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('managerParent.nav.activity', { defaultValue: 'Panel Activity' })}</CardTitle></CardHeader>
                 <CardContent className="space-y-2">
                   {(customer.activity ?? []).length === 0 ? (
                     <EmptyState title={t('common.noData')} description={t('superAdmin.pages.dashboard.noActivity')} />
                   ) : (
                     (customer.activity ?? []).map((entry) => (
                       <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                        <p className="font-medium">{formatActivityActionLabel(entry.action, t)}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium">{formatActivityActionLabel(entry.action, t)}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
+                          </div>
+                          <div className="text-start">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                          </div>
+                        </div>
                       </div>
                     ))
                   )}
@@ -177,6 +208,74 @@ export function CustomerDetailPage() {
       <CustomerNoteDialog isOpen={isNotesDialogOpen} onClose={() => setIsNotesDialogOpen(false)} customerId={customerId} />
     </div>
   )
+}
+
+function groupLicensesByReseller(customer: SuperAdminCustomerDetails | undefined) {
+  const groups = new Map<string, {
+    key: string
+    id: number | null
+    name: string
+    email: string
+    role: string | null
+    items: NonNullable<SuperAdminCustomerDetails['licenses']>
+  }>()
+
+  for (const license of customer?.licenses ?? []) {
+    const key = String(license.reseller_id ?? `unknown-${license.reseller ?? 'unknown'}`)
+    const existing = groups.get(key)
+
+    if (existing) {
+      existing.items.push(license)
+      continue
+    }
+
+    groups.set(key, {
+      key,
+      id: license.reseller_id ?? null,
+      name: license.reseller ?? 'Unknown',
+      email: license.reseller_email ?? '-',
+      role: license.reseller_role ?? null,
+      items: [license],
+    })
+  }
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    period: formatGroupPeriod(group.items),
+  }))
+}
+
+function formatGroupPeriod(licenses: NonNullable<SuperAdminCustomerDetails['licenses']>) {
+  const dates = licenses
+    .flatMap((license) => [license.activated_at, license.start_at, license.expires_at])
+    .filter((value): value is string => Boolean(value))
+    .map((value) => new Date(value))
+    .filter((value) => !Number.isNaN(value.getTime()))
+    .sort((left, right) => left.getTime() - right.getTime())
+
+  if (dates.length === 0) {
+    return '-'
+  }
+
+  const first = dates[0]
+  const last = dates[dates.length - 1]
+  const formatMonth = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' })
+
+  return `${formatMonth.format(first)} - ${formatMonth.format(last)}`
+}
+
+function formatLicensePeriod(
+  license: NonNullable<SuperAdminCustomerDetails['licenses']>[number],
+  locale: string,
+) {
+  const start = license.start_at ?? license.activated_at
+  const end = license.expires_at
+
+  if (!start && !end) {
+    return '-'
+  }
+
+  return `${start ? formatDate(start, locale) : '-'} -> ${end ? formatDate(end, locale) : '-'}`
 }
 
 function resolveCustomerDetailUsername(customer: { name?: string | null; client_name?: string | null; external_username?: string | null; username?: string | null; licenses?: Array<{ external_username?: string | null }> } | undefined) {
@@ -221,13 +320,10 @@ function Info({
   lockTooltip?: string
 }) {
   return (
-    <div
-      className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40"
-      title={isLocked ? lockTooltip : undefined}
-    >
+    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40" title={isLocked ? lockTooltip : undefined}>
       <div className="flex items-center gap-1">
         <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-        {isLocked && <Lock className="h-3 w-3 text-amber-600" />}
+        {isLocked ? <Lock className="h-3 w-3 text-amber-600" /> : null}
       </div>
       <div className={`mt-1 whitespace-pre-line font-medium ${isLocked ? 'text-slate-400 dark:text-slate-600' : ''}`}>
         {value}

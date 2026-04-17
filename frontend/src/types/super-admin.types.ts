@@ -96,6 +96,7 @@ export interface SuperAdminCustomerSummary {
   duration_days?: number | null
   program: string | null
   status: string | null
+  price?: number | null
   activated_at?: string | null
   start_at?: string | null
   expiry: string | null

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ALL_COUNTRIES } from '@/lib/countries'
 
 interface EditCustomerDialogProps {
   open: boolean
@@ -14,8 +15,12 @@ interface EditCustomerDialogProps {
   initialClientName: string
   initialEmail?: string | null
   initialPhone?: string | null
+  initialCountryName?: string | null
+  initialPrice?: number | null
+  showCountryField?: boolean
+  showPriceField?: boolean
   isPending?: boolean
-  onSubmit: (payload: { client_name: string; email?: string; phone?: string }) => void
+  onSubmit: (payload: { client_name: string; email?: string; phone?: string; country_name?: string; price?: number }) => void
 }
 
 export function EditCustomerDialog({
@@ -26,6 +31,10 @@ export function EditCustomerDialog({
   initialClientName,
   initialEmail,
   initialPhone,
+  initialCountryName,
+  initialPrice,
+  showCountryField = false,
+  showPriceField = false,
   isPending = false,
   onSubmit,
 }: EditCustomerDialogProps) {
@@ -33,6 +42,8 @@ export function EditCustomerDialog({
   const [clientName, setClientName] = useState(initialClientName)
   const [email, setEmail] = useState(initialEmail ?? '')
   const [phone, setPhone] = useState(initialPhone ?? '')
+  const [countryName, setCountryName] = useState(initialCountryName ?? '')
+  const [price, setPrice] = useState(initialPrice !== null && initialPrice !== undefined ? initialPrice.toFixed(2) : '')
 
   useEffect(() => {
     if (!open) {
@@ -42,9 +53,14 @@ export function EditCustomerDialog({
     setClientName(initialClientName)
     setEmail(initialEmail ?? '')
     setPhone(initialPhone ?? '')
-  }, [initialClientName, initialEmail, initialPhone, open])
+    setCountryName(initialCountryName ?? '')
+    setPrice(initialPrice !== null && initialPrice !== undefined ? initialPrice.toFixed(2) : '')
+  }, [initialClientName, initialCountryName, initialEmail, initialPhone, initialPrice, open])
 
   const trimmedClientName = clientName.trim()
+  const trimmedPrice = price.trim()
+  const parsedPrice = trimmedPrice === '' ? null : Number(trimmedPrice)
+  const isPriceValid = !showPriceField || trimmedPrice === '' || (parsedPrice !== null && Number.isFinite(parsedPrice) && parsedPrice >= 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -63,6 +79,33 @@ export function EditCustomerDialog({
           <Field label={t('common.phone')} htmlFor="edit-customer-phone">
             <Input id="edit-customer-phone" value={phone} onChange={(event) => setPhone(event.target.value)} />
           </Field>
+          {showCountryField ? (
+            <Field label={t('common.country', { defaultValue: 'Country' })} htmlFor="edit-customer-country">
+              <select
+                id="edit-customer-country"
+                value={countryName}
+                onChange={(event) => setCountryName(event.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">{t('common.country', { defaultValue: 'Country' })}</option>
+                {ALL_COUNTRIES.map((country) => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
+          {showPriceField ? (
+            <Field label={t('common.price', { defaultValue: 'Price' })} htmlFor="edit-customer-price">
+              <Input
+                id="edit-customer-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+              />
+            </Field>
+          ) : null}
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isPending}>
@@ -70,11 +113,13 @@ export function EditCustomerDialog({
           </Button>
           <Button
             type="button"
-            disabled={isPending || trimmedClientName.length < 1}
+            disabled={isPending || trimmedClientName.length < 1 || !isPriceValid}
             onClick={() => onSubmit({
               client_name: trimmedClientName,
               email: email.trim() || undefined,
               phone: phone.trim() || undefined,
+              country_name: showCountryField ? (countryName.trim() || undefined) : undefined,
+              price: showPriceField && parsedPrice !== null ? Number(parsedPrice.toFixed(2)) : undefined,
             })}
           >
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

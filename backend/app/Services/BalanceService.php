@@ -21,6 +21,8 @@ class BalanceService
         $balance = UserBalance::query()->firstOrCreate(
             [
                 'user_id' => $user->id,
+            ],
+            [
                 'tenant_id' => $user->tenant_id,
             ]
         );

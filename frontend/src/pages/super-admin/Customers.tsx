@@ -205,14 +205,17 @@ export function CustomersPage() {
   }, [countryName, page, perPage, programId, resellerId, search, searchParams, setSearchParams, status, tenantId])
 
   const editMutation = useMutation({
-    mutationFn: (payload: { client_name: string; email?: string; phone?: string }) =>
-      superAdminCustomerService.update(editTarget?.id ?? 0, payload),
+    mutationFn: (payload: { client_name: string; email?: string; phone?: string; country_name?: string; price?: number }) =>
+      superAdminCustomerService.update(editTarget?.id ?? 0, {
+        ...payload,
+        license_id: editTarget?.license_id ?? undefined,
+      }),
     onSuccess: () => {
       toast.success(t('common.customerUpdatedSuccess', { defaultValue: 'Customer updated successfully.' }))
       setEditTarget(null)
       invalidate(queryClient)
     },
-    onError: () => toast.error(t('common.error')),
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
   })
 
   const pauseMutation = useMutation({
@@ -679,7 +682,11 @@ export function CustomersPage() {
         initialClientName={editTarget?.name ?? ''}
         initialEmail={editTarget?.email ?? ''}
         initialPhone={editTarget?.phone ?? ''}
-        onSubmit={(payload: { client_name: string; email?: string; phone?: string }) => editMutation.mutate(payload)}
+        initialCountryName={editTarget?.country_name ?? ''}
+        initialPrice={editTarget?.price ?? null}
+        showCountryField
+        showPriceField
+        onSubmit={(payload) => editMutation.mutate(payload)}
         isPending={editMutation.isPending}
       />
       <Dialog

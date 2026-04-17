@@ -10,9 +10,11 @@ use App\Models\CustomerNote;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use App\Models\UserBalance;
 use App\Models\UserIpLog;
 use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
+use App\Services\BalanceService;
 use App\Services\ExportTaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -619,24 +621,224 @@ class CustomerController extends BaseSuperAdminController
         $validated = $request->validate([
             'client_name' => ['required', 'string', 'min:1', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[0-9]{6,20}$/'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'country_name' => ['nullable', 'string', 'max:120'],
+            'license_id' => ['nullable', 'integer', 'exists:licenses,id'],
+            'price' => ['nullable', 'numeric', 'min:0', 'max:'.CustomerOwnership::MAX_REASONABLE_PRICE],
         ]);
 
         $email = $this->resolveCustomerEmail($user, $validated['email'] ?? null, (int) $user->tenant_id);
         $this->ensureEmailAvailable($user, $email);
 
-        $user->fill([
-            'client_name' => $validated['client_name'],
-            'name' => $validated['client_name'],
-            'email' => $email,
-            'phone' => $validated['phone'] ?? null,
-        ])->save();
+        DB::transaction(function () use ($user, $validated, $email): void {
+            $user->fill([
+                'client_name' => $validated['client_name'],
+                'name' => $validated['client_name'],
+                'email' => $email,
+                'phone' => $this->normalizeCustomerPhone($validated['phone'] ?? null),
+                'country_name' => $this->supportsUserCountryName()
+                    ? (isset($validated['country_name']) ? trim((string) $validated['country_name']) ?: null : $user->country_name)
+                    : $user->country_name,
+            ])->save();
+
+            if (array_key_exists('price', $validated)) {
+                $license = $this->resolveEditableLicenseForPrice($user, isset($validated['license_id']) ? (int) $validated['license_id'] : null);
+                $this->applySuperAdminPriceOverride($user, $license, round((float) $validated['price'], 2));
+            } elseif (isset($validated['license_id'])) {
+                $license = License::query()->find((int) $validated['license_id']);
+                if ($license && (int) $license->customer_id === (int) $user->id) {
+                    $this->refreshEditableLicenseCountry($user, $license);
+                    LicenseCacheInvalidation::invalidateForLicense($license->fresh(['reseller:id,tenant_id,created_by']));
+                }
+            }
+        });
 
         $user->load(['tenant', 'customerLicenses' => fn ($licenseQuery) => $licenseQuery
             ->select($this->licenseListColumns())
             ->with(['program:id,name', 'reseller:id,name,role'])]);
 
         return response()->json(['data' => $this->serializeCustomer($user, [], null, null, $this->safeBiosLinkMapForUsers(collect([$user]), $user->tenant_id))]);
+    }
+
+    private function resolveEditableLicenseForPrice(User $user, ?int $licenseId): License
+    {
+        $license = $licenseId !== null
+            ? License::query()->find($licenseId)
+            : License::query()
+                ->where('customer_id', $user->id)
+                ->orderByDesc('activated_at')
+                ->orderByDesc('expires_at')
+                ->first();
+
+        if (! $license || (int) $license->customer_id !== (int) $user->id) {
+            throw ValidationException::withMessages([
+                'price' => 'The selected license does not belong to this customer.',
+            ]);
+        }
+
+        return $license;
+    }
+
+    private function applySuperAdminPriceOverride(User $customer, License $license, float $newPrice): void
+    {
+        $oldPrice = CustomerOwnership::displayPriceForLicense($license);
+        $license->loadMissing(['reseller']);
+
+        $license->forceFill(['price' => $newPrice])->save();
+
+        $revenueLog = ActivityLog::query()
+            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->where('metadata->license_id', $license->id)
+            ->latest()
+            ->first();
+
+        if ($revenueLog) {
+            $metadata = is_array($revenueLog->metadata) ? $revenueLog->metadata : [];
+            $oldLoggedPrice = CustomerOwnership::sanitizeDisplayPrice($metadata['price'] ?? $oldPrice);
+            $metadata['price'] = $newPrice;
+            $metadata['country_name'] = $customer->country_name;
+            $metadata['price_source'] = 'super_admin_override';
+            $metadata['price_override_previous'] = $oldLoggedPrice;
+            $revenueLog->forceFill(['metadata' => $metadata])->save();
+
+            $this->applyBalanceDifference($revenueLog, round($newPrice - $oldLoggedPrice, 2));
+        } else {
+            $syntheticRevenueLog = $this->createSyntheticRevenueLogForLicense($customer, $license, $newPrice);
+            if ($syntheticRevenueLog) {
+                $this->applyBalanceDifference($syntheticRevenueLog, $newPrice);
+            }
+        }
+
+        $this->refreshEditableLicenseCountry($customer, $license);
+        $this->recordSuperAdminCustomerActivity(
+            auth()->user(),
+            (int) $license->tenant_id,
+            'customer.price_overridden',
+            sprintf('Updated customer %s price for BIOS %s.', $customer->id, $license->bios_id),
+            [
+                'customer_id' => $customer->id,
+                'license_id' => $license->id,
+                'bios_id' => $license->bios_id,
+                'old_price' => $oldPrice,
+                'new_price' => $newPrice,
+                'country_name' => $customer->country_name,
+            ],
+        );
+
+        LicenseCacheInvalidation::invalidateForLicense($license->fresh(['reseller:id,tenant_id,created_by']));
+    }
+
+    private function createSyntheticRevenueLogForLicense(User $customer, License $license, float $price): ?ActivityLog
+    {
+        if (! $license->activated_at) {
+            return null;
+        }
+
+        $seller = $license->reseller;
+        $sellerRole = $seller?->role?->value ?? ($seller ? (string) $seller->role : null);
+
+        $log = new ActivityLog([
+            'tenant_id' => $license->tenant_id,
+            'user_id' => $seller?->id,
+            'action' => 'license.activated',
+            'description' => sprintf('Backfilled activation revenue for BIOS %s.', $license->bios_id),
+            'metadata' => [
+                'license_id' => $license->id,
+                'customer_id' => $customer->id,
+                'program_id' => $license->program_id,
+                'bios_id' => $license->bios_id,
+                'external_username' => $license->external_username,
+                'price' => $price,
+                'country_name' => $customer->country_name,
+                'price_source' => 'super_admin_override_backfill',
+                'seller_id' => $seller?->id,
+                'seller_role' => $sellerRole,
+                'owner_user_id' => $seller?->id,
+                'owner_role' => $sellerRole,
+                'actor_id' => $seller?->id,
+                'actor_role' => $sellerRole,
+                'attribution_type' => BalanceService::TYPE_EARNED,
+            ],
+            'ip_address' => request()?->ip(),
+            'created_at' => $license->activated_at,
+            'updated_at' => now(),
+        ]);
+        $log->save();
+
+        return $log->fresh();
+    }
+
+    private function refreshEditableLicenseCountry(User $customer, License $license): void
+    {
+        ActivityLog::query()
+            ->where('metadata->license_id', $license->id)
+            ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled'])
+            ->get()
+            ->each(function (ActivityLog $log) use ($customer): void {
+                $metadata = is_array($log->metadata) ? $log->metadata : [];
+                $metadata['country_name'] = $customer->country_name;
+                $log->forceFill(['metadata' => $metadata])->save();
+            });
+    }
+
+    private function applyBalanceDifference(ActivityLog $revenueLog, float $difference): void
+    {
+        if ($difference === 0.0 || (int) $revenueLog->user_id <= 0) {
+            return;
+        }
+
+        $balance = UserBalance::query()->firstOrCreate(
+            [
+                'user_id' => (int) $revenueLog->user_id,
+            ],
+            [
+                'tenant_id' => (int) $revenueLog->tenant_id,
+            ]
+        );
+
+        if ((int) $balance->tenant_id !== (int) $revenueLog->tenant_id) {
+            $balance->tenant_id = (int) $revenueLog->tenant_id;
+        }
+
+        $metadata = is_array($revenueLog->metadata) ? $revenueLog->metadata : [];
+        $isGranted = ($metadata['attribution_type'] ?? BalanceService::TYPE_EARNED) === BalanceService::TYPE_GRANTED;
+
+        if ($isGranted) {
+            $balance->granted_value = round((float) $balance->granted_value + $difference, 2);
+        } else {
+            $balance->total_revenue = round((float) $balance->total_revenue + $difference, 2);
+            $balance->pending_balance = round((float) $balance->pending_balance + $difference, 2);
+        }
+
+        $balance->last_activity_at = now();
+        $balance->save();
+    }
+
+    private function normalizeCustomerPhone(?string $phone): ?string
+    {
+        if ($phone === null) {
+            return null;
+        }
+
+        $trimmed = trim($phone);
+
+        return $trimmed !== '' ? $trimmed : null;
+    }
+
+    private function recordSuperAdminCustomerActivity(?User $actor, int $tenantId, string $action, string $description, array $metadata = []): void
+    {
+        if (! $actor) {
+            return;
+        }
+
+        ActivityLog::query()->create([
+            'tenant_id' => $tenantId > 0 ? $tenantId : null,
+            'user_id' => $actor->id,
+            'action' => $action,
+            'description' => $description,
+            'metadata' => $metadata,
+            'ip_address' => request()?->ip(),
+        ]);
     }
 
     public function destroy(User $user): JsonResponse
