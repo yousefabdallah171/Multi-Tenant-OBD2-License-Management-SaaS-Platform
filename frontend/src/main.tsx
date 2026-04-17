@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import { initI18n, resolveInitialLanguage } from './i18n'
 import { primeDashboardAppearanceFromStorage } from './lib/dashboard-appearance'
@@ -133,6 +134,16 @@ function installChunkRecovery() {
 }
 
 installChunkRecovery()
+
+const updateServiceWorker = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    void clearRuntimeCaches().finally(() => {
+      updateServiceWorker(true)
+      window.location.reload()
+    })
+  },
+})
 
 if (typeof document !== 'undefined') {
   primeDashboardAppearanceFromStorage(document.documentElement)
