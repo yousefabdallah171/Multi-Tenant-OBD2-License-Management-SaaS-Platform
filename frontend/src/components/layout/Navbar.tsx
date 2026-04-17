@@ -92,6 +92,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white shadow-sm shadow-slate-950/[0.06] dark:border-slate-800/50 dark:bg-slate-950 dark:shadow-slate-950/40">
+      <div className="h-1 w-full bg-red-600" />
       <div className="flex h-14 items-center justify-between gap-3 px-3 sm:px-4 md:px-5">
 
         {/* Left — hamburger + identity */}
