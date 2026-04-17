@@ -638,7 +638,22 @@ export function CustomersPage() {
     setCountryName(urlCountryName)
   }, [urlCountryName, urlManagerId, urlManagerParentId, urlPage, urlPerPage, urlProgramId, urlResellerId, urlSearch, urlStatus])
 
+  const isStateSyncedWithUrl =
+    page === urlPage
+    && perPage === urlPerPage
+    && search === urlSearch
+    && status === urlStatus
+    && managerParentId === urlManagerParentId
+    && managerId === urlManagerId
+    && resellerId === urlResellerId
+    && programId === urlProgramId
+    && countryName === urlCountryName
+
   useEffect(() => {
+    if (!isStateSyncedWithUrl) {
+      return
+    }
+
     const next = new URLSearchParams()
     if (page > 1) next.set('page', String(page))
     if (perPage !== 25) next.set('per_page', String(perPage))
@@ -654,7 +669,7 @@ export function CustomersPage() {
     if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true })
     }
-  }, [countryName, managerId, managerParentId, page, perPage, programId, resellerId, scopeName, scopeRole, search, searchParams, setSearchParams, status])
+  }, [countryName, isStateSyncedWithUrl, managerId, managerParentId, page, perPage, programId, resellerId, scopeName, scopeRole, search, searchParams, setSearchParams, status])
 
   const selectedProgram = (programsQuery.data?.data ?? []).find((program) => program.id === activationForm.program_id)
   const durationDays = useMemo(() => {
