@@ -14,6 +14,7 @@ import type { ProgramDurationPreset, RenewLicenseData } from '@/types/manager-re
 
 type DurationUnit = 'minutes' | 'hours' | 'days'
 type ScheduleMode = 'after' | 'on'
+type RenewMode = 'duration' | 'end_date' | 'preset'
 
 interface RenewLicenseFormProps {
   confirmLabel: string
@@ -144,8 +145,8 @@ export function RenewLicenseForm({
     () => [...presetOptions].filter((preset) => preset.is_active).sort((a, b) => a.sort_order - b.sort_order),
     [presetOptions],
   )
-  const usePresetMode = presetOnly || activePresetOptions.length > 0
-  const [mode, setMode] = useState<'duration' | 'end_date'>('end_date')
+  const [mode, setMode] = useState<RenewMode>('end_date')
+  const usePresetMode = presetOnly || mode === 'preset'
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
   const [endDate, setEndDate] = useState(() => resolveInitialEndDate(displayTimezone, anchorDate, initialExpiresAt, initialScheduledAt))
@@ -176,7 +177,7 @@ export function RenewLicenseForm({
       return
     }
 
-    setMode(usePresetMode ? 'duration' : 'end_date')
+    setMode(presetOnly ? 'preset' : 'end_date')
     setDurationValue('30')
     setDurationUnit('days')
     const nextScheduleTimezone = initialScheduledTimezone ?? displayTimezone
@@ -190,7 +191,7 @@ export function RenewLicenseForm({
     setPriceMode(usePresetMode ? 'auto' : autoPricePerDay > 0 ? 'auto' : 'manual')
     setPriceInput(initialPrice > 0 ? initialPrice.toFixed(2) : '0.00')
     setSelectedPresetId(activePresetOptions[0]?.id ?? null)
-  }, [activePresetOptions, anchorDate, autoPricePerDay, displayTimezone, enabled, initialExpiresAt, initialPrice, initialScheduledAt, initialScheduledTimezone, requireScheduled, resetKey, usePresetMode])
+  }, [activePresetOptions, anchorDate, autoPricePerDay, displayTimezone, enabled, initialExpiresAt, initialPrice, initialScheduledAt, initialScheduledTimezone, presetOnly, requireScheduled, resetKey])
 
   useEffect(() => {
     if (!allowScheduleControls || !scheduleEnabled || scheduleMode !== 'after') {
@@ -401,7 +402,7 @@ export function RenewLicenseForm({
           </p>
           <p className="mt-1 text-base font-semibold text-emerald-900 dark:text-emerald-100">{endSummary}</p>
         </div>
-        {!usePresetMode ? (
+        {!presetOnly ? (
           <div className="flex flex-wrap items-center gap-2">
             <Label>{t('common.duration')}</Label>
             <Button type="button" size="sm" variant={mode === 'duration' ? 'default' : 'outline'} onClick={() => setMode('duration')}>
@@ -410,6 +411,11 @@ export function RenewLicenseForm({
             <Button type="button" size="sm" variant={mode === 'end_date' ? 'default' : 'outline'} onClick={() => setMode('end_date')}>
               {t('common.endDate', { defaultValue: 'End Date' })}
             </Button>
+            {activePresetOptions.length > 0 ? (
+              <Button type="button" size="sm" variant={mode === 'preset' ? 'default' : 'outline'} onClick={() => setMode('preset')}>
+                {t('software.durationPresetsTitle', { defaultValue: 'Duration Presets' })}
+              </Button>
+            ) : null}
           </div>
         ) : (
           <Label>{t('common.duration')}</Label>

@@ -11,7 +11,6 @@ export function RenewLicensePageForManagerParent() {
       invalidateQueryKey={['manager-parent']}
       eyebrow={t('roles.manager_parent')}
       cachePattern={/^manager-parent:/}
-      presetOnly
     />
   )
 }
