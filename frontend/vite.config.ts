@@ -15,9 +15,10 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
-        // Keep long-term cache for hashed assets, but do not precache HTML.
-        // This lets clients fetch fresh index/app shell on each navigation.
-        globPatterns: ['**/*.{js,css,ico,png,svg,webmanifest}'],
+        // Precache the app shell because Workbox generates a navigation fallback to index.html.
+        // Without HTML in the precache manifest, createHandlerBoundToURL('index.html') throws
+        // non-precached-url on SPA navigations in production.
+        globPatterns: ['**/*.{html,js,css,ico,png,svg,webmanifest}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
