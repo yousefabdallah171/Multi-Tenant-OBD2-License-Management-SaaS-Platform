@@ -88,7 +88,7 @@ export function CreateCustomerPage() {
   const [createLicenseNow, setCreateLicenseNow] = useState(true)
   const [biosId, setBiosId] = useState('')
   const [programId, setProgramId] = useState<number | ''>('')
-  const [mode, setMode] = useState<'duration' | 'end_date' | 'preset'>('end_date')
+  const [mode, setMode] = useState<'duration' | 'end_date' | 'preset'>('preset')
   const [durationValue, setDurationValue] = useState('30')
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('days')
   const [endDate, setEndDate] = useState(() => getDefaultEndDate(displayTimezone))
@@ -213,7 +213,8 @@ export function CreateCustomerPage() {
         ? current
         : availablePresets[0]?.id ?? null
     ))
-  }, [availablePresets, mode])
+    setMode((current) => (current === 'preset' ? current : 'preset'))
+  }, [availablePresets])
 
   const autoPrice = useMemo(() => {
     if (!selectedProgram || !createLicenseNow) return 0

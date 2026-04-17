@@ -14,7 +14,6 @@ import { apiCache } from '@/lib/apiCache'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { getLicenseDisplayStatus, isPausedPendingLicense, isPlainPendingLicense } from '@/lib/utils'
 import { licenseService } from '@/services/license.service'
-import { programService } from '@/services/program.service'
 import type { RenewLicenseData } from '@/types/manager-reseller.types'
 
 interface RenewLicensePageProps {
@@ -62,20 +61,10 @@ export function RenewLicensePage({
   })
 
   const license = licenseQuery.data?.data
-  const resellerProgramsQuery = useQuery({
-    queryKey: ['license-renew', 'programs', license?.program_id],
-    queryFn: () => programService.getAll({ per_page: 100, status: 'active' }),
-    enabled: presetOnly && Boolean(license?.program_id),
-    staleTime: 60_000,
-  })
-  const resellerPresetOptions = useMemo(() => {
-    if (!presetOnly || !license?.program_id) {
-      return []
-    }
-
-    const program = resellerProgramsQuery.data?.data.find((item) => item.id === license.program_id)
-    return program?.duration_presets ?? []
-  }, [license?.program_id, presetOnly, resellerProgramsQuery.data?.data])
+  const resellerPresetOptions = useMemo(
+    () => license?.program_duration_presets ?? [],
+    [license?.program_duration_presets],
+  )
   const displayStatus = license ? getLicenseDisplayStatus(license) : null
   const isScheduleEdit = displayStatus === 'scheduled' || displayStatus === 'scheduled_failed'
   const isPendingActivation = Boolean(license && isPlainPendingLicense(license))
@@ -85,7 +74,9 @@ export function RenewLicensePage({
     ? (activeLicenseTitle ?? t('common.increaseDuration', { defaultValue: 'Increase Duration' }))
     : isScheduleEdit
       ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-      : license && isPausedPendingLicense(license)
+      : displayStatus === 'cancelled'
+        ? t('common.reactivate', { defaultValue: 'Reactivate' })
+        : license && isPausedPendingLicense(license)
         ? t('common.continue', { defaultValue: 'Continue' })
         : license && isPlainPendingLicense(license)
           ? t('common.activate', { defaultValue: 'Activate' })
@@ -150,15 +141,10 @@ export function RenewLicensePage({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {licenseQuery.isLoading || (presetOnly && resellerProgramsQuery.isLoading) ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.loading')}</p> : null}
+          {licenseQuery.isLoading ? <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.loading')}</p> : null}
           {!licenseQuery.isLoading && licenseQuery.isError ? (
             <p className="text-sm text-rose-600 dark:text-rose-400">
               {resolveApiErrorMessage(licenseQuery.error, t('common.noData'))}
-            </p>
-          ) : null}
-          {presetOnly && !resellerProgramsQuery.isLoading && resellerProgramsQuery.isError ? (
-            <p className="text-sm text-rose-600 dark:text-rose-400">
-              {resolveApiErrorMessage(resellerProgramsQuery.error, t('common.noData'))}
             </p>
           ) : null}
           {!licenseQuery.isLoading && !license ? (

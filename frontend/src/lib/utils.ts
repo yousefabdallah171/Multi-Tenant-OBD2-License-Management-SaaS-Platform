@@ -294,11 +294,7 @@ export function isPlainPendingLicense(value: SchedulableLicense | null | undefin
 }
 
 export function canReactivateLicense(value: SchedulableLicense | null | undefined) {
-  if (!value?.status) {
-    return false
-  }
-
-  return value.status === 'cancelled' || isPausedPendingLicense(value)
+  return isPausedPendingLicense(value)
 }
 
 export function shouldRenewLicense(value: SchedulableLicense | null | undefined) {
@@ -306,7 +302,11 @@ export function shouldRenewLicense(value: SchedulableLicense | null | undefined)
     return false
   }
 
-  return value.status === 'expired' || isScheduledLicense(value) || isScheduledFailedLicense(value) || isPlainPendingLicense(value)
+  return value.status === 'expired'
+    || value.status === 'cancelled'
+    || isScheduledLicense(value)
+    || isScheduledFailedLicense(value)
+    || isPlainPendingLicense(value)
 }
 
 export function canRetryScheduledLicense(value: SchedulableLicense | null | undefined) {

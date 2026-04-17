@@ -7,6 +7,22 @@ import { formatChartNumber, useChartTheme } from '@/components/charts/chart-them
 type ChartRow = object
 type ValueFormatter<TData extends ChartRow> = (value: number | string, payload: TData) => string
 
+function resolveTooltipValue(value: unknown): number | string {
+  if (typeof value === 'number' || typeof value === 'string') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    const firstPrimitive = value.find((item) => typeof item === 'number' || typeof item === 'string')
+
+    if (typeof firstPrimitive === 'number' || typeof firstPrimitive === 'string') {
+      return firstPrimitive
+    }
+  }
+
+  return 0
+}
+
 interface PieChartWidgetProps<TData extends ChartRow = ChartRow> {
   title: string
   description?: string
@@ -57,11 +73,11 @@ export function PieChartWidget<TData extends ChartRow>({
               contentStyle={{ backgroundColor: palette.tooltipBackground, borderColor: palette.tooltipBorder, borderRadius: 16 }}
               labelStyle={{ color: palette.axis }}
               itemStyle={{ color: palette.axis }}
-              formatter={(value: number | string | undefined, _name, item) => {
+              formatter={(value, _name, item) => {
                 const payload = item.payload as TData
                 const row = payload as Record<string, string | number | null | undefined>
                 const label = legendLabelFormatter ? legendLabelFormatter(payload) : String(row[nameKey] ?? '')
-                const resolvedValue = value ?? 0
+                const resolvedValue = resolveTooltipValue(value)
                 const formatted = valueFormatter ? valueFormatter(resolvedValue, payload) : formatChartNumber(resolvedValue, locale)
 
                 return [formatted, label]

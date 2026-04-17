@@ -418,12 +418,14 @@ export function CustomersPage() {
         const canDeleteRow = canDeleteCustomerRow(row)
         const isBlacklisted = Boolean(row.is_blacklisted)
         const renewActionLabel = displayStatus === 'active'
-            ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
-            : isScheduleEditable
-              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : isPlainPending
-                ? t('common.activate', { defaultValue: 'Activate' })
-                : t('common.renew')
+          ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
+          : displayStatus === 'cancelled'
+            ? t('common.reactivate', { defaultValue: 'Reactivate' })
+          : isScheduleEditable
+            ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+            : isPlainPending
+              ? t('common.activate', { defaultValue: 'Activate' })
+              : t('common.renew')
 
           return (
           <div onClick={(event) => event.stopPropagation()}>

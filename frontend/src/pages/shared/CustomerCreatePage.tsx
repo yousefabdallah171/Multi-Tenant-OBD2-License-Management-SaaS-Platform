@@ -86,8 +86,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
-  const isPresetSeller = user?.role === 'reseller' || user?.role === 'manager'
-  const isManagerParent = user?.role === 'manager_parent'
+  const isPresetSeller = user?.role === 'reseller' || user?.role === 'manager' || user?.role === 'manager_parent'
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const durationPresets = useMemo(() => getActivationDurationPresets(t), [t])
   const [customerName, setCustomerName] = useState('')
@@ -693,9 +692,6 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                       <Label>{t('common.duration')}</Label>
                       <Button type="button" size="sm" variant={mode === 'duration' ? 'default' : 'outline'} onClick={() => setMode('duration')}>{t('activate.durationMode', { defaultValue: 'Duration' })}</Button>
                       <Button type="button" size="sm" variant={mode === 'end_date' ? 'default' : 'outline'} onClick={() => setMode('end_date')}>{t('common.endDate', { defaultValue: 'End Date' })}</Button>
-                      {isManagerParent && availablePresets.length > 0 && (
-                        <Button type="button" size="sm" variant={mode === 'preset' ? 'default' : 'outline'} onClick={() => setMode('preset')}>{t('software.durationPresetsTitle', { defaultValue: 'Presets' })}</Button>
-                      )}
                     </div>
                     {mode === 'preset' ? (
                       <div className="space-y-2">

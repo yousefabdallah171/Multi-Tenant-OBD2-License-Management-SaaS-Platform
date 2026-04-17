@@ -678,11 +678,13 @@ export function CustomersPage() {
         const isBiosActiveElsewhere = Boolean(row.bios_active_elsewhere)
         const renewActionLabel = displayStatus === 'active'
           ? text.actions.renew
+          : displayStatus === 'cancelled'
+            ? text.actions.reactivate
           : isScheduleEditable
-              ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
-              : isPlainPending
-                ? t('common.activate', { defaultValue: 'Activate' })
-                : text.actions.renew
+            ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+            : isPlainPending
+              ? t('common.activate', { defaultValue: 'Activate' })
+              : text.actions.renew
 
           return (
           <DropdownMenu>

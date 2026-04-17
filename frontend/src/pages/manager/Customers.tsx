@@ -468,6 +468,8 @@ export function CustomersPage() {
           ? t('common.increaseDuration', { defaultValue: 'Increase Duration' })
           : isScheduleEditable
             ? t('common.editSchedule', { defaultValue: 'Edit Schedule' })
+            : displayStatus === 'cancelled'
+              ? t('common.reactivate', { defaultValue: 'Reactivate' })
             : isPlainPending
               ? t('common.activate', { defaultValue: 'Activate' })
               : t('common.renew')

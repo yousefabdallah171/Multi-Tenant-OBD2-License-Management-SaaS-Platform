@@ -327,6 +327,7 @@ export interface LicenseDetails extends LicenseSummary {
     email: string
     phone: string | null
   } | null
+  program_duration_presets?: ProgramDurationPreset[]
   program_version: string | null
   download_link: string | null
   activity: Array<{

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\License;
+use App\Models\ProgramDurationPreset;
+use App\Models\ProgramDurationPresetCountryPrice;
 use App\Models\User;
 use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
@@ -325,7 +327,7 @@ class LicenseController extends Controller
 
     private function serializeLicense(License $license): array
     {
-        $license->loadMissing(['customer:id,name,email', 'program:id,name']);
+        $license->loadMissing(['customer:id,name,email', 'program.activeDurationPresets.countryPrices']);
 
         return [
             'id' => $license->id,
@@ -337,6 +339,9 @@ class LicenseController extends Controller
             'external_username' => $license->external_username ?: $license->customer?->username,
             'program' => $license->program?->name,
             'program_id' => $license->program_id,
+            'program_duration_presets' => $license->program
+                ? $this->serializeDurationPresets($license->program->activeDurationPresets)
+                : [],
             'duration_days' => $license->duration_days,
             'price' => CustomerOwnership::displayPriceForLicense($license),
             'activated_at' => $license->activated_at?->toIso8601String(),
@@ -354,6 +359,31 @@ class LicenseController extends Controller
             'paused_by_role' => $license->paused_by_role,
             'status' => $license->status,
         ];
+    }
+
+    private function serializeDurationPresets(iterable $presets): array
+    {
+        return collect($presets)
+            ->map(fn (ProgramDurationPreset $preset): array => [
+                'id' => $preset->id,
+                'program_id' => $preset->program_id,
+                'label' => $preset->label,
+                'duration_days' => (float) $preset->duration_days,
+                'price' => (float) $preset->price,
+                'sort_order' => (int) $preset->sort_order,
+                'is_active' => (bool) $preset->is_active,
+                'country_prices' => ($preset->relationLoaded('countryPrices') ? $preset->countryPrices : $preset->countryPrices()->get())
+                    ->map(fn (ProgramDurationPresetCountryPrice $countryPrice): array => [
+                        'id' => $countryPrice->id,
+                        'country_name' => $countryPrice->country_name,
+                        'price' => (float) $countryPrice->price,
+                        'is_active' => (bool) $countryPrice->is_active,
+                    ])
+                    ->values()
+                    ->all(),
+            ])
+            ->values()
+            ->all();
     }
 
     private function resolveAccessibleLicense(Request $request, License $license): License

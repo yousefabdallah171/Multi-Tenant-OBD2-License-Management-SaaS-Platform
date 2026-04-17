@@ -57,6 +57,7 @@ function resolveCurrentLanguage(): SupportedLanguage {
 }
 
 async function fetchCurrentUserSnapshot(): Promise<User | null> {
+  const token = useAuthStore.getState().token
   const { data } = await axios.get<{ user: User | null }>('/auth/me', {
     baseURL: resolveApiBaseUrl(),
     withCredentials: true,
@@ -64,6 +65,7 @@ async function fetchCurrentUserSnapshot(): Promise<User | null> {
       Accept: 'application/json',
       'Content-Type': 'application/json',
       'Accept-Language': resolveCurrentLanguage(),
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
   })
 
@@ -78,6 +80,11 @@ api.interceptors.request.use((config) => {
     const state = getImpersonationState()
     if (state?.token) {
       config.headers.Authorization = `Bearer ${state.token}`
+    }
+  } else {
+    const token = useAuthStore.getState().token
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
   }
 

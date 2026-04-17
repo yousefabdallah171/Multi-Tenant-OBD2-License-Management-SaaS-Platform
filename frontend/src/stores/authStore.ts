@@ -5,25 +5,27 @@ import type { User } from '@/types/user.types'
 
 interface AuthState {
   user: User | null
+  token: string | null
   remember: boolean
-  setSession: (user: User, remember?: boolean) => void
+  setSession: (user: User, token: string, remember?: boolean) => void
   setUser: (user: User | null) => void
   clearSession: () => void
 }
 
-function readStoredAuth(): Pick<AuthState, 'user' | 'remember'> {
+function readStoredAuth(): Pick<AuthState, 'user' | 'token' | 'remember'> {
   if (typeof window === 'undefined') {
-    return { user: null, remember: true }
+    return { user: null, token: null, remember: true }
   }
 
   try {
     if (isImpersonationActive()) {
       const impersonationRaw = window.sessionStorage.getItem(IMPERSONATION_AUTH_STORAGE_KEY)
       if (impersonationRaw) {
-        const parsed = JSON.parse(impersonationRaw) as { user?: User | null }
+        const parsed = JSON.parse(impersonationRaw) as { user?: User | null; token?: string | null }
 
         return {
           user: parsed.user ?? null,
+          token: parsed.token ?? null,
           remember: false,
         }
       }
@@ -34,21 +36,22 @@ function readStoredAuth(): Pick<AuthState, 'user' | 'remember'> {
     const raw = localRaw ?? sessionRaw
 
     if (!raw) {
-      return { user: null, remember: true }
+      return { user: null, token: null, remember: true }
     }
 
-    const parsed = JSON.parse(raw) as { user?: User | null }
+    const parsed = JSON.parse(raw) as { user?: User | null; token?: string | null }
 
     return {
       user: parsed.user ?? null,
+      token: parsed.token ?? null,
       remember: Boolean(localRaw),
     }
   } catch {
-    return { user: null, remember: true }
+    return { user: null, token: null, remember: true }
   }
 }
 
-function persistAuth(user: User | null, remember = true) {
+function persistAuth(user: User | null, token: string | null, remember = true) {
   if (typeof window === 'undefined') {
     return
   }
@@ -59,7 +62,7 @@ function persistAuth(user: User | null, remember = true) {
       return
     }
 
-    window.sessionStorage.setItem(IMPERSONATION_AUTH_STORAGE_KEY, JSON.stringify({ user }))
+    window.sessionStorage.setItem(IMPERSONATION_AUTH_STORAGE_KEY, JSON.stringify({ user, token }))
     return
   }
 
@@ -70,7 +73,7 @@ function persistAuth(user: User | null, remember = true) {
     return
   }
 
-  const payload = JSON.stringify({ user })
+  const payload = JSON.stringify({ user, token })
 
   if (remember) {
     window.localStorage.setItem(AUTH_STORAGE_KEY, payload)
@@ -84,19 +87,20 @@ const initialState = readStoredAuth()
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: initialState.user,
+  token: initialState.token,
   remember: initialState.remember,
-  setSession: (user, remember = true) => {
-    persistAuth(user, remember)
-    set({ user, remember })
+  setSession: (user, token, remember = true) => {
+    persistAuth(user, token, remember)
+    set({ user, token, remember })
   },
   setUser: (user) => {
     set((state) => {
-      persistAuth(user, state.remember)
+      persistAuth(user, state.token, state.remember)
       return { user }
     })
   },
   clearSession: () => {
-    persistAuth(null, true)
-    set({ user: null, remember: true })
+    persistAuth(null, null, true)
+    set({ user: null, token: null, remember: true })
   },
 }))
