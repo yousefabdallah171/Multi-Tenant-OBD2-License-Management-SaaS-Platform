@@ -94,9 +94,18 @@ class BiosBlacklistController extends BaseSuperAdminController
             ->first();
 
         if ($entry && $entry->status === 'active') {
+            if ($reason !== '' && $entry->reason !== $reason) {
+                $entry->forceFill([
+                    'added_by' => $request->user()?->id,
+                    'reason' => $reason,
+                ])->save();
+            }
+
             return response()->json([
                 'data' => $this->serializeEntry($entry->fresh('addedBy')),
-                'message' => 'This BIOS is already blacklisted.',
+                'message' => $reason !== ''
+                    ? 'This BIOS is already blacklisted. The reason was updated.'
+                    : 'This BIOS is already blacklisted.',
             ]);
         }
 

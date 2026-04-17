@@ -3,6 +3,7 @@
 namespace Tests\Feature\Security;
 
 use App\Models\ActivityLog;
+use App\Models\BiosBlacklist;
 use App\Models\License;
 use App\Models\ProgramDurationPreset;
 use App\Models\ProgramDurationPresetCountryPrice;
@@ -158,6 +159,65 @@ class AuthorizationBoundaryTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.username', 'updated-manager-username');
+    }
+
+    public function test_manager_parent_can_update_reason_for_existing_active_blacklisted_bios(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+
+        BiosBlacklist::query()->create([
+            'tenant_id' => $tenant->id,
+            'bios_id' => '4TSY362',
+            'added_by' => $managerParent->id,
+            'reason' => '',
+            'status' => 'active',
+        ]);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->postJson('/api/bios-blacklist', [
+            'bios_id' => '4TSY362',
+            'reason' => 'Chargeback abuse',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.reason', 'Chargeback abuse');
+
+        $this->assertDatabaseHas('bios_blacklist', [
+            'tenant_id' => $tenant->id,
+            'bios_id' => '4TSY362',
+            'reason' => 'Chargeback abuse',
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_super_admin_can_update_reason_for_existing_active_global_blacklisted_bios(): void
+    {
+        $superAdmin = $this->createUser('super_admin');
+
+        BiosBlacklist::query()->withoutGlobalScope('tenant')->create([
+            'tenant_id' => null,
+            'bios_id' => 'PF3PAS86',
+            'added_by' => $superAdmin->id,
+            'reason' => '',
+            'status' => 'active',
+        ]);
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->postJson('/api/super-admin/bios-blacklist', [
+            'bios_id' => 'PF3PAS86',
+            'reason' => 'Shared account detected',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.reason', 'Shared account detected');
+
+        $this->assertDatabaseHas('bios_blacklist', [
+            'tenant_id' => null,
+            'bios_id' => 'PF3PAS86',
+            'reason' => 'Shared account detected',
+            'status' => 'active',
+        ]);
     }
 
     public function test_manager_cannot_unlock_reseller_outside_his_team(): void
