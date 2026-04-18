@@ -686,11 +686,7 @@ class CustomerController extends BaseSuperAdminController
 
         $license->forceFill(['price' => $newPrice])->save();
 
-        $revenueLog = ActivityLog::query()
-            ->whereIn('action', ['license.activated', 'license.renewed'])
-            ->where('metadata->license_id', $license->id)
-            ->latest()
-            ->first();
+        $revenueLog = $this->resolveEditableRevenueLog($license);
 
         if ($revenueLog) {
             $metadata = is_array($revenueLog->metadata) ? $revenueLog->metadata : [];
@@ -726,6 +722,26 @@ class CustomerController extends BaseSuperAdminController
         );
 
         LicenseCacheInvalidation::invalidateForLicense($license->fresh(['reseller:id,tenant_id,created_by']));
+    }
+
+    private function resolveEditableRevenueLog(License $license): ?ActivityLog
+    {
+        $earnedRevenueLog = ActivityLog::query()
+            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->where('metadata->license_id', $license->id)
+            ->where('metadata->attribution_type', BalanceService::TYPE_EARNED)
+            ->latest()
+            ->first();
+
+        if ($earnedRevenueLog) {
+            return $earnedRevenueLog;
+        }
+
+        return ActivityLog::query()
+            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->where('metadata->license_id', $license->id)
+            ->latest()
+            ->first();
     }
 
     private function createSyntheticRevenueLogForLicense(User $customer, License $license, float $price): ?ActivityLog
