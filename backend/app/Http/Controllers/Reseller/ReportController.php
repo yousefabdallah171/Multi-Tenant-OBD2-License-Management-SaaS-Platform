@@ -9,6 +9,7 @@ use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends BaseResellerController
 {
@@ -63,83 +64,101 @@ class ReportController extends BaseResellerController
 
     public function revenue(Request $request): JsonResponse
     {
-        $validated = $this->validatedFilters($request);
-        $cacheKey = $this->cacheKey($this->currentReseller($request)->id, 'revenue', $validated);
+        try {
+            $validated = $this->validatedFilters($request);
+            $cacheKey = $this->cacheKey($this->currentReseller($request)->id, 'revenue', $validated);
 
-        return response()->json([
-            'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
-                $periodExpression = $this->periodExpression($validated['period']);
+            return response()->json([
+                'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
+                    $periodExpression = $this->periodExpression($validated['period']);
 
-                return $this->revenueQuery($request, $validated)
-                    ->selectRaw("{$periodExpression} as period")
-                    ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
-                    ->selectRaw('MIN(activity_logs.created_at) as sort_at')
-                    ->groupByRaw($periodExpression)
-                    ->orderBy('sort_at')
-                    ->get()
-                    ->map(fn ($row): array => [
-                        'period' => (string) $row->period,
-                        'revenue' => round((float) $row->revenue, 2),
-                    ])
-                    ->values()
-                    ->all();
-            }),
-        ]);
+                    return $this->revenueQuery($request, $validated)
+                        ->selectRaw("{$periodExpression} as period")
+                        ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+                        ->selectRaw('MIN(activity_logs.created_at) as sort_at')
+                        ->groupByRaw($periodExpression)
+                        ->orderBy('sort_at')
+                        ->get()
+                        ->map(fn ($row): array => [
+                            'period' => (string) $row->period,
+                            'revenue' => round((float) $row->revenue, 2),
+                        ])
+                        ->values()
+                        ->all();
+                }),
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json(['data' => []]);
+        }
     }
 
     public function activations(Request $request): JsonResponse
     {
-        $validated = $this->validatedFilters($request);
-        $cacheKey = $this->cacheKey($this->currentReseller($request)->id, 'activations', $validated);
+        try {
+            $validated = $this->validatedFilters($request);
+            $cacheKey = $this->cacheKey($this->currentReseller($request)->id, 'activations', $validated);
 
-        return response()->json([
-            'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
-                $periodExpression = $this->periodExpression($validated['period'], 'licenses.activated_at');
+            return response()->json([
+                'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
+                    $periodExpression = $this->periodExpression($validated['period'], 'licenses.activated_at');
 
-                return $this->baseQuery($request, $validated)
-                    ->whereNotNull('licenses.activated_at')
-                    ->selectRaw("{$periodExpression} as period, COUNT(*) as count, MIN(licenses.activated_at) as sort_at")
-                    ->groupByRaw($periodExpression)
-                    ->orderBy('sort_at')
-                    ->get()
-                    ->map(fn ($row): array => [
-                        'period' => (string) $row->period,
-                        'count' => (int) $row->count,
-                    ])
-                    ->values()
-                    ->all();
-            }),
-        ]);
+                    return $this->baseQuery($request, $validated)
+                        ->whereNotNull('licenses.activated_at')
+                        ->selectRaw("{$periodExpression} as period, COUNT(*) as count, MIN(licenses.activated_at) as sort_at")
+                        ->groupByRaw($periodExpression)
+                        ->orderBy('sort_at')
+                        ->get()
+                        ->map(fn ($row): array => [
+                            'period' => (string) $row->period,
+                            'count' => (int) $row->count,
+                        ])
+                        ->values()
+                        ->all();
+                }),
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json(['data' => []]);
+        }
     }
 
     public function topPrograms(Request $request): JsonResponse
     {
-        $validated = $this->validatedFilters($request);
-        $cacheKey = $this->cacheKey($this->currentReseller($request)->id, 'top-programs', $validated);
+        try {
+            $validated = $this->validatedFilters($request);
+            $cacheKey = $this->cacheKey($this->currentReseller($request)->id, 'top-programs', $validated);
 
-        return response()->json([
-            'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
-                $rows = $this->revenueQuery($request, $validated)
-                    ->selectRaw(RevenueAnalytics::programIdExpression('activity_logs').' as program_id')
-                    ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'count'))
-                    ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
-                    ->groupByRaw(RevenueAnalytics::programIdExpression('activity_logs'))
-                    ->orderByDesc('revenue')
-                    ->get()
-                    ->filter(fn ($row): bool => (int) ($row->program_id ?? 0) > 0)
-                    ->values();
+            return response()->json([
+                'data' => Cache::remember($cacheKey, now()->addSeconds(90), function () use ($request, $validated): array {
+                    $rows = $this->revenueQuery($request, $validated)
+                        ->selectRaw(RevenueAnalytics::programIdExpression('activity_logs').' as program_id')
+                        ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'count'))
+                        ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+                        ->groupByRaw(RevenueAnalytics::programIdExpression('activity_logs'))
+                        ->orderByDesc('revenue')
+                        ->get()
+                        ->filter(fn ($row): bool => (int) ($row->program_id ?? 0) > 0)
+                        ->values();
 
-                $programs = \App\Models\Program::query()
-                    ->whereIn('id', $rows->pluck('program_id')->all())
-                    ->pluck('name', 'id');
+                    $programs = \App\Models\Program::query()
+                        ->whereIn('id', $rows->pluck('program_id')->all())
+                        ->pluck('name', 'id');
 
-                return $rows->map(fn ($row): array => [
-                    'program' => (string) ($programs->get((int) $row->program_id) ?? 'Unknown'),
-                    'count' => (int) $row->count,
-                    'revenue' => round((float) $row->revenue, 2),
-                ])->values()->all();
-            }),
-        ]);
+                    return $rows->map(fn ($row): array => [
+                        'program' => (string) ($programs->get((int) $row->program_id) ?? 'Unknown'),
+                        'count' => (int) $row->count,
+                        'revenue' => round((float) $row->revenue, 2),
+                    ])->values()->all();
+                }),
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json(['data' => []]);
+        }
     }
 
     public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
@@ -207,6 +226,14 @@ class ReportController extends BaseResellerController
 
     private function periodExpression(string $period, string $column = 'activity_logs.created_at'): string
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return match ($period) {
+                'daily' => "strftime('%Y-%m-%d', {$column})",
+                'weekly' => "strftime('%Y-%m-%d', {$column}, '-' || ((CAST(strftime('%w', {$column}) AS INTEGER) + 6) % 7) || ' days')",
+                default => "strftime('%Y-%m', {$column})",
+            };
+        }
+
         return match ($period) {
             'daily' => "DATE_FORMAT({$column}, '%Y-%m-%d')",
             'weekly' => "DATE_FORMAT(DATE_SUB({$column}, INTERVAL WEEKDAY({$column}) DAY), '%Y-%m-%d')",
