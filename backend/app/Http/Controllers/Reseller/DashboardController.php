@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Reseller;
 
 use App\Models\ActivityLog;
 use App\Models\License;
-use App\Support\CustomerOwnership;
 use App\Support\RevenueAnalytics;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +21,7 @@ class DashboardController extends BaseResellerController
             $licenseQuery = License::query()->where('reseller_id', $resellerId);
 
             return [
-                'customers' => CustomerOwnership::currentOwnedCustomerCount([$resellerId], $this->currentTenantId($request)),
+                'customers' => $this->historicalCustomerCount($request),
                 'active_licenses' => (int) (clone $licenseQuery)
                     ->whereEffectivelyActive()
                     ->whereNotNull('customer_id')

@@ -29,7 +29,7 @@ class ReportController extends BaseResellerController
                     $totalRevenue = round((float) ($summary?->total_revenue ?? 0), 2);
                     $baseQuery = $this->baseQuery($request, $validated);
                     $totalActivations = (int) $baseQuery->count();
-                    $totalCustomers = CustomerOwnership::currentOwnedCustomerCount([$resellerId], $this->currentTenantId($request));
+                    $totalCustomers = $this->historicalCustomerCount($request);
                     $activeCustomers = (int) $this->licenseQuery($request)
                         ->whereEffectivelyActive()
                         ->whereNotNull('customer_id')

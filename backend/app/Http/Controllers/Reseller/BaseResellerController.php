@@ -43,6 +43,11 @@ abstract class BaseResellerController extends Controller
             ->whereIn('id', $customerIds);
     }
 
+    protected function historicalCustomerCount(Request $request): int
+    {
+        return (int) $this->customerQuery($request)->count();
+    }
+
     protected function licenseQuery(Request $request)
     {
         return License::query()->where('reseller_id', $this->currentReseller($request)->id);
