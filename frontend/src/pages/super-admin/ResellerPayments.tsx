@@ -14,6 +14,7 @@ export function ResellerPaymentsPage() {
       recordPayment={superAdminPlatformService.recordPayment}
       detailPath={(lang, resellerId) => routePaths.superAdmin.resellerPaymentDetail(lang, resellerId)}
       managerParentDetailPath={(lang, managerParentId) => routePaths.superAdmin.resellerPaymentsManagerParentCustomers(lang, managerParentId)}
+      allowManagerParentPaymentDetails
     />
   )
 }

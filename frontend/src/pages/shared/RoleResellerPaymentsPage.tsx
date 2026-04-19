@@ -28,6 +28,7 @@ interface RoleResellerPaymentsPageProps {
   managerParentDetailPath?: (lang: 'ar' | 'en', managerParentId: number) => string
   roleSalesRoles?: Array<'manager_parent' | 'manager' | 'reseller'>
   allowRecordPayment?: boolean
+  allowManagerParentPaymentDetails?: boolean
 }
 
 export function RoleResellerPaymentsPage({
@@ -39,6 +40,7 @@ export function RoleResellerPaymentsPage({
   managerParentDetailPath,
   roleSalesRoles,
   allowRecordPayment = true,
+  allowManagerParentPaymentDetails = false,
 }: RoleResellerPaymentsPageProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -211,10 +213,12 @@ export function RoleResellerPaymentsPage({
         if (row.reseller_role === 'manager_parent') {
           return (
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
-                {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              {allowManagerParentPaymentDetails ? (
+                <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+                  {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              ) : null}
               {managerParentDetailPath ? (
                 <button type="button" onClick={() => navigate(managerParentDetailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
                   {t('payments.actions.viewSalesCustomers', { defaultValue: 'View Sales Customers' })}
@@ -233,7 +237,7 @@ export function RoleResellerPaymentsPage({
         )
       },
     },
-  ], [detailPath, lang, locale, managerParentDetailPath, navigate, t])
+  ], [allowManagerParentPaymentDetails, detailPath, lang, locale, managerParentDetailPath, navigate, t])
 
   const displayedRows = useMemo(() => {
     if (summaryMode === 'manager_parent' || summaryMode === 'manager' || summaryMode === 'reseller') {
