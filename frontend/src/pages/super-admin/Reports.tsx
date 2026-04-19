@@ -16,7 +16,8 @@ import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { reportService } from '@/services/report.service'
-import type { FinancialReportPayload } from '@/types/super-admin.types'
+import { superAdminPlatformService } from '@/services/super-admin-platform.service'
+import type { ResellerPaymentRow } from '@/types/manager-reseller.types'
 import type { UserRole } from '@/types/user.types'
 
 type TopResellerRow = {
@@ -67,6 +68,11 @@ export function ReportsPage() {
     queryFn: () => reportService.getTopResellers(params),
   })
 
+  const paymentRowsQuery = useQuery({
+    queryKey: ['super-admin', 'reports', 'reseller-payments-table'],
+    queryFn: () => superAdminPlatformService.getResellerPayments(),
+  })
+
   const financialData = financialQuery.data?.data
   const breakdownSeries = (financialData?.revenue_breakdown_series ?? []).map((program) => ({ key: program, label: program, stackId: 'revenue' }))
   const monthlyRevenueData = (financialData?.monthly_revenue ?? []).map((item) => ({
@@ -74,25 +80,25 @@ export function ReportsPage() {
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
   }))
 
-  const balanceColumns: Array<DataTableColumn<FinancialReportPayload['reseller_balances'][number]>> = [
+  const balanceColumns: Array<DataTableColumn<ResellerPaymentRow>> = [
     {
-      key: 'reseller',
-      label: t('superAdmin.pages.financialReports.seller'),
+      key: 'reseller_name',
+      label: t('payments.columns.reseller', { defaultValue: 'Seller' }),
       sortable: true,
-      sortValue: (row) => row.reseller ?? '',
+      sortValue: (row) => row.reseller_name ?? '',
       render: (row) => (
         <RoleIdentity
-          name={row.reseller}
-          role={resolveUserRole(row.role)}
-          href={row.id ? routePaths.superAdmin.userDetail(lang, row.id) : undefined}
-          secondary={row.tenant ?? '-'}
+          name={row.reseller_name}
+          role={resolveUserRole(row.reseller_role)}
+          href={row.reseller_id ? routePaths.superAdmin.userDetail(lang, row.reseller_id) : undefined}
+          secondary={row.reseller_email ?? '-'}
         />
       ),
     },
-    { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant ?? '', render: (row) => row.tenant ?? '-' },
-    { key: 'revenue', label: t('common.revenue'), sortable: true, sortValue: (row) => row.total_revenue, render: (row) => formatCurrency(row.total_revenue, 'USD', locale) },
-    { key: 'activations', label: t('common.activations'), sortable: true, sortValue: (row) => row.total_activations, render: (row) => row.total_activations },
-    { key: 'avg', label: t('superAdmin.pages.financialReports.avgPrice'), sortable: true, sortValue: (row) => row.avg_price, render: (row) => formatCurrency(row.avg_price, 'USD', locale) },
+    { key: 'total_sales', label: t('payments.columns.sales', { defaultValue: 'Sales' }), sortable: true, sortValue: (row) => row.total_sales, render: (row) => formatCurrency(row.total_sales, 'USD', locale) },
+    { key: 'commission_owed', label: t('payments.columns.owed', { defaultValue: 'Commission Owed' }), sortable: true, sortValue: (row) => row.commission_owed, render: (row) => formatCurrency(row.commission_owed, 'USD', locale) },
+    { key: 'amount_paid', label: t('payments.columns.paid', { defaultValue: 'Amount Paid' }), sortable: true, sortValue: (row) => row.amount_paid, render: (row) => formatCurrency(row.amount_paid, 'USD', locale) },
+    { key: 'outstanding', label: t('payments.columns.outstanding', { defaultValue: 'Outstanding' }), sortable: true, sortValue: (row) => row.outstanding, render: (row) => formatCurrency(row.outstanding, 'USD', locale) },
   ]
 
   const resellerColumns: Array<DataTableColumn<TopResellerRow>> = [
@@ -198,7 +204,7 @@ export function ReportsPage() {
         />
       </div>
 
-      <DataTable tableKey="super_admin_reports_balances" columns={balanceColumns} data={financialData?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={financialQuery.isLoading} />
+      <DataTable tableKey="super_admin_reports_balances" columns={balanceColumns} data={paymentRowsQuery.data?.data ?? []} rowKey={(row) => row.reseller_id} isLoading={paymentRowsQuery.isLoading} />
       <DataTable tableKey="super_admin_reports_top_resellers" columns={resellerColumns} data={(topResellersQuery.data?.data ?? []) as TopResellerRow[]} rowKey={(row) => `${row.tenant}-${row.reseller}-${row.reseller_id ?? 'unknown'}`} isLoading={topResellersQuery.isLoading} />
     </div>
   )

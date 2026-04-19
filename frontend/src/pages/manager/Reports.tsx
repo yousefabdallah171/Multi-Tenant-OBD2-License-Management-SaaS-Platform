@@ -17,7 +17,7 @@ import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerService } from '@/services/manager.service'
-import type { FinancialReportData } from '@/types/manager-parent.types'
+import type { ResellerPaymentRow } from '@/types/manager-reseller.types'
 import type { UserRole } from '@/types/user.types'
 
 export function ReportsPage() {
@@ -35,8 +35,13 @@ export function ReportsPage() {
     queryKey: ['manager', 'reports', 'retention', range.from, range.to],
     queryFn: () => managerService.getRetention(range),
   })
+  const paymentRowsQuery = useQuery({
+    queryKey: ['manager', 'reports', 'reseller-payments-table'],
+    queryFn: () => managerService.getResellerPayments(),
+  })
 
   const report = reportQuery.data?.data
+  const paymentRows = paymentRowsQuery.data?.data ?? []
   const monthlyRevenueSeries = (report?.monthly_revenue ?? []).map((item) => ({
     ...item,
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
@@ -45,25 +50,25 @@ export function ReportsPage() {
     ...item,
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
   }))
-  const columns = useMemo<Array<DataTableColumn<FinancialReportData['reseller_balances'][number]>>>(
+  const columns = useMemo<Array<DataTableColumn<ResellerPaymentRow>>>(
     () => [
       {
-        key: 'reseller',
+        key: 'reseller_name',
         label: t('managerParent.pages.financialReports.columns.seller'),
         sortable: true,
-        sortValue: (row) => row.reseller,
+        sortValue: (row) => row.reseller_name,
         render: (row) => (
           <RoleIdentity
-            name={row.reseller}
-            role={resolveUserRole(row.role)}
-            href={getManagerSellerDetailPath(lang, row.id, row.role)}
+            name={row.reseller_name}
+            role={resolveUserRole(row.reseller_role)}
+            href={getManagerSellerDetailPath(lang, row.reseller_id, row.reseller_role)}
           />
         ),
       },
-      { key: 'revenue', label: t('managerParent.pages.financialReports.columns.totalRevenue'), sortable: true, sortValue: (row) => row.total_revenue, render: (row) => formatCurrency(row.total_revenue, 'USD', locale) },
-      { key: 'activations', label: t('common.activations'), sortable: true, sortValue: (row) => row.total_activations, render: (row) => row.total_activations },
-      { key: 'avgPrice', label: t('managerParent.pages.financialReports.columns.avgPrice'), sortable: true, sortValue: (row) => row.avg_price, render: (row) => formatCurrency(row.avg_price, 'USD', locale) },
-      { key: 'stillNotPaid', label: t('managerParent.pages.financialReports.columns.stillNotPaid'), sortable: true, sortValue: (row) => row.still_not_paid, render: (row) => formatCurrency(row.still_not_paid, 'USD', locale) },
+      { key: 'total_sales', label: t('payments.columns.sales', { defaultValue: 'Sales' }), sortable: true, sortValue: (row) => row.total_sales, render: (row) => formatCurrency(row.total_sales, 'USD', locale) },
+      { key: 'commission_owed', label: t('payments.columns.owed', { defaultValue: 'Commission Owed' }), sortable: true, sortValue: (row) => row.commission_owed, render: (row) => formatCurrency(row.commission_owed, 'USD', locale) },
+      { key: 'amount_paid', label: t('payments.columns.paid', { defaultValue: 'Amount Paid' }), sortable: true, sortValue: (row) => row.amount_paid, render: (row) => formatCurrency(row.amount_paid, 'USD', locale) },
+      { key: 'outstanding', label: t('payments.columns.outstanding', { defaultValue: 'Outstanding' }), sortable: true, sortValue: (row) => row.outstanding, render: (row) => formatCurrency(row.outstanding, 'USD', locale) },
     ],
     [lang, locale, t],
   )
@@ -126,12 +131,12 @@ export function ReportsPage() {
         <BarChartWidget
           title={t('managerParent.pages.financialReports.stillNotPaidBySeller')}
           description={t('managerParent.pages.financialReports.stillNotPaidHint')}
-          data={report?.reseller_balances ?? []}
-          isLoading={reportQuery.isLoading}
-          xKey="reseller"
+          data={paymentRows}
+          isLoading={paymentRowsQuery.isLoading}
+          xKey="reseller_name"
           horizontal
           showLabels
-          series={[{ key: 'still_not_paid', label: t('managerParent.pages.financialReports.columns.stillNotPaid') }]}
+          series={[{ key: 'outstanding', label: t('payments.columns.outstanding', { defaultValue: 'Outstanding' }) }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
         />
       </div>
@@ -148,7 +153,7 @@ export function ReportsPage() {
         <CardContent className="p-6">
           <h3 className="mb-2 text-lg font-semibold">{t('managerParent.pages.financialReports.stillNotPaidBySeller')}</h3>
           <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.financialReports.stillNotPaidHint')}</p>
-          <DataTable tableKey="manager_reports_balances" columns={columns} data={report?.reseller_balances ?? []} rowKey={(row) => row.id} isLoading={reportQuery.isLoading} />
+          <DataTable tableKey="manager_reports_balances" columns={columns} data={paymentRows} rowKey={(row) => row.reseller_id} isLoading={paymentRowsQuery.isLoading} />
         </CardContent>
       </Card>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, Banknote, CircleDollarSign, Wallet, WalletCards } from 'lucide-react'
 import { toast } from 'sonner'
@@ -8,7 +8,6 @@ import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { RoleOptionPicker } from '@/components/shared/RoleOptionPicker'
-import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -57,6 +56,7 @@ export function RoleResellerPaymentsPage({
   const scopeRole = normalizeScopeRole(searchParams.get('scope_role'))
   const roleFilter = normalizeRoleFilter(searchParams.get('role'))
   const allowedRoleSales = roleSalesRoles ?? ['manager_parent', 'manager', 'reseller']
+  const summaryMode = roleFilter || balanceFilter || 'all'
   const [paymentForm, setPaymentForm] = useState({
     reseller_id: 0,
     amount: '',
@@ -87,9 +87,9 @@ export function RoleResellerPaymentsPage({
 
   useEffect(() => {
     if (roleFilter && !allowedRoleSales.includes(roleFilter)) {
-      setSearchParams((current) => updateSummaryFilter(current, { role: '', balance: balanceFilter }), { replace: true })
+      setSearchParams((current) => updateSummaryMode(current, 'all'), { replace: true })
     }
-  }, [allowedRoleSales, balanceFilter, roleFilter, setSearchParams])
+  }, [allowedRoleSales, roleFilter, setSearchParams])
 
   const query = useQuery({
     queryKey: [queryKeyPrefix, 'reseller-payments', listFilters],
@@ -97,22 +97,6 @@ export function RoleResellerPaymentsPage({
   })
 
   const rows = query.data?.data ?? []
-  const filteredRows = useMemo(() => {
-    if (balanceFilter === 'negative') {
-      return rows.filter((row) => row.outstanding < 0)
-    }
-    if (balanceFilter === 'positive') {
-      return rows.filter((row) => row.outstanding > 0)
-    }
-    if (balanceFilter === 'collected') {
-      return rows.filter((row) => {
-        const commissionOwed = row.commission_owed ?? 0
-        const outstanding = Math.max(row.outstanding ?? 0, 0)
-        return commissionOwed > 0 && commissionOwed - outstanding > 0
-      })
-    }
-    return rows
-  }, [balanceFilter, rows])
   const summary = query.data?.summary
   const totalsByRole = useMemo(() => {
     if (summary?.sales_by_role) {
@@ -158,12 +142,12 @@ export function RoleResellerPaymentsPage({
       return commissionOwed > 0 && commissionOwed - outstanding > 0
     }),
   }), [rows])
-  const resellerOptions = rows.map((row) => ({
+  const sellerOptions = rows.map((row) => ({
     id: row.reseller_id,
     name: row.reseller_name,
     role: row.reseller_role ?? null,
     secondary: row.reseller_email,
-  })).filter((row) => row.role !== 'manager_parent')
+  }))
 
   const paymentMutation = useMutation({
     mutationFn: (payload: RecordPaymentPayload) => recordPayment(payload),
@@ -225,15 +209,19 @@ export function RoleResellerPaymentsPage({
       label: t('common.actions'),
       render: (row) => {
         if (row.reseller_role === 'manager_parent') {
-          if (!managerParentDetailPath) {
-            return <span className="text-sm text-slate-500 dark:text-slate-400">-</span>
-          }
-
           return (
-            <button type="button" onClick={() => navigate(managerParentDetailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
-              {t('payments.actions.viewSalesCustomers', { defaultValue: 'View Sales Customers' })}
-              <ArrowRight className="h-4 w-4" />
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+                {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              {managerParentDetailPath ? (
+                <button type="button" onClick={() => navigate(managerParentDetailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+                  {t('payments.actions.viewSalesCustomers', { defaultValue: 'View Sales Customers' })}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
           )
         }
 
@@ -248,11 +236,28 @@ export function RoleResellerPaymentsPage({
   ], [detailPath, lang, locale, managerParentDetailPath, navigate, t])
 
   const displayedRows = useMemo(() => {
-    if (roleFilter) {
-      return filteredRows.filter((row) => row.reseller_role === roleFilter)
+    if (summaryMode === 'manager_parent' || summaryMode === 'manager' || summaryMode === 'reseller') {
+      return rows.filter((row) => row.reseller_role === summaryMode)
     }
-    return filteredRows
-  }, [filteredRows, roleFilter])
+
+    if (summaryMode === 'negative') {
+      return rows.filter((row) => row.outstanding < 0)
+    }
+
+    if (summaryMode === 'positive') {
+      return rows.filter((row) => row.outstanding > 0)
+    }
+
+    if (summaryMode === 'collected') {
+      return rows.filter((row) => {
+        const commissionOwed = row.commission_owed ?? 0
+        const outstanding = Math.max(row.outstanding ?? 0, 0)
+        return commissionOwed > 0 && commissionOwed - outstanding > 0
+      })
+    }
+
+    return rows
+  }, [rows, summaryMode])
 
   function resetPaymentForm() {
     setPaymentForm({
@@ -268,32 +273,25 @@ export function RoleResellerPaymentsPage({
       name: scopeName || t(`payments.scopeRoles.${scopeRole}`),
     })
     : ''
-  const hasSummaryFilter = balanceFilter !== '' || roleFilter !== ''
-  const activeSummaryFilterLabel = roleFilter
-    ? roleSummaryLabel(roleFilter, t)
-    : balanceFilter
-      ? balanceSummaryLabel(balanceFilter, t)
-      : ''
+  const hasSummaryFilter = summaryMode !== 'all'
+  const activeSummaryFilterLabel = summaryModeLabel(summaryMode, t)
+  const totalCollected = summary?.total_collected
+    ?? Math.max(0, (summary?.total_owed ?? 0) - (summary?.total_collectible ?? 0))
 
-  const handleRoleToggle = (role: 'manager_parent' | 'manager' | 'reseller') => {
-    const nextRole = roleFilter === role ? '' : role
-    setSearchParams((current) => updateSummaryFilter(current, { role: nextRole, balance: '' }), { replace: true })
+  const handleSummaryReset = () => {
+    setSearchParams((current) => updateSummaryMode(current, 'all'), { replace: true })
   }
 
-  const handleBalanceToggle = (nextValue: '' | 'negative' | 'positive' | 'collected') => {
-    if (nextValue === '') {
-      setSearchParams((current) => updateSummaryFilter(current, { balance: '', role: '' }), { replace: true })
+  const handleRoleSelect = (role: 'manager_parent' | 'manager' | 'reseller') => {
+    setSearchParams((current) => updateSummaryMode(current, role), { replace: true })
+  }
+
+  const handleBalanceSelect = (mode: 'negative' | 'positive' | 'collected') => {
+    if (!balanceAvailability[mode]) {
       return
     }
 
-    const isActive = balanceFilter === nextValue
-    const hasRows = balanceAvailability[nextValue]
-    const nextFilter = isActive || !hasRows ? '' : nextValue
-    setSearchParams((current) => updateSummaryFilter(current, { balance: nextFilter, role: '' }), { replace: true })
-  }
-
-  const handleSummaryReset = () => {
-    setSearchParams((current) => updateSummaryFilter(current, { balance: '', role: '' }), { replace: true })
+    setSearchParams((current) => updateSummaryMode(current, mode), { replace: true })
   }
 
   return (
@@ -307,112 +305,225 @@ export function RoleResellerPaymentsPage({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.28fr)]">
-        <div className="order-2 flex flex-col gap-4 xl:order-1">
-          <SummaryFilterCard
-            active={balanceFilter === 'collected'}
-            title={t('payments.summary.totalCollected', { defaultValue: 'Collected From Sales' })}
-            value={formatCurrency(
-              summary?.total_collected
-                ?? Math.max(0, (summary?.total_owed ?? 0) - (summary?.total_collectible ?? 0)),
-              'USD',
-              locale
-            )}
-            helperText={t('payments.summary.totalCollectedHint')}
-            color="emerald"
-            onClick={() => handleBalanceToggle('collected')}
-          />
-          <SummaryFilterCard
-            active={balanceFilter === 'positive'}
-            title={t('payments.summary.amountToCollect', { defaultValue: 'Amount To Collect' })}
-            value={formatCurrency(summary?.total_collectible ?? 0, 'USD', locale)}
-            helperText={t('payments.summary.amountToCollectHint')}
-            color="sky"
-            onClick={() => handleBalanceToggle('positive')}
-          />
-          <SummaryFilterCard
-            active={balanceFilter === 'negative'}
-            title={t('payments.summary.outstanding', { defaultValue: 'Advance Payments' })}
-            value={formatCurrency(summary?.total_outstanding ?? 0, 'USD', locale)}
-            helperText={t('payments.summary.outstandingHint')}
-            color="rose"
-            onClick={() => handleBalanceToggle('negative')}
-          />
-        </div>
-
-        <div className="order-1 flex flex-col gap-4 xl:order-2">
-          <SummaryFilterCard
-            active={!hasSummaryFilter}
-            title={t('payments.summary.totalSales', { defaultValue: 'Total Sales' })}
-            value={formatCurrency(totalSales, 'USD', locale)}
-            helperText={t('payments.summary.totalSalesHint', { defaultValue: 'Default view. Click to show all rows and clear any active card filter.' })}
-            color="amber"
-            density="normal"
-            onClick={handleSummaryReset}
-          />
-
+      <section className="space-y-4 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <div className="grid gap-4 xl:grid-cols-2">
           {allowedRoleSales.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {allowedRoleSales.includes('manager_parent') ? (
-                <SummaryFilterCard
-                  active={roleFilter === 'manager_parent'}
-                  title={t('payments.summary.totalSalesManagerParent')}
-                  value={formatCurrency(totalsByRole.manager_parent, 'USD', locale)}
-                  helperText={t('payments.summary.totalSalesManagerParentHint')}
-                  color="sky"
-                  density="compact"
-                  onClick={() => handleRoleToggle('manager_parent')}
-                />
-              ) : null}
-              {allowedRoleSales.includes('manager') ? (
-                <SummaryFilterCard
-                  active={roleFilter === 'manager'}
-                  title={t('payments.summary.totalSalesManager')}
-                  value={formatCurrency(totalsByRole.manager, 'USD', locale)}
-                  helperText={t('payments.summary.totalSalesManagerHint')}
-                  color="emerald"
-                  density="compact"
-                  onClick={() => handleRoleToggle('manager')}
-                />
-              ) : null}
-              {allowedRoleSales.includes('reseller') ? (
-                <SummaryFilterCard
-                  active={roleFilter === 'reseller'}
-                  title={t('payments.summary.totalSalesReseller')}
-                  value={formatCurrency(totalsByRole.reseller, 'USD', locale)}
-                  helperText={t('payments.summary.totalSalesResellerHint')}
-                  color="amber"
-                  density="compact"
-                  onClick={() => handleRoleToggle('reseller')}
-                />
-              ) : null}
+            <div className="space-y-2.5 rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/40">
+              <button
+                type="button"
+                onClick={handleSummaryReset}
+                className={cn(
+                  'w-full rounded-[1.5rem] border p-3.5 text-start transition-all duration-200',
+                  !hasSummaryFilter
+                    ? 'border-amber-300 bg-gradient-to-br from-amber-100 via-white to-orange-100 shadow-lg shadow-amber-500/10 dark:border-amber-700 dark:from-amber-950/60 dark:via-slate-950 dark:to-orange-950/40'
+                    : 'border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-orange-50 hover:border-amber-300 hover:shadow-md dark:border-amber-900/50 dark:from-amber-950/30 dark:via-slate-950 dark:to-orange-950/20'
+                )}
+                aria-pressed={!hasSummaryFilter}
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                      {t('payments.summary.totalSales', { defaultValue: 'Total Sales' })}
+                    </p>
+                    {!hasSummaryFilter ? (
+                      <span className="rounded-full bg-amber-600 px-3 py-1 text-xs font-semibold text-white dark:bg-amber-400 dark:text-slate-950">
+                        {t('payments.filters.defaultView', { defaultValue: 'Default View' })}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-[1.7rem]">
+                    {formatCurrency(totalSales, 'USD', locale)}
+                  </p>
+                  <p className="text-[11px] leading-5 text-balance text-slate-600 dark:text-slate-300">
+                    {t('payments.summary.heroHint', { defaultValue: 'Click this card any time to reset the table and show all rows.' })}
+                  </p>
+                </div>
+              </button>
+
+              <div className="relative hidden xl:block">
+                <div className="absolute left-1/2 top-0 h-3 w-px -translate-x-1/2 bg-slate-300 dark:bg-slate-700" />
+                <div className="absolute left-[16.666%] right-[16.666%] top-3 h-px bg-slate-300 dark:bg-slate-700" />
+                <div className="absolute left-[16.666%] top-3 h-3 w-px bg-slate-300 dark:bg-slate-700" />
+                <div className="absolute left-1/2 top-3 h-3 w-px -translate-x-1/2 bg-slate-300 dark:bg-slate-700" />
+                <div className="absolute right-[16.666%] top-3 h-3 w-px bg-slate-300 dark:bg-slate-700" />
+                <div className="grid gap-3 pt-6 xl:grid-cols-3">
+                  {allowedRoleSales.includes('manager_parent') ? (
+                    <SummaryFilterCard
+                      active={summaryMode === 'manager_parent'}
+                      title={t('payments.summary.totalSalesManagerParent', { defaultValue: 'Manager Parent Sales' })}
+                      value={formatCurrency(totalsByRole.manager_parent, 'USD', locale)}
+                      helperText={t('payments.summary.totalSalesManagerParentShortHint', { defaultValue: 'Only manager parent rows.' })}
+                      color="sky"
+                      density="compact"
+                      compactContent
+                      onClick={() => handleRoleSelect('manager_parent')}
+                    />
+                  ) : <div />}
+                  {allowedRoleSales.includes('manager') ? (
+                    <SummaryFilterCard
+                      active={summaryMode === 'manager'}
+                      title={t('payments.summary.totalSalesManager', { defaultValue: 'Manager Sales' })}
+                      value={formatCurrency(totalsByRole.manager, 'USD', locale)}
+                      helperText={t('payments.summary.totalSalesManagerShortHint', { defaultValue: 'Only manager rows.' })}
+                      color="emerald"
+                      density="compact"
+                      compactContent
+                      onClick={() => handleRoleSelect('manager')}
+                    />
+                  ) : <div />}
+                  {allowedRoleSales.includes('reseller') ? (
+                    <SummaryFilterCard
+                      active={summaryMode === 'reseller'}
+                      title={t('payments.summary.totalSalesReseller', { defaultValue: 'Reseller Sales' })}
+                      value={formatCurrency(totalsByRole.reseller, 'USD', locale)}
+                      helperText={t('payments.summary.totalSalesResellerShortHint', { defaultValue: 'Only reseller rows.' })}
+                      color="amber"
+                      density="compact"
+                      compactContent
+                      onClick={() => handleRoleSelect('reseller')}
+                    />
+                  ) : <div />}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:hidden">
+                {allowedRoleSales.includes('manager_parent') ? (
+                  <SummaryFilterCard
+                    active={summaryMode === 'manager_parent'}
+                    title={t('payments.summary.totalSalesManagerParent', { defaultValue: 'Manager Parent Sales' })}
+                    value={formatCurrency(totalsByRole.manager_parent, 'USD', locale)}
+                    helperText={t('payments.summary.totalSalesManagerParentShortHint', { defaultValue: 'Only manager parent rows.' })}
+                    color="sky"
+                    density="compact"
+                    compactContent
+                    onClick={() => handleRoleSelect('manager_parent')}
+                  />
+                ) : null}
+                {allowedRoleSales.includes('manager') ? (
+                  <SummaryFilterCard
+                    active={summaryMode === 'manager'}
+                    title={t('payments.summary.totalSalesManager', { defaultValue: 'Manager Sales' })}
+                    value={formatCurrency(totalsByRole.manager, 'USD', locale)}
+                    helperText={t('payments.summary.totalSalesManagerShortHint', { defaultValue: 'Only manager rows.' })}
+                    color="emerald"
+                    density="compact"
+                    compactContent
+                    onClick={() => handleRoleSelect('manager')}
+                  />
+                ) : null}
+                {allowedRoleSales.includes('reseller') ? (
+                  <SummaryFilterCard
+                    active={summaryMode === 'reseller'}
+                    title={t('payments.summary.totalSalesReseller', { defaultValue: 'Reseller Sales' })}
+                    value={formatCurrency(totalsByRole.reseller, 'USD', locale)}
+                    helperText={t('payments.summary.totalSalesResellerShortHint', { defaultValue: 'Only reseller rows.' })}
+                    color="amber"
+                    density="compact"
+                    compactContent
+                    onClick={() => handleRoleSelect('reseller')}
+                  />
+                ) : null}
+              </div>
             </div>
           ) : null}
+
+          <div className="flex h-full flex-col justify-center rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/40">
+            <div className="space-y-0.5 text-center">
+              <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                {t('payments.summary.collectionView', { defaultValue: 'Collection Status' })}
+              </p>
+              <p className="text-xs text-pretty text-slate-500 dark:text-slate-400">
+                {t('payments.summary.collectionViewHint', { defaultValue: 'Choose one money status to focus the table.' })}
+              </p>
+            </div>
+            <div className="mt-3 grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <SummaryFilterCard
+                active={summaryMode === 'collected'}
+                title={t('payments.summary.totalCollected', { defaultValue: 'Collected From Sales' })}
+                value={formatCurrency(totalCollected, 'USD', locale)}
+                helperText={t('payments.summary.totalCollectedShortHint', { defaultValue: 'Amounts already received.' })}
+                color="emerald"
+                compactContent
+                onClick={() => handleBalanceSelect('collected')}
+              />
+              <SummaryFilterCard
+                active={summaryMode === 'positive'}
+                title={t('payments.summary.amountToCollect', { defaultValue: 'Amount To Collect' })}
+                value={formatCurrency(summary?.total_collectible ?? 0, 'USD', locale)}
+                helperText={t('payments.summary.amountToCollectShortHint', { defaultValue: 'Positive balances still due.' })}
+                color="sky"
+                compactContent
+                onClick={() => handleBalanceSelect('positive')}
+              />
+              <SummaryFilterCard
+                active={summaryMode === 'negative'}
+                title={t('payments.summary.outstanding', { defaultValue: 'Net Outstanding Balance' })}
+                value={formatCurrency(summary?.total_outstanding ?? 0, 'USD', locale)}
+                helperText={t('payments.summary.outstandingShortHint', { defaultValue: 'Credit paid before matching sales.' })}
+                color="rose"
+                compactContent
+                onClick={() => handleBalanceSelect('negative')}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex-1 space-y-3">
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-950 dark:text-white">{t('payments.filters.period')}</span>
-              <Input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} />
-            </label>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {period === ''
-                ? t('payments.filters.allTimeHint', { defaultValue: 'Showing all-time reseller balances. Select a month to review a specific commission period.' })
-                : t('payments.filters.monthHint', { defaultValue: 'Showing reseller balances for the selected month only.' })}
-            </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {t('payments.filters.reportsDifferenceHint')}
-            </p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex-1 space-y-4">
+            <div className="grid gap-4 lg:grid-cols-[minmax(220px,280px)_1fr]">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-slate-950 dark:text-white">{t('payments.filters.period')}</span>
+                <Input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} />
+              </label>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-slate-950 dark:text-white">
+                    {t('payments.filters.quickFilters', { defaultValue: 'Quick Filters' })}
+                  </p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {t('payments.filters.quickFiltersHint', { defaultValue: 'Choose one filter. Use the Total Sales card above to reset to the default view.' })}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {allowedRoleSales.includes('manager_parent') ? (
+                    <FilterChip active={summaryMode === 'manager_parent'} onClick={() => handleRoleSelect('manager_parent')}>
+                      {t('payments.summary.totalSalesManagerParent', { defaultValue: 'Manager Parent Sales' })}
+                    </FilterChip>
+                  ) : null}
+                  {allowedRoleSales.includes('manager') ? (
+                    <FilterChip active={summaryMode === 'manager'} onClick={() => handleRoleSelect('manager')}>
+                      {t('payments.summary.totalSalesManager', { defaultValue: 'Manager Sales' })}
+                    </FilterChip>
+                  ) : null}
+                  {allowedRoleSales.includes('reseller') ? (
+                    <FilterChip active={summaryMode === 'reseller'} onClick={() => handleRoleSelect('reseller')}>
+                      {t('payments.summary.totalSalesReseller', { defaultValue: 'Reseller Sales' })}
+                    </FilterChip>
+                  ) : null}
+                  <FilterChip active={summaryMode === 'collected'} onClick={() => handleBalanceSelect('collected')} disabled={!balanceAvailability.collected}>
+                    {t('payments.summary.totalCollected', { defaultValue: 'Collected From Sales' })}
+                  </FilterChip>
+                  <FilterChip active={summaryMode === 'positive'} onClick={() => handleBalanceSelect('positive')} disabled={!balanceAvailability.positive}>
+                    {t('payments.summary.amountToCollect', { defaultValue: 'Amount To Collect' })}
+                  </FilterChip>
+                  <FilterChip active={summaryMode === 'negative'} onClick={() => handleBalanceSelect('negative')} disabled={!balanceAvailability.negative}>
+                    {t('payments.summary.outstanding', { defaultValue: 'Net Outstanding Balance' })}
+                  </FilterChip>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-col items-start gap-3 lg:items-end">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+              <span className="font-medium text-slate-950 dark:text-white">
+                {t('payments.filters.activeFilter', { defaultValue: 'Viewing:' })}
+              </span>{' '}
+              {activeSummaryFilterLabel}
+            </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant={hasSummaryFilter ? 'outline' : 'default'} onClick={handleSummaryReset}>
-                {t('payments.filters.showAll', { defaultValue: 'Show All Sales' })}
-              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -421,18 +532,12 @@ export function RoleResellerPaymentsPage({
                   setSearchParams((current) => {
                     const next = new URLSearchParams(current)
                     next.delete('period')
-                    return next
+                    return updateSummaryMode(next, 'all')
                   }, { replace: true })
                 }}
               >
                 {t('common.clear')}
               </Button>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-              <span className="font-medium text-slate-950 dark:text-white">
-                {t('payments.filters.activeFilter', { defaultValue: 'Active filter:' })}
-              </span>{' '}
-              {activeSummaryFilterLabel || t('payments.filters.none', { defaultValue: 'All sales' })}
             </div>
           </div>
         </div>
@@ -454,11 +559,11 @@ export function RoleResellerPaymentsPage({
             </div>
             <div className="mt-4 grid gap-4">
               <label className="space-y-2">
-                <span className="text-sm font-medium">{t('payments.columns.reseller', { defaultValue: 'Reseller' })}</span>
+                <span className="text-sm font-medium">{t('payments.columns.seller', { defaultValue: 'Seller' })}</span>
                 <RoleOptionPicker
                   value={paymentForm.reseller_id === 0 ? '' : paymentForm.reseller_id}
                   onChange={(value) => setPaymentForm((current) => ({ ...current, reseller_id: value === '' ? 0 : value }))}
-                  options={resellerOptions}
+                  options={sellerOptions}
                   placeholder={t('common.selectOption', { defaultValue: 'Select an option' })}
                 />
               </label>
@@ -597,29 +702,44 @@ function updateSummaryFilter(
   return next
 }
 
-function roleSummaryLabel(
-  role: 'manager_parent' | 'manager' | 'reseller',
-  t: (key: string, options?: Record<string, unknown>) => string
+function updateSummaryMode(
+  current: URLSearchParams,
+  nextMode: 'all' | 'manager_parent' | 'manager' | 'reseller' | 'negative' | 'positive' | 'collected'
 ) {
-  if (role === 'manager_parent') {
-    return t('payments.summary.totalSalesManagerParent')
+  if (nextMode === 'all') {
+    return updateSummaryFilter(current, { role: '', balance: '' })
   }
-  if (role === 'manager') {
-    return t('payments.summary.totalSalesManager')
+
+  if (nextMode === 'manager_parent' || nextMode === 'manager' || nextMode === 'reseller') {
+    return updateSummaryFilter(current, { role: nextMode, balance: '' })
   }
-  return t('payments.summary.totalSalesReseller')
+
+  return updateSummaryFilter(current, { role: '', balance: nextMode })
 }
 
-function balanceSummaryLabel(
-  balance: 'negative' | 'positive' | 'collected',
+function summaryModeLabel(
+  mode: 'all' | 'manager_parent' | 'manager' | 'reseller' | 'negative' | 'positive' | 'collected',
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
-  if (balance === 'negative') {
-    return t('payments.summary.outstanding', { defaultValue: 'Advance Payments' })
+  if (mode === 'all') {
+    return t('payments.summary.totalSales', { defaultValue: 'Total Sales' })
   }
-  if (balance === 'collected') {
+  if (mode === 'manager_parent') {
+    return t('payments.summary.totalSalesManagerParent', { defaultValue: 'Manager Parent Sales' })
+  }
+  if (mode === 'manager') {
+    return t('payments.summary.totalSalesManager', { defaultValue: 'Manager Sales' })
+  }
+  if (mode === 'reseller') {
+    return t('payments.summary.totalSalesReseller', { defaultValue: 'Reseller Sales' })
+  }
+  if (mode === 'negative') {
+    return t('payments.summary.outstanding', { defaultValue: 'Net Outstanding Balance' })
+  }
+  if (mode === 'collected') {
     return t('payments.summary.totalCollected', { defaultValue: 'Collected From Sales' })
   }
+
   return t('payments.summary.amountToCollect', { defaultValue: 'Amount To Collect' })
 }
 
@@ -630,6 +750,7 @@ interface SummaryFilterCardProps {
   color: 'sky' | 'emerald' | 'amber' | 'rose'
   active: boolean
   density?: 'normal' | 'compact'
+  compactContent?: boolean
   onClick: () => void
 }
 
@@ -640,24 +761,103 @@ function SummaryFilterCard({
   color,
   active,
   density = 'normal',
+  compactContent = false,
   onClick,
 }: SummaryFilterCardProps) {
+  const Icon = color === 'emerald' ? Banknote : color === 'rose' ? Wallet : color === 'sky' ? CircleDollarSign : WalletCards
+
+  const palette = {
+    sky: {
+      active: 'border-sky-400 bg-sky-100 text-sky-950 shadow-lg shadow-sky-500/15 dark:border-sky-500 dark:bg-sky-950/60 dark:text-sky-50',
+      muted: 'border-slate-200 bg-white text-slate-950 hover:border-sky-200 hover:bg-sky-50 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:hover:border-sky-900 dark:hover:bg-sky-950/20',
+      icon: 'bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950',
+      label: 'text-sky-700 dark:text-sky-300',
+      hint: 'text-sky-800/80 dark:text-sky-100/80',
+    },
+    emerald: {
+      active: 'border-emerald-400 bg-emerald-100 text-emerald-950 shadow-lg shadow-emerald-500/15 dark:border-emerald-500 dark:bg-emerald-950/60 dark:text-emerald-50',
+      muted: 'border-slate-200 bg-white text-slate-950 hover:border-emerald-200 hover:bg-emerald-50 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:hover:border-emerald-900 dark:hover:bg-emerald-950/20',
+      icon: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-emerald-950',
+      label: 'text-emerald-700 dark:text-emerald-300',
+      hint: 'text-emerald-800/80 dark:text-emerald-100/80',
+    },
+    amber: {
+      active: 'border-amber-400 bg-amber-100 text-amber-950 shadow-lg shadow-amber-500/15 dark:border-amber-500 dark:bg-amber-950/60 dark:text-amber-50',
+      muted: 'border-slate-200 bg-white text-slate-950 hover:border-amber-200 hover:bg-amber-50 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:hover:border-amber-900 dark:hover:bg-amber-950/20',
+      icon: 'bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950',
+      label: 'text-amber-700 dark:text-amber-300',
+      hint: 'text-amber-800/80 dark:text-amber-100/80',
+    },
+    rose: {
+      active: 'border-rose-400 bg-rose-100 text-rose-950 shadow-lg shadow-rose-500/15 dark:border-rose-500 dark:bg-rose-950/60 dark:text-rose-50',
+      muted: 'border-slate-200 bg-white text-slate-950 hover:border-rose-200 hover:bg-rose-50 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:hover:border-rose-900 dark:hover:bg-rose-950/20',
+      icon: 'bg-rose-600 text-white dark:bg-rose-500 dark:text-rose-950',
+      label: 'text-rose-700 dark:text-rose-300',
+      hint: 'text-rose-800/80 dark:text-rose-100/80',
+    },
+  }[color]
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={cn('h-full text-start transition-colors', active ? 'rounded-3xl' : undefined)}
+      className="h-full text-start"
       aria-pressed={active}
     >
-      <StatsCard
-        title={title}
-        value={value}
-        icon={color === 'emerald' ? Banknote : color === 'rose' ? Wallet : color === 'sky' ? CircleDollarSign : WalletCards}
-        color={color}
-        helperText={helperText}
-        density={density}
-        className={cn(active ? 'ring-2 ring-slate-900/15 dark:ring-white/20' : 'ring-1 ring-transparent')}
-      />
+      <div
+        className={cn(
+          'flex h-full flex-col rounded-[1.5rem] border text-start transition-all duration-200',
+          compactContent ? 'min-h-[112px] gap-2 p-3.5' : density === 'compact' ? 'min-h-[168px] gap-3 p-4' : 'min-h-[182px] gap-3 p-4',
+          active ? `scale-[1.01] ${palette.active}` : palette.muted
+        )}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className={cn('flex items-center justify-center rounded-2xl', compactContent ? 'h-9 w-9' : 'h-11 w-11', palette.icon)}>
+            <Icon className={cn(compactContent ? 'h-4 w-4' : 'h-5 w-5')} />
+          </div>
+          {active ? (
+            <span className={cn('rounded-full bg-slate-950 font-semibold uppercase tracking-wide text-white dark:bg-white dark:text-slate-950', compactContent ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]')}>
+              Active
+            </span>
+          ) : null}
+        </div>
+        <div className={cn('space-y-1.5', compactContent && 'space-y-1')}>
+          <p className={cn('text-xs font-semibold uppercase tracking-[0.18em]', active ? '' : palette.label)}>{title}</p>
+          <p className={cn('tabular-nums font-bold tracking-tight', compactContent ? 'text-xl' : density === 'compact' ? 'text-2xl' : 'text-3xl')}>
+            {value}
+          </p>
+          {helperText ? (
+            <p className={cn(compactContent ? 'text-xs leading-5' : 'text-sm leading-6', active ? 'text-current/85' : palette.hint)}>{helperText}</p>
+          ) : null}
+        </div>
+      </div>
+    </button>
+  )
+}
+
+interface FilterChipProps {
+  active: boolean
+  disabled?: boolean
+  onClick: () => void
+  children: ReactNode
+}
+
+function FilterChip({ active, disabled = false, onClick, children }: FilterChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+        active
+          ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950'
+          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-900',
+        disabled && 'cursor-not-allowed opacity-45 hover:border-slate-200 hover:bg-white dark:hover:border-slate-800 dark:hover:bg-slate-950'
+      )}
+      aria-pressed={active}
+    >
+      {children}
     </button>
   )
 }

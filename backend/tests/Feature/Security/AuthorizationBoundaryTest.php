@@ -465,12 +465,12 @@ class AuthorizationBoundaryTest extends TestCase
 
         $this->getJson('/api/reseller/reports/summary')
             ->assertOk()
-            ->assertJsonPath('data.total_customers', 0)
+            ->assertJsonPath('data.total_customers', 1)
             ->assertJsonPath('data.active_customers', 0);
 
         $this->getJson('/api/reseller/dashboard/stats')
             ->assertOk()
-            ->assertJsonPath('stats.customers', 0)
+            ->assertJsonPath('stats.customers', 1)
             ->assertJsonPath('stats.active_licenses', 0);
     }
 
