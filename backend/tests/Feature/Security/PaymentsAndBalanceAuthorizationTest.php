@@ -139,6 +139,51 @@ class PaymentsAndBalanceAuthorizationTest extends TestCase
         ]);
     }
 
+    public function test_manager_parent_can_view_his_own_payment_detail_page(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+
+        ResellerPayment::query()->create([
+            'commission_id' => null,
+            'reseller_id' => $managerParent->id,
+            'manager_id' => $managerParent->id,
+            'amount' => 15,
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'cash',
+        ]);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->getJson('/api/reseller-payments/'.$managerParent->id)
+            ->assertOk()
+            ->assertJsonPath('data.reseller.id', $managerParent->id)
+            ->assertJsonPath('data.reseller.role', 'manager_parent')
+            ->assertJsonPath('data.summary.total_paid', 15);
+    }
+
+    public function test_manager_parent_can_record_payment_for_manager_parent_row(): void
+    {
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+
+        Sanctum::actingAs($managerParent);
+
+        $this->postJson('/api/reseller-payments', [
+            'reseller_id' => $managerParent->id,
+            'amount' => 25,
+            'payment_method' => 'cash',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.reseller_id', $managerParent->id)
+            ->assertJsonPath('data.amount', 25);
+
+        $this->assertDatabaseHas('reseller_payments', [
+            'reseller_id' => $managerParent->id,
+            'amount' => 25.0,
+        ]);
+    }
+
     public function test_manager_cannot_delete_payment_through_manager_parent_endpoint(): void
     {
         $tenant = $this->createTenant();

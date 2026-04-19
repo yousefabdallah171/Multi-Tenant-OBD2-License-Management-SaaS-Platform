@@ -518,7 +518,7 @@ class ResellerPaymentController extends BaseManagerParentController
 
         abort_unless(
             (int) $user->tenant_id === $this->currentTenantId($request)
-                && in_array($role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true),
+                && in_array($role, [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value], true),
             404,
         );
 
@@ -570,7 +570,7 @@ class ResellerPaymentController extends BaseManagerParentController
 
         abort_unless(
             (int) $payment->reseller?->tenant_id === $this->currentTenantId($request)
-                && in_array($role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true),
+                && in_array($role, [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value], true),
             404,
         );
 
