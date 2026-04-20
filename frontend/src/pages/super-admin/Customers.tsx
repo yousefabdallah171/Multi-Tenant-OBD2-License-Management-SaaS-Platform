@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, CheckCircle2, ChevronDown, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -46,6 +46,7 @@ export function CustomersPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
+  const lastWrittenSearchRef = useRef<string | null>(null)
   const urlPage = parsePositiveIntegerParam(searchParams.get('page')) || 1
   const urlPerPage = parsePositiveIntegerParam(searchParams.get('per_page')) || 25
   const urlSearch = normalizeSearchParam(searchParams.get('search'))
@@ -179,6 +180,10 @@ export function CustomersPage() {
   })
 
   useEffect(() => {
+    if (lastWrittenSearchRef.current !== null && lastWrittenSearchRef.current === searchParams.toString()) {
+      return
+    }
+
     setPage(urlPage)
     setPerPage(urlPerPage)
     setSearch(urlSearch)
@@ -187,7 +192,7 @@ export function CustomersPage() {
     setResellerId(urlResellerId)
     setProgramId(urlProgramId)
     setCountryName(urlCountryName)
-  }, [urlCountryName, urlPage, urlPerPage, urlProgramId, urlResellerId, urlSearch, urlStatus, urlTenantId])
+  }, [searchParams, urlCountryName, urlPage, urlPerPage, urlProgramId, urlResellerId, urlSearch, urlStatus, urlTenantId])
 
   useEffect(() => {
     const next = new URLSearchParams()
@@ -199,10 +204,12 @@ export function CustomersPage() {
     if (resellerId) next.set('reseller_id', String(resellerId))
     if (programId) next.set('program_id', String(programId))
     if (countryName) next.set('country_name', countryName)
-    if (next.toString() !== searchParams.toString()) {
+    const nextString = next.toString()
+    if (nextString !== searchParams.toString()) {
+      lastWrittenSearchRef.current = nextString
       setSearchParams(next, { replace: true })
     }
-  }, [countryName, page, perPage, programId, resellerId, search, searchParams, setSearchParams, status, tenantId])
+  }, [countryName, page, perPage, programId, resellerId, search, setSearchParams, status, tenantId])
 
   const editMutation = useMutation({
     mutationFn: (payload: { client_name: string; email?: string; phone?: string; country_name?: string; price?: number }) =>
