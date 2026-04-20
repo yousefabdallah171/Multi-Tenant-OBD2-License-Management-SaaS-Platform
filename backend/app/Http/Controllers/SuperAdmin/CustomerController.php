@@ -296,9 +296,12 @@ class CustomerController extends BaseSuperAdminController
             ]);
         }
 
+        // Block reuse only if a *different* customer previously held this username.
+        // Allows reverting a customer to their own prior username (undo scenario).
         $existsInHistory = UserUsernameHistory::query()
             ->where('tenant_id', $tenantId)
             ->whereRaw('LOWER(old_username) = ?', [$newUsername])
+            ->where('user_id', '!=', $user->id)
             ->exists();
 
         if ($existsInHistory) {

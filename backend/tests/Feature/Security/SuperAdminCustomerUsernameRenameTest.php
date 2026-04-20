@@ -193,6 +193,78 @@ class SuperAdminCustomerUsernameRenameTest extends TestCase
         $this->assertNull(UserUsernameHistory::query()->where('user_id', $customer->id)->first());
     }
 
+    public function test_customer_can_revert_to_own_previous_username_undo_scenario(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser('manager', $tenant);
+        $reseller = $this->createUser('reseller', $tenant, $manager);
+        $program = $this->createProgram($tenant, [
+            'external_software_id' => 20,
+            'has_external_api' => true,
+        ]);
+
+        $customer = $this->createUser('customer', $tenant, $reseller, [
+            'username' => 'iraq266',
+            'username_locked' => true,
+        ]);
+
+        $license = $this->createLicense($reseller, $program, $customer, [
+            'bios_id' => 'PF0TDKW2',
+            'status' => 'active',
+            'external_username' => 'iraq266',
+        ]);
+
+        BiosUsernameLink::query()->create([
+            'tenant_id' => $tenant->id,
+            'bios_id' => strtolower((string) $license->bios_id),
+            'username' => 'iraq266',
+        ]);
+
+        // Simulate that iraq26 was already renamed to iraq266 (history exists)
+        UserUsernameHistory::query()->create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $customer->id,
+            'old_username' => 'iraq26',
+            'new_username' => 'iraq266',
+            'changed_by_user_id' => null,
+            'reason' => 'original rename',
+        ]);
+
+        $superAdmin = $this->createUser('super_admin', null);
+        Sanctum::actingAs($superAdmin);
+
+        $external = Mockery::mock(ExternalApiService::class);
+        $external->shouldReceive('getActiveUsers')
+            ->with(20, Mockery::any())
+            ->andReturn(['success' => true, 'data' => ['users' => ['iraq266' => 'PF0TDKW2']], 'status_code' => 200])
+            ->once();
+        $external->shouldReceive('deactivateUser')
+            ->with('test-api-key', 'iraq266', Mockery::any())
+            ->andReturn(['success' => true, 'data' => ['response' => 'true'], 'status_code' => 200])
+            ->once();
+        $external->shouldReceive('activateUser')
+            ->with('test-api-key', 'iraq26', (string) $license->bios_id, Mockery::any())
+            ->andReturn(['success' => true, 'data' => ['response' => 'true'], 'status_code' => 200])
+            ->once();
+        $this->app->instance(ExternalApiService::class, $external);
+
+        // Reverting to iraq26 (own old username) must succeed, not 422
+        $this->putJson('/api/super-admin/customers/'.$customer->id.'/username', [
+            'username' => 'IRAQ26',
+            'reason' => 'undo rename',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.username', 'iraq26');
+
+        $this->assertDatabaseHas('users', ['id' => $customer->id, 'username' => 'iraq26']);
+        $this->assertDatabaseHas('licenses', ['id' => $license->id, 'external_username' => 'iraq26']);
+        $this->assertDatabaseHas('bios_username_links', [
+            'tenant_id' => $tenant->id,
+            'bios_id' => strtolower((string) $license->bios_id),
+            'username' => 'iraq26',
+        ]);
+    }
+
     public function test_rename_succeeds_when_old_username_is_already_missing_externally(): void
     {
         $tenant = $this->createTenant();
