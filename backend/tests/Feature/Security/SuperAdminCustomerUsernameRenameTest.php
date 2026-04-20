@@ -53,7 +53,7 @@ class SuperAdminCustomerUsernameRenameTest extends TestCase
         $external = Mockery::mock(ExternalApiService::class);
         $external->shouldReceive('getActiveUsers')
             ->with(10, Mockery::any())
-            ->andReturn(['success' => true, 'data' => ['users' => []], 'status_code' => 200])
+            ->andReturn(['success' => true, 'data' => ['users' => ['old_user' => (string) $license->bios_id]], 'status_code' => 200])
             ->once();
         $external->shouldReceive('deactivateUser')
             ->with('test-api-key', 'old_user', Mockery::any())
@@ -144,7 +144,7 @@ class SuperAdminCustomerUsernameRenameTest extends TestCase
         $external = Mockery::mock(ExternalApiService::class);
         $external->shouldReceive('getActiveUsers')
             ->with(11, Mockery::any())
-            ->andReturn(['success' => true, 'data' => ['users' => []], 'status_code' => 200])
+            ->andReturn(['success' => true, 'data' => ['users' => ['old_user2' => (string) $license->bios_id]], 'status_code' => 200])
             ->once();
         $external->shouldReceive('deactivateUser')
             ->with('test-api-key', 'old_user2', Mockery::any())
@@ -191,5 +191,59 @@ class SuperAdminCustomerUsernameRenameTest extends TestCase
 
         $this->assertNull(ActivityLog::query()->where('action', 'username.change')->first());
         $this->assertNull(UserUsernameHistory::query()->where('user_id', $customer->id)->first());
+    }
+
+    public function test_rename_succeeds_when_old_username_is_already_missing_externally(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser('manager', $tenant);
+        $reseller = $this->createUser('reseller', $tenant, $manager);
+        $program = $this->createProgram($tenant, [
+            'external_software_id' => 12,
+            'has_external_api' => true,
+        ]);
+
+        $customer = $this->createUser('customer', $tenant, $reseller, [
+            'username' => 'old_user3',
+            'username_locked' => true,
+        ]);
+
+        $license = $this->createLicense($reseller, $program, $customer, [
+            'bios_id' => 'BIOS-RENAME-003',
+            'status' => 'active',
+            'external_username' => 'old_user3',
+        ]);
+
+        BiosUsernameLink::query()->create([
+            'tenant_id' => $tenant->id,
+            'bios_id' => strtolower((string) $license->bios_id),
+            'username' => 'old_user3',
+        ]);
+
+        $superAdmin = $this->createUser('super_admin', null);
+        Sanctum::actingAs($superAdmin);
+
+        $external = Mockery::mock(ExternalApiService::class);
+        $external->shouldReceive('getActiveUsers')
+            ->with(12, Mockery::any())
+            ->andReturn([
+                'success' => true,
+                'data' => ['users' => []],
+                'status_code' => 200,
+            ])
+            ->once();
+        $external->shouldNotReceive('deactivateUser');
+        $external->shouldReceive('activateUser')
+            ->with('test-api-key', 'new_user3', (string) $license->bios_id, Mockery::any())
+            ->andReturn(['success' => true, 'data' => ['response' => 'true'], 'status_code' => 200])
+            ->once();
+        $this->app->instance(ExternalApiService::class, $external);
+
+        $this->putJson('/api/super-admin/customers/'.$customer->id.'/username', [
+            'username' => 'new_user3',
+            'reason' => 'external old missing',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.username', 'new_user3');
     }
 }

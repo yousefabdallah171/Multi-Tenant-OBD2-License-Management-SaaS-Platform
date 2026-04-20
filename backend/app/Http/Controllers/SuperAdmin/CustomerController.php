@@ -445,6 +445,7 @@ class CustomerController extends BaseSuperAdminController
             }
 
             $usersMap = is_array($activeUsers['data']['users'] ?? null) ? $activeUsers['data']['users'] : [];
+            $oldExternalBios = array_key_exists($oldUsername, $usersMap) ? (string) $usersMap[$oldUsername] : null;
             $existingBios = array_key_exists($newUsername, $usersMap) ? (string) $usersMap[$newUsername] : null;
             if ($existingBios !== null && strtolower(trim($existingBios)) !== (string) $externalBiosIdLower) {
                 return response()->json([
@@ -458,7 +459,17 @@ class CustomerController extends BaseSuperAdminController
                 ], 422);
             }
 
-            $deactivate = $externalApi->deactivateUser($apiKey, $oldUsername, $baseUrl);
+            $oldExistsExternally = $oldExternalBios !== null
+                && strtolower(trim($oldExternalBios)) === (string) $externalBiosIdLower;
+
+            $deactivate = $oldExistsExternally
+                ? $externalApi->deactivateUser($apiKey, $oldUsername, $baseUrl)
+                : [
+                    'success' => true,
+                    'status_code' => 200,
+                    'data' => ['response' => 'skipped_missing_old_username'],
+                ];
+
             if (! ($deactivate['success'] ?? false)) {
                 $rollbackPrior = $this->rollbackExternalRenames($externalApi, $successfulRenames, $oldUsername, $newUsername, (string) $externalBiosIdRaw);
 
@@ -467,6 +478,7 @@ class CustomerController extends BaseSuperAdminController
                     'error' => [
                         'software_id' => $softwareId,
                         'step' => 'deactivateUser',
+                        'old_username_exists' => $oldExistsExternally,
                         'response' => $deactivate,
                         'rollback_prior' => $rollbackPrior,
                     ],
@@ -1036,18 +1048,20 @@ class CustomerController extends BaseSuperAdminController
         $license->loadMissing(['reseller']);
 
         $license->forceFill(['price' => $newPrice])->save();
-        $revenueLog = $this->resolveEditableRevenueLog($license);
+        $revenueLogs = $this->resolveEditableRevenueLogs($license);
 
-        if ($revenueLog) {
-            $metadata = is_array($revenueLog->metadata) ? $revenueLog->metadata : [];
-            $oldLoggedPrice = CustomerOwnership::sanitizeDisplayPrice($metadata['price'] ?? $oldPrice);
-            $metadata['price'] = $newPrice;
-            $metadata['country_name'] = $customer->country_name;
-            $metadata['price_source'] = 'super_admin_override';
-            $metadata['price_override_previous'] = $oldLoggedPrice;
-            $revenueLog->forceFill(['metadata' => $metadata])->save();
+        if ($revenueLogs->isNotEmpty()) {
+            $revenueLogs->each(function (ActivityLog $revenueLog) use ($customer, $newPrice, $oldPrice): void {
+                $metadata = is_array($revenueLog->metadata) ? $revenueLog->metadata : [];
+                $oldLoggedPrice = CustomerOwnership::sanitizeDisplayPrice($metadata['price'] ?? $oldPrice);
+                $metadata['price'] = $newPrice;
+                $metadata['country_name'] = $customer->country_name;
+                $metadata['price_source'] = 'super_admin_override';
+                $metadata['price_override_previous'] = $oldLoggedPrice;
+                $revenueLog->forceFill(['metadata' => $metadata])->save();
 
-            $this->applyBalanceDifference($revenueLog, round($newPrice - $oldLoggedPrice, 2));
+                $this->applyBalanceDifference($revenueLog, round($newPrice - $oldLoggedPrice, 2));
+            });
         } else {
             $syntheticRevenueLog = $this->createSyntheticRevenueLogForLicense($customer, $license, $newPrice);
             if ($syntheticRevenueLog) {
@@ -1074,24 +1088,27 @@ class CustomerController extends BaseSuperAdminController
         LicenseCacheInvalidation::invalidateForLicense($license->fresh(['reseller:id,tenant_id,created_by']));
     }
 
-    private function resolveEditableRevenueLog(License $license): ?ActivityLog
+    /**
+     * @return Collection<int, ActivityLog>
+     */
+    private function resolveEditableRevenueLogs(License $license): Collection
     {
-        $earnedRevenueLog = ActivityLog::query()
+        $earnedRevenueLogs = ActivityLog::query()
             ->whereIn('action', ['license.activated', 'license.renewed'])
             ->whereMetadataLicenseId((int) $license->id)
             ->where('metadata->attribution_type', BalanceService::TYPE_EARNED)
-            ->latest()
-            ->first();
+            ->orderBy('id')
+            ->get();
 
-        if ($earnedRevenueLog) {
-            return $earnedRevenueLog;
+        if ($earnedRevenueLogs->isNotEmpty()) {
+            return $earnedRevenueLogs;
         }
 
         return ActivityLog::query()
             ->whereIn('action', ['license.activated', 'license.renewed'])
             ->whereMetadataLicenseId((int) $license->id)
-            ->latest()
-            ->first();
+            ->orderBy('id')
+            ->get();
     }
 
     private function createSyntheticRevenueLogForLicense(User $customer, License $license, float $price): ?ActivityLog

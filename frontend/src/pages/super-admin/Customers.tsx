@@ -337,6 +337,12 @@ export function CustomersPage() {
     }
   }, [resellerId, sellerOptions])
 
+  const handleMenuAction = (event: Event, callback: () => void) => {
+    event.preventDefault()
+    event.stopPropagation()
+    callback()
+  }
+
   const columns = useMemo<Array<DataTableColumn<SuperAdminCustomerSummary>>>(
     () => [
       {
@@ -446,59 +452,61 @@ export function CustomersPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.customerDetail(lang, row.id))}>{t('common.view')}</DropdownMenuItem>
+                <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => navigate(routePaths.superAdmin.customerDetail(lang, row.id)))}>
+                  {t('common.view')}
+                </DropdownMenuItem>
                 <DropdownMenuItem
-                  onSelect={() => navigate(`${routePaths.superAdmin.customerDetail(lang, row.id)}?action=change-username`)}
+                  onSelect={(event) => handleMenuAction(event, () => navigate(`${routePaths.superAdmin.customerDetail(lang, row.id)}?action=change-username`))}
                 >
                   <Pencil className="me-2 h-4 w-4" />
                   {t('common.changeUsername', { defaultValue: 'Change Username' })}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setNotesCustomerId(row.id)}>
+                <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => setNotesCustomerId(row.id))}>
                   <FileText className="me-2 h-4 w-4" />
                   {t('common.notes', { defaultValue: 'Notes' })}
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={isBlacklisted} onSelect={() => setEditTarget(row)}>
+                <DropdownMenuItem disabled={isBlacklisted} onSelect={(event) => handleMenuAction(event, () => setEditTarget(row))}>
                   <Pencil className="me-2 h-4 w-4" />
                   {t('common.edit')}
                 </DropdownMenuItem>
                 {row.license_id ? (
-                  <DropdownMenuItem onSelect={() => setBiosChangeTarget(row)}>
+                  <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => setBiosChangeTarget(row))}>
                     <Cpu className="me-2 h-4 w-4" />
                     {t('biosChangeRequests.directAction', { defaultValue: 'Change BIOS ID' })}
                   </DropdownMenuItem>
                 ) : null}
                 {row.license_id && (displayStatus === 'active' || shouldRenewLicense(row)) && !isBlacklisted ? (
-                  <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.licenseRenew(lang, row.license_id ?? 0), { state: { returnTo: `${location.pathname}${location.search}` } })}>
+                  <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => navigate(routePaths.superAdmin.licenseRenew(lang, row.license_id ?? 0), { state: { returnTo: `${location.pathname}${location.search}` } }))}>
                     <RotateCw className="me-2 h-4 w-4" />
                     {renewActionLabel}
                   </DropdownMenuItem>
                 ) : null}
                 {row.license_id && row.status === 'active' && !row.paused_at && !isBlacklisted ? (
-                  <DropdownMenuItem onSelect={() => setPauseTarget(row)}>
+                  <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => setPauseTarget(row))}>
                     <Pause className="me-2 h-4 w-4" />
                     {t('common.pause')}
                   </DropdownMenuItem>
                 ) : null}
                 {row.license_id && canReactivateLicense(row) ? (
-                  <DropdownMenuItem onSelect={() => setResumeTarget(row)}>
+                  <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => setResumeTarget(row))}>
                     <Play className="me-2 h-4 w-4" />
                     {isPausedPending ? t('common.continue', { defaultValue: 'Continue' }) : t('common.resume')}
                   </DropdownMenuItem>
                 ) : null}
                 {row.license_id && canRetryScheduledLicense(row) ? (
-                  <DropdownMenuItem onSelect={() => void retryScheduledMutation.mutate(row.license_id!)}>
+                  <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => void retryScheduledMutation.mutate(row.license_id!))}>
                     <RotateCw className="me-2 h-4 w-4" />
                     {t('common.retry')}
                   </DropdownMenuItem>
                 ) : null}
                 {row.license_id ? (
-                  <DropdownMenuItem onSelect={() => setForceExpireTarget(row)}>
+                  <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => setForceExpireTarget(row))}>
                     <CheckCircle2 className="me-2 h-4 w-4" />
                     {t('common.doneExpire', { defaultValue: 'Done / Expire' })}
                   </DropdownMenuItem>
                 ) : null}
                 {canDeleteRow ? (
-                  <DropdownMenuItem onSelect={() => setDeleteTarget(row)}>
+                  <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => setDeleteTarget(row))}>
                     <Trash2 className="me-2 h-4 w-4" />
                     {t('common.delete')}
                   </DropdownMenuItem>

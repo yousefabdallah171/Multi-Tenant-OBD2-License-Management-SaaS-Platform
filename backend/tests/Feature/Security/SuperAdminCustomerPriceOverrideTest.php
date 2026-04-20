@@ -171,4 +171,88 @@ class SuperAdminCustomerPriceOverrideTest extends TestCase
 
         $this->assertSame(0.0, RevenueAnalytics::totalRevenue([], (int) $tenant->id, null, (int) $reseller->id));
     }
+
+    public function test_super_admin_price_override_rewrites_all_earned_logs_for_the_license(): void
+    {
+        $superAdmin = $this->createUser('super_admin');
+        $tenant = $this->createTenant();
+        $managerParent = $this->createUser('manager_parent', $tenant);
+        $reseller = $this->createUser('reseller', $tenant, $managerParent);
+        $customer = $this->createUser('customer', $tenant, $reseller, [
+            'name' => 'ALLOY261',
+            'username' => 'ALLOY261',
+        ]);
+        $program = $this->createProgram($tenant, [
+            'name' => 'GM Techline Connect',
+        ]);
+
+        $license = $this->createLicense($reseller, $program, $customer, [
+            'bios_id' => 'CND1035WDY',
+            'price' => 50,
+            'activated_at' => now()->subDays(7),
+            'expires_at' => now()->addDays(10),
+            'status' => 'active',
+        ]);
+
+        ActivityLog::query()->create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $reseller->id,
+            'action' => 'license.activated',
+            'description' => 'Activation revenue',
+            'metadata' => [
+                'license_id' => $license->id,
+                'customer_id' => $customer->id,
+                'program_id' => $program->id,
+                'bios_id' => $license->bios_id,
+                'price' => 50,
+                'attribution_type' => BalanceService::TYPE_EARNED,
+            ],
+            'created_at' => now()->subDays(7),
+            'updated_at' => now()->subDays(7),
+        ]);
+
+        ActivityLog::query()->create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $reseller->id,
+            'action' => 'license.renewed',
+            'description' => 'Renewal revenue',
+            'metadata' => [
+                'license_id' => $license->id,
+                'customer_id' => $customer->id,
+                'program_id' => $program->id,
+                'bios_id' => $license->bios_id,
+                'price' => 50,
+                'attribution_type' => BalanceService::TYPE_EARNED,
+            ],
+            'created_at' => now()->subDays(3),
+            'updated_at' => now()->subDays(3),
+        ]);
+
+        UserBalance::query()->create([
+            'user_id' => $reseller->id,
+            'tenant_id' => $tenant->id,
+            'total_revenue' => 100,
+            'pending_balance' => 100,
+            'granted_value' => 0,
+            'total_activations' => 2,
+        ]);
+
+        Sanctum::actingAs($superAdmin);
+
+        $this->putJson('/api/super-admin/customers/'.$customer->id, [
+            'client_name' => 'ALLOY261',
+            'license_id' => $license->id,
+            'price' => 0,
+        ])->assertOk();
+
+        $updatedLogs = ActivityLog::query()
+            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->whereMetadataLicenseId((int) $license->id)
+            ->orderBy('id')
+            ->get();
+
+        $this->assertCount(2, $updatedLogs);
+        $this->assertSame([0.0, 0.0], $updatedLogs->map(fn (ActivityLog $log) => round((float) data_get($log->metadata, 'price'), 2))->all());
+        $this->assertSame(0.0, RevenueAnalytics::totalRevenue([], (int) $tenant->id, null, (int) $reseller->id));
+    }
 }
