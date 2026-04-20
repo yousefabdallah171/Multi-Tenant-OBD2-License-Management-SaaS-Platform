@@ -17,7 +17,7 @@ class BiosAvailabilityController extends Controller
      */
     public function checkBios(Request $request): JsonResponse
     {
-        $biosId = strtolower(trim($request->query('bios_id', '')));
+        $biosId = trim($request->query('bios_id', ''));
 
         if (strlen($biosId) < 3) {
             return response()->json([
@@ -35,11 +35,11 @@ class BiosAvailabilityController extends Controller
         // Always resolve the linked username for this BIOS (needed for locking even when unavailable)
         // Scoped to current tenant to prevent cross-tenant data leakage
         $linkedUsernameForBios = null;
-        $biosLink = BiosUsernameLink::where('tenant_id', $tenantId)->where('bios_id', $biosId)->first();
+        $biosLink = BiosUsernameLink::where('tenant_id', $tenantId)->whereRaw('LOWER(bios_id) = ?', [strtolower($biosId)])->first();
         if ($biosLink) {
             $linkedUsernameForBios = $biosLink->username;
         } else {
-            $historicalLicense = License::whereRaw('LOWER(bios_id) = ?', [$biosId])
+            $historicalLicense = License::whereRaw('LOWER(bios_id) = ?', [strtolower($biosId)])
                 ->whereNotNull('external_username')
                 ->latest('updated_at')
                 ->first();
@@ -57,7 +57,7 @@ class BiosAvailabilityController extends Controller
 
         // Check if BIOS is active or suspended in ANY license across ALL tenants
         // Pending licenses do NOT block — any reseller can create/activate a pending BIOS
-        $existingActive = License::whereRaw('LOWER(bios_id) = ?', [$biosId])
+        $existingActive = License::whereRaw('LOWER(bios_id) = ?', [strtolower($biosId)])
             ->whereIn('status', ['active', 'suspended'])
             ->first();
 
@@ -71,7 +71,7 @@ class BiosAvailabilityController extends Controller
         }
 
         // Also block if another pending BIOS change request is already targeting this BIOS ID
-        $pendingChangeRequest = \App\Models\BiosChangeRequest::whereRaw('LOWER(new_bios_id) = ?', [$biosId])
+        $pendingChangeRequest = \App\Models\BiosChangeRequest::whereRaw('LOWER(new_bios_id) = ?', [strtolower($biosId)])
             ->where('status', 'pending')
             ->first();
 

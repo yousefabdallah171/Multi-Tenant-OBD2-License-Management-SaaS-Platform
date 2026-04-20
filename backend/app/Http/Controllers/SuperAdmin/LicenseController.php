@@ -57,7 +57,7 @@ class LicenseController extends BaseSuperAdminController
             'duration_months' => ['required', 'integer', 'min:1'],
         ]);
 
-        $biosId = strtolower($validated['bios_id']);
+        $biosId = trim($validated['bios_id']);
         $customer = User::query()->find($validated['customer_id']);
         $program = Program::query()->find($validated['program_id']);
         $seller = User::query()->find($validated['seller_id']);

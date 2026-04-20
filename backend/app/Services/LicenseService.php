@@ -177,7 +177,7 @@ class LicenseService
 
             // Link BIOS ID to username in bios_username_links table
             BiosUsernameLink::updateOrCreate(
-                ['bios_id' => strtolower($biosId)],
+                ['bios_id' => $biosId],
                 ['username' => $customer->username, 'tenant_id' => $reseller->tenant_id]
             );
 
@@ -920,7 +920,7 @@ class LicenseService
 
         // NEW BIOS → USERNAME LINK CHECK: new BIOS must not be permanently linked to a different username
         $licenseUsername = strtolower((string) ($license->external_username ?: $license->customer?->username ?? ''));
-        $newBiosLink = BiosUsernameLink::where('bios_id', $newBiosLower)->first();
+        $newBiosLink = BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$newBiosLower])->first();
         if ($newBiosLink && $licenseUsername !== '' && strtolower((string) $newBiosLink->username) !== $licenseUsername) {
             throw ValidationException::withMessages([
                 'new_bios_id' => sprintf(
@@ -1035,7 +1035,7 @@ class LicenseService
                     if ($licenseUsername !== '') {
                         BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$oldBiosLower])->delete();
                         BiosUsernameLink::updateOrCreate(
-                            ['bios_id' => $newBiosLower],
+                            ['bios_id' => $trimmedBiosId],
                             ['username' => $licenseUsername, 'tenant_id' => $license->tenant_id]
                         );
                     }

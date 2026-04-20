@@ -101,10 +101,10 @@ class BiosChangeRequestController extends Controller
                     'reviewer_notes' => $result['message'] ?? 'External sync pending.',
                 ])->save();
             } else {
-                BiosUsernameLink::where('bios_id', $oldBiosLower)->delete();
+                BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$oldBiosLower])->delete();
                 if ($customerUsername) {
                     BiosUsernameLink::updateOrCreate(
-                        ['bios_id' => $newBiosLower],
+                        ['bios_id' => $biosChangeRequest->new_bios_id],
                         ['username' => $customerUsername, 'tenant_id' => $biosChangeRequest->license->tenant_id]
                     );
                 }
