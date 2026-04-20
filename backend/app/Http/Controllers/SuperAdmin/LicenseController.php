@@ -84,7 +84,12 @@ class LicenseController extends BaseSuperAdminController
         }
 
         $usernameLower = strtolower((string) $customer->username);
-        $biosLink = BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [$biosId])->first();
+        $biosLink = BiosUsernameLink::query()
+            ->where(function ($query) use ($customer): void {
+                $query->whereNull('tenant_id')->orWhere('tenant_id', $customer->tenant_id);
+            })
+            ->whereRaw('LOWER(bios_id) = ?', [$biosId])
+            ->first();
         if ($biosLink && strtolower((string) $biosLink->username) !== $usernameLower) {
             throw ValidationException::withMessages([
                 'bios_id' => sprintf('This BIOS ID is permanently linked to username %s and cannot be force-assigned.', $biosLink->username),
@@ -92,7 +97,12 @@ class LicenseController extends BaseSuperAdminController
         }
 
         $usernameLink = $usernameLower !== ''
-            ? BiosUsernameLink::whereRaw('LOWER(username) = ?', [$usernameLower])->first()
+            ? BiosUsernameLink::query()
+                ->where(function ($query) use ($customer): void {
+                    $query->whereNull('tenant_id')->orWhere('tenant_id', $customer->tenant_id);
+                })
+                ->whereRaw('LOWER(username) = ?', [$usernameLower])
+                ->first()
             : null;
         if ($usernameLink && strtolower((string) $usernameLink->bios_id) !== $biosId) {
             throw ValidationException::withMessages([

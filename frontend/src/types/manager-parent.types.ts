@@ -455,6 +455,7 @@ export interface BiosChangeAuditParams {
 export interface IpAnalyticsEntry {
   username: string
   raw_username?: string
+  raw_timestamp?: string | null
   external_username?: string | null
   bios_id: string | null
   customer_id: number | null

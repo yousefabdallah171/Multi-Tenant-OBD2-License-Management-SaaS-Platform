@@ -1,16 +1,21 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, FileText, Lock } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, FileText, Lock, Pencil } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { CustomerNoteDialog } from '@/components/customers/CustomerNoteDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { LicenseStatusBadges } from '@/components/shared/LicenseStatusBadges'
 import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { useLanguage } from '@/hooks/useLanguage'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
@@ -19,6 +24,7 @@ import { superAdminCustomerService } from '@/services/super-admin-customer.servi
 import type { SuperAdminCustomerDetails } from '@/types/super-admin.types'
 import type { UserRole } from '@/types/user.types'
 import { IpLocationCell } from '@/utils/countryFlag'
+import { formatUsername } from '@/utils/biosId'
 
 export function CustomerDetailPage() {
   const { t } = useTranslation()
@@ -27,7 +33,12 @@ export function CustomerDetailPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const { id } = useParams<{ id: string }>()
   const customerId = Number(id)
+  const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false)
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false)
+  const [usernameDraft, setUsernameDraft] = useState('')
+  const [renameReason, setRenameReason] = useState('')
 
   const query = useQuery({
     queryKey: ['super-admin', 'customer-detail', customerId],
@@ -39,6 +50,35 @@ export function CustomerDetailPage() {
   const customer = query.data?.data
   const groupedLicenses = groupLicensesByReseller(customer)
 
+  useEffect(() => {
+    if (!customer) {
+      return
+    }
+
+    if (searchParams.get('action') !== 'change-username') {
+      return
+    }
+
+    setUsernameDraft((resolveCustomerDetailUsername(customer) ?? '').toLowerCase())
+    setIsRenameDialogOpen(true)
+
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('action')
+    setSearchParams(nextParams, { replace: true })
+  }, [customer, searchParams, setSearchParams])
+
+  const renameMutation = useMutation({
+    mutationFn: (payload: { username: string; reason?: string }) => superAdminCustomerService.renameUsername(customerId, payload),
+    onSuccess: (result) => {
+      toast.success(result.message || t('common.saved', { defaultValue: 'Saved' }))
+      setIsRenameDialogOpen(false)
+      setRenameReason('')
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'customer-detail', customerId] })
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'customers'] })
+    },
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
+  })
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -46,10 +86,24 @@ export function CustomerDetailPage() {
           <ArrowLeft className="me-2 h-4 w-4" />
           {t('common.back')}
         </Button>
-        <Button type="button" variant="outline" onClick={() => setIsNotesDialogOpen(true)}>
-          <FileText className="me-2 h-4 w-4" />
-          {t('common.notes', { defaultValue: 'Notes' })}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setUsernameDraft((resolveCustomerDetailUsername(customer) ?? '').toLowerCase())
+              setIsRenameDialogOpen(true)
+            }}
+            disabled={!customer}
+          >
+            <Pencil className="me-2 h-4 w-4" />
+            {t('common.changeUsername', { defaultValue: 'Change Username' })}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setIsNotesDialogOpen(true)}>
+            <FileText className="me-2 h-4 w-4" />
+            {t('common.notes', { defaultValue: 'Notes' })}
+          </Button>
+        </div>
       </div>
 
       {customer ? (
@@ -88,6 +142,7 @@ export function CustomerDetailPage() {
               <TabsTrigger value="licenses">{t('managerParent.pages.customers.licenseHistory')}</TabsTrigger>
               <TabsTrigger value="bios">{t('managerParent.pages.customers.biosId')}</TabsTrigger>
               <TabsTrigger value="ips">{t('managerParent.pages.ipAnalytics.title')}</TabsTrigger>
+              <TabsTrigger value="username_history">{t('common.history', { defaultValue: 'History' })}</TabsTrigger>
               <TabsTrigger value="activity">{t('managerParent.nav.activity', { defaultValue: 'Panel Activity' })}</TabsTrigger>
             </TabsList>
 
@@ -177,6 +232,34 @@ export function CustomerDetailPage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="username_history">
+              <Card>
+                <CardHeader><CardTitle>{t('common.username', { defaultValue: 'Username' })} {t('common.history', { defaultValue: 'History' })}</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {(customer.username_history ?? []).length === 0 ? (
+                    <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} />
+                  ) : (
+                    (customer.username_history ?? []).map((entry) => (
+                      <div key={entry.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium">{entry.old_username} → {entry.new_username}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              {(entry.changed_by?.name ?? entry.changed_by?.email) ? `${entry.changed_by?.name ?? entry.changed_by?.email}` : t('common.system', { defaultValue: 'System' })}
+                              {entry.reason ? ` • ${entry.reason}` : ''}
+                            </p>
+                          </div>
+                          <div className="text-start">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="activity">
               <Card>
                 <CardHeader><CardTitle>{t('managerParent.nav.activity', { defaultValue: 'Panel Activity' })}</CardTitle></CardHeader>
@@ -206,6 +289,45 @@ export function CustomerDetailPage() {
       ) : null}
 
       <CustomerNoteDialog isOpen={isNotesDialogOpen} onClose={() => setIsNotesDialogOpen(false)} customerId={customerId} />
+
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('common.username', { defaultValue: 'Username' })}</DialogTitle>
+            <DialogDescription>{t('common.dangerZone', { defaultValue: 'This action updates external software usernames for active licenses. If the external API fails, nothing will be changed.' })}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="rename-username">{t('common.username', { defaultValue: 'Username' })}</Label>
+              <Input
+                id="rename-username"
+                value={usernameDraft}
+                onChange={(event) => setUsernameDraft(event.target.value)}
+                onBlur={(event) => setUsernameDraft(formatUsername(event.target.value).toLowerCase())}
+                placeholder="e.g. john_doe"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="rename-reason">{t('common.reason', { defaultValue: 'Reason' })}</Label>
+              <Input id="rename-reason" value={renameReason} onChange={(event) => setRenameReason(event.target.value)} placeholder={t('common.optional', { defaultValue: 'Optional' })} />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsRenameDialogOpen(false)} disabled={renameMutation.isPending}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => renameMutation.mutate({ username: usernameDraft, reason: renameReason.trim() || undefined })}
+              disabled={!customer || renameMutation.isPending || usernameDraft.trim().length < 2}
+            >
+              {renameMutation.isPending ? t('common.loading', { defaultValue: 'Loading...' }) : t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

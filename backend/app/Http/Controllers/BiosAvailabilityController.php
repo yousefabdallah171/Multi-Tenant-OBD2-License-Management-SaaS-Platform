@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BiosBlacklist;
 use App\Models\BiosUsernameLink;
 use App\Models\License;
+use App\Models\UserUsernameHistory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -110,12 +111,36 @@ class BiosAvailabilityController extends Controller
         // Scoped to current tenant to prevent cross-tenant data leakage
         $user = Auth::user();
         $tenantId = $user?->tenant_id;
+
+        if ($tenantId === null && ($user?->role?->value ?? (string) ($user?->role ?? '')) === 'super_admin') {
+            $requestedTenantId = $request->query('tenant_id');
+            if (is_numeric($requestedTenantId)) {
+                $tenantId = (int) $requestedTenantId;
+            }
+        }
+
+        if ($tenantId) {
+            $usedInHistory = UserUsernameHistory::query()
+                ->where('tenant_id', (int) $tenantId)
+                ->whereRaw('LOWER(old_username) = ?', [$username])
+                ->exists();
+
+            if ($usedInHistory) {
+                return response()->json([
+                    'available' => false,
+                    'linked_bios' => null,
+                    'message' => 'Username was previously used and cannot be reused.',
+                ]);
+            }
+        }
+
         $biosLink = BiosUsernameLink::where('tenant_id', $tenantId)->whereRaw('LOWER(username) = ?', [$username])->first();
         $linkedBios = $biosLink?->bios_id;
 
         // If not in the permanent link table, check historical licenses for a BIOS association
         if (! $linkedBios) {
             $historicalLicense = License::join('users', 'licenses.customer_id', '=', 'users.id')
+                ->when($tenantId, fn ($q) => $q->where('licenses.tenant_id', (int) $tenantId)->where('users.tenant_id', (int) $tenantId))
                 ->whereRaw('LOWER(users.username) = ?', [$username])
                 ->whereNotNull('licenses.bios_id')
                 ->latest('licenses.updated_at')
@@ -124,8 +149,9 @@ class BiosAvailabilityController extends Controller
             $linkedBios = $historicalLicense?->bios_id;
         }
 
-        // Check if username is active/suspended in ANY customer's license across ALL tenants
+        // Check if username is active/suspended within tenant (tenant-scoped)
         $activeLicense = License::join('users', 'licenses.customer_id', '=', 'users.id')
+            ->when($tenantId, fn ($q) => $q->where('licenses.tenant_id', (int) $tenantId)->where('users.tenant_id', (int) $tenantId))
             ->whereRaw('LOWER(users.username) = ?', [$username])
             ->whereIn('licenses.status', ['active', 'suspended'])
             ->exists();

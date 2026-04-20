@@ -984,7 +984,7 @@ class CustomerController extends BaseResellerController
 
             // BIOS → username: this BIOS must not be linked to a different username
             // (only applies when activating for a brand-new username, not an existing customer)
-            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            $linkByBios = BiosUsernameLink::where('tenant_id', $this->currentTenantId($request))->where('bios_id', $biosIdLower)->first();
             if ($linkByBios && strtolower((string) $linkByBios->username) !== $usernameLower) {
                 // If the existing customer owns this BIOS link's username, skip — different customer's BIOS
                 throw ValidationException::withMessages([
@@ -995,7 +995,7 @@ class CustomerController extends BaseResellerController
             // Username → BIOS: only block if this is a NEW customer (not an existing one being re-activated)
             // Existing customers may have had their BIOS changed via an approved BIOS change request
             if (! $existingCustomer) {
-                $linkByUsername = BiosUsernameLink::where('username', $usernameLower)
+                $linkByUsername = BiosUsernameLink::where('tenant_id', $this->currentTenantId($request))->where('username', $usernameLower)
                     ->where('bios_id', '!=', $biosIdLower)
                     ->first();
                 if ($linkByUsername) {
@@ -1006,6 +1006,7 @@ class CustomerController extends BaseResellerController
 
                 // Also check historical licenses for truly new customers
                 $historicalConflict = License::query()
+                    ->where('tenant_id', $this->currentTenantId($request))
                     ->whereRaw('LOWER(external_username) = ?', [$usernameLower])
                     ->whereRaw('LOWER(bios_id) != ?', [$biosIdLower])
                     ->exists();

@@ -87,7 +87,7 @@ class LicenseController extends BaseResellerController
             ->where('user_id', $this->currentReseller($request)->id)
             ->where(function ($builder) use ($resolved): void {
                 $builder
-                    ->where('metadata->license_id', $resolved->id)
+                    ->whereMetadataLicenseId((int) $resolved->id)
                     ->orWhere('metadata->bios_id', $resolved->bios_id);
             })
             ->latest()

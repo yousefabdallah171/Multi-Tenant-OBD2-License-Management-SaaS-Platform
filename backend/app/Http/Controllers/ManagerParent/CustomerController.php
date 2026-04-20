@@ -819,7 +819,7 @@ class CustomerController extends BaseManagerParentController
                 ->first();
 
             // BIOS → username: this BIOS must not be linked to a different username
-            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            $linkByBios = BiosUsernameLink::where('tenant_id', $this->currentTenantId($request))->where('bios_id', $biosIdLower)->first();
             if ($linkByBios && strtolower((string) $linkByBios->username) !== $usernameLower) {
                 throw ValidationException::withMessages([
                     'bios_id' => 'This BIOS ID is permanently linked to a different username (' . $linkByBios->username . ').',
@@ -828,7 +828,7 @@ class CustomerController extends BaseManagerParentController
 
             // Username → BIOS: only block for new customers (existing may have had BIOS changed)
             if (! $existingCustomer) {
-                $linkByUsername = BiosUsernameLink::where('username', $usernameLower)
+                $linkByUsername = BiosUsernameLink::where('tenant_id', $this->currentTenantId($request))->where('username', $usernameLower)
                     ->where('bios_id', '!=', $biosIdLower)
                     ->first();
                 if ($linkByUsername) {
@@ -839,6 +839,7 @@ class CustomerController extends BaseManagerParentController
 
                 // Also check historical licenses — covers cases where BiosUsernameLink entry was cleaned up
                 $historicalConflict = \App\Models\License::query()
+                    ->where('tenant_id', $this->currentTenantId($request))
                     ->whereRaw('LOWER(external_username) = ?', [$usernameLower])
                     ->whereRaw('LOWER(bios_id) != ?', [$biosIdLower])
                     ->exists();
@@ -850,7 +851,7 @@ class CustomerController extends BaseManagerParentController
             }
         } else {
             // No derived username — still check BIOS→username link
-            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            $linkByBios = BiosUsernameLink::where('tenant_id', $this->currentTenantId($request))->where('bios_id', $biosIdLower)->first();
             if ($linkByBios) {
                 throw ValidationException::withMessages([
                     'bios_id' => 'This BIOS ID is permanently linked to a specific username. Please provide the correct customer name.',

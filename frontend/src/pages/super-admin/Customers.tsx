@@ -440,6 +440,12 @@ export function CustomersPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.customerDetail(lang, row.id))}>{t('common.view')}</DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => navigate(`${routePaths.superAdmin.customerDetail(lang, row.id)}?action=change-username`)}
+                >
+                  <Pencil className="me-2 h-4 w-4" />
+                  {t('common.changeUsername', { defaultValue: 'Change Username' })}
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setNotesCustomerId(row.id)}>
                   <FileText className="me-2 h-4 w-4" />
                   {t('common.notes', { defaultValue: 'Notes' })}

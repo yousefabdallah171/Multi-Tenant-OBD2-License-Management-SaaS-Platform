@@ -12,10 +12,12 @@ use App\Models\Program;
 use App\Models\User;
 use App\Models\UserBalance;
 use App\Models\UserIpLog;
+use App\Models\UserUsernameHistory;
 use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
 use App\Services\BalanceService;
 use App\Services\ExportTaskService;
+use App\Services\ExternalApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -65,8 +67,9 @@ class CustomerController extends BaseSuperAdminController
 
         if (! empty($validated['search'])) {
             $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $tenantId);
+            $historyUserIds = $this->userIdsFromUsernameHistorySearch((string) $validated['search'], $tenantId);
             $supportsCountryName = $this->supportsUserCountryName();
-            $query->where(function ($builder) use ($validated, $linkedUsernames, $supportsCountryName): void {
+            $query->where(function ($builder) use ($validated, $linkedUsernames, $supportsCountryName, $historyUserIds): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
@@ -79,6 +82,10 @@ class CustomerController extends BaseSuperAdminController
                 $builder
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('bios_id', 'like', '%'.$validated['search'].'%'))
                     ->orWhereIn('username', $linkedUsernames);
+
+                if (! empty($historyUserIds)) {
+                    $builder->orWhereIn('id', $historyUserIds);
+                }
             });
         }
 
@@ -156,7 +163,8 @@ class CustomerController extends BaseSuperAdminController
         if (! empty($validated['search'])) {
             $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $tenantId);
             $supportsCountryName = $this->supportsUserCountryName();
-            $query->where(function ($builder) use ($validated, $linkedUsernames, $supportsCountryName): void {
+            $historyUserIds = $this->userIdsFromUsernameHistorySearch((string) $validated['search'], $tenantId);
+            $query->where(function ($builder) use ($validated, $linkedUsernames, $supportsCountryName, $historyUserIds): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
@@ -169,6 +177,10 @@ class CustomerController extends BaseSuperAdminController
                 $builder
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->where('bios_id', 'like', '%'.$validated['search'].'%'))
                     ->orWhereIn('username', $linkedUsernames);
+
+                if (! empty($historyUserIds)) {
+                    $builder->orWhereIn('id', $historyUserIds);
+                }
             });
         }
 
@@ -216,6 +228,336 @@ class CustomerController extends BaseSuperAdminController
         );
 
         return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
+    }
+
+    public function renameUsername(Request $request, User $user): JsonResponse
+    {
+        abort_unless(($user->role?->value ?? (string) $user->role) === UserRole::CUSTOMER->value, 404);
+
+        $validated = $request->validate([
+            'username' => ['required', 'string', 'max:255'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $tenantId = $user->tenant_id !== null ? (int) $user->tenant_id : null;
+        if ($tenantId === null) {
+            throw ValidationException::withMessages([
+                'username' => 'This customer does not belong to a tenant.',
+            ]);
+        }
+
+        $hasLicenses = License::query()
+            ->where('tenant_id', $tenantId)
+            ->where('customer_id', $user->id)
+            ->exists();
+
+        if (! $hasLicenses) {
+            throw ValidationException::withMessages([
+                'username' => 'This user is not a customer record (no licenses found).',
+            ]);
+        }
+
+        $oldUsername = $this->normalizeUsername((string) ($user->username ?? ''));
+        $newUsername = $this->normalizeUsername((string) $validated['username']);
+
+        if ($newUsername === '') {
+            throw ValidationException::withMessages([
+                'username' => 'The username is invalid after normalization.',
+            ]);
+        }
+
+        if ($oldUsername === '') {
+            throw ValidationException::withMessages([
+                'username' => 'This customer has no current username set and cannot be renamed.',
+            ]);
+        }
+
+        if ($newUsername === $oldUsername) {
+            return response()->json([
+                'message' => 'Username is already up to date.',
+                'data' => [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'username_locked' => (bool) $user->username_locked,
+                    'username_history' => $this->usernameHistoryPayload($tenantId, (int) $user->id),
+                ],
+            ]);
+        }
+
+        $existsInUsers = User::query()
+            ->where('tenant_id', $tenantId)
+            ->whereRaw('LOWER(username) = ?', [$newUsername])
+            ->whereKeyNot($user->id)
+            ->exists();
+
+        if ($existsInUsers) {
+            throw ValidationException::withMessages([
+                'username' => 'This username is already in use in the tenant.',
+            ]);
+        }
+
+        $existsInHistory = UserUsernameHistory::query()
+            ->where('tenant_id', $tenantId)
+            ->whereRaw('LOWER(old_username) = ?', [$newUsername])
+            ->exists();
+
+        if ($existsInHistory) {
+            throw ValidationException::withMessages([
+                'username' => 'This username was previously used and cannot be reused.',
+            ]);
+        }
+
+        $biosIds = License::query()
+            ->where('tenant_id', $tenantId)
+            ->where('customer_id', $user->id)
+            ->whereNotNull('bios_id')
+            ->pluck('bios_id')
+            ->filter(fn ($biosId): bool => is_string($biosId) && trim($biosId) !== '')
+            ->map(fn (string $biosId): string => strtolower(trim($biosId)))
+            ->unique()
+            ->values();
+
+        if ($biosIds->isEmpty()) {
+            throw ValidationException::withMessages([
+                'username' => 'This customer has no BIOS IDs and cannot be renamed safely.',
+            ]);
+        }
+
+        $existingBiosLinks = BiosUsernameLink::query()
+            ->whereIn('bios_id', $biosIds->all())
+            ->get(['id', 'bios_id', 'username', 'tenant_id']);
+
+        $crossTenantLink = $existingBiosLinks->first(function (BiosUsernameLink $link) use ($tenantId): bool {
+            return $link->tenant_id !== null && (int) $link->tenant_id !== (int) $tenantId;
+        });
+        if ($crossTenantLink) {
+            throw ValidationException::withMessages([
+                'username' => 'This customer has BIOS links assigned to a different tenant. Manual data fix required.',
+            ]);
+        }
+
+        $mismatchedLink = $existingBiosLinks->first(function (BiosUsernameLink $link) use ($oldUsername): bool {
+            $linked = $this->normalizeUsername((string) ($link->username ?? ''));
+            return $linked !== '' && $linked !== $oldUsername;
+        });
+        if ($mismatchedLink) {
+            throw ValidationException::withMessages([
+                'username' => 'This customer has a BIOS link assigned to a different username. Manual data fix required.',
+            ]);
+        }
+
+        $newUsernameLink = BiosUsernameLink::query()
+            ->where('tenant_id', $tenantId)
+            ->whereRaw('LOWER(username) = ?', [$newUsername])
+            ->first(['bios_id', 'username', 'tenant_id']);
+
+        if ($newUsernameLink && ! $biosIds->contains(strtolower((string) $newUsernameLink->bios_id))) {
+            throw ValidationException::withMessages([
+                'username' => sprintf('This username is permanently linked to BIOS ID %s and cannot be reassigned.', (string) $newUsernameLink->bios_id),
+            ]);
+        }
+
+        $activeLicenses = License::query()
+            ->with(['program:id,external_api_key_encrypted,external_api_base_url,external_software_id,tenant_id'])
+            ->where('tenant_id', $tenantId)
+            ->where('customer_id', $user->id)
+            ->whereIn('status', ['active', 'suspended'])
+            ->whereNotNull('bios_id')
+            ->get();
+
+        $externalCandidates = $activeLicenses
+            ->filter(function (License $license): bool {
+                $program = $license->program;
+                return $program !== null
+                    && $program->external_software_id !== null
+                    && $program->getDecryptedApiKey() !== null;
+            })
+            ->values();
+
+        $activeDistinctBios = $externalCandidates
+            ->pluck('bios_id')
+            ->filter(fn ($biosId): bool => is_string($biosId) && trim($biosId) !== '')
+            ->map(fn (string $biosId): string => strtolower(trim($biosId)))
+            ->unique()
+            ->values();
+
+        if ($activeDistinctBios->count() > 1) {
+            throw ValidationException::withMessages([
+                'username' => 'This customer has multiple active BIOS IDs. Rename is blocked to avoid ambiguous external state.',
+            ]);
+        }
+
+        $externalBiosIdLower = $activeDistinctBios->first();
+        $externalBiosIdRaw = $externalCandidates->first()?->bios_id;
+        $externalBiosIdRaw = is_string($externalBiosIdRaw) ? trim($externalBiosIdRaw) : '';
+
+        if ($externalBiosIdLower !== null && ! $biosIds->contains($externalBiosIdLower)) {
+            throw ValidationException::withMessages([
+                'username' => 'External BIOS context could not be verified.',
+            ]);
+        }
+
+        if ($externalBiosIdLower !== null && $externalBiosIdRaw === '') {
+            throw ValidationException::withMessages([
+                'username' => 'External BIOS context could not be verified.',
+            ]);
+        }
+
+        /** @var ExternalApiService $externalApi */
+        $externalApi = app(ExternalApiService::class);
+
+        $softwareConfigs = $externalCandidates
+            ->groupBy(fn (License $license): int => (int) $license->program->external_software_id)
+            ->map(function ($licenses) use ($tenantId): array {
+                /** @var License $first */
+                $first = $licenses->first();
+                $program = $first->program;
+
+                return [
+                    'software_id' => (int) $program->external_software_id,
+                    'api_key' => (string) $program->getDecryptedApiKey(),
+                    'base_url' => is_string($program->external_api_base_url) && trim($program->external_api_base_url) !== '' ? trim($program->external_api_base_url) : null,
+                    'license_ids' => $licenses->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+                    'program_ids' => $licenses->pluck('program_id')->map(fn ($id): int => (int) $id)->unique()->values()->all(),
+                    'tenant_id' => (int) $tenantId,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $successfulRenames = [];
+        $externalSummary = [];
+        foreach ($softwareConfigs as $config) {
+            $softwareId = (int) $config['software_id'];
+            $apiKey = (string) $config['api_key'];
+            $baseUrl = $config['base_url'];
+
+            $activeUsers = $externalApi->getActiveUsers($softwareId, $baseUrl);
+            if (! ($activeUsers['success'] ?? false)) {
+                return response()->json([
+                    'message' => 'External API verification failed. Operation canceled.',
+                    'error' => [
+                        'software_id' => $softwareId,
+                        'step' => 'getActiveUsers',
+                        'response' => $activeUsers,
+                    ],
+                ], 422);
+            }
+
+            $usersMap = is_array($activeUsers['data']['users'] ?? null) ? $activeUsers['data']['users'] : [];
+            $existingBios = array_key_exists($newUsername, $usersMap) ? (string) $usersMap[$newUsername] : null;
+            if ($existingBios !== null && strtolower(trim($existingBios)) !== (string) $externalBiosIdLower) {
+                return response()->json([
+                    'message' => 'New username already exists in external software. Operation canceled.',
+                    'error' => [
+                        'software_id' => $softwareId,
+                        'step' => 'precheck',
+                        'existing_bios_id' => $existingBios,
+                        'expected_bios_id' => $externalBiosIdRaw,
+                    ],
+                ], 422);
+            }
+
+            $deactivate = $externalApi->deactivateUser($apiKey, $oldUsername, $baseUrl);
+            if (! ($deactivate['success'] ?? false)) {
+                $rollbackPrior = $this->rollbackExternalRenames($externalApi, $successfulRenames, $oldUsername, $newUsername, (string) $externalBiosIdRaw);
+
+                return response()->json([
+                    'message' => 'External API rename failed. Operation canceled.',
+                    'error' => [
+                        'software_id' => $softwareId,
+                        'step' => 'deactivateUser',
+                        'response' => $deactivate,
+                        'rollback_prior' => $rollbackPrior,
+                    ],
+                ], 422);
+            }
+
+            $activate = $externalApi->activateUser($apiKey, $newUsername, (string) $externalBiosIdRaw, $baseUrl);
+            if (! ($activate['success'] ?? false)) {
+                $rollbackSelf = $externalApi->activateUser($apiKey, $oldUsername, (string) $externalBiosIdRaw, $baseUrl);
+                $rollbackPrior = $this->rollbackExternalRenames($externalApi, $successfulRenames, $oldUsername, $newUsername, (string) $externalBiosIdRaw);
+
+                return response()->json([
+                    'message' => 'External API rename failed. Operation canceled.',
+                    'error' => [
+                        'software_id' => $softwareId,
+                        'step' => 'activateUser',
+                        'response' => $activate,
+                        'rollback_self' => $rollbackSelf,
+                        'rollback_prior' => $rollbackPrior,
+                    ],
+                ], 422);
+            }
+
+            $successfulRenames[] = [
+                'software_id' => $softwareId,
+                'api_key' => $apiKey,
+                'base_url' => $baseUrl,
+            ];
+            $externalSummary[] = [
+                'software_id' => $softwareId,
+                'deactivate' => $deactivate,
+                'activate' => $activate,
+            ];
+        }
+
+        DB::transaction(function () use ($request, $validated, $tenantId, $user, $oldUsername, $newUsername, $biosIds, $softwareConfigs, $externalSummary): void {
+            UserUsernameHistory::query()->create([
+                'tenant_id' => $tenantId,
+                'user_id' => $user->id,
+                'old_username' => $oldUsername,
+                'new_username' => $newUsername,
+                'changed_by_user_id' => $request->user()?->id,
+                'reason' => $validated['reason'] ?? null,
+            ]);
+
+            $user->forceFill([
+                'username' => $newUsername,
+                'username_locked' => true,
+            ])->save();
+
+            License::query()
+                ->where('tenant_id', $tenantId)
+                ->where('customer_id', $user->id)
+                ->update(['external_username' => $newUsername]);
+
+            foreach ($biosIds as $biosId) {
+                BiosUsernameLink::updateOrCreate(
+                    ['bios_id' => (string) $biosId],
+                    ['tenant_id' => $tenantId, 'username' => $newUsername],
+                );
+            }
+
+            ActivityLog::query()->create([
+                'tenant_id' => $tenantId,
+                'user_id' => $request->user()?->id,
+                'action' => 'username.change',
+                'description' => sprintf('Changed customer username from %s to %s.', $oldUsername, $newUsername),
+                'metadata' => [
+                    'customer_id' => $user->id,
+                    'target_user_id' => $user->id,
+                    'old_username' => $oldUsername,
+                    'new_username' => $newUsername,
+                    'reason' => $validated['reason'] ?? null,
+                    'affected_license_ids' => collect($softwareConfigs)->flatMap(fn ($row) => $row['license_ids'] ?? [])->values()->all(),
+                    'affected_program_ids' => collect($softwareConfigs)->flatMap(fn ($row) => $row['program_ids'] ?? [])->unique()->values()->all(),
+                    'affected_software_ids' => collect($softwareConfigs)->pluck('software_id')->values()->all(),
+                    'external' => $externalSummary,
+                ],
+                'ip_address' => $request->ip(),
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Username changed successfully.',
+            'data' => [
+                'id' => $user->id,
+                'username' => $newUsername,
+                'username_locked' => true,
+                'username_history' => $this->usernameHistoryPayload($tenantId, (int) $user->id),
+            ],
+        ]);
     }
 
     public function show(User $user): JsonResponse
@@ -273,7 +615,10 @@ class CustomerController extends BaseSuperAdminController
 
         $activity = ActivityLog::query()
             ->where(function ($query) use ($user): void {
-                $query->where('user_id', $user->id)->orWhere('metadata->customer_id', $user->id);
+                $query
+                    ->where('user_id', $user->id)
+                    ->orWhere('metadata->customer_id', $user->id)
+                    ->orWhere('metadata->target_user_id', $user->id);
             })
             ->latest()
             ->limit(100)
@@ -304,6 +649,7 @@ class CustomerController extends BaseSuperAdminController
             'data' => [
             ...$this->serializeCustomer($user, [], null, null, $this->safeBiosLinkMapForUsers(collect([$user]), $user->tenant_id)),
                 'username' => $this->resolveCustomerUsername($user, $displayLicense),
+                'username_history' => $this->usernameHistoryPayload((int) $user->tenant_id, (int) $user->id),
                 'phone' => $user->phone,
                 'tenant' => $user->tenant ? [
                     'id' => $user->tenant->id,
@@ -496,7 +842,8 @@ class CustomerController extends BaseSuperAdminController
         if (! empty($validated['search'])) {
             $linkedUsernames = $this->linkedUsernamesForBiosSearch((string) $validated['search'], $tenantId);
             $supportsCountryName = $this->supportsUserCountryName();
-            $query->where(function ($builder) use ($validated, $linkedUsernames, $supportsCountryName): void {
+            $historyUserIds = $this->userIdsFromUsernameHistorySearch((string) $validated['search'], $tenantId);
+            $query->where(function ($builder) use ($validated, $linkedUsernames, $supportsCountryName, $historyUserIds): void {
                 $builder
                     ->where('name', 'like', '%'.$validated['search'].'%')
                     ->orWhere('username', 'like', '%'.$validated['search'].'%')
@@ -510,6 +857,10 @@ class CustomerController extends BaseSuperAdminController
                     ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery
                         ->where('bios_id', 'like', '%'.$validated['search'].'%'))
                     ->orWhereIn('username', $linkedUsernames);
+
+                if (! empty($historyUserIds)) {
+                    $builder->orWhereIn('id', $historyUserIds);
+                }
             });
         }
 
@@ -685,7 +1036,6 @@ class CustomerController extends BaseSuperAdminController
         $license->loadMissing(['reseller']);
 
         $license->forceFill(['price' => $newPrice])->save();
-
         $revenueLog = $this->resolveEditableRevenueLog($license);
 
         if ($revenueLog) {
@@ -728,7 +1078,7 @@ class CustomerController extends BaseSuperAdminController
     {
         $earnedRevenueLog = ActivityLog::query()
             ->whereIn('action', ['license.activated', 'license.renewed'])
-            ->where('metadata->license_id', $license->id)
+            ->whereMetadataLicenseId((int) $license->id)
             ->where('metadata->attribution_type', BalanceService::TYPE_EARNED)
             ->latest()
             ->first();
@@ -739,7 +1089,7 @@ class CustomerController extends BaseSuperAdminController
 
         return ActivityLog::query()
             ->whereIn('action', ['license.activated', 'license.renewed'])
-            ->where('metadata->license_id', $license->id)
+            ->whereMetadataLicenseId((int) $license->id)
             ->latest()
             ->first();
     }
@@ -787,7 +1137,7 @@ class CustomerController extends BaseSuperAdminController
     private function refreshEditableLicenseCountry(User $customer, License $license): void
     {
         ActivityLog::query()
-            ->where('metadata->license_id', $license->id)
+            ->whereMetadataLicenseId((int) $license->id)
             ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled'])
             ->get()
             ->each(function (ActivityLog $log) use ($customer): void {
@@ -1220,6 +1570,86 @@ class CustomerController extends BaseSuperAdminController
         return str_starts_with($email, 'no-email+') && str_ends_with($email, '@obd2sw.local') ? null : $email;
     }
 
+    private function normalizeUsername(string $value): string
+    {
+        return Str::of($value)
+            ->lower()
+            ->replaceMatches('/[^a-z0-9_]+/', '_')
+            ->replaceMatches('/_+/', '_')
+            ->trim('_')
+            ->value();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function usernameHistoryPayload(int $tenantId, int $userId, int $limit = 25): array
+    {
+        return UserUsernameHistory::query()
+            ->with(['changedBy:id,name,email'])
+            ->where('tenant_id', $tenantId)
+            ->where('user_id', $userId)
+            ->latest('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn (UserUsernameHistory $row): array => [
+                'id' => $row->id,
+                'old_username' => $row->old_username,
+                'new_username' => $row->new_username,
+                'reason' => $row->reason,
+                'created_at' => $row->created_at?->toIso8601String(),
+                'changed_by' => $row->changedBy ? [
+                    'id' => $row->changedBy->id,
+                    'name' => $row->changedBy->name,
+                    'email' => $row->changedBy->email,
+                ] : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function userIdsFromUsernameHistorySearch(string $search, ?int $tenantId): array
+    {
+        $term = strtolower(trim($search));
+        if ($term === '') {
+            return [];
+        }
+
+        return UserUsernameHistory::query()
+            ->when($tenantId !== null, fn ($query) => $query->where('tenant_id', $tenantId))
+            ->whereRaw('LOWER(old_username) like ?', ['%'.$term.'%'])
+            ->pluck('user_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param array<int, array{software_id:int, api_key:string, base_url:?string}> $successfulRenames
+     * @return array<int, array<string, mixed>>
+     */
+    private function rollbackExternalRenames(ExternalApiService $externalApi, array $successfulRenames, string $oldUsername, string $newUsername, string $biosId): array
+    {
+        $results = [];
+        foreach ($successfulRenames as $rename) {
+            $apiKey = (string) ($rename['api_key'] ?? '');
+            $baseUrl = $rename['base_url'] ?? null;
+            $softwareId = (int) ($rename['software_id'] ?? 0);
+
+            $results[] = [
+                'software_id' => $softwareId,
+                'deactivate_new' => $externalApi->deactivateUser($apiKey, $newUsername, $baseUrl),
+                'activate_old' => $externalApi->activateUser($apiKey, $oldUsername, $biosId, $baseUrl),
+            ];
+        }
+
+        return $results;
+    }
+
     private function resolveCustomerUsername(User $user, ?License $license): ?string
     {
         $externalUsername = is_string($license?->external_username) ? trim((string) $license->external_username) : '';
@@ -1462,7 +1892,7 @@ class CustomerController extends BaseSuperAdminController
                 ->first();
 
             // BIOS → username: this BIOS must not be linked to a different username
-            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            $linkByBios = BiosUsernameLink::where('tenant_id', $tenantId)->where('bios_id', $biosIdLower)->first();
             if ($linkByBios && strtolower((string) $linkByBios->username) !== $usernameLower) {
                 throw ValidationException::withMessages([
                     'bios_id' => 'This BIOS ID is permanently linked to a different username (' . $linkByBios->username . ').',
@@ -1471,7 +1901,7 @@ class CustomerController extends BaseSuperAdminController
 
             // Username → BIOS: only block for new customers (existing may have had BIOS changed)
             if (! $existingCustomer) {
-                $linkByUsername = BiosUsernameLink::where('username', $usernameLower)
+                $linkByUsername = BiosUsernameLink::where('tenant_id', $tenantId)->where('username', $usernameLower)
                     ->where('bios_id', '!=', $biosIdLower)
                     ->first();
                 if ($linkByUsername) {
@@ -1482,6 +1912,7 @@ class CustomerController extends BaseSuperAdminController
 
                 // Also check historical licenses — covers cases where BiosUsernameLink entry was cleaned up
                 $historicalConflict = \App\Models\License::query()
+                    ->where('tenant_id', $tenantId)
                     ->whereRaw('LOWER(external_username) = ?', [$usernameLower])
                     ->whereRaw('LOWER(bios_id) != ?', [$biosIdLower])
                     ->exists();
@@ -1493,7 +1924,7 @@ class CustomerController extends BaseSuperAdminController
             }
         } else {
             // No derived username — still check BIOS→username link
-            $linkByBios = BiosUsernameLink::where('bios_id', $biosIdLower)->first();
+            $linkByBios = BiosUsernameLink::where('tenant_id', $tenantId)->where('bios_id', $biosIdLower)->first();
             if ($linkByBios) {
                 throw ValidationException::withMessages([
                     'bios_id' => 'This BIOS ID is permanently linked to a specific username. Please provide the correct customer name.',

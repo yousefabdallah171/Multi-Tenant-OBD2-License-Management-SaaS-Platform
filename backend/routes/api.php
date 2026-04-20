@@ -417,6 +417,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/customers', [SuperAdminCustomerController::class, 'store']);
         Route::get('/customers/{user}', [SuperAdminCustomerController::class, 'show']);
         Route::put('/customers/{user}', [SuperAdminCustomerController::class, 'update']);
+        Route::put('/customers/{user}/username', [SuperAdminCustomerController::class, 'renameUsername']);
         Route::delete('/customers/{user}', [SuperAdminCustomerController::class, 'destroy']);
         Route::delete('/customers/{user}/revenue', [SuperAdminCustomerController::class, 'destroyRevenue']);
         Route::get('/deleted-customers', [SuperAdminDeletedCustomerController::class, 'index']);

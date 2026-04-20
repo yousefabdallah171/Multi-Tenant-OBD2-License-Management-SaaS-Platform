@@ -118,6 +118,14 @@ export interface SuperAdminCustomerSummary {
 export interface SuperAdminCustomerDetails extends SuperAdminCustomerSummary {
   created_by?: { id: number; name: string; email: string } | null
   created_at?: string | null
+  username_history?: Array<{
+    id: number
+    old_username: string
+    new_username: string
+    reason?: string | null
+    created_at?: string | null
+    changed_by?: { id: number; name: string; email: string } | null
+  }>
   licenses: Array<{
     id: number
     bios_id: string

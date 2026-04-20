@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Models\License;
 use App\Models\Program;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class IpAnalyticsService
 {
     /**
-     * @return array<int, array{username: string, timestamp: string, ip_address: string}>
+     * @return array<int, array{username: string, timestamp: string, raw_timestamp: string, ip_address: string}>
      */
     public function parseExternalLogs(string $rawText): array
     {
@@ -26,9 +28,13 @@ class IpAnalyticsService
                 continue;
             }
 
+            $rawTimestamp = trim((string) $matches[2]);
+            $normalizedTimestamp = $this->normalizeExternalLogTimestampToIsoUtc($rawTimestamp) ?? $rawTimestamp;
+
             $logs[] = [
                 'username' => trim((string) $matches[1]),
-                'timestamp' => trim((string) $matches[2]),
+                'timestamp' => $normalizedTimestamp,
+                'raw_timestamp' => $rawTimestamp,
                 'ip_address' => trim((string) $matches[3]),
             ];
         }
@@ -37,7 +43,7 @@ class IpAnalyticsService
     }
 
     /**
-     * @param  array<int, array{username: string, timestamp: string, ip_address: string}>  $parsedLogs
+     * @param  array<int, array{username: string, timestamp: string, raw_timestamp: string, ip_address: string}>  $parsedLogs
      * @return array<int, array<string, mixed>>
      */
     public function matchLogsToDatabaseRecords(array $parsedLogs, int $tenantId): array
@@ -68,6 +74,7 @@ class IpAnalyticsService
                 'username' => $customerName,
                 'raw_username' => $log['username'],
                 'timestamp' => $log['timestamp'],
+                'raw_timestamp' => $log['raw_timestamp'] ?? null,
                 'ip_address' => $log['ip_address'],
                 'bios_id' => $license?->bios_id,
                 'customer_id' => $license?->customer_id,
@@ -104,15 +111,78 @@ class IpAnalyticsService
             ->with(['customer:id,name,username', 'reseller:id,name,email'])
             ->where('tenant_id', $tenantId)
             ->where('program_id', $programId)
-            ->where(function ($query) use ($normalized): void {
-                $query->whereRaw('LOWER(external_username) = ?', [$normalized])
-                    ->orWhereHas('customer', function ($customerQuery) use ($normalized): void {
+            ->where(function ($query) use ($normalized, $tenantId): void {
+                $query
+                    ->whereRaw('LOWER(external_username) = ?', [$normalized])
+                    ->orWhereHas('customer', function ($customerQuery) use ($normalized, $tenantId): void {
                         $customerQuery
                             ->whereRaw('LOWER(name) = ?', [$normalized])
-                            ->orWhereRaw('LOWER(username) = ?', [$normalized]);
+                            ->orWhereRaw('LOWER(username) = ?', [$normalized])
+                            ->orWhereExists(function ($sub) use ($normalized, $tenantId): void {
+                                $sub->select(DB::raw(1))
+                                    ->from('user_username_history')
+                                    ->where('user_username_history.tenant_id', $tenantId)
+                                    ->whereColumn('user_username_history.user_id', 'users.id')
+                                    ->whereRaw('LOWER(user_username_history.old_username) = ?', [$normalized]);
+                            });
                     });
             })
             ->latest('id')
             ->first();
+    }
+
+    private function normalizeExternalLogTimestampToIsoUtc(string $value): ?string
+    {
+        $trimmed = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+        if ($trimmed === '') {
+            return null;
+        }
+
+        // Example line segment: "Sun:Apr:19:2026 16:25:37"
+        // We treat the external log timestamp as UTC because the platform uses UTC internally.
+        if (! preg_match('/^(?<dow>[A-Za-z]{3}):(?<mon>[A-Za-z]{3}):(?<day>\d{1,2}):(?<year>\d{4})\s+(?<time>\d{2}:\d{2}:\d{2})$/', $trimmed, $matches)) {
+            return null;
+        }
+
+        $monthMap = [
+            'jan' => 1,
+            'feb' => 2,
+            'mar' => 3,
+            'apr' => 4,
+            'may' => 5,
+            'jun' => 6,
+            'jul' => 7,
+            'aug' => 8,
+            'sep' => 9,
+            'oct' => 10,
+            'nov' => 11,
+            'dec' => 12,
+        ];
+
+        $monthKey = mb_strtolower((string) ($matches['mon'] ?? ''));
+        $month = $monthMap[$monthKey] ?? null;
+        if (! $month) {
+            return null;
+        }
+
+        $year = (int) ($matches['year'] ?? 0);
+        $day = (int) ($matches['day'] ?? 0);
+        $time = (string) ($matches['time'] ?? '');
+
+        if ($year < 1970 || $day < 1 || $day > 31 || $time === '') {
+            return null;
+        }
+
+        try {
+            $dt = CarbonImmutable::createFromFormat(
+                'Y-n-j H:i:s',
+                sprintf('%d-%d-%d %s', $year, $month, $day, $time),
+                'UTC'
+            );
+
+            return $dt->setTimezone('UTC')->toIso8601String();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

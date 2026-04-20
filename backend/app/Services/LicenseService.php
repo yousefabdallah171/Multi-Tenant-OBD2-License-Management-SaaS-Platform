@@ -932,7 +932,7 @@ class LicenseService
 
         // CURRENT USERNAME → BIOS LINK CHECK: if the license username is permanently linked to a different BIOS, block
         if ($licenseUsername !== '') {
-            $usernameLink = BiosUsernameLink::whereRaw('LOWER(username) = ?', [$licenseUsername])->first();
+            $usernameLink = BiosUsernameLink::where('tenant_id', $license->tenant_id)->whereRaw('LOWER(username) = ?', [$licenseUsername])->first();
             if ($usernameLink && strtolower((string) $usernameLink->bios_id) !== strtolower((string) $license->bios_id)) {
                 throw ValidationException::withMessages([
                     'new_bios_id' => sprintf(
@@ -1231,7 +1231,7 @@ class LicenseService
 
         // USERNAME → BIOS LINK CHECK: if this username is permanently linked to a different BIOS, block
         $usernameLower = strtolower($externalUsername);
-        $existingUsernameLink = BiosUsernameLink::whereRaw('LOWER(username) = ?', [$usernameLower])->first();
+        $existingUsernameLink = BiosUsernameLink::where('tenant_id', $license->tenant_id)->whereRaw('LOWER(username) = ?', [$usernameLower])->first();
         if ($existingUsernameLink && strtolower((string) $existingUsernameLink->bios_id) !== $biosIdLower) {
             $this->logBiosAccess($reseller, $biosId, 'conflict', [
                 'program_id' => $program->id,

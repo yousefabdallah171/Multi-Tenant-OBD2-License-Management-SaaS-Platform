@@ -40,6 +40,10 @@ export const superAdminCustomerService = {
     const { data } = await api.put<{ data: SuperAdminCustomerSummary }>(`/super-admin/customers/${id}`, payload)
     return data
   },
+  async renameUsername(id: number, payload: { username: string; reason?: string }) {
+    const { data } = await api.put<{ message: string; data: { id: number; username: string; username_locked: boolean } }>(`/super-admin/customers/${id}/username`, payload)
+    return data
+  },
   async remove(id: number) {
     const { data } = await api.delete<{ message: string }>(`/super-admin/customers/${id}`)
     return data

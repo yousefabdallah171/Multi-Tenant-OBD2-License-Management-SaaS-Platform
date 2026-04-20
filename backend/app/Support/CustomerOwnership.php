@@ -137,7 +137,7 @@ class CustomerOwnership
 
         $activity = ActivityLog::query()
             ->whereIn('action', ['license.activated', 'license.renewed'])
-            ->where('metadata->license_id', $license->id)
+            ->whereMetadataLicenseId((int) $license->id)
             ->latest()
             ->limit(10)
             ->get()

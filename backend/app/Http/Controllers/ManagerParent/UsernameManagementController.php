@@ -155,7 +155,7 @@ class UsernameManagementController extends BaseManagerParentController
     {
         $usernameLower = strtolower((string) $user->username);
 
-        $hasPermanentLink = ($usernameLower !== '' && BiosUsernameLink::whereRaw('LOWER(username) = ?', [$usernameLower])->exists())
+        $hasPermanentLink = ($usernameLower !== '' && BiosUsernameLink::where('tenant_id', $user->tenant_id)->whereRaw('LOWER(username) = ?', [$usernameLower])->exists())
             || License::query()
                 ->where('customer_id', $user->id)
                 ->whereNotNull('bios_id')

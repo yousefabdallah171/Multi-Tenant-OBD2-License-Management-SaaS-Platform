@@ -3,9 +3,9 @@
 namespace Tests\Feature\Security;
 
 use App\Models\ActivityLog;
-use App\Models\License;
 use App\Models\UserBalance;
 use App\Services\BalanceService;
+use App\Support\RevenueAnalytics;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\BuildsSecurityFixtures;
@@ -113,5 +113,62 @@ class SuperAdminCustomerPriceOverrideTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.total_revenue', 0)
             ->assertJsonPath('data.avg_price', 0);
+    }
+
+    public function test_super_admin_price_override_updates_revenue_log_even_when_license_id_is_string_in_metadata(): void
+    {
+        $tenant = $this->createTenant();
+        $manager = $this->createUser('manager', $tenant);
+        $reseller = $this->createUser('reseller', $tenant, $manager);
+        $customer = $this->createUser('customer', $tenant, $reseller, [
+            'country_name' => 'Saudi Arabia',
+        ]);
+        $license = $this->createLicense($reseller, null, $customer, [
+            'status' => 'active',
+            'price' => 100.00,
+            'bios_id' => 'BIOS-PRICE-001',
+        ]);
+
+        ActivityLog::query()->create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $reseller->id,
+            'action' => 'license.activated',
+            'description' => 'Activation revenue fixture',
+            'metadata' => [
+                'license_id' => (string) $license->id, // key detail: stored as string
+                'customer_id' => $customer->id,
+                'program_id' => $license->program_id,
+                'bios_id' => $license->bios_id,
+                'price' => 100.00,
+            ],
+            'ip_address' => '127.0.0.1',
+        ]);
+
+        $superAdmin = $this->createUser('super_admin', null);
+        Sanctum::actingAs($superAdmin);
+
+        $this->putJson('/api/super-admin/customers/'.$customer->id, [
+            'client_name' => $customer->name,
+            'email' => $customer->email,
+            'phone' => $customer->phone,
+            'country_name' => $customer->country_name,
+            'license_id' => $license->id,
+            'price' => 0,
+        ])
+            ->assertOk();
+
+        $license->refresh();
+        $this->assertSame(0.0, round((float) $license->price, 2));
+
+        $updatedRevenueLog = ActivityLog::query()
+            ->where('action', 'license.activated')
+            ->whereMetadataLicenseId((int) $license->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($updatedRevenueLog);
+        $this->assertSame(0.0, round((float) ($updatedRevenueLog->metadata['price'] ?? 0), 2));
+
+        $this->assertSame(0.0, RevenueAnalytics::totalRevenue([], (int) $tenant->id, null, (int) $reseller->id));
     }
 }
