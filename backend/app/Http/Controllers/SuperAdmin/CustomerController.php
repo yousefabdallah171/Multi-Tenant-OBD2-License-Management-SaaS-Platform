@@ -448,8 +448,24 @@ class CustomerController extends BaseSuperAdminController
             }
 
             $usersMap = is_array($activeUsers['data']['users'] ?? null) ? $activeUsers['data']['users'] : [];
-            $oldExternalBios = array_key_exists($oldUsername, $usersMap) ? (string) $usersMap[$oldUsername] : null;
-            $existingBios = array_key_exists($newUsername, $usersMap) ? (string) $usersMap[$newUsername] : null;
+
+            // Case-insensitive lookups: external API may store usernames in different casing
+            // than what we have in DB (e.g. 'IRAQ26' vs 'iraq26'). Collect ALL matching keys.
+            $oldUsernameVariants = array_values(array_filter(
+                array_keys($usersMap),
+                fn (string $k): bool => strtolower($k) === strtolower($oldUsername)
+            ));
+            $newUsernameMatchKey = null;
+            foreach (array_keys($usersMap) as $k) {
+                if (strtolower($k) === strtolower($newUsername)) {
+                    $newUsernameMatchKey = $k;
+                    break;
+                }
+            }
+
+            $oldExternalBios = count($oldUsernameVariants) > 0 ? (string) $usersMap[$oldUsernameVariants[0]] : null;
+            $existingBios = $newUsernameMatchKey !== null ? (string) $usersMap[$newUsernameMatchKey] : null;
+
             if ($existingBios !== null && strtolower(trim($existingBios)) !== (string) $externalBiosIdLower) {
                 return response()->json([
                     'message' => 'New username already exists in external software. Operation canceled.',
@@ -465,27 +481,27 @@ class CustomerController extends BaseSuperAdminController
             $oldExistsExternally = $oldExternalBios !== null
                 && strtolower(trim($oldExternalBios)) === (string) $externalBiosIdLower;
 
-            $deactivate = $oldExistsExternally
-                ? $externalApi->deactivateUser($apiKey, $oldUsername, $baseUrl)
-                : [
-                    'success' => true,
-                    'status_code' => 200,
-                    'data' => ['response' => 'skipped_missing_old_username'],
-                ];
+            // Deactivate every case-variant of the old username so no stale entries remain.
+            $deactivate = ['success' => true, 'status_code' => 200, 'data' => ['response' => 'skipped_missing_old_username']];
+            if ($oldExistsExternally) {
+                foreach ($oldUsernameVariants as $variantKey) {
+                    $deactivate = $externalApi->deactivateUser($apiKey, $variantKey, $baseUrl);
+                    if (! ($deactivate['success'] ?? false)) {
+                        $rollbackPrior = $this->rollbackExternalRenames($externalApi, $successfulRenames, $oldUsername, $newUsername, (string) $externalBiosIdRaw);
 
-            if (! ($deactivate['success'] ?? false)) {
-                $rollbackPrior = $this->rollbackExternalRenames($externalApi, $successfulRenames, $oldUsername, $newUsername, (string) $externalBiosIdRaw);
-
-                return response()->json([
-                    'message' => 'External API rename failed. Operation canceled.',
-                    'error' => [
-                        'software_id' => $softwareId,
-                        'step' => 'deactivateUser',
-                        'old_username_exists' => $oldExistsExternally,
-                        'response' => $deactivate,
-                        'rollback_prior' => $rollbackPrior,
-                    ],
-                ], 422);
+                        return response()->json([
+                            'message' => 'External API rename failed. Operation canceled.',
+                            'error' => [
+                                'software_id' => $softwareId,
+                                'step' => 'deactivateUser',
+                                'variant' => $variantKey,
+                                'old_username_exists' => $oldExistsExternally,
+                                'response' => $deactivate,
+                                'rollback_prior' => $rollbackPrior,
+                            ],
+                        ], 422);
+                    }
+                }
             }
 
             $activate = $externalApi->activateUser($apiKey, $newUsername, (string) $externalBiosIdRaw, $baseUrl);
