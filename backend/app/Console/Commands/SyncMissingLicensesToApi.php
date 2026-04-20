@@ -52,12 +52,12 @@ class SyncMissingLicensesToApi extends Command
                 }
 
                 // Check if user exists in external API
-                $apiUsers = $this->externalApiService->getActiveUsers(
-                    $apiKey,
+                $apiUsersResponse = $this->externalApiService->getActiveUsers(
+                    (int) $program->id,
                     $program->external_api_base_url,
                 );
 
-                $usersMap = $apiUsers['users_map'] ?? [];
+                $usersMap = $apiUsersResponse['data']['users'] ?? [];
                 $existsInApi = false;
 
                 // Check if username exists in API (case-insensitive)
