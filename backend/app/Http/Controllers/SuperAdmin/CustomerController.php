@@ -286,7 +286,7 @@ class CustomerController extends BaseSuperAdminController
 
         $existsInUsers = User::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw('LOWER(username) = ?', [$newUsername])
+            ->whereRaw('LOWER(username) = ?', [strtolower($newUsername)])
             ->whereKeyNot($user->id)
             ->exists();
 
@@ -300,7 +300,7 @@ class CustomerController extends BaseSuperAdminController
         // Allows reverting a customer to their own prior username (undo scenario).
         $existsInHistory = UserUsernameHistory::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw('LOWER(old_username) = ?', [$newUsername])
+            ->whereRaw('LOWER(old_username) = ?', [strtolower($newUsername)])
             ->where('user_id', '!=', $user->id)
             ->exists();
 
@@ -341,7 +341,7 @@ class CustomerController extends BaseSuperAdminController
 
         $mismatchedLink = $existingBiosLinks->first(function (BiosUsernameLink $link) use ($oldUsername): bool {
             $linked = $this->normalizeUsername((string) ($link->username ?? ''));
-            return $linked !== '' && $linked !== $oldUsername;
+            return $linked !== '' && strtolower($linked) !== strtolower($oldUsername);
         });
         if ($mismatchedLink) {
             throw ValidationException::withMessages([
@@ -351,7 +351,7 @@ class CustomerController extends BaseSuperAdminController
 
         $newUsernameLink = BiosUsernameLink::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw('LOWER(username) = ?', [$newUsername])
+            ->whereRaw('LOWER(username) = ?', [strtolower($newUsername)])
             ->first(['bios_id', 'username', 'tenant_id']);
 
         if ($newUsernameLink && ! $biosIds->contains(strtolower((string) $newUsernameLink->bios_id))) {
@@ -1609,8 +1609,7 @@ class CustomerController extends BaseSuperAdminController
     private function normalizeUsername(string $value): string
     {
         return Str::of($value)
-            ->lower()
-            ->replaceMatches('/[^a-z0-9_]+/', '_')
+            ->replaceMatches('/[^a-zA-Z0-9_]+/', '_')
             ->replaceMatches('/_+/', '_')
             ->trim('_')
             ->value();

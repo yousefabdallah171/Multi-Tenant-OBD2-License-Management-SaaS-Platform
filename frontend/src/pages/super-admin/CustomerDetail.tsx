@@ -59,7 +59,7 @@ export function CustomerDetailPage() {
       return
     }
 
-    setUsernameDraft((resolveCustomerDetailUsername(customer) ?? '').toLowerCase())
+    setUsernameDraft(resolveCustomerDetailUsername(customer) ?? '')
     setIsRenameDialogOpen(true)
   }, [customer, searchParams, setSearchParams])
 
@@ -103,7 +103,7 @@ export function CustomerDetailPage() {
             type="button"
             variant="outline"
             onClick={() => {
-              setUsernameDraft((resolveCustomerDetailUsername(customer) ?? '').toLowerCase())
+              setUsernameDraft(resolveCustomerDetailUsername(customer) ?? '')
               setIsRenameDialogOpen(true)
             }}
             disabled={!customer}
@@ -316,7 +316,7 @@ export function CustomerDetailPage() {
                 id="rename-username"
                 value={usernameDraft}
                 onChange={(event) => setUsernameDraft(event.target.value)}
-                onBlur={(event) => setUsernameDraft(formatUsername(event.target.value).toLowerCase())}
+                onBlur={(event) => setUsernameDraft(formatUsername(event.target.value))}
                 placeholder="e.g. john_doe"
               />
             </div>
