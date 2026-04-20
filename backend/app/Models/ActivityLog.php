@@ -48,6 +48,10 @@ class ActivityLog extends Model
             return $query->whereRaw("CAST(json_extract(metadata, '$.license_id') AS TEXT) = ?", [$needle]);
         }
 
-        return $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.license_id')) = ?", [$needle]);
+        // Handle both numeric and string JSON types for license_id
+        return $query->whereRaw(
+            "(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.license_id')) = ? OR JSON_EXTRACT(metadata, '$.license_id') = ?)",
+            [$needle, (int) $licenseId]
+        );
     }
 }

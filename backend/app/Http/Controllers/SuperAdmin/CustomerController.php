@@ -1081,6 +1081,17 @@ class CustomerController extends BaseSuperAdminController
 
                 $this->applyBalanceDifference($revenueLog, round($newPrice - $oldLoggedPrice, 2));
             });
+
+            // Clean up any duplicate synthetic logs that may have been created as fallbacks
+            ActivityLog::query()
+                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->where(function ($q) use ($license): void {
+                    $q->whereJsonContains('metadata->license_id', $license->id)
+                        ->orWhereRaw("JSON_EXTRACT(metadata, '$.license_id') = ?", [(int) $license->id]);
+                })
+                ->where('metadata->price_source', 'super_admin_override')
+                ->where('id', '!=', $revenueLogs->max('id'))
+                ->delete();
         } else {
             $syntheticRevenueLog = $this->createSyntheticRevenueLogForLicense($customer, $license, $newPrice);
             if ($syntheticRevenueLog) {
