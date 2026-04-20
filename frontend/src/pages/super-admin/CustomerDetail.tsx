@@ -61,17 +61,29 @@ export function CustomerDetailPage() {
 
     setUsernameDraft((resolveCustomerDetailUsername(customer) ?? '').toLowerCase())
     setIsRenameDialogOpen(true)
+  }, [customer, searchParams, setSearchParams])
+
+  const handleRenameDialogOpenChange = (open: boolean) => {
+    setIsRenameDialogOpen(open)
+
+    if (open) {
+      return
+    }
+
+    if (searchParams.get('action') !== 'change-username') {
+      return
+    }
 
     const nextParams = new URLSearchParams(searchParams)
     nextParams.delete('action')
     setSearchParams(nextParams, { replace: true })
-  }, [customer, searchParams, setSearchParams])
+  }
 
   const renameMutation = useMutation({
     mutationFn: (payload: { username: string; reason?: string }) => superAdminCustomerService.renameUsername(customerId, payload),
     onSuccess: (result) => {
       toast.success(result.message || t('common.saved', { defaultValue: 'Saved' }))
-      setIsRenameDialogOpen(false)
+      handleRenameDialogOpenChange(false)
       setRenameReason('')
       queryClient.invalidateQueries({ queryKey: ['super-admin', 'customer-detail', customerId] })
       queryClient.invalidateQueries({ queryKey: ['super-admin', 'customers'] })
@@ -290,7 +302,7 @@ export function CustomerDetailPage() {
 
       <CustomerNoteDialog isOpen={isNotesDialogOpen} onClose={() => setIsNotesDialogOpen(false)} customerId={customerId} />
 
-      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+      <Dialog open={isRenameDialogOpen} onOpenChange={handleRenameDialogOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('common.username', { defaultValue: 'Username' })}</DialogTitle>
@@ -315,7 +327,7 @@ export function CustomerDetailPage() {
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsRenameDialogOpen(false)} disabled={renameMutation.isPending}>
+            <Button type="button" variant="outline" onClick={() => handleRenameDialogOpenChange(false)} disabled={renameMutation.isPending}>
               {t('common.cancel')}
             </Button>
             <Button
