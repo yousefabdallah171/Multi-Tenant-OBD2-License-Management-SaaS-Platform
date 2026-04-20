@@ -40,6 +40,7 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 15. [Environment Variables](#15-environment-variables)
 16. [License & Ownership](#16-license--ownership)
 17. [Laragon Local Setup Guide](#17-laragon-local-setup-guide)
+18. [Backup & Disaster Recovery](#18-backup--disaster-recovery)
 
 ---
 
@@ -2343,6 +2344,142 @@ curl -i -X POST https://panel.obd2sw.com/api/auth/login \
   - `2026_03_02_120000_add_performance_indexes`
   - `2026_03_02_130000_create_export_tasks_table`
 - Telescope is installed for dev/staging and guarded for production-safe boot.
+
+---
+
+## 18. Backup & Disaster Recovery
+
+### ⚠️ CRITICAL: Automatic Daily Backups
+
+**Location:** `/home/obd2sw-panel/backups/databases/obd2sw/YYYY-MM-DD/`
+
+**Structure:**
+```
+/home/obd2sw-panel/backups/databases/
+└── obd2sw/
+    ├── 2026-04-18/
+    │   └── obd2sw_1776512345.sql.gz  (compressed backup ~159MB)
+    ├── 2026-04-19/
+    │   └── obd2sw_1776598745.sql.gz
+    └── 2026-04-20/
+        └── obd2sw_1776654902.sql.gz
+```
+
+**Backup Timing:** 03:15 UTC daily (automated cron job)
+
+**Retention:** At least 7 days of daily backups kept on disk
+
+### Emergency Restore (Zero-Downtime)
+
+**If data is corrupted/deleted:**
+
+1. **Identify the correct backup** (must be BEFORE the incident):
+```bash
+ls -lah /home/obd2sw-panel/backups/databases/obd2sw/
+# Find the date from BEFORE your incident happened
+```
+
+2. **Restore from backup** (app stays running):
+```bash
+cd /home/obd2sw-panel/backups/databases/obd2sw/YYYY-MM-DD/
+
+# Get MySQL credentials from .env
+cat /home/obd2sw-panel/htdocs/panel.obd2sw.com/backend/.env | grep DB_
+
+# Restore (replace USERNAME, PASSWORD, DATABASE, FILENAME)
+zcat obd2sw_TIMESTAMP.sql.gz | mysql -u USERNAME -pPASSWORD DATABASE
+```
+
+**Example:**
+```bash
+zcat obd2sw_1776654902.sql.gz | mysql -u obd2sw1 -pEg7uo57FKwJRsK1Bd8se obd2sw
+```
+
+3. **Verify restore:**
+```bash
+cd /home/obd2sw-panel/htdocs/panel.obd2sw.com/backend
+
+php artisan tinker
+echo \App\Models\ActivityLog::count();  # Should show thousands
+echo \App\Support\RevenueAnalytics::totalRevenue();  # Should show $amount
+exit
+```
+
+### ⚠️ DANGEROUS OPERATIONS - DO NOT RUN WITHOUT UNDERSTANDING
+
+**The following Tinker commands can DELETE critical data. ALWAYS test in non-production first:**
+
+#### ❌ DO NOT RUN: Automatic Log Cleanup
+```php
+// DANGEROUS: This deleted 788+ logs in production (Apr 20, 2026)
+// ONLY use after fully understanding the scope and testing on backup
+
+$duplicates = \App\Models\ActivityLog::query()
+    ->whereIn('action', ['license.activated', 'license.renewed'])
+    ->where('metadata->price_source', 'super_admin_override')
+    ->get()
+    ->groupBy(fn ($log) => \Illuminate\Support\Str::of($log->metadata['license_id'] ?? 0)->toString())
+    ->filter(fn ($group) => $group->count() > 1)
+    ->flatMap(fn ($group) => $group->sortBy('id')->skip(1)->values());
+
+// BEFORE running delete():
+// 1. Export/backup the $duplicates collection manually
+// 2. Verify the count is EXACTLY what you expect
+// 3. Test in staging environment first
+// 4. If uncertain, RESTORE from backup instead of deleting
+
+echo "About to delete " . $duplicates->count() . " logs. CONFIRM IN STAGING FIRST\n";
+
+// Only after staging confirmation:
+// $duplicates->each(fn ($log) => $log->delete());
+```
+
+**Why it's dangerous:**
+- Activity logs drive revenue reports, reseller payments, and audit trails
+- Deleting activity logs breaks financial calculations
+- Group logic can match more logs than intended (e.g., missing license_id matches as "0")
+- 1 typo = data loss
+
+**Safe alternative to cleanup:**
+- Keep all logs (they're just data)
+- OR manually review each log before deleting
+- OR use database transactions to rollback if something goes wrong
+
+### Safe Maintenance Practices
+
+1. **Before any data operation on production:**
+   - Take a manual backup: `mysqldump -u USER -p DB > /tmp/backup.sql`
+   - Test the operation on a restored copy locally
+   - Get code review
+
+2. **For automatic cleanups:**
+   - Always filter to a small, specific dataset first
+   - Log what you're about to delete before actually deleting
+   - Never use `delete()` without `limit()` or explicit `where()` conditions
+   - Add a "dry-run" flag to test without committing
+
+3. **Monitor backups:**
+   - Verify backups exist daily
+   - Test restore from backup monthly
+   - Alert if backup job fails for >1 day
+
+4. **Activity logs are critical:**
+   - Never delete without understanding the impact
+   - They fund reseller payments (metadata.price is used in revenue calculations)
+   - They track all system changes (audit trail)
+   - They fill reports (dashboard revenue, graphs, etc.)
+
+### Incident Recovery Timeline (Apr 20, 2026)
+
+**07:33 UTC:** Tinker cleanup script deleted 788 activity_logs (revenue calculation broke, dashboard showed $0)
+
+**07:55 UTC:** Noticed issue, immediately restored from Apr 20 03:15 backup
+
+**08:05 UTC:** Database restored, revenue recalculated, dashboard healthy
+
+**Lesson:** Always test destructive Tinker scripts in staging or on a backup first.
+
+---
 
 **Author:** Yousef Abdallah | Full Stack Developer | Tanta, Egypt
 
