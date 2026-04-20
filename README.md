@@ -2445,6 +2445,49 @@ echo "About to delete " . $duplicates->count() . " logs. CONFIRM IN STAGING FIRS
 - OR manually review each log before deleting
 - OR use database transactions to rollback if something goes wrong
 
+### Bulk Customer Sync to External API
+
+**Command:** `php artisan licenses:sync-missing-to-api`
+
+**Purpose:** Find all active licenses in local DB that are missing from external API and activate them.
+
+**Usage:**
+
+```bash
+# Test first (safe, shows what would happen):
+php artisan licenses:sync-missing-to-api --dry-run
+
+# Run actual sync (activates customers in external API):
+php artisan licenses:sync-missing-to-api
+```
+
+**When to use:**
+- After database restore (customers restored to DB but not in external API)
+- If external API was wiped/reset
+- If some customers appear active locally but not in API
+- After major sync issues
+
+**What it does:**
+1. Gets all active licenses from DB with `status = 'active'`
+2. For each license, checks if username exists in external API (case-insensitive)
+3. If missing, activates user in external API with `activateUser()`
+4. Reports: Synced count, Failed count, Skipped count
+
+**Output:**
+```
+Found 78 active licenses in DB
+✓ IRAQ26 already in API (skipped)
+Activating ALLOY262 (BIOS: pf3337cg)...
+✓ Activated ALLOY262
+...
+=== Sync Complete ===
+Synced: 71
+Failed: 0
+Skipped: 7
+```
+
+---
+
 ### Safe Maintenance Practices
 
 1. **Before any data operation on production:**
