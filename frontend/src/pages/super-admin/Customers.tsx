@@ -122,7 +122,7 @@ export function CustomersPage() {
 
   const sellersQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'sellers', tenantId],
-    queryFn: () => userService.getAll({ per_page: 100, tenant_id: tenantId || '', status: 'active' }),
+    queryFn: () => userService.getAll({ per_page: 100, tenant_id: tenantId || undefined, status: 'active' }),
     staleTime: 10 * 60 * 1000,
     gcTime: 20 * 60 * 1000,
   })

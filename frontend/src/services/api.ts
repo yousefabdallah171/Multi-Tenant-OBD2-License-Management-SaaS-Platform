@@ -17,11 +17,7 @@ function resolveApiBaseUrl() {
     return configuredBaseUrl
   }
 
-  if (typeof window !== 'undefined') {
-    return new URL('/api', window.location.origin).toString().replace(/\/$/, '')
-  }
-
-  return 'http://127.0.0.1:8000/api'
+  return '/api'
 }
 
 export const api = axios.create({
