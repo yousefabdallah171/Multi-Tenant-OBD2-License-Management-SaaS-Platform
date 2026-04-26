@@ -48,7 +48,7 @@ export function PieChartWidget<TData extends ChartRow>({
   valueKey,
   isLoading = false,
   actions,
-  heightClassName = 'h-80',
+  heightClassName = 'h-56',
   emptyDescription,
   colors,
   donut = true,
@@ -111,7 +111,7 @@ export function PieChartWidget<TData extends ChartRow>({
         </BaseChart>
 
         {data.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-1 overflow-y-auto max-h-56">
             {data.map((item, index) => {
               const row = item as Record<string, string | number | null | undefined>
               const value = Number(row[valueKey] ?? 0) || 0
@@ -119,7 +119,7 @@ export function PieChartWidget<TData extends ChartRow>({
               const label = legendLabelFormatter ? legendLabelFormatter(item) : String(row[nameKey] ?? '')
 
               return (
-                <div key={`${label}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800">
+                <div key={`${label}-${index}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-2 py-1 text-xs dark:border-slate-800">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: activeColors[index % activeColors.length] }} />
                     <span className="truncate text-slate-700 dark:text-slate-200">{label}</span>
