@@ -5,6 +5,7 @@ export interface UserListParams {
   page?: number
   per_page?: number
   role?: string
+  roles?: string[]
   tenant_id?: number | ''
   status?: string
   search?: string

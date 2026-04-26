@@ -19,10 +19,12 @@ class UserController extends BaseSuperAdminController
     {
         $validated = $request->validate([
             'role' => ['nullable', 'in:'.implode(',', UserRole::values())],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['in:'.implode(',', UserRole::values())],
             'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
             'status' => ['nullable', 'in:active,suspended,inactive,deactive'],
             'search' => ['nullable', 'string'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
         ]);
 
         $perPage = (int) ($validated['per_page'] ?? 25);
@@ -54,6 +56,10 @@ class UserController extends BaseSuperAdminController
 
         if (! empty($validated['role'])) {
             $query->where('role', $validated['role']);
+        }
+
+        if (! empty($validated['roles'])) {
+            $query->whereIn('role', $validated['roles']);
         }
 
         $users = $query->paginate($perPage);
