@@ -975,25 +975,42 @@ class CustomerController extends BaseSuperAdminController
         return $notes;
     }
 
-    private function resolveExportDurationDays(?float $durationDays, ?string $startAt, ?string $expiryAt): ?float
+    private function resolveExportDurationDays(?float $durationDays, ?string $startAt, ?string $expiryAt): string
     {
+        $seconds = null;
+
         if ($startAt && $expiryAt) {
             try {
                 $start = Carbon::parse($startAt);
                 $expiry = Carbon::parse($expiryAt);
                 if ($expiry->greaterThan($start)) {
-                    return round($expiry->diffInSeconds($start) / 86400, 2);
+                    $seconds = $expiry->diffInSeconds($start);
                 }
             } catch (\Throwable) {
                 // fall through to duration_days
             }
         }
 
-        if ($durationDays !== null && is_finite($durationDays) && $durationDays > 0) {
-            return round($durationDays, 2);
+        if ($seconds === null && $durationDays !== null && is_finite($durationDays) && $durationDays > 0) {
+            $seconds = (int) ($durationDays * 86400);
         }
 
-        return null;
+        if ($seconds === null || $seconds <= 0) {
+            return '-';
+        }
+
+        $days = (int) ($seconds / 86400);
+        $hours = (int) (($seconds % 86400) / 3600);
+
+        if ($days > 0) {
+            return "{$days} " . ($days === 1 ? 'Day' : 'Days');
+        }
+
+        if ($hours > 0) {
+            return "{$hours} " . ($hours === 1 ? 'Hour' : 'Hours');
+        }
+
+        return '< 1 Hour';
     }
 
     public function update(Request $request, User $user): JsonResponse
