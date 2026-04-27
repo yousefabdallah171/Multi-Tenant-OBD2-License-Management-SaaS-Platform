@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_username_history', function (Blueprint $table): void {
+        Schema::createIfNotExists('user_username_history', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('tenant_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
