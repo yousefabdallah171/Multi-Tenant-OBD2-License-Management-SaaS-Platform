@@ -117,7 +117,7 @@ jobs:
 
           cd backend
           composer install --no-dev --optimize-autoloader --no-interaction
-          php artisan migrate --force
+          php artisan migrate --force --step
           php artisan optimize:clear
           php artisan config:cache
           php artisan route:cache
@@ -151,7 +151,7 @@ jobs:
 
             cd backend
             composer install --no-dev --optimize-autoloader --no-interaction
-            php artisan migrate --force
+            php artisan migrate --force --step
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
