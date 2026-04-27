@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, CheckCircle2, ChevronDown, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2 } from 'lucide-react'
+import { Check, CheckCircle2, ChevronDown, Cpu, FileText, MoreVertical, Pause, Pencil, Play, Plus, RotateCw, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -255,6 +255,15 @@ export function CustomersPage() {
     onError: () => toast.error(t('common.error')),
   })
 
+  const cancelScheduledMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.cancelScheduled(licenseId),
+    onSuccess: () => {
+      toast.success(t('common.cancelScheduledSuccess', { defaultValue: 'Scheduled activation cancelled successfully.' }))
+      invalidate(queryClient)
+    },
+    onError: (error) => toast.error(resolveApiErrorMessage(error, t('common.error'))),
+  })
+
   const forceExpireMutation = useMutation({
     mutationFn: (licenseId: number) => superAdminCustomerService.forceExpireLicense(licenseId),
     onSuccess: () => {
@@ -499,6 +508,12 @@ export function CustomersPage() {
                     {t('common.retry')}
                   </DropdownMenuItem>
                 ) : null}
+                {row.license_id && (getLicenseDisplayStatus(row) === 'scheduled' || getLicenseDisplayStatus(row) === 'scheduled_failed') ? (
+                  <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => void cancelScheduledMutation.mutate(row.license_id!))}>
+                    <X className="me-2 h-4 w-4" />
+                    {t('common.cancelScheduled')}
+                  </DropdownMenuItem>
+                ) : null}
                 {row.license_id ? (
                   <DropdownMenuItem onSelect={(event) => handleMenuAction(event, () => setForceExpireTarget(row))}>
                     <CheckCircle2 className="me-2 h-4 w-4" />
@@ -737,7 +752,7 @@ export function CustomersPage() {
                 value={newBiosId}
                 maxLength={255}
                 onChange={(event) => {
-                  setNewBiosId(event.target.value)
+                  setNewBiosId(event.target.value.toUpperCase())
                   setBiosCheckResult(null)
                 }}
                 placeholder={t('biosChangeRequests.newBiosPlaceholder')}

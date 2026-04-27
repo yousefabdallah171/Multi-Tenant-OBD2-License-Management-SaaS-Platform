@@ -509,6 +509,18 @@ export function CustomersPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
   })
 
+  const cancelScheduledMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.cancelScheduled(licenseId),
+    onSuccess: () => {
+      toast.success(t('common.cancelScheduledSuccess', { defaultValue: 'Scheduled activation cancelled successfully.' }))
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'customers'] }),
+        queryClient.invalidateQueries({ queryKey: ['reseller', 'licenses'] }),
+      ])
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, text.validation.requestFailed)),
+  })
+
   const bulkRenewMutation = useMutation({
     mutationFn: (payload: RenewLicenseData) => licenseService.bulkRenew(selectedLicenseIds, payload),
     onSuccess: () => {
@@ -750,6 +762,18 @@ export function CustomersPage() {
                   >
                     <Play className="me-2 h-4 w-4" />
                     {t('common.retryNow', { defaultValue: 'Retry Now' })}
+                  </DropdownMenuItem>
+                )}
+                {typeof row.license_id === 'number' && (getLicenseDisplayStatus(row) === 'scheduled' || getLicenseDisplayStatus(row) === 'scheduled_failed') && (
+                  <DropdownMenuItem
+                    disabled={cancelScheduledMutation.isPending}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      cancelScheduledMutation.mutate(row.license_id!)
+                    }}
+                  >
+                    <X className="me-2 h-4 w-4" />
+                    {t('common.cancelScheduled')}
                   </DropdownMenuItem>
                 )}
                 {typeof row.license_id === 'number' && canReactivateLicense(row) && !isBlacklisted && !isBiosActiveElsewhere && !(isPausedPending && row.paused_by_role != null && row.paused_by_role !== 'reseller') && (

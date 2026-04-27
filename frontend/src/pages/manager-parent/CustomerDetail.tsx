@@ -293,7 +293,7 @@ export function CustomerDetailPage() {
                 value={newBiosId}
                 maxLength={255}
                 onChange={(event) => {
-                  setNewBiosId(event.target.value)
+                  setNewBiosId(event.target.value.toUpperCase())
                   setBiosCheckResult(null)
                 }}
                 placeholder={t('biosChangeRequests.newBiosPlaceholder')}

@@ -23,7 +23,7 @@ class CustomerDeletionService
 
             // Find activity logs for this customer's license activations/renewals
             $activityLogs = DB::table('activity_logs')
-                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
                 ->where(function ($query) use ($customer) {
                     $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$customer->id])
                         ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$customer->name]);

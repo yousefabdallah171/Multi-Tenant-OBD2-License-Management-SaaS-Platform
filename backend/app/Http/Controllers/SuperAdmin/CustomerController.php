@@ -1101,7 +1101,7 @@ class CustomerController extends BaseSuperAdminController
 
             // Clean up any duplicate synthetic logs that may have been created as fallbacks
             ActivityLog::query()
-                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
                 ->where(function ($q) use ($license): void {
                     $q->whereJsonContains('metadata->license_id', $license->id)
                         ->orWhereRaw("JSON_EXTRACT(metadata, '$.license_id') = ?", [(int) $license->id]);
@@ -1141,7 +1141,7 @@ class CustomerController extends BaseSuperAdminController
     private function resolveEditableRevenueLogs(License $license): Collection
     {
         $earnedRevenueLogs = ActivityLog::query()
-            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
             ->whereMetadataLicenseId((int) $license->id)
             ->where('metadata->attribution_type', BalanceService::TYPE_EARNED)
             ->orderBy('id')
@@ -1152,7 +1152,7 @@ class CustomerController extends BaseSuperAdminController
         }
 
         return ActivityLog::query()
-            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
             ->whereMetadataLicenseId((int) $license->id)
             ->orderBy('id')
             ->get();
@@ -1327,7 +1327,7 @@ class CustomerController extends BaseSuperAdminController
         // If customer was deleted long ago and not in deleted_customers table,
         // search for activity logs by customer name from the snapshot or metadata
         $activityLogCount = DB::table('activity_logs')
-            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
             ->where(function ($query) use ($user) {
                 $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$user->id])
                     ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$user->name]);
@@ -1342,7 +1342,7 @@ class CustomerController extends BaseSuperAdminController
 
         DB::transaction(function () use ($user): void {
             DB::table('activity_logs')
-                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
                 ->where(function ($query) use ($user) {
                     $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$user->id])
                         ->orWhereRaw('JSON_EXTRACT(metadata, "$.customer_name") = ?', [$user->name]);

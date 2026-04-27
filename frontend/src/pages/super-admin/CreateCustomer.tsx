@@ -404,7 +404,7 @@ export function CreateCustomerPage() {
               />
             </Field>
             <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
-              <Input value={biosId}  onChange={(event) => setBiosId(event.target.value)} />
+              <Input value={biosId}  onChange={(event) => setBiosId(event.target.value.toUpperCase())} />
             </Field>
             <Field label={t('common.program')} error={errors.programId}>
               <select value={programId} onChange={(event) => setProgramId(event.target.value ? Number(event.target.value) : '')} className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">

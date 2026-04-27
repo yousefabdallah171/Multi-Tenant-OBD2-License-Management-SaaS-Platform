@@ -95,6 +95,9 @@ const SuperAdminProgramLogsPage = lazyNamed(() => import('@/pages/super-admin/Pr
 const SuperAdminResellerPaymentDetailPage = lazyNamed(() => import('@/pages/super-admin/ResellerPaymentDetail'), 'ResellerPaymentDetailPage')
 const SuperAdminResellerPaymentsPage = lazyNamed(() => import('@/pages/super-admin/ResellerPayments'), 'ResellerPaymentsPage')
 const SuperAdminManagerParentSalesCustomersPage = lazyNamed(() => import('@/pages/super-admin/ManagerParentSalesCustomers'), 'ManagerParentSalesCustomersPage')
+const SuperAdminManagerSalesCustomersPage = lazyNamed(() => import('@/pages/super-admin/ManagerSalesCustomers'), 'ManagerSalesCustomersPage')
+const SuperAdminResellerSalesCustomersPage = lazyNamed(() => import('@/pages/super-admin/ResellerSalesCustomers'), 'ResellerSalesCustomersPage')
+const SuperAdminTransactionHistoryPage = lazyNamed(() => import('@/pages/super-admin/TransactionHistory'), 'TransactionHistoryPage')
 const SuperAdminResellerLogsPage = lazyNamed(() => import('@/pages/super-admin/ResellerLogs'), 'ResellerLogsPage')
 const ReportsPage = lazyNamed(() => import('@/pages/super-admin/Reports'), 'ReportsPage')
 const SettingsPage = lazyNamed(() => import('@/pages/super-admin/Settings'), 'SettingsPage')
@@ -176,7 +179,10 @@ export function AppRouter() {
                   <Route path="program-logs" element={<SuperAdminProgramLogsPage />} />
                   <Route path="reseller-payments" element={<SuperAdminResellerPaymentsPage />} />
                   <Route path="reseller-payments/manager-parent/:managerParentId/customers" element={<SuperAdminManagerParentSalesCustomersPage />} />
+                  <Route path="reseller-payments/manager/:managerId/customers" element={<SuperAdminManagerSalesCustomersPage />} />
+                  <Route path="reseller-payments/reseller/:resellerId/customers" element={<SuperAdminResellerSalesCustomersPage />} />
                   <Route path="reseller-payments/:resellerId" element={<SuperAdminResellerPaymentDetailPage />} />
+                  <Route path="transaction-history" element={<SuperAdminTransactionHistoryPage />} />
                   <Route path="ip-analytics" element={<SuperAdminIpAnalyticsPage />} />
                   <Route path="logs" element={<LogsPage />} />
                   <Route path="activity" element={<SuperAdminActivityPage />} />

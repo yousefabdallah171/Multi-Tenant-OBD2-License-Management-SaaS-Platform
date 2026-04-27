@@ -92,6 +92,7 @@
     "block": "Block",
     "pause": "Pause",
     "resume": "Resume",
+    "cancelScheduled": "Cancel Scheduled",
     "continue": "Continue",
     "reactivate": "Reactivate",
     "pauseSuccess": "License paused successfully.",
@@ -314,6 +315,7 @@
       "reports": "Reports",
       "programLogs": "Program Logs",
       "resellerPayments": "Reseller Payments",
+      "transactionHistory": "Transaction History",
       "ipAnalytics": "IP Analytics",
       "logs": "Logs",
       "activity": "Panel Activity",
@@ -2036,7 +2038,7 @@
       "scopeHint": "Showing reseller balances for {{name}} only."
     },
     "managerParentCustomers": {
-      "title": "Manager Parent Sales Customers",
+      "title": "Sales Customers",
       "description": "Customers and sales events recorded for {{managerParent}}.",
       "unknownManagerParent": "Unknown manager parent",
       "searchPlaceholder": "Search by customer, username, BIOS, or program",
@@ -2054,6 +2056,14 @@
         "saleAmount": "Sale Amount",
         "saleDate": "Sale Date"
       }
+    },
+    "managerCustomers": {
+      "unknownManager": "Unknown manager",
+      "description": "{{manager}}"
+    },
+    "resellerCustomers": {
+      "unknownReseller": "Unknown reseller",
+      "description": "{{reseller}}"
     },
     "scopeRoles": {
       "manager_parent": "the selected manager parent subtree",

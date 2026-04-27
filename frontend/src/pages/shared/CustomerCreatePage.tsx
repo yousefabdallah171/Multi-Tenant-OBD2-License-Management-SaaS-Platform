@@ -450,7 +450,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
               <Field label={t('activate.biosId')} hint={t('activate.biosIdHint', { defaultValue: 'Hardware BIOS serial number for this machine.' })} error={errors.biosId}>
                 <Input
                   value={biosId}
-                  onChange={(event) => { setBiosId(event.target.value); setSubmitError('') }}
+                  onChange={(event) => { setBiosId(event.target.value.toUpperCase()); setSubmitError('') }}
                   data-testid="bios-id"
                 />
               </Field>

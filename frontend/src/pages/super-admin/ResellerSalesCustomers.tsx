@@ -15,13 +15,13 @@ import { superAdminCustomerService } from '@/services/super-admin-customer.servi
 import { superAdminPlatformService } from '@/services/super-admin-platform.service'
 import type { ManagerParentSalesCustomerEventRow, ManagerParentSalesCustomerFilters } from '@/types/manager-reseller.types'
 
-export function ManagerParentSalesCustomersPage() {
+export function ResellerSalesCustomersPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
-  const { managerParentId } = useParams<{ managerParentId: string }>()
+  const { resellerId } = useParams<{ resellerId: string }>()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const resolvedManagerParentId = Number(managerParentId)
+  const resolvedResellerId = Number(resellerId)
 
   const [search, setSearch] = useState('')
   const [programId, setProgramId] = useState<number | ''>('')
@@ -41,9 +41,9 @@ export function ManagerParentSalesCustomersPage() {
   }), [countryName, from, page, programId, search, to])
 
   const salesQuery = useQuery({
-    queryKey: ['super-admin', 'reseller-payments', 'manager-parent-customers', resolvedManagerParentId, filters],
-    queryFn: () => superAdminPlatformService.getManagerParentSalesCustomers(resolvedManagerParentId, filters),
-    enabled: Number.isFinite(resolvedManagerParentId) && resolvedManagerParentId > 0,
+    queryKey: ['super-admin', 'reseller-payments', 'reseller-customers', resolvedResellerId, filters],
+    queryFn: () => superAdminPlatformService.getResellerSalesCustomers(resolvedResellerId, filters),
+    enabled: Number.isFinite(resolvedResellerId) && resolvedResellerId > 0,
   })
 
   const programsQuery = useQuery({
@@ -59,9 +59,9 @@ export function ManagerParentSalesCustomersPage() {
   const rows = salesQuery.data?.data ?? []
   const summary = salesQuery.data?.summary
   const meta = salesQuery.data?.meta
-  const managerParentLabel = summary?.manager_parent
-    ? `${summary.manager_parent.name} (${summary.manager_parent.email})`
-    : t('payments.managerParentCustomers.unknownManagerParent', { defaultValue: 'Unknown manager parent' })
+  const resellerLabel = summary?.reseller
+    ? `${summary.reseller.name} (${summary.reseller.email})`
+    : t('payments.resellerCustomers.unknownReseller', { defaultValue: 'Unknown reseller' })
 
   const columns = useMemo<Array<DataTableColumn<ManagerParentSalesCustomerEventRow>>>(() => [
     {
@@ -133,8 +133,8 @@ export function ManagerParentSalesCustomersPage() {
 
       <PageHeader
         eyebrow={t('superAdmin.layout.eyebrow')}
-        title={t('payments.managerParentCustomers.title')}
-        description={managerParentLabel}
+        title={t('payments.managerParentCustomers.title', { defaultValue: 'Reseller Sales Customers' })}
+        description={resellerLabel}
       />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -198,7 +198,7 @@ export function ManagerParentSalesCustomersPage() {
         </div>
       </div>
 
-      <DataTable tableKey="super_admin_manager_parent_sales_customers" columns={columns} data={rows} rowKey={(row) => `${row.license_id ?? 'no-license'}-${row.sale_date ?? ''}-${row.customer_id ?? 'no-customer'}`} isLoading={salesQuery.isLoading} emptyMessage={t('payments.managerParentCustomers.empty')} />
+      <DataTable tableKey="super_admin_reseller_sales_customers" columns={columns} data={rows} rowKey={(row) => `${row.license_id ?? 'no-license'}-${row.sale_date ?? ''}-${row.customer_id ?? 'no-customer'}`} isLoading={salesQuery.isLoading} emptyMessage={t('payments.managerParentCustomers.empty')} />
 
       <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
         <span>{t('common.totalCount', { count: meta?.total ?? 0 })}</span>
@@ -215,4 +215,3 @@ export function ManagerParentSalesCustomersPage() {
     </div>
   )
 }
-

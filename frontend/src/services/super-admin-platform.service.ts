@@ -15,7 +15,7 @@ import type {
   SellerLogEntry,
   SellerLogSummary,
 } from '@/types/manager-parent.types'
-import type { ManagerParentSalesCustomerFilters, ManagerParentSalesCustomerListResponse, RecordPaymentPayload, ResellerPaymentDetailData, ResellerPaymentFilters, ResellerPaymentListData, StoreCommissionPayload } from '@/types/manager-reseller.types'
+import type { ManagerParentSalesCustomerFilters, ManagerParentSalesCustomerListResponse, RecordPaymentPayload, ResellerPaymentDetailData, ResellerPaymentFilters, ResellerPaymentListData, StoreCommissionPayload, TransactionHistoryFilters, TransactionHistoryListResponse } from '@/types/manager-reseller.types'
 import type { ImpersonationStartResponse, ImpersonationTargetListResponse } from '@/types/super-admin.types'
 
 export const superAdminPlatformService = {
@@ -55,6 +55,18 @@ export const superAdminPlatformService = {
   },
   async getManagerParentSalesCustomers(managerParentId: number, filters?: ManagerParentSalesCustomerFilters) {
     const { data } = await api.get<ManagerParentSalesCustomerListResponse>(`/super-admin/reseller-payments/manager-parent/${managerParentId}/customers`, { params: filters })
+    return data
+  },
+  async getManagerSalesCustomers(managerId: number, filters?: ManagerParentSalesCustomerFilters) {
+    const { data } = await api.get<ManagerParentSalesCustomerListResponse>(`/super-admin/reseller-payments/manager/${managerId}/customers`, { params: filters })
+    return data
+  },
+  async getResellerSalesCustomers(resellerId: number, filters?: ManagerParentSalesCustomerFilters) {
+    const { data } = await api.get<ManagerParentSalesCustomerListResponse>(`/super-admin/reseller-payments/reseller/${resellerId}/customers`, { params: filters })
+    return data
+  },
+  async getTransactionHistory(filters?: TransactionHistoryFilters) {
+    const { data } = await api.get<TransactionHistoryListResponse>('/super-admin/transaction-history', { params: filters })
     return data
   },
   async recordPayment(payload: RecordPaymentPayload) {

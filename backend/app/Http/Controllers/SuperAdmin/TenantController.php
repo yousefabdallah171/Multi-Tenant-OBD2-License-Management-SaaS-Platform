@@ -197,7 +197,7 @@ class TenantController extends BaseSuperAdminController
         DB::transaction(function () use ($tenant): void {
             DB::table('activity_logs')
                 ->where('tenant_id', $tenant->id)
-                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
                 ->delete();
         });
 

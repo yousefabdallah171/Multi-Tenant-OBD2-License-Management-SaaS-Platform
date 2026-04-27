@@ -62,7 +62,7 @@ class BackfillCustomerPriceOverridesCommand extends Command
 
             $targetPrice = round(CustomerOwnership::sanitizeDisplayPrice($license->price ?? ($metadata['new_price'] ?? 0)), 2);
             $revenueLog = ActivityLog::query()
-                ->whereIn('action', ['license.activated', 'license.renewed'])
+                ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
                 ->whereMetadataLicenseId((int) $license->id)
                 ->latest()
                 ->first();

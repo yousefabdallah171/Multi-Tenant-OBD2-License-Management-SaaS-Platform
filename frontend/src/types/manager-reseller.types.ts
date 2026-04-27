@@ -582,7 +582,17 @@ export interface ManagerParentSalesCustomerSummary {
   total_sales: number
   total_events: number
   total_customers: number
-  manager_parent: {
+  manager_parent?: {
+    id: number
+    name: string
+    email: string
+  }
+  manager?: {
+    id: number
+    name: string
+    email: string
+  }
+  reseller?: {
     id: number
     name: string
     email: string
@@ -752,4 +762,55 @@ export interface BiosChangeHistoryItem {
   reviewer_notes: string | null
   created_at: string | null
   reviewed_at: string | null
+}
+
+export interface TransactionHistoryRow {
+  id: number
+  action: 'license.activated' | 'license.renewed'
+  seller_id: number
+  seller_name: string
+  seller_email: string
+  seller_role: 'manager_parent' | 'manager' | 'reseller'
+  tenant_id: number | null
+  tenant_name: string | null
+  customer_id: number | null
+  customer_name: string | null
+  customer_username: string | null
+  bios_id: string
+  program_id: number | null
+  program_name: string | null
+  country_name: string | null
+  sale_amount: number
+  attribution_type: 'earned' | 'granted'
+  sale_date: string | null
+  license_id: number | null
+}
+
+export interface TransactionHistoryFilters {
+  from?: string
+  to?: string
+  search?: string
+  tenant_id?: number | ''
+  role?: 'manager_parent' | 'manager' | 'reseller' | ''
+  seller_id?: number | ''
+  page?: number
+  per_page?: number
+}
+
+export interface TransactionHistoryListResponse {
+  data: TransactionHistoryRow[]
+  summary: {
+    total_sales: number
+    total_events: number
+    total_sellers: number
+    total_customers: number
+  }
+  meta: {
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+    from: number | null
+    to: number | null
+  }
 }

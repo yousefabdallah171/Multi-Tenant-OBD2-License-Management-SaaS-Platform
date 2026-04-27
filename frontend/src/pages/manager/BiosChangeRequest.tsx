@@ -99,9 +99,9 @@ export function BiosChangeRequestPageForManager() {
                 <label className="text-sm font-medium text-slate-950 dark:text-white">{t('biosChangeRequests.newBiosPlaceholder')}</label>
                 <Input
                   value={newBiosId}
-                  
+
                   onChange={(event) => {
-                    setNewBiosId(event.target.value)
+                    setNewBiosId(event.target.value.toUpperCase())
                     setBiosCheckResult(null)
                   }}
                   placeholder={t('biosChangeRequests.newBiosPlaceholder')}

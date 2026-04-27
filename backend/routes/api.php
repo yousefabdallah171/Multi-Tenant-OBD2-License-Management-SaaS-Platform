@@ -78,6 +78,7 @@ use App\Http\Controllers\SuperAdmin\ProgramLogsController as SuperAdminProgramLo
 use App\Http\Controllers\SuperAdmin\ReportController;
 use App\Http\Controllers\SuperAdmin\ResellerLogController as SuperAdminResellerLogController;
 use App\Http\Controllers\SuperAdmin\ResellerPaymentController as SuperAdminResellerPaymentController;
+use App\Http\Controllers\SuperAdmin\TransactionHistoryController;
 use App\Http\Controllers\SuperAdmin\SecurityController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
@@ -361,6 +362,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/licenses/{license}/pause', [LicenseController::class, 'pause']);
         Route::post('/licenses/{license}/resume', [LicenseController::class, 'resume']);
         Route::post('/licenses/{license}/retry-scheduled', [LicenseController::class, 'retryScheduled']);
+        Route::post('/licenses/{license}/cancel-scheduled', [LicenseController::class, 'cancelScheduled']);
         Route::post('/licenses/{license}/cancel-pending', [LicenseController::class, 'cancelPending']);
         Route::post('/licenses/bulk-renew', [LicenseController::class, 'bulkRenew']);
         Route::post('/licenses/bulk-delete', [LicenseController::class, 'bulkDelete']);
@@ -484,12 +486,15 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/programs/{program}/active-users', [SuperAdminProgramLogsController::class, 'activeUsers']);
         Route::get('/programs/{program}/stats', [SuperAdminProgramLogsController::class, 'stats']);
         Route::get('/reseller-payments', [SuperAdminResellerPaymentController::class, 'index']);
-        Route::get('/reseller-payments/manager-parent/{user}/customers', [SuperAdminResellerPaymentController::class, 'managerParentCustomers']);
+        Route::get('/reseller-payments/manager-parent/{id}/customers', [SuperAdminResellerPaymentController::class, 'managerParentCustomers']);
+        Route::get('/reseller-payments/manager/{id}/customers', [SuperAdminResellerPaymentController::class, 'managerCustomers']);
+        Route::get('/reseller-payments/reseller/{id}/customers', [SuperAdminResellerPaymentController::class, 'resellerCustomers']);
         Route::get('/reseller-payments/{user}', [SuperAdminResellerPaymentController::class, 'show']);
         Route::post('/reseller-payments', [SuperAdminResellerPaymentController::class, 'storePayment']);
         Route::put('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'updatePayment']);
         Route::delete('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'destroyPayment']);
         Route::post('/reseller-commissions', [SuperAdminResellerPaymentController::class, 'storeCommission']);
+        Route::get('/transaction-history', [TransactionHistoryController::class, 'index']);
         Route::get('/ip-analytics', [SuperAdminIpAnalyticsController::class, 'index']);
         Route::get('/ip-analytics/stats', [SuperAdminIpAnalyticsController::class, 'stats']);
         Route::get('/bios-change-audit', [SuperAdminBiosChangeAuditController::class, 'index']);

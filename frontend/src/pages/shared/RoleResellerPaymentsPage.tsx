@@ -26,9 +26,10 @@ interface RoleResellerPaymentsPageProps {
   recordPayment: (payload: RecordPaymentPayload) => Promise<{ message?: string }>
   detailPath: (lang: 'ar' | 'en', resellerId: number) => string
   managerParentDetailPath?: (lang: 'ar' | 'en', managerParentId: number) => string
+  managerDetailPath?: (lang: 'ar' | 'en', managerId: number) => string
+  resellerDetailPath?: (lang: 'ar' | 'en', resellerId: number) => string
   roleSalesRoles?: Array<'manager_parent' | 'manager' | 'reseller'>
   allowRecordPayment?: boolean
-  allowManagerParentPaymentDetails?: boolean
 }
 
 export function RoleResellerPaymentsPage({
@@ -38,9 +39,10 @@ export function RoleResellerPaymentsPage({
   recordPayment,
   detailPath,
   managerParentDetailPath,
+  managerDetailPath,
+  resellerDetailPath,
   roleSalesRoles,
   allowRecordPayment = true,
-  allowManagerParentPaymentDetails = false,
 }: RoleResellerPaymentsPageProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -210,34 +212,37 @@ export function RoleResellerPaymentsPage({
       key: 'actions',
       label: t('common.actions'),
       render: (row) => {
-        if (row.reseller_role === 'manager_parent') {
-          return (
-            <div className="flex flex-wrap gap-2">
-              {allowManagerParentPaymentDetails ? (
-                <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
-                  {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              ) : null}
-              {managerParentDetailPath ? (
-                <button type="button" onClick={() => navigate(managerParentDetailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
-                  {t('payments.actions.viewSalesCustomers', { defaultValue: 'View Sales Customers' })}
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              ) : null}
-            </div>
-          )
+        const getSalesCustomersPath = () => {
+          if (row.reseller_role === 'manager_parent' && managerParentDetailPath) {
+            return managerParentDetailPath(lang, row.reseller_id)
+          }
+          if (row.reseller_role === 'manager' && managerDetailPath) {
+            return managerDetailPath(lang, row.reseller_id)
+          }
+          if (row.reseller_role === 'reseller' && resellerDetailPath) {
+            return resellerDetailPath(lang, row.reseller_id)
+          }
+          return null
         }
+        const salesCustomersPath = getSalesCustomersPath()
 
         return (
-          <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
-            {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
-            <ArrowRight className="h-4 w-4" />
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => navigate(detailPath(lang, row.reseller_id))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+              {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            {salesCustomersPath ? (
+              <button type="button" onClick={() => navigate(salesCustomersPath)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+                {t('payments.actions.viewSalesCustomers', { defaultValue: 'Sales Customers' })}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
         )
       },
     },
-  ], [allowManagerParentPaymentDetails, detailPath, lang, locale, managerParentDetailPath, navigate, t])
+  ], [detailPath, lang, locale, managerDetailPath, managerParentDetailPath, navigate, resellerDetailPath, t])
 
   const displayedRows = useMemo(() => {
     if (summaryMode === 'manager_parent' || summaryMode === 'manager' || summaryMode === 'reseller') {

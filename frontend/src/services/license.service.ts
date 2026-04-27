@@ -79,6 +79,11 @@ export const licenseService = {
     clearRoleCaches()
     return response.data
   },
+  async cancelScheduled(id: number) {
+    const response = await api.post<{ message: string; data: LicenseSummary }>(`/licenses/${id}/cancel-scheduled`)
+    clearRoleCaches()
+    return response.data
+  },
   async cancelPending(id: number) {
     const response = await api.post<{ message: string; data: LicenseSummary }>(`/licenses/${id}/cancel-pending`)
     clearRoleCaches()

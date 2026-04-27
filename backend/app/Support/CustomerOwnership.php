@@ -136,7 +136,7 @@ class CustomerOwnership
         }
 
         $activity = ActivityLog::query()
-            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
             ->whereMetadataLicenseId((int) $license->id)
             ->latest()
             ->limit(10)

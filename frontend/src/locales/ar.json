@@ -92,6 +92,7 @@
     "block": "حظر",
     "pause": "إيقاف",
     "resume": "استئناف",
+    "cancelScheduled": "إلغاء المجدول",
     "continue": "متابعة",
     "reactivate": "إعادة تفعيل",
     "pauseSuccess": "تم إيقاف الترخيص بنجاح.",
@@ -311,6 +312,7 @@
       "reports": "التقارير",
       "programLogs": "سجلات البرامج",
       "resellerPayments": "مدفوعات البائعين",
+      "transactionHistory": "سجل المعاملات",
       "ipAnalytics": "تحليلات IP",
       "logs": "السجلات",
       "activity": "نشاط اللوحة",
@@ -2057,7 +2059,7 @@
       "scopeHint": "يتم عرض أرصدة الموزعين لـ {{name}} فقط."
     },
     "managerParentCustomers": {
-      "title": "عملاء مبيعات المدير الرئيسي",
+      "title": "عملاء المبيعات",
       "description": "العملاء وعمليات البيع المسجلة للحساب {{managerParent}}.",
       "unknownManagerParent": "مدير رئيسي غير معروف",
       "searchPlaceholder": "ابحث بالعميل أو اسم المستخدم أو BIOS أو البرنامج",
@@ -2075,6 +2077,14 @@
         "saleAmount": "قيمة البيع",
         "saleDate": "تاريخ البيع"
       }
+    },
+    "managerCustomers": {
+      "unknownManager": "مدير غير معروف",
+      "description": "{{manager}}"
+    },
+    "resellerCustomers": {
+      "unknownReseller": "موزع غير معروف",
+      "description": "{{reseller}}"
     },
     "scopeRoles": {
       "manager_parent": "نطاق المدير الرئيسي المحدد",

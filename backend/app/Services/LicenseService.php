@@ -149,7 +149,9 @@ class LicenseService
                 'status' => $isScheduled ? 'pending' : 'active',
             ]);
 
-            $this->balanceService->recordRevenue($reseller, (float) $license->price, true);
+            if (! $isScheduled) {
+                $this->balanceService->recordRevenue($reseller, (float) $license->price, true);
+            }
             $this->logActivity(
                 $reseller,
                 $isScheduled ? 'license.scheduled' : 'license.activated',
@@ -787,6 +789,8 @@ class LicenseService
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
             ])->save();
 
+            $this->balanceService->recordRevenue($reseller, (float) $license->price, true);
+
             $this->logActivity(
                 $reseller,
                 'license.scheduled_activation_executed',
@@ -798,6 +802,8 @@ class LicenseService
                     'bios_id' => $license->bios_id,
                     'external_username' => $license->external_username,
                     'executed_at' => $attemptedAt->toIso8601String(),
+                    'price' => (float) $license->price,
+                    'duration_days' => (float) $license->duration_days,
                 ],
             );
 
@@ -878,6 +884,51 @@ class LicenseService
         }
 
         return $result['license'];
+    }
+
+    public function cancelScheduled(License $license): License
+    {
+        $actor = $this->currentActor();
+        $reseller = $this->resolveReseller($actor, $license->reseller);
+
+        if (! $license->is_scheduled || $license->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'license' => 'Only scheduled pending licenses can be cancelled.',
+            ]);
+        }
+
+        $license->loadMissing(['reseller']);
+
+        $cancelledLicense = DB::transaction(function () use ($license, $reseller): License {
+            $license->forceFill([
+                'status' => 'cancelled',
+                'is_scheduled' => false,
+                'scheduled_at' => null,
+                'scheduled_timezone' => null,
+                'scheduled_last_attempt_at' => null,
+                'scheduled_failed_at' => null,
+                'scheduled_failure_message' => null,
+            ])->save();
+
+            $this->logActivity(
+                $reseller,
+                'license.cancelled_scheduled',
+                sprintf('Cancelled scheduled activation for BIOS %s.', $license->bios_id),
+                [
+                    'license_id' => $license->id,
+                    'customer_id' => $license->customer_id,
+                    'program_id' => $license->program_id,
+                    'bios_id' => $license->bios_id,
+                ],
+            );
+
+            $license->load(['customer', 'program', 'reseller']);
+            $this->forgetDashboardCachesSafely((int) $reseller->tenant_id, (int) $reseller->id);
+
+            return $license;
+        });
+
+        return $cancelledLicense;
     }
 
     /**

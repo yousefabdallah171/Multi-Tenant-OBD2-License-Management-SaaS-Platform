@@ -17,7 +17,7 @@ class RevenueAnalytics
     {
         $query = ActivityLog::query()
             ->from('activity_logs')
-            ->whereIn('activity_logs.action', ['license.activated', 'license.renewed']);
+            ->whereIn('activity_logs.action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed']);
 
         if ($tenantId !== null) {
             $query->where('activity_logs.tenant_id', $tenantId);

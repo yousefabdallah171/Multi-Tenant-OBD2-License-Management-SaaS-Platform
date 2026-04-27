@@ -15,6 +15,10 @@ class ResellerLogController extends BaseSuperAdminController
     private const TRACKED_ACTIONS = [
         'license.activated',
         'license.renewed',
+        'license.scheduled',
+        'license.scheduled_activation_executed',
+        'license.scheduled_activation_failed',
+        'license.cancelled_scheduled',
         'license.deactivated',
         'license.delete',
         'bios.change_requested',

@@ -143,6 +143,18 @@ class LicenseController extends Controller
         ]);
     }
 
+    public function cancelScheduled(Request $request, License $license): JsonResponse
+    {
+        $resolved = $this->resolveAccessibleLicense($request, $license);
+        $cancelled = $this->licenseService->cancelScheduled($resolved);
+        $this->invalidateLicenseCachesSafely($cancelled);
+
+        return response()->json([
+            'message' => 'Scheduled activation cancelled.',
+            'data' => $this->serializeLicense($cancelled),
+        ]);
+    }
+
     public function destroy(Request $request, License $license): JsonResponse
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
@@ -327,7 +339,7 @@ class LicenseController extends Controller
 
     private function serializeLicense(License $license): array
     {
-        $license->loadMissing(['customer:id,name,email', 'program.activeDurationPresets.countryPrices']);
+        $license->loadMissing(['customer:id,name,email,country_name', 'program.activeDurationPresets.countryPrices']);
 
         return [
             'id' => $license->id,

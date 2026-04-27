@@ -341,6 +341,15 @@ export function CustomersPage() {
     onError: () => toast.error(t('common.error')),
   })
 
+  const cancelScheduledMutation = useMutation({
+    mutationFn: (licenseId: number) => licenseService.cancelScheduled(licenseId),
+    onSuccess: () => {
+      toast.success(lang === 'ar' ? 'تم إلغاء التفعيل المجدول بنجاح.' : 'Scheduled activation cancelled successfully.')
+      invalidate(queryClient)
+    },
+    onError: () => toast.error(t('common.error')),
+  })
+
   const cancelPendingMutation = useMutation({
     mutationFn: (licenseId: number) => licenseService.cancelPending(licenseId),
     onSuccess: () => {
@@ -589,6 +598,15 @@ export function CustomersPage() {
               <DropdownMenuItem onClick={() => retryScheduledMutation.mutate(row.license_id!)} disabled={retryScheduledMutation.isPending}>
                 <Play className="me-2 h-4 w-4" />
                 {t('common.retryNow', { defaultValue: 'Retry Now' })}
+              </DropdownMenuItem>
+            ) : null}
+            {typeof row.license_id === 'number' && (displayStatus === 'scheduled' || displayStatus === 'scheduled_failed') ? (
+              <DropdownMenuItem
+                disabled={cancelScheduledMutation.isPending}
+                onClick={() => cancelScheduledMutation.mutate(row.license_id!)}
+              >
+                <X className="me-2 h-4 w-4" />
+                {t('common.cancelScheduled')}
               </DropdownMenuItem>
             ) : null}
             {typeof row.license_id === 'number' && isPlainPending ? (

@@ -287,7 +287,7 @@ class DeletedCustomerController extends BaseSuperAdminController
 
         // Always search by customer_id and name to catch any logs not in snapshot
         $searchIds = DB::table('activity_logs')
-            ->whereIn('action', ['license.activated', 'license.renewed'])
+            ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
             ->where(function ($query) use ($deletedCustomer) {
                 if ($deletedCustomer->original_customer_id) {
                     $query->whereRaw('JSON_EXTRACT(metadata, "$.customer_id") = ?', [$deletedCustomer->original_customer_id]);
