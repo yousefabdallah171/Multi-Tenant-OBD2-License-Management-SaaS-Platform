@@ -361,6 +361,190 @@ class ResellerPaymentController extends BaseManagerParentController
         ]);
     }
 
+    public function managerCustomers(Request $request, User $user): JsonResponse
+    {
+        $seller = $this->resolveSeller($request, $user);
+        $role = $seller->role?->value ?? (string) $seller->role;
+        abort_unless($role === UserRole::MANAGER->value, 404);
+
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'search' => ['nullable', 'string', 'max:255'],
+            'program_id' => ['nullable', 'integer'],
+            'country_name' => ['nullable', 'string', 'max:120'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $tenantId = $this->currentTenantId($request);
+        $filters = [
+            'from' => ! empty($validated['from']) ? (string) $validated['from'] : null,
+            'to' => ! empty($validated['to']) ? (string) $validated['to'] : null,
+        ];
+
+        $events = RevenueAnalytics::baseQuery($filters, $tenantId, null, (int) $seller->id)
+            ->select(['activity_logs.metadata', 'activity_logs.created_at'])
+            ->orderByDesc('activity_logs.created_at')
+            ->get();
+
+        $rows = $events
+            ->map(fn ($event): array => $this->serializeManagerParentEventRow((array) ($event->metadata ?? []), $event->created_at?->toIso8601String()))
+            ->filter(fn (array $row): bool => $row['sale_amount'] > 0)
+            ->values();
+
+        if (! empty($validated['program_id'])) {
+            $programId = (int) $validated['program_id'];
+            $rows = $rows->filter(fn (array $row): bool => (int) ($row['program_id'] ?? 0) === $programId)->values();
+        }
+
+        $customerIds = $rows->pluck('customer_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
+        $programIds = $rows->pluck('program_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
+
+        $customersById = $customerIds === [] ? collect() : User::query()->where('tenant_id', $tenantId)->whereIn('id', $customerIds)->select(['id', 'name', 'username', 'country_name'])->get()->keyBy('id');
+        $programsById = $programIds === [] ? collect() : Program::query()->where('tenant_id', $tenantId)->whereIn('id', $programIds)->select(['id', 'name'])->get()->keyBy('id');
+
+        $hydratedRows = $rows->map(function (array $row) use ($customersById, $programsById): array {
+            $customer = (int) ($row['customer_id'] ?? 0) > 0 ? $customersById->get((int) $row['customer_id']) : null;
+            $program = (int) ($row['program_id'] ?? 0) > 0 ? $programsById->get((int) $row['program_id']) : null;
+
+            return [
+                'customer_id' => $row['customer_id'],
+                'customer_name' => $customer?->name ?? $row['customer_name'],
+                'customer_username' => $customer?->username ?? $row['customer_username'],
+                'bios_id' => $row['bios_id'],
+                'program_id' => $row['program_id'],
+                'program_name' => $program?->name ?? $row['program_name'],
+                'country_name' => $customer?->country_name ?? $row['country_name'],
+                'sale_amount' => $row['sale_amount'],
+                'sale_date' => $row['sale_date'],
+                'license_id' => $row['license_id'],
+            ];
+        })->values();
+
+        if (! empty($validated['country_name'])) {
+            $countryFilter = mb_strtolower(trim((string) $validated['country_name']));
+            $hydratedRows = $hydratedRows->filter(function (array $row) use ($countryFilter): bool {
+                $country = mb_strtolower(trim((string) ($row['country_name'] ?? '')));
+                return $country !== '' && str_contains($country, $countryFilter);
+            })->values();
+        }
+
+        if (! empty($validated['search'])) {
+            $search = mb_strtolower(trim((string) $validated['search']));
+            $hydratedRows = $hydratedRows->filter(function (array $row) use ($search): bool {
+                $haystack = mb_strtolower(implode(' ', [(string) ($row['customer_name'] ?? ''), (string) ($row['customer_username'] ?? ''), (string) ($row['bios_id'] ?? ''), (string) ($row['program_name'] ?? ''), (string) ($row['country_name'] ?? '')]));
+                return $haystack !== '' && str_contains($haystack, $search);
+            })->values();
+        }
+
+        $page = (int) ($validated['page'] ?? 1);
+        $perPage = (int) ($validated['per_page'] ?? 25);
+        $paginator = $this->paginateCollection($hydratedRows, $page, $perPage);
+
+        return response()->json([
+            'data' => $paginator->getCollection()->values(),
+            'summary' => [
+                'total_sales' => round((float) $hydratedRows->sum('sale_amount'), 2),
+                'total_events' => $hydratedRows->count(),
+                'total_customers' => $this->countDistinctCustomers($hydratedRows),
+                'manager' => ['id' => (int) $seller->id, 'name' => (string) $seller->name, 'email' => (string) $seller->email],
+            ],
+            'meta' => $this->paginationMeta($paginator),
+        ]);
+    }
+
+    public function resellerCustomers(Request $request, User $user): JsonResponse
+    {
+        $seller = $this->resolveReseller($request, $user);
+
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'search' => ['nullable', 'string', 'max:255'],
+            'program_id' => ['nullable', 'integer'],
+            'country_name' => ['nullable', 'string', 'max:120'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $tenantId = $this->currentTenantId($request);
+        $filters = [
+            'from' => ! empty($validated['from']) ? (string) $validated['from'] : null,
+            'to' => ! empty($validated['to']) ? (string) $validated['to'] : null,
+        ];
+
+        $events = RevenueAnalytics::baseQuery($filters, $tenantId, null, (int) $seller->id)
+            ->select(['activity_logs.metadata', 'activity_logs.created_at'])
+            ->orderByDesc('activity_logs.created_at')
+            ->get();
+
+        $rows = $events
+            ->map(fn ($event): array => $this->serializeManagerParentEventRow((array) ($event->metadata ?? []), $event->created_at?->toIso8601String()))
+            ->filter(fn (array $row): bool => $row['sale_amount'] > 0)
+            ->values();
+
+        if (! empty($validated['program_id'])) {
+            $programId = (int) $validated['program_id'];
+            $rows = $rows->filter(fn (array $row): bool => (int) ($row['program_id'] ?? 0) === $programId)->values();
+        }
+
+        $customerIds = $rows->pluck('customer_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
+        $programIds = $rows->pluck('program_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
+
+        $customersById = $customerIds === [] ? collect() : User::query()->where('tenant_id', $tenantId)->whereIn('id', $customerIds)->select(['id', 'name', 'username', 'country_name'])->get()->keyBy('id');
+        $programsById = $programIds === [] ? collect() : Program::query()->where('tenant_id', $tenantId)->whereIn('id', $programIds)->select(['id', 'name'])->get()->keyBy('id');
+
+        $hydratedRows = $rows->map(function (array $row) use ($customersById, $programsById): array {
+            $customer = (int) ($row['customer_id'] ?? 0) > 0 ? $customersById->get((int) $row['customer_id']) : null;
+            $program = (int) ($row['program_id'] ?? 0) > 0 ? $programsById->get((int) $row['program_id']) : null;
+
+            return [
+                'customer_id' => $row['customer_id'],
+                'customer_name' => $customer?->name ?? $row['customer_name'],
+                'customer_username' => $customer?->username ?? $row['customer_username'],
+                'bios_id' => $row['bios_id'],
+                'program_id' => $row['program_id'],
+                'program_name' => $program?->name ?? $row['program_name'],
+                'country_name' => $customer?->country_name ?? $row['country_name'],
+                'sale_amount' => $row['sale_amount'],
+                'sale_date' => $row['sale_date'],
+                'license_id' => $row['license_id'],
+            ];
+        })->values();
+
+        if (! empty($validated['country_name'])) {
+            $countryFilter = mb_strtolower(trim((string) $validated['country_name']));
+            $hydratedRows = $hydratedRows->filter(function (array $row) use ($countryFilter): bool {
+                $country = mb_strtolower(trim((string) ($row['country_name'] ?? '')));
+                return $country !== '' && str_contains($country, $countryFilter);
+            })->values();
+        }
+
+        if (! empty($validated['search'])) {
+            $search = mb_strtolower(trim((string) $validated['search']));
+            $hydratedRows = $hydratedRows->filter(function (array $row) use ($search): bool {
+                $haystack = mb_strtolower(implode(' ', [(string) ($row['customer_name'] ?? ''), (string) ($row['customer_username'] ?? ''), (string) ($row['bios_id'] ?? ''), (string) ($row['program_name'] ?? ''), (string) ($row['country_name'] ?? '')]));
+                return $haystack !== '' && str_contains($haystack, $search);
+            })->values();
+        }
+
+        $page = (int) ($validated['page'] ?? 1);
+        $perPage = (int) ($validated['per_page'] ?? 25);
+        $paginator = $this->paginateCollection($hydratedRows, $page, $perPage);
+
+        return response()->json([
+            'data' => $paginator->getCollection()->values(),
+            'summary' => [
+                'total_sales' => round((float) $hydratedRows->sum('sale_amount'), 2),
+                'total_events' => $hydratedRows->count(),
+                'total_customers' => $this->countDistinctCustomers($hydratedRows),
+                'reseller' => ['id' => (int) $seller->id, 'name' => (string) $seller->name, 'email' => (string) $seller->email],
+            ],
+            'meta' => $this->paginationMeta($paginator),
+        ]);
+    }
+
     public function storePayment(Request $request, ResellerCommissionService $commissionService): JsonResponse
     {
         $validated = $request->validate([
@@ -661,12 +845,7 @@ class ResellerPaymentController extends BaseManagerParentController
             $amountPaid = round((float) ($accounting['total_paid'] ?? 0), 2);
             $outstanding = round((float) $accounting['still_not_paid'], 2);
 
-            if ($role === UserRole::MANAGER_PARENT->value) {
-                $commissionRate = 0.0;
-                $amountPaid = 0.0;
-                $commissionOwed = 0.0;
-                $outstanding = 0.0;
-            } elseif ($role !== UserRole::RESELLER->value) {
+            if ($role !== UserRole::RESELLER->value) {
                 $commissionRate = 0.0;
                 $amountPaid = round((float) ($paymentsBySeller->get($seller->id, 0) ?? 0), 2);
                 $commissionOwed = $totalSales;
@@ -724,11 +903,7 @@ class ResellerPaymentController extends BaseManagerParentController
             $commissionOwed = round((float) ($commission?->commission_owed ?? $totalSales), 2);
             $outstanding = round((float) ($commission?->outstanding ?? ($commissionOwed - $amountPaid)), 2);
 
-            if ($role === UserRole::MANAGER_PARENT->value) {
-                $amountPaid = 0.0;
-                $commissionOwed = 0.0;
-                $outstanding = 0.0;
-            } elseif ($role !== UserRole::RESELLER->value) {
+            if ($role !== UserRole::RESELLER->value) {
                 $amountPaid = round((float) ($paymentsByReseller->get($seller->id, 0) ?? 0), 2);
                 $commissionOwed = $totalSales;
                 $outstanding = round($commissionOwed - $amountPaid, 2);

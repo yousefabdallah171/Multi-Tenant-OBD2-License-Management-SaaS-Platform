@@ -278,6 +278,14 @@ export const managerParentService = {
     const { data } = await api.get<ManagerParentSalesCustomerListResponse>(`/reseller-payments/manager-parent/${managerParentId}/customers`, { params: filters })
     return data
   },
+  async getManagerSalesCustomers(managerId: number, filters?: ManagerParentSalesCustomerFilters) {
+    const { data } = await api.get<ManagerParentSalesCustomerListResponse>(`/reseller-payments/manager/${managerId}/customers`, { params: filters })
+    return data
+  },
+  async getResellerSalesCustomers(resellerId: number, filters?: ManagerParentSalesCustomerFilters) {
+    const { data } = await api.get<ManagerParentSalesCustomerListResponse>(`/reseller-payments/reseller/${resellerId}/customers`, { params: filters })
+    return data
+  },
   async recordPayment(payload: RecordPaymentPayload) {
     const { data } = await api.post<{ data: unknown; message: string }>('/reseller-payments', payload)
     return data

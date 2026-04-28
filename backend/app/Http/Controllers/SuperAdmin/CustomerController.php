@@ -1140,22 +1140,34 @@ class CustomerController extends BaseSuperAdminController
      */
     private function resolveEditableRevenueLogs(License $license): Collection
     {
-        $earnedRevenueLogs = ActivityLog::query()
-            ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
+        $actions = ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'];
+
+        // Collect logs by license_id (current license)
+        $byLicenseId = ActivityLog::query()
+            ->whereIn('action', $actions)
             ->whereMetadataLicenseId((int) $license->id)
-            ->where('metadata->attribution_type', BalanceService::TYPE_EARNED)
             ->orderBy('id')
             ->get();
 
-        if ($earnedRevenueLogs->isNotEmpty()) {
-            return $earnedRevenueLogs;
+        // Also collect logs for any previous licenses on the same BIOS + same reseller,
+        // so a price edit retroactively corrects all historical activity log entries for that BIOS.
+        $byBiosId = collect();
+        if ($license->bios_id && $license->reseller_id) {
+            $byBiosId = ActivityLog::query()
+                ->whereIn('action', $actions)
+                ->where('user_id', (int) $license->reseller_id)
+                ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.bios_id')) = ?", [$license->bios_id])
+                ->orderBy('id')
+                ->get();
         }
 
-        return ActivityLog::query()
-            ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
-            ->whereMetadataLicenseId((int) $license->id)
-            ->orderBy('id')
-            ->get();
+        $allLogs = $byLicenseId->merge($byBiosId)->unique('id')->sortBy('id')->values();
+
+        $earnedLogs = $allLogs->filter(
+            fn (ActivityLog $log) => (is_array($log->metadata) ? ($log->metadata['attribution_type'] ?? null) : null) === BalanceService::TYPE_EARNED
+        )->values();
+
+        return $earnedLogs->isNotEmpty() ? $earnedLogs : $allLogs;
     }
 
     private function createSyntheticRevenueLogForLicense(User $customer, License $license, float $price): ?ActivityLog

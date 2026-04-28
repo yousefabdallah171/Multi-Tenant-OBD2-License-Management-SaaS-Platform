@@ -31,6 +31,8 @@ export const routePaths = {
     resellerPayments: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/reseller-payments`,
     resellerPaymentDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, resellerId: number | string = ':resellerId') => `/${lang}/reseller-payments/${resellerId}`,
     resellerPaymentsManagerParentCustomers: (lang: SupportedLanguage = DEFAULT_LANGUAGE, managerParentId: number | string = ':managerParentId') => `/${lang}/reseller-payments/manager-parent/${managerParentId}/customers`,
+    resellerPaymentsManagerCustomers: (lang: SupportedLanguage = DEFAULT_LANGUAGE, managerId: number | string = ':managerId') => `/${lang}/reseller-payments/manager/${managerId}/customers`,
+    resellerPaymentsResellerCustomers: (lang: SupportedLanguage = DEFAULT_LANGUAGE, resellerId: number | string = ':resellerId') => `/${lang}/reseller-payments/reseller/${resellerId}/customers`,
     biosConflicts: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/bios-conflicts`,
     ipAnalytics: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/ip-analytics`,
     logs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/logs`,

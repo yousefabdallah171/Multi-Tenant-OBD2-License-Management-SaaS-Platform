@@ -58,6 +58,8 @@ const ManagerParentCustomerDetailPage = lazyNamed(() => import('@/pages/manager-
 const ManagerParentResellerPaymentDetailPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPaymentDetail'), 'ResellerPaymentDetailPage')
 const ManagerParentResellerPaymentsPage = lazyNamed(() => import('@/pages/manager-parent/ResellerPayments'), 'ResellerPaymentsPage')
 const ManagerParentSalesCustomersPage = lazyNamed(() => import('@/pages/manager-parent/ManagerParentSalesCustomers'), 'ManagerParentSalesCustomersPage')
+const ManagerParentManagerSalesCustomersPage = lazyNamed(() => import('@/pages/manager-parent/ManagerSalesCustomers'), 'ManagerSalesCustomersPage')
+const ManagerParentResellerSalesCustomersPage = lazyNamed(() => import('@/pages/manager-parent/ResellerSalesCustomers'), 'ResellerSalesCustomersPage')
 const ManagerParentRenewLicensePage = lazyNamed(() => import('@/pages/manager-parent/RenewLicense'), 'RenewLicensePageForManagerParent')
 const ManagerParentDashboardPage = lazyNamed(() => import('@/pages/manager-parent/Dashboard'), 'DashboardPage')
 const ManagerParentFinancialReportsPage = lazyNamed(() => import('@/pages/manager-parent/FinancialReports'), 'FinancialReportsPage')
@@ -212,6 +214,8 @@ export function AppRouter() {
                   <Route path="bios-change-audit" element={<ManagerParentBiosChangeAuditPage />} />
                   <Route path="reseller-payments" element={<ManagerParentResellerPaymentsPage />} />
                   <Route path="reseller-payments/manager-parent/:managerParentId/customers" element={<ManagerParentSalesCustomersPage />} />
+                  <Route path="reseller-payments/manager/:managerId/customers" element={<ManagerParentManagerSalesCustomersPage />} />
+                  <Route path="reseller-payments/reseller/:resellerId/customers" element={<ManagerParentResellerSalesCustomersPage />} />
                   <Route path="reseller-payments/:resellerId" element={<ManagerParentResellerPaymentDetailPage />} />
                   <Route path="bios-conflicts" element={<ManagerParentBiosConflictsPage />} />
                   <Route path="ip-analytics" element={<ManagerParentIpAnalyticsPage />} />

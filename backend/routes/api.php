@@ -181,6 +181,8 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         });
         Route::get('/reseller-payments', [ManagerParentResellerPaymentController::class, 'index']);
         Route::get('/reseller-payments/manager-parent/{user}/customers', [ManagerParentResellerPaymentController::class, 'managerParentCustomers']);
+        Route::get('/reseller-payments/manager/{user}/customers', [ManagerParentResellerPaymentController::class, 'managerCustomers']);
+        Route::get('/reseller-payments/reseller/{user}/customers', [ManagerParentResellerPaymentController::class, 'resellerCustomers']);
         Route::get('/reseller-payments/{user}', [ManagerParentResellerPaymentController::class, 'show']);
         Route::post('/reseller-payments', [ManagerParentResellerPaymentController::class, 'storePayment']);
         Route::put('/reseller-payments/{resellerPayment}', [ManagerParentResellerPaymentController::class, 'updatePayment']);
