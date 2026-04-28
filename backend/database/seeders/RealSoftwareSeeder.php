@@ -27,6 +27,8 @@ class RealSoftwareSeeder extends Seeder
                 'base_price' => 25.00,
                 'status' => 'active',
                 'external_software_id' => 8,
+                'external_api_base_url' => env('EXTERNAL_API_URL'),
+                'external_logs_endpoint' => env('EXTERNAL_LOGS_ENDPOINT', 'apilogs'),
                 'has_external_api' => (bool) env('EXTERNAL_API_KEY'),
             ]
         );

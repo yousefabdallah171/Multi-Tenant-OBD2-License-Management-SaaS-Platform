@@ -4,19 +4,28 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+      },
       colors: {
         brand: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
+          50: 'var(--brand-50)',
+          100: 'var(--brand-100)',
+          200: 'var(--brand-200)',
+          300: 'var(--brand-300)',
+          400: 'var(--brand-400)',
+          500: 'var(--brand-500)',
+          600: 'var(--brand-600)',
+          700: 'var(--brand-700)',
+          800: 'var(--brand-800)',
+          900: 'var(--brand-900)',
+          950: 'var(--brand-950)',
         },
         surface: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          900: '#0f172a',
-          950: '#020617',
+          50: '#f8f8fb',
+          100: '#f1f1f7',
+          900: '#13111e',
+          950: '#09080f',
         },
         success: {
           100: '#dcfce7',

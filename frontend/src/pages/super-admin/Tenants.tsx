@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useRef, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BarChart3, MoreHorizontal, Plus, Search } from 'lucide-react'
+import { BarChart3, Download, History, MoreHorizontal, Plus, RotateCcw, Search, Trash2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
@@ -16,7 +18,7 @@ import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { tenantService } from '@/services/tenant.service'
-import type { TenantSummary } from '@/types/super-admin.types'
+import type { TenantBackup, TenantSummary } from '@/types/super-admin.types'
 
 const emptyTenantForm = {
   name: '',
@@ -26,17 +28,11 @@ const emptyTenantForm = {
   status: 'active' as 'active' | 'suspended' | 'inactive',
 }
 
-const statusTabs: Array<{ value: '' | 'active' | 'suspended' | 'inactive'; labelKey: string }> = [
-  { value: '', labelKey: 'common.all' },
-  { value: 'active', labelKey: 'common.active' },
-  { value: 'suspended', labelKey: 'common.suspended' },
-  { value: 'inactive', labelKey: 'common.inactive' },
-]
-
 export function TenantsPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
@@ -50,6 +46,21 @@ export function TenantsPage() {
   const [showManagerPassword, setShowManagerPassword] = useState(false)
   const [form, setForm] = useState(emptyTenantForm)
 
+  // Reset & Backup state
+  const [resetTarget, setResetTarget] = useState<TenantSummary | null>(null)
+  const [resetConfirmName, setResetConfirmName] = useState('')
+  const [resetLabel, setResetLabel] = useState('')
+  const [resetRevenueTarget, setResetRevenueTarget] = useState<TenantSummary | null>(null)
+  const [resetRevenueConfirmName, setResetRevenueConfirmName] = useState('')
+  const [backupsTarget, setBackupsTarget] = useState<TenantSummary | null>(null)
+  const [createBackupTarget, setCreateBackupTarget] = useState<TenantSummary | null>(null)
+  const [backupName, setBackupName] = useState('')
+  const [restoreTarget, setRestoreTarget] = useState<TenantBackup | null>(null)
+  const [restoreConfirmName, setRestoreConfirmName] = useState('')
+  const [deleteBackupTarget, setDeleteBackupTarget] = useState<TenantBackup | null>(null)
+  const [importLabel, setImportLabel] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const tenantsQuery = useQuery({
     queryKey: ['super-admin', 'tenants', page, perPage, status, search],
     queryFn: () => tenantService.getAll({ page, status, search, per_page: perPage }),
@@ -60,6 +71,129 @@ export function TenantsPage() {
     queryFn: () => tenantService.getStats(selectedTenantId as number),
     enabled: selectedTenantId !== null && statsOpen,
   })
+
+  const backupsQuery = useQuery({
+    queryKey: ['super-admin', 'tenant-backups', backupsTarget?.id],
+    queryFn: () => tenantService.getBackups(backupsTarget!.id),
+    enabled: backupsTarget !== null,
+  })
+
+  const resetMutation = useMutation({
+    mutationFn: () =>
+      tenantService.resetTenant(resetTarget!.id, {
+        confirm_name: resetConfirmName,
+        label: resetLabel || undefined,
+      }),
+    onSuccess: (data) => {
+      toast.success(data.message)
+      setResetTarget(null)
+      setResetConfirmName('')
+      setResetLabel('')
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] })
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenant-backups', resetTarget?.id] })
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Reset failed. Please try again.')
+    },
+  })
+
+  const resetRevenueMutation = useMutation({
+    mutationFn: () =>
+      tenantService.resetRevenue(resetRevenueTarget!.id, {
+        confirm_name: resetRevenueConfirmName,
+      }),
+    onSuccess: (data) => {
+      toast.success(data.message)
+      setResetRevenueTarget(null)
+      setResetRevenueConfirmName('')
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] })
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Reset revenue failed. Please try again.')
+    },
+  })
+
+  const restoreMutation = useMutation({
+    mutationFn: () =>
+      tenantService.restoreBackup(backupsTarget!.id, restoreTarget!.id, {
+        confirm_name: restoreConfirmName,
+      }),
+    onSuccess: (data) => {
+      toast.success(data.message)
+      setRestoreTarget(null)
+      setRestoreConfirmName('')
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] })
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Restore failed. Please try again.')
+    },
+  })
+
+  const deleteBackupMutation = useMutation({
+    mutationFn: (backup: TenantBackup) => tenantService.deleteBackup(backupsTarget!.id, backup.id),
+    onSuccess: () => {
+      toast.success('Backup deleted.')
+      setDeleteBackupTarget(null)
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenant-backups', backupsTarget?.id] })
+    },
+  })
+
+  const createBackupMutation = useMutation({
+    mutationFn: () =>
+      tenantService.createBackup(createBackupTarget!.id, {
+        label: backupName || undefined,
+      }),
+    onSuccess: (data) => {
+      toast.success(data.message || t('superAdmin.pages.tenants.backupCreatedSuccess', { defaultValue: 'Backup created successfully.' }))
+      setCreateBackupTarget(null)
+      setBackupName('')
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenant-backups', createBackupTarget?.id] })
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? t('superAdmin.pages.tenants.backupCreateError', { defaultValue: 'Failed to create backup. Please try again.' }))
+    },
+  })
+
+  const importMutation = useMutation({
+    mutationFn: (file: File) => tenantService.importBackup(backupsTarget!.id, file, importLabel || undefined),
+    onSuccess: (data) => {
+      toast.success(data.message)
+      setImportLabel('')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenant-backups', backupsTarget?.id] })
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Import failed. Please check the file format.')
+    },
+  })
+
+  async function handleDownload(backup: TenantBackup) {
+    if (!backupsTarget) return
+    try {
+      const { blob, filename } = await tenantService.downloadBackup(backupsTarget.id, backup.id)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Download failed. Please try again.')
+    }
+  }
+
+  function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    importMutation.mutate(file)
+  }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -80,6 +214,13 @@ export function TenantsPage() {
       setForm(emptyTenantForm)
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'tenants'] })
     },
+    onError: (err: unknown) => {
+      const fallback = t('common.error')
+      const data = (err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data
+      const message = data?.message
+      const fieldErrors = data?.errors ? Object.values(data.errors).flat().filter(Boolean) : []
+      toast.error(fieldErrors[0] ?? message ?? fallback)
+    },
   })
 
   const statusMutation = useMutation({
@@ -99,6 +240,11 @@ export function TenantsPage() {
     },
   })
 
+  function openTenantStats(tenantId: number) {
+    setSelectedTenantId(tenantId)
+    setStatsOpen(true)
+  }
+
   const columns = useMemo<Array<DataTableColumn<TenantSummary>>>(
     () => [
       {
@@ -107,12 +253,17 @@ export function TenantsPage() {
         sortable: true,
         sortValue: (row) => row.name,
         render: (row) => (
-          <div>
+          <button
+            type="button"
+            onClick={() => openTenantStats(row.id)}
+            className="text-start transition hover:opacity-80"
+          >
             <div className="font-medium text-slate-950 dark:text-white">{row.name}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">{row.slug}</div>
-          </div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">{row.slug}</div>
+          </button>
         ),
       },
+      { key: 'users', label: t('common.users'), sortable: true, sortValue: (row) => row.users_count, render: (row) => row.users_count },
       { key: 'managers', label: t('superAdmin.pages.tenants.managers'), sortable: true, sortValue: (row) => row.managers_count, render: (row) => row.managers_count },
       { key: 'resellers', label: t('superAdmin.pages.tenants.resellers'), sortable: true, sortValue: (row) => row.resellers_count, render: (row) => row.resellers_count },
       { key: 'customers', label: t('superAdmin.pages.tenants.customers'), sortable: true, sortValue: (row) => row.customers_count, render: (row) => row.customers_count },
@@ -132,10 +283,7 @@ export function TenantsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                onSelect={() => {
-                  setSelectedTenantId(row.id)
-                  setStatsOpen(true)
-                }}
+                onSelect={() => openTenantStats(row.id)}
               >
                 <BarChart3 className="me-2 h-4 w-4" />
                 {t('common.view')}
@@ -158,6 +306,44 @@ export function TenantsPage() {
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => statusMutation.mutate({ id: row.id, nextStatus: row.status === 'active' ? 'suspended' : 'active' })}>
                 {row.status === 'active' ? t('common.suspend') : t('common.activate')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  setBackupsTarget(row)
+                }}
+              >
+                <History className="me-2 h-4 w-4" />
+                {t('superAdmin.pages.tenants.backupHistory', { defaultValue: 'Backup History' })}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  setCreateBackupTarget(row)
+                  setBackupName('')
+                }}
+              >
+                <Plus className="me-2 h-4 w-4" />
+                {t('superAdmin.pages.tenants.createBackupAction', { defaultValue: 'Create Backup' })}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-orange-600 focus:text-orange-600 dark:text-orange-400 dark:focus:text-orange-400"
+                onSelect={() => {
+                  setResetTarget(row)
+                  setResetConfirmName('')
+                  setResetLabel('')
+                }}
+              >
+                <RotateCcw className="me-2 h-4 w-4" />
+                {t('superAdmin.pages.tenants.resetTenant', { defaultValue: 'Reset Tenant' })}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-amber-600 focus:text-amber-600 dark:text-amber-400 dark:focus:text-amber-400"
+                onSelect={() => {
+                  setResetRevenueTarget(row)
+                  setResetRevenueConfirmName('')
+                }}
+              >
+                <RotateCcw className="me-2 h-4 w-4" />
+                {t('superAdmin.pages.tenants.resetRevenue', { defaultValue: 'Reset Revenue' })}
               </DropdownMenuItem>
               <DropdownMenuItem className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400" onSelect={() => setDeleteTarget(row)}>
                 {t('common.delete')}
@@ -205,29 +391,20 @@ export function TenantsPage() {
               placeholder={t('common.search')}
             />
           </div>
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('common.status')}>
-            {statusTabs.map((tab) => (
-              <Button
-                key={tab.value || 'all'}
-                type="button"
-                size="sm"
-                variant={status === tab.value ? 'default' : 'secondary'}
-                onClick={() => {
-                  setStatus(tab.value)
-                  setPage(1)
-                }}
-              >
-                {t(tab.labelKey)}
-              </Button>
-            ))}
+          <div className="grid gap-3 md:grid-cols-4">
+            <StatusFilterCard label={t('common.all')} count={tenantsQuery.data?.status_counts.all ?? 0} isActive={status === ''} onClick={() => { setStatus(''); setPage(1) }} color="sky" />
+            <StatusFilterCard label={t('common.active')} count={tenantsQuery.data?.status_counts.active ?? 0} isActive={status === 'active'} onClick={() => { setStatus('active'); setPage(1) }} color="emerald" />
+            <StatusFilterCard label={t('common.suspended')} count={tenantsQuery.data?.status_counts.suspended ?? 0} isActive={status === 'suspended'} onClick={() => { setStatus('suspended'); setPage(1) }} color="amber" />
+            <StatusFilterCard label={t('common.inactive')} count={tenantsQuery.data?.status_counts.inactive ?? 0} isActive={status === 'inactive'} onClick={() => { setStatus('inactive'); setPage(1) }} color="slate" />
           </div>
         </CardContent>
       </Card>
 
       {tenantsQuery.isLoading ? (
-        <DataTable columns={columns} data={[]} rowKey={(row) => row.id} isLoading />
+        <DataTable tableKey="super_admin_tenants" columns={columns} data={[]} rowKey={(row) => row.id} isLoading />
       ) : (
         <DataTable
+          tableKey="super_admin_tenants"
           columns={columns}
           data={tenantsQuery.data?.data ?? []}
           rowKey={(row) => row.id}
@@ -305,7 +482,17 @@ export function TenantsPage() {
             <Button type="button" variant="ghost" onClick={() => setFormOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="button" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!editingTenant && form.manager_password.trim().length < 8) {
+                  toast.error(t('superAdmin.pages.tenants.passwordMin', { defaultValue: 'Password must be at least 8 characters.' }))
+                  return
+                }
+                saveMutation.mutate()
+              }}
+              disabled={saveMutation.isPending}
+            >
               {saveMutation.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
@@ -322,30 +509,54 @@ export function TenantsPage() {
             <LoadingSpinner fullPage label={t('common.loading')} />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t('common.users')}</CardTitle>
-                </CardHeader>
-                <CardContent>{tenantStatsQuery.data?.data.users ?? 0}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t('superAdmin.pages.tenants.resellers')}</CardTitle>
-                </CardHeader>
-                <CardContent>{tenantStatsQuery.data?.data.resellers ?? 0}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t('superAdmin.pages.tenants.customers')}</CardTitle>
-                </CardHeader>
-                <CardContent>{tenantStatsQuery.data?.data.customers ?? 0}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{t('common.revenue')}</CardTitle>
-                </CardHeader>
-                <CardContent>{formatCurrency(tenantStatsQuery.data?.data.revenue ?? 0, 'USD', locale)}</CardContent>
-              </Card>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/admin-management?tenant_id=${selectedTenantId}`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('common.users')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.users ?? 0}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/admin-management?tenant_id=${selectedTenantId}&role=manager_parent,manager`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('superAdmin.pages.tenants.managers')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.managers ?? 0}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/admin-management?tenant_id=${selectedTenantId}&role=reseller`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('superAdmin.pages.tenants.resellers')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.resellers ?? 0}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/customers?tenant_id=${selectedTenantId}`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('superAdmin.pages.tenants.customers')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.customers ?? 0}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/reports?tenant_id=${selectedTenantId}`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('common.revenue')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{formatCurrency(tenantStatsQuery.data?.data.revenue ?? 0, 'USD', locale)}</CardContent>
+                </Card>
+              </button>
+              <button className="cursor-pointer" onClick={() => { setStatsOpen(false); navigate(`/${lang}/super-admin/deleted-customers?tenant_id=${selectedTenantId}`) }}>
+                <Card className="hover:bg-accent transition-colors h-full">
+                  <CardHeader>
+                    <CardTitle className="text-base">{t('superAdmin.pages.tenants.deletedCustomers')}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{tenantStatsQuery.data?.data.deleted_customers ?? 0}</CardContent>
+                </Card>
+              </button>
             </div>
           )}
         </DialogContent>
@@ -368,6 +579,390 @@ export function TenantsPage() {
           }
         }}
       />
+
+      {/* Reset Tenant Dialog */}
+      <Dialog
+        open={resetTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetTarget(null)
+            setResetConfirmName('')
+            setResetLabel('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-orange-600 dark:text-orange-400">{t('superAdmin.pages.tenants.resetTenantData', { defaultValue: 'Reset Tenant Data' })}</DialogTitle>
+            <DialogDescription>
+              This will permanently delete all customers, licenses, BIOS logs, and activity data for{' '}
+              <span className="font-semibold text-slate-900 dark:text-white">{resetTarget?.name}</span>. A backup will be created first so you can restore later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-900/50 dark:bg-orange-950/20">
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-300">What will be deleted:</p>
+              <ul className="mt-1 list-inside list-disc text-sm text-orange-700 dark:text-orange-400">
+                <li>All customers (users with role: customer)</li>
+                <li>All licenses and BIOS access logs</li>
+                <li>All activity logs and API logs</li>
+                <li>All reseller commissions and financial reports</li>
+              </ul>
+              <p className="mt-2 text-sm text-orange-700 dark:text-orange-400">Managers and resellers are <strong>NOT</strong> deleted.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reset-label">{t('superAdmin.pages.tenants.backupLabelOptional', { defaultValue: 'Backup Label (optional)' })}</Label>
+              <Input
+                id="reset-label"
+                placeholder="e.g. Before Q1 2026 reset"
+                value={resetLabel}
+                onChange={(e) => setResetLabel(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reset-confirm">
+                {t('superAdmin.pages.tenants.typeToConfirm', { defaultValue: 'Type' })} <span className="font-mono font-semibold text-slate-900 dark:text-white">{resetTarget?.name}</span> {t('superAdmin.pages.tenants.toConfirm', { defaultValue: 'to confirm' })}
+              </Label>
+              <Input
+                id="reset-confirm"
+                placeholder={resetTarget?.name ?? ''}
+                value={resetConfirmName}
+                onChange={(e) => setResetConfirmName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setResetTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={resetConfirmName !== resetTarget?.name || resetMutation.isPending}
+              onClick={() => resetMutation.mutate()}
+            >
+              {resetMutation.isPending ? t('superAdmin.pages.tenants.resetting', { defaultValue: 'Resetting...' }) : t('superAdmin.pages.tenants.resetTenant', { defaultValue: 'Reset Tenant' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Revenue Dialog */}
+      <Dialog
+        open={resetRevenueTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetRevenueTarget(null)
+            setResetRevenueConfirmName('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-amber-600 dark:text-amber-400">{t('superAdmin.pages.tenants.resetRevenueTitle', { defaultValue: 'Reset Revenue' })}</DialogTitle>
+            <DialogDescription>
+              This will permanently delete all revenue records (activity logs) for{' '}
+              <span className="font-semibold text-slate-900 dark:text-white">{resetRevenueTarget?.name}</span>. The revenue counter will reset to $0.00.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">What will be deleted:</p>
+              <ul className="mt-1 list-inside list-disc text-sm text-amber-700 dark:text-amber-400">
+                <li>All license activation activity logs</li>
+                <li>All license renewal activity logs</li>
+                <li>Total revenue will reset to $0.00</li>
+              </ul>
+              <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">Customers and licenses will <strong>NOT</strong> be deleted.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reset-revenue-confirm">
+                {t('superAdmin.pages.tenants.typeToConfirm', { defaultValue: 'Type' })} <span className="font-mono font-semibold text-slate-900 dark:text-white">{resetRevenueTarget?.name}</span> {t('superAdmin.pages.tenants.toConfirm', { defaultValue: 'to confirm' })}
+              </Label>
+              <Input
+                id="reset-revenue-confirm"
+                placeholder={resetRevenueTarget?.name ?? ''}
+                value={resetRevenueConfirmName}
+                onChange={(e) => setResetRevenueConfirmName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setResetRevenueTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={resetRevenueConfirmName !== resetRevenueTarget?.name || resetRevenueMutation.isPending}
+              onClick={() => resetRevenueMutation.mutate()}
+            >
+              {resetRevenueMutation.isPending ? t('superAdmin.pages.tenants.resetting', { defaultValue: 'Resetting...' }) : t('superAdmin.pages.tenants.resetRevenue', { defaultValue: 'Reset Revenue' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Backups List Dialog */}
+      <Dialog
+        open={backupsTarget !== null && restoreTarget === null && deleteBackupTarget === null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBackupsTarget(null)
+            setImportLabel('')
+            if (fileInputRef.current) fileInputRef.current.value = ''
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t('superAdmin.pages.tenants.backupsTitle', { defaultValue: 'Backups' })} - {backupsTarget?.name}</DialogTitle>
+            <DialogDescription>{t('superAdmin.pages.tenants.backupsDescription', { defaultValue: 'Restore, download, or import backups. Downloaded files can be imported on any server.' })}</DialogDescription>
+          </DialogHeader>
+
+          {/* Import section */}
+          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+            <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('superAdmin.pages.tenants.importBackupFile', { defaultValue: 'Import backup file' })}</p>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder={t('superAdmin.pages.tenants.labelOptional', { defaultValue: 'Label (optional)' })}
+                value={importLabel}
+                onChange={(e) => setImportLabel(e.target.value)}
+                className="max-w-[180px]"
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleFileImport}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={importMutation.isPending}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="me-1.5 h-3.5 w-3.5" />
+                {importMutation.isPending ? t('superAdmin.pages.tenants.importing', { defaultValue: 'Importing...' }) : t('superAdmin.pages.tenants.chooseFile', { defaultValue: 'Choose file' })}
+              </Button>
+            </div>
+            <p className="mt-1.5 text-sm text-slate-400">{t('superAdmin.pages.tenants.importBackupHint', { defaultValue: 'Accepts .json exported from this or another server. Backup is stored without restoring - use Restore to apply it.' })}</p>
+          </div>
+
+          {backupsQuery.isLoading ? (
+            <LoadingSpinner fullPage={false} label={t('superAdmin.pages.tenants.loadingBackups', { defaultValue: 'Loading backups...' })} />
+          ) : backupsQuery.data?.data.length === 0 ? (
+            <p className="py-4 text-center text-sm text-slate-500">{t('superAdmin.pages.tenants.noBackupsYet', { defaultValue: 'No backups yet. Reset the tenant to create a backup first, or import a file above.' })}</p>
+          ) : (
+            <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+              {backupsQuery.data?.data.map((backup) => (
+                <div
+                  key={backup.id}
+                  className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">
+                        {backup.label ?? formatDate(backup.created_at ?? new Date(), locale)}
+                      </p>
+                      {backup.label ? (
+                        <span className="text-sm text-slate-400">{formatDate(backup.created_at ?? new Date(), locale)}</span>
+                      ) : null}
+                    </div>
+                    <p className="mt-0.5 text-sm text-slate-500">
+                      {t('common.addedBy')} {backup.created_by?.name ?? t('common.unknown')} •{' '}
+                      {backup.stats.customers} customers, {backup.stats.licenses} licenses
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {Object.entries(backup.stats)
+                        .filter(([, v]) => v > 0)
+                        .map(([k, v]) => (
+                          <span
+                            key={k}
+                            className="rounded bg-slate-100 px-1.5 py-0.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                          >
+                            {k.replace(/_/g, ' ')}: {v}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setRestoreTarget(backup)
+                        setRestoreConfirmName('')
+                      }}
+                    >
+                      <RotateCcw className="me-1 h-3.5 w-3.5" />
+                      {t('superAdmin.pages.tenants.restoreAction', { defaultValue: 'Restore' })}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownload(backup)}
+                    >
+                      <Download className="me-1 h-3.5 w-3.5" />
+                      {t('superAdmin.pages.tenants.downloadAction', { defaultValue: 'Download' })}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/20"
+                      onClick={() => setDeleteBackupTarget(backup)}
+                    >
+                      <Trash2 className="me-1 h-3.5 w-3.5" />
+                      {t('common.delete')}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setBackupsTarget(null)}>
+              {t('common.closeDialog')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restore Confirm Dialog */}
+      <Dialog
+        open={restoreTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRestoreTarget(null)
+            setRestoreConfirmName('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-sky-600 dark:text-sky-400">{t('superAdmin.pages.tenants.restoreBackupTitle', { defaultValue: 'Restore Backup' })}</DialogTitle>
+            <DialogDescription>
+              {t('superAdmin.pages.tenants.restoreBackupIntro', { defaultValue: 'This will replace all current tenant operational data with the backup from' })}{' '}
+              <span className="font-semibold">{restoreTarget ? formatDate(restoreTarget.created_at ?? new Date(), locale) : ''}</span>.
+              {' '}{t('superAdmin.pages.tenants.restoreBackupWarning', { defaultValue: 'Current data will be wiped before restoring.' })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {restoreTarget ? (
+              <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 dark:border-sky-900/50 dark:bg-sky-950/20">
+                <p className="text-sm font-medium text-sky-800 dark:text-sky-300">{t('superAdmin.pages.tenants.backupContains', { defaultValue: 'This backup contains:' })}</p>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {Object.entries(restoreTarget.stats)
+                    .filter(([, v]) => v > 0)
+                    .map(([k, v]) => (
+                      <span key={k} className="rounded bg-sky-100 px-1.5 py-0.5 text-sm text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">
+                        {k.replace(/_/g, ' ')}: {v}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="restore-confirm">
+                {t('superAdmin.pages.tenants.typeToConfirm', { defaultValue: 'Type' })} <span className="font-mono font-semibold text-slate-900 dark:text-white">{backupsTarget?.name}</span> {t('superAdmin.pages.tenants.toConfirm', { defaultValue: 'to confirm' })}
+              </Label>
+              <Input
+                id="restore-confirm"
+                placeholder={backupsTarget?.name ?? ''}
+                value={restoreConfirmName}
+                onChange={(e) => setRestoreConfirmName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setRestoreTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              disabled={restoreConfirmName !== backupsTarget?.name || restoreMutation.isPending}
+              onClick={() => restoreMutation.mutate()}
+            >
+              {restoreMutation.isPending ? t('superAdmin.pages.tenants.restoring', { defaultValue: 'Restoring...' }) : t('superAdmin.pages.tenants.restoreBackupTitle', { defaultValue: 'Restore Backup' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Backup Confirm */}
+      <ConfirmDialog
+        open={deleteBackupTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteBackupTarget(null)
+        }}
+        title={t('superAdmin.pages.tenants.deleteBackupTitle', { defaultValue: 'Delete Backup' })}
+        description={deleteBackupTarget ? t('superAdmin.pages.tenants.deleteBackupDescription', { defaultValue: 'Delete backup from {{date}}? This cannot be undone.', date: formatDate(deleteBackupTarget.created_at ?? new Date(), locale) }) : ''}
+        confirmLabel={t('common.delete')}
+        isDestructive
+        onConfirm={() => {
+          if (deleteBackupTarget) deleteBackupMutation.mutate(deleteBackupTarget)
+        }}
+      />
+
+      {/* Create Backup Dialog */}
+      <Dialog
+        open={createBackupTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreateBackupTarget(null)
+            setBackupName('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('superAdmin.pages.tenants.createBackupTitle', { defaultValue: 'Create Backup' })}</DialogTitle>
+            <DialogDescription>
+              {t('superAdmin.pages.tenants.createBackupDescription', { defaultValue: 'Create a new backup of {{tenantName}} tenant.', tenantName: createBackupTarget?.name })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="backup-name">{t('superAdmin.pages.tenants.backupNameLabel', { defaultValue: 'Backup Name (Optional)' })}</Label>
+              <Input
+                id="backup-name"
+                value={backupName}
+                onChange={(e) => setBackupName(e.target.value)}
+                placeholder={t('superAdmin.pages.tenants.backupNamePlaceholder', { defaultValue: 'e.g. Pre-Update Backup' })}
+                maxLength={100}
+                disabled={createBackupMutation.isPending}
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {t('superAdmin.pages.tenants.backupNameHint', { defaultValue: 'Add a descriptive name to identify this backup later.' })}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateBackupTarget(null)
+                setBackupName('')
+              }}
+              disabled={createBackupMutation.isPending}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={() => createBackupMutation.mutate()}
+              disabled={createBackupMutation.isPending}
+            >
+              {createBackupMutation.isPending && <span className="me-2">⏳</span>}
+              {t('superAdmin.pages.tenants.createBackupButton', { defaultValue: 'Create Backup' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

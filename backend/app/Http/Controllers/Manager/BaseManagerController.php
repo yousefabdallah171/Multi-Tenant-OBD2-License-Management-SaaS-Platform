@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\User;
+use App\Support\CustomerOwnership;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -34,6 +35,17 @@ abstract class BaseManagerController extends Controller
         return $this->teamResellersQuery($request)->pluck('id')->all();
     }
 
+    /**
+     * @return list<int>
+     */
+    protected function teamSellerIds(Request $request): array
+    {
+        return [
+            $this->currentManager($request)->id,
+            ...$this->teamResellerIds($request),
+        ];
+    }
+
     protected function teamResellersQuery(Request $request)
     {
         return User::query()
@@ -44,45 +56,38 @@ abstract class BaseManagerController extends Controller
 
     protected function teamCustomersQuery(Request $request)
     {
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
+        $customerIds = License::query()
+            ->whereIn('reseller_id', $sellerIds)
+            ->whereNotNull('customer_id')
+            ->distinct()
+            ->pluck('customer_id');
 
-        $query = User::query()
+        return User::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('role', UserRole::CUSTOMER->value);
+            ->whereIn('id', $customerIds);
+    }
 
-        if ($resellerIds === []) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        return $query->where(function ($builder) use ($resellerIds): void {
-            $builder
-                ->whereIn('created_by', $resellerIds)
-                ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->whereIn('reseller_id', $resellerIds));
-        });
+    protected function currentOwnedCustomerCount(Request $request): int
+    {
+        return CustomerOwnership::currentOwnedCustomerCount($this->teamSellerIds($request), $this->currentTenantId($request));
     }
 
     protected function teamUsersQuery(Request $request)
     {
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
+        $customerIds = License::query()
+            ->whereIn('reseller_id', $sellerIds)
+            ->whereNotNull('customer_id')
+            ->distinct()
+            ->pluck('customer_id');
 
         return User::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where(function ($builder) use ($resellerIds): void {
-                if ($resellerIds !== []) {
-                    $builder
-                        ->whereIn('id', $resellerIds)
-                        ->orWhere(function ($customerBuilder) use ($resellerIds): void {
-                            $customerBuilder
-                                ->where('role', UserRole::CUSTOMER->value)
-                                ->where(function ($teamCustomerBuilder) use ($resellerIds): void {
-                                    $teamCustomerBuilder
-                                        ->whereIn('created_by', $resellerIds)
-                                        ->orWhereHas('customerLicenses', fn ($licenseQuery) => $licenseQuery->whereIn('reseller_id', $resellerIds));
-                                });
-                        });
-                } else {
-                    $builder->whereRaw('1 = 0');
-                }
+            ->where(function ($builder) use ($sellerIds, $customerIds): void {
+                $builder
+                    ->whereIn('id', $sellerIds)
+                    ->orWhereIn('id', $customerIds);
             });
     }
 
@@ -91,11 +96,24 @@ abstract class BaseManagerController extends Controller
         abort_unless(
             $user->tenant_id === $this->currentTenantId($request)
                 && ($user->role?->value ?? (string) $user->role) === UserRole::RESELLER->value
-                && $user->created_by === $this->currentManager($request)->id,
+                && (int) $user->created_by === $this->currentManager($request)->id,
             404,
         );
 
         return $user;
+    }
+
+    protected function resolveManagedSeller(Request $request, User $user): User
+    {
+        $role = $user->role?->value ?? (string) $user->role;
+
+        abort_unless($user->tenant_id === $this->currentTenantId($request), 404);
+
+        if ($user->id === $this->currentManager($request)->id && $role === UserRole::MANAGER->value) {
+            return $user;
+        }
+
+        return $this->resolveTeamReseller($request, $user);
     }
 
     protected function resolveTeamUser(Request $request, User $user): User
@@ -106,9 +124,13 @@ abstract class BaseManagerController extends Controller
             return $this->resolveTeamReseller($request, $user);
         }
 
+        $sellerIds = $this->teamSellerIds($request);
+
         abort_unless(
-            $role === UserRole::CUSTOMER->value
-                && $this->teamCustomersQuery($request)->whereKey($user->id)->exists(),
+            License::query()
+                ->whereIn('reseller_id', $sellerIds)
+                ->where('customer_id', $user->id)
+                ->exists(),
             404,
         );
 
@@ -117,7 +139,7 @@ abstract class BaseManagerController extends Controller
 
     protected function resolveTeamLicense(Request $request, License $license): License
     {
-        abort_unless(in_array($license->reseller_id, $this->teamResellerIds($request), true), 404);
+        abort_unless(in_array($license->reseller_id, $this->teamSellerIds($request), true), 404);
 
         return $license;
     }

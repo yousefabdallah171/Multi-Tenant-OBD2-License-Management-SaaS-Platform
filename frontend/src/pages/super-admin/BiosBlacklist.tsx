@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { localizeMonthLabel } from '@/lib/chart-labels'
+import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { biosService } from '@/services/bios.service'
@@ -29,11 +30,13 @@ export function BiosBlacklistPage() {
   const queryClient = useQueryClient()
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
+  const [perPage, setPerPage] = useState(25)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [formOpen, setFormOpen] = useState(false)
+  const [editingReasonFor, setEditingReasonFor] = useState<BiosBlacklistEntry | null>(null)
   const [form, setForm] = useState({ bios_id: '', reason: '' })
+  const [submitError, setSubmitError] = useState('')
 
   const blacklistQuery = useQuery({
     queryKey: ['super-admin', 'bios-blacklist', page, perPage, search, status],
@@ -46,12 +49,22 @@ export function BiosBlacklistPage() {
   })
 
   const addMutation = useMutation({
-    mutationFn: () => biosService.addToBlacklist(form),
+    mutationFn: () => biosService.addToBlacklist({
+      bios_id: form.bios_id.trim(),
+      reason: form.reason.trim(),
+    }),
     onSuccess: () => {
+      setSubmitError('')
       toast.success(t('superAdmin.pages.biosBlacklist.saveSuccess'))
       setFormOpen(false)
+      setEditingReasonFor(null)
       setForm({ bios_id: '', reason: '' })
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'bios-blacklist'] })
+    },
+    onError: (error: unknown) => {
+      const message = resolveApiErrorMessage(error, t('common.error'))
+      setSubmitError(message)
+      toast.error(message)
     },
   })
 
@@ -59,6 +72,14 @@ export function BiosBlacklistPage() {
     mutationFn: (id: number) => biosService.removeFromBlacklist(id),
     onSuccess: () => {
       toast.success(t('superAdmin.pages.biosBlacklist.removeSuccess'))
+      void queryClient.invalidateQueries({ queryKey: ['super-admin', 'bios-blacklist'] })
+    },
+  })
+
+  const purgeMutation = useMutation({
+    mutationFn: (id: number) => biosService.purgeFromBlacklist(id),
+    onSuccess: () => {
+      toast.success(t('superAdmin.pages.biosBlacklist.purgeSuccess', { defaultValue: 'Entry permanently deleted.' }))
       void queryClient.invalidateQueries({ queryKey: ['super-admin', 'bios-blacklist'] })
     },
   })
@@ -73,9 +94,10 @@ export function BiosBlacklistPage() {
 
   const columns = useMemo<Array<DataTableColumn<BiosBlacklistEntry>>>(
     () => [
-      { key: 'bios', label: t('superAdmin.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
+      { key: 'bios', label: t('superAdmin.pages.biosBlacklist.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <button type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.superAdmin.biosDetail(lang, row.bios_id))}><code>{row.bios_id}</code></button> },
+      { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant?.name ?? '', render: (row) => row.tenant?.name ?? 'Global' },
       { key: 'addedBy', label: t('common.addedBy'), sortable: true, sortValue: (row) => row.added_by ?? '', render: (row) => row.added_by ?? '-' },
-      { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.reason, render: (row) => row.reason },
+      { key: 'reason', label: t('common.reason'), sortable: true, sortValue: (row) => row.reason, render: (row) => row.reason || '-' },
       { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
       { key: 'createdAt', label: t('common.createdAt'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
       {
@@ -90,23 +112,56 @@ export function BiosBlacklistPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => navigate(`${routePaths.superAdmin.biosHistory(lang)}?bios=${encodeURIComponent(row.bios_id)}`)}>
+              <DropdownMenuItem onSelect={() => navigate(routePaths.superAdmin.biosDetail(lang, row.bios_id))}>
                 {t('superAdmin.pages.biosBlacklist.viewHistory')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={row.status === 'removed'}
+                onSelect={() => {
+                  setSubmitError('')
+                  setEditingReasonFor(row)
+                  setForm({ bios_id: row.bios_id, reason: row.reason ?? '' })
+                  setFormOpen(true)
+                }}
+              >
+                {t('superAdmin.pages.biosBlacklist.editReason', { defaultValue: 'Edit reason' })}
               </DropdownMenuItem>
               <DropdownMenuItem disabled={row.status === 'removed'} onSelect={() => removeMutation.mutate(row.id)}>
                 {t('superAdmin.pages.biosBlacklist.remove')}
               </DropdownMenuItem>
+              {row.status === 'removed' && (
+                <DropdownMenuItem
+                  className="text-red-600 dark:text-red-400"
+                  onSelect={() => {
+                    if (window.confirm(t('superAdmin.pages.biosBlacklist.purgeConfirm', { defaultValue: 'Permanently delete this entry? This cannot be undone.' }))) {
+                      purgeMutation.mutate(row.id)
+                    }
+                  }}
+                >
+                  {t('superAdmin.pages.biosBlacklist.purge', { defaultValue: 'Delete Permanently' })}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         ),
       },
     ],
-    [lang, locale, navigate, removeMutation, t],
+    [lang, locale, navigate, purgeMutation, removeMutation, t],
   )
   const trendData = (statsQuery.data?.data ?? []).map((item) => ({
     ...item,
     month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
   }))
+
+  const formErrors = useMemo(() => {
+    const next: { bios_id?: string } = {}
+
+    if (!form.bios_id.trim()) {
+      next.bios_id = t('validation.required', { defaultValue: 'Field required' })
+    }
+
+    return next
+  }, [form.bios_id, t])
 
   return (
     <div className="space-y-6">
@@ -139,7 +194,15 @@ export function BiosBlacklistPage() {
           <Button type="button" variant="secondary" onClick={() => void biosService.exportBlacklist()}>
             {t('superAdmin.pages.biosBlacklist.export')}
           </Button>
-          <Button type="button" onClick={() => setFormOpen(true)}>
+          <Button
+            type="button"
+            onClick={() => {
+              setSubmitError('')
+              setEditingReasonFor(null)
+              setForm({ bios_id: '', reason: '' })
+              setFormOpen(true)
+            }}
+          >
             <Plus className="me-2 h-4 w-4" />
             {t('superAdmin.pages.biosBlacklist.add')}
           </Button>
@@ -188,6 +251,7 @@ export function BiosBlacklistPage() {
       />
 
       <DataTable
+        tableKey="super_admin_bios_blacklist"
         columns={columns}
         data={blacklistQuery.data?.data ?? []}
         rowKey={(row) => row.id}
@@ -205,16 +269,47 @@ export function BiosBlacklistPage() {
         }}
       />
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open)
+          if (!open) {
+            setSubmitError('')
+            setEditingReasonFor(null)
+            setForm({ bios_id: '', reason: '' })
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('superAdmin.pages.biosBlacklist.addTitle')}</DialogTitle>
-            <DialogDescription>{t('superAdmin.pages.biosBlacklist.formDescription')}</DialogDescription>
+            <DialogTitle>
+              {editingReasonFor
+                ? t('superAdmin.pages.biosBlacklist.editReasonTitle', { defaultValue: 'Edit blacklist reason' })
+                : t('superAdmin.pages.biosBlacklist.addTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {editingReasonFor
+                ? t('superAdmin.pages.biosBlacklist.editReasonDescription', { defaultValue: 'Update the reason stored for this blocked BIOS identifier.' })
+                : t('superAdmin.pages.biosBlacklist.formDescription')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {submitError ? (
+              <div aria-live="polite" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                {submitError}
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="bios-id">{t('superAdmin.pages.biosBlacklist.biosId')}</Label>
-              <Input id="bios-id" value={form.bios_id} onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))} />
+              <Input
+                id="bios-id"
+                value={form.bios_id}
+                readOnly={editingReasonFor !== null}
+                aria-invalid={Boolean(formErrors.bios_id)}
+                aria-describedby={formErrors.bios_id ? 'bios-id-error' : undefined}
+                onChange={(event) => setForm((current) => ({ ...current, bios_id: event.target.value }))}
+              />
+              {formErrors.bios_id ? <p id="bios-id-error" className="text-sm text-rose-600 dark:text-rose-400">{formErrors.bios_id}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="bios-reason">{t('common.reason')}</Label>
@@ -225,7 +320,20 @@ export function BiosBlacklistPage() {
             <Button type="button" variant="ghost" onClick={() => setFormOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="button" onClick={() => addMutation.mutate()} disabled={addMutation.isPending}>
+            <Button
+              type="button"
+              onClick={() => {
+                setSubmitError('')
+
+                if (formErrors.bios_id) {
+                  toast.error(formErrors.bios_id ?? t('common.error'))
+                  return
+                }
+
+                addMutation.mutate()
+              }}
+              disabled={addMutation.isPending}
+            >
               {addMutation.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>

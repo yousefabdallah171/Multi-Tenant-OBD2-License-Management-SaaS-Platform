@@ -3,11 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Download, UserRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { managerService } from '@/services/manager.service'
 
 export function ActivityPage() {
@@ -46,7 +47,7 @@ export function ActivityPage() {
             <Button type="button" variant="secondary" onClick={() => setRange({ from: '', to: '' })}>
               {t('manager.pages.activity.clearDates')}
             </Button>
-            <Button type="button" onClick={() => void managerService.exportCsv(range)}>
+            <Button type="button" onClick={() => void managerService.exportActivity(range)}>
               <Download className="me-2 h-4 w-4" />
               {t('manager.pages.activity.exportReport')}
             </Button>
@@ -67,7 +68,7 @@ export function ActivityPage() {
             <option value="">{t('manager.pages.activity.allActions')}</option>
             {actionOptions.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {formatActivityActionLabel(option, t)}
               </option>
             ))}
           </select>
@@ -101,18 +102,21 @@ export function ActivityPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold text-slate-950 dark:text-white">{entry.user?.name ?? t('manager.layout.eyebrow')}</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300">{entry.action}</p>
-                    {entry.description ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{entry.description}</p> : null}
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{formatActivityActionLabel(entry.action, t)}</p>
+                    {entry.description ? <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p> : null}
                   </div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {Object.entries(entry.metadata ?? {}).slice(0, 6).map(([key, value]) => (
-                    <span key={key} className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                      {key}: {String(value)}
-                    </span>
-                  ))}
-                  {entry.ip_address ? <span className="rounded-full bg-sky-100 px-3 py-1 text-xs text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">{entry.ip_address}</span> : null}
+                  {Object.entries(entry.metadata ?? {})
+                    .filter(([key]) => !['license_id', 'program_id', 'customer_id', 'request_id', 'bios_conflict_id', 'bios_change_id', 'reviewer_id', 'reseller_id'].includes(key))
+                    .slice(0, 6)
+                    .map(([key, value]) => (
+                      <span key={key} className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {key}: {String(value)}
+                      </span>
+                    ))}
+                  {entry.ip_address ? <span className="rounded-full bg-sky-100 px-3 py-1 text-sm text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">{entry.ip_address}</span> : null}
                 </div>
               </div>
             </CardContent>
@@ -120,9 +124,7 @@ export function ActivityPage() {
         ))}
 
         {!activityQuery.isLoading && entries.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">{t('manager.pages.activity.noMatches')}</CardContent>
-          </Card>
+          <EmptyState title={t('common.noData')} description={t('manager.pages.activity.noMatches')} />
         ) : null}
       </div>
 

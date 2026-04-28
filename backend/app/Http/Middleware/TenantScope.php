@@ -3,12 +3,18 @@
 namespace App\Http\Middleware;
 
 use App\Enums\UserRole;
+use App\Services\LicenseExpiryService;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 class TenantScope
 {
+    public function __construct(private readonly LicenseExpiryService $licenseExpiryService)
+    {
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
         app()->forgetInstance('tenant.scope.id');
@@ -16,9 +22,38 @@ class TenantScope
         $user = $request->user();
 
         if ($user && $user->role !== UserRole::SUPER_ADMIN && $user->tenant_id !== null) {
-            app()->instance('tenant.scope.id', (int) $user->tenant_id);
+            $tenantId = (int) $user->tenant_id;
+            app()->instance('tenant.scope.id', $tenantId);
+
+            $throttleKey = 'licenses:expire:tenant:'.$tenantId;
+            if ($this->shouldRunThrottle($throttleKey, now()->addSecond())) {
+                try {
+                    $this->licenseExpiryService->expireDue($tenantId, true, 50);
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
+        }
+
+        if ($user && $user->role === UserRole::SUPER_ADMIN && $this->shouldRunThrottle('licenses:expire:global', now()->addSecond())) {
+            try {
+                $this->licenseExpiryService->expireDue(null, true, 100);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
         }
 
         return $next($request);
+    }
+
+    private function shouldRunThrottle(string $key, \DateTimeInterface $ttl): bool
+    {
+        try {
+            return Cache::add($key, 1, $ttl);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
     }
 }

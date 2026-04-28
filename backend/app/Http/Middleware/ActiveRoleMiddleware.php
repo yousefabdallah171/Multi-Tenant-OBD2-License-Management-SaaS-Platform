@@ -26,7 +26,7 @@ class ActiveRoleMiddleware
         $role = $user->role?->value ?? (string) $user->role;
 
         if (! in_array($role, $this->allowedRoles, true)) {
-            $request->user()?->currentAccessToken()?->delete();
+            $this->invalidateCurrentToken($request);
 
             return response()->json(
                 ['message' => 'Invalid credentials.'],
@@ -34,6 +34,42 @@ class ActiveRoleMiddleware
             );
         }
 
+        if ($user->status !== 'active') {
+            $reason = $user->status === 'suspended' ? 'account_suspended' : 'account_inactive';
+            $message = $user->status === 'suspended'
+                ? 'This account is currently suspended.'
+                : 'This account is currently inactive.';
+
+            return $this->blockedResponse($request, $reason, $message);
+        }
+
+        $user->loadMissing('tenant');
+        $tenantStatus = $user->tenant?->status;
+
+        if ($tenantStatus && $tenantStatus !== 'active') {
+            $reason = $tenantStatus === 'suspended' ? 'tenant_suspended' : 'tenant_inactive';
+            $message = $tenantStatus === 'suspended'
+                ? 'This workspace is currently suspended.'
+                : 'This workspace is currently inactive.';
+
+            return $this->blockedResponse($request, $reason, $message);
+        }
+
         return $next($request);
+    }
+
+    private function blockedResponse(Request $request, string $reason, string $message): Response
+    {
+        $this->invalidateCurrentToken($request);
+
+        return response()->json([
+            'message' => $message,
+            'reason' => $reason,
+        ], Response::HTTP_FORBIDDEN);
+    }
+
+    private function invalidateCurrentToken(Request $request): void
+    {
+        $request->user()?->currentAccessToken()?->delete();
     }
 }

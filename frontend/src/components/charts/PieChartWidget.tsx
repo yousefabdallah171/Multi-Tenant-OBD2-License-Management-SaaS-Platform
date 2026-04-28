@@ -7,6 +7,22 @@ import { formatChartNumber, useChartTheme } from '@/components/charts/chart-them
 type ChartRow = object
 type ValueFormatter<TData extends ChartRow> = (value: number | string, payload: TData) => string
 
+function resolveTooltipValue(value: unknown): number | string {
+  if (typeof value === 'number' || typeof value === 'string') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    const firstPrimitive = value.find((item) => typeof item === 'number' || typeof item === 'string')
+
+    if (typeof firstPrimitive === 'number' || typeof firstPrimitive === 'string') {
+      return firstPrimitive
+    }
+  }
+
+  return 0
+}
+
 interface PieChartWidgetProps<TData extends ChartRow = ChartRow> {
   title: string
   description?: string
@@ -32,7 +48,7 @@ export function PieChartWidget<TData extends ChartRow>({
   valueKey,
   isLoading = false,
   actions,
-  heightClassName = 'h-80',
+  heightClassName = 'h-56',
   emptyDescription,
   colors,
   donut = true,
@@ -57,11 +73,11 @@ export function PieChartWidget<TData extends ChartRow>({
               contentStyle={{ backgroundColor: palette.tooltipBackground, borderColor: palette.tooltipBorder, borderRadius: 16 }}
               labelStyle={{ color: palette.axis }}
               itemStyle={{ color: palette.axis }}
-              formatter={(value: number | string | undefined, _name, item) => {
+              formatter={(value, _name, item) => {
                 const payload = item.payload as TData
                 const row = payload as Record<string, string | number | null | undefined>
                 const label = legendLabelFormatter ? legendLabelFormatter(payload) : String(row[nameKey] ?? '')
-                const resolvedValue = value ?? 0
+                const resolvedValue = resolveTooltipValue(value)
                 const formatted = valueFormatter ? valueFormatter(resolvedValue, payload) : formatChartNumber(resolvedValue, locale)
 
                 return [formatted, label]
@@ -95,7 +111,7 @@ export function PieChartWidget<TData extends ChartRow>({
         </BaseChart>
 
         {data.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-1 overflow-y-auto max-h-56">
             {data.map((item, index) => {
               const row = item as Record<string, string | number | null | undefined>
               const value = Number(row[valueKey] ?? 0) || 0
@@ -103,14 +119,14 @@ export function PieChartWidget<TData extends ChartRow>({
               const label = legendLabelFormatter ? legendLabelFormatter(item) : String(row[nameKey] ?? '')
 
               return (
-                <div key={`${label}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800">
+                <div key={`${label}-${index}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-2 py-1 text-xs dark:border-slate-800">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: activeColors[index % activeColors.length] }} />
                     <span className="truncate text-slate-700 dark:text-slate-200">{label}</span>
                   </div>
-                  <div className="text-right text-slate-500 dark:text-slate-400">
-                    <div>{formatChartNumber(percentage, locale, { maximumFractionDigits: 1 })}%</div>
-                    <div className="text-xs">{valueFormatter ? valueFormatter(value, item) : formatChartNumber(value, locale)}</div>
+                  <div className="flex gap-1 text-slate-500 dark:text-slate-400">
+                    <span>{formatChartNumber(percentage, locale, { maximumFractionDigits: 1 })}%</span>
+                    <span>{valueFormatter ? valueFormatter(value, item) : formatChartNumber(value, locale)}</span>
                   </div>
                 </div>
               )

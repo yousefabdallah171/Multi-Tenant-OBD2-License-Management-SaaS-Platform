@@ -8,6 +8,7 @@ use App\Models\BiosConflict;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class BiosActivationService
@@ -29,7 +30,30 @@ class BiosActivationService
             throw ValidationException::withMessages(['program_id' => 'Program has no external API configured.']);
         }
 
-        if (BiosBlacklist::query()->where('bios_id', $biosId)->where('status', 'active')->exists()) {
+        if (BiosBlacklist::blocksBios($biosId, $reseller->tenant_id)) {
+            BiosConflict::query()->create([
+                'bios_id' => $biosId,
+                'attempted_by' => $reseller->id,
+                'tenant_id' => $reseller->tenant_id,
+                'program_id' => $program->id,
+                'conflict_type' => 'blacklisted_bios',
+                'resolved' => false,
+            ]);
+
+            BiosAccessLog::query()->create([
+                'bios_id' => $biosId,
+                'user_id' => $reseller->id,
+                'tenant_id' => $reseller->tenant_id,
+                'action' => 'blacklist',
+                'ip_address' => request()->ip(),
+                'metadata' => [
+                    'reason' => 'blacklisted',
+                    'status' => 'blocked',
+                    'program_id' => $program->id,
+                    'description' => sprintf('Blocked activation for blacklisted BIOS %s.', $biosId),
+                ],
+            ]);
+
             throw ValidationException::withMessages(['bios_id' => 'The BIOS ID is blacklisted.']);
         }
 
@@ -46,12 +70,9 @@ class BiosActivationService
             throw ValidationException::withMessages(['bios_id' => 'An active license already exists for this BIOS ID.']);
         }
 
-        $externalUsername = trim((string) ($customer->name ?? ''));
-        if ($externalUsername === '') {
-            $externalUsername = $biosId;
-        }
+        $externalUsername = $this->normalizeExternalUsername((string) ($customer->name ?? ''), $biosId);
 
-        $response = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId);
+        $response = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId, $program->external_api_base_url);
 
         BiosAccessLog::query()->create([
             'bios_id' => $biosId,
@@ -91,5 +112,28 @@ class BiosActivationService
             ],
             'status_code' => 201,
         ];
+    }
+
+    private function normalizeExternalUsername(string $customerName, string $biosId): string
+    {
+        $candidate = Str::of($customerName)
+            ->ascii()
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->trim('_')
+            ->limit(50, '')
+            ->value();
+
+        if ($candidate !== '') {
+            return $candidate;
+        }
+
+        return Str::of($biosId)
+            ->ascii()
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->trim('_')
+            ->limit(50, '')
+            ->value() ?: 'user_'.Str::lower(Str::random(8));
     }
 }

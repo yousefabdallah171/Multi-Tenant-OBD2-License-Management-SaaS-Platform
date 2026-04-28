@@ -22,9 +22,19 @@ class LogController extends BaseManagerParentController
         ]);
 
         $query = ApiLog::query()
+            ->select([
+                'id',
+                'tenant_id',
+                'user_id',
+                'endpoint',
+                'method',
+                'status_code',
+                'response_time_ms',
+                'created_at',
+            ])
             ->with(['tenant:id,name', 'user:id,name'])
             ->where('tenant_id', $this->currentTenantId($request))
-            ->latest();
+            ->latest('id');
 
         if (! empty($validated['endpoint'])) {
             $query->where('endpoint', 'like', '%'.$validated['endpoint'].'%');
@@ -90,13 +100,38 @@ class LogController extends BaseManagerParentController
             'id' => $log->id,
             'tenant' => $log->tenant?->name,
             'user' => $log->user?->name,
-            'endpoint' => $log->endpoint,
+            'endpoint' => $this->redactEndpoint((string) $log->endpoint),
             'method' => $log->method,
             'status_code' => $log->status_code,
             'response_time_ms' => $log->response_time_ms,
-            'request_body' => $includePayload ? ($log->request_body ?? []) : null,
-            'response_body' => $includePayload ? ($log->response_body ?? []) : null,
+            'request_body' => $includePayload ? $this->redactSensitiveData($log->request_body ?? []) : null,
+            'response_body' => $includePayload ? $this->redactSensitiveData($log->response_body ?? []) : null,
             'created_at' => $log->created_at?->toIso8601String(),
         ];
+    }
+
+    private function redactSensitiveData(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        $redacted = [];
+        foreach ($value as $key => $item) {
+            $keyAsString = strtolower((string) $key);
+            if (in_array($keyAsString, ['api_key', 'key', 'token', 'authorization'], true)) {
+                $redacted[$key] = '[REDACTED]';
+                continue;
+            }
+
+            $redacted[$key] = $this->redactSensitiveData($item);
+        }
+
+        return $redacted;
+    }
+
+    private function redactEndpoint(string $endpoint): string
+    {
+        return preg_replace('#/(apiuseradd|apideluser)/[^/]+/#i', '/$1/[REDACTED]/', $endpoint) ?? $endpoint;
     }
 }

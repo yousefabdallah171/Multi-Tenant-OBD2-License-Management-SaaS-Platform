@@ -7,6 +7,7 @@ use App\Http\Controllers\ManagerParent\DashboardController as ManagerParentDashb
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
+use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -49,23 +50,28 @@ class DashboardController extends Controller
                 ->groupBy('status')
                 ->pluck('total', 'status');
 
-            $licenseAggregate = (clone $licensesQuery)
-                ->selectRaw(
-                    "COALESCE(SUM(price), 0) as revenue,
-                    COALESCE(SUM(CASE WHEN activated_at BETWEEN ? AND ? THEN price ELSE 0 END), 0) as monthly_revenue",
-                    [now()->startOfMonth(), now()->endOfMonth()],
-                )
-                ->first();
+            $revenue = $tenantId === null
+                ? RevenueAnalytics::totalRevenue()
+                : RevenueAnalytics::totalRevenue([], $tenantId);
+            $monthlyRevenue = $tenantId === null
+                ? RevenueAnalytics::totalRevenue([
+                    'from' => now()->startOfMonth()->toDateString(),
+                    'to' => now()->endOfMonth()->toDateString(),
+                ])
+                : RevenueAnalytics::totalRevenue([
+                    'from' => now()->startOfMonth()->toDateString(),
+                    'to' => now()->endOfMonth()->toDateString(),
+                ], $tenantId);
 
             return [
                 'users' => (int) $roleCounts->sum(),
                 'programs' => (int) $programsQuery->count(),
                 'licenses' => (int) $licenseCounts->sum(),
                 'active_licenses' => (int) ($licenseCounts['active'] ?? 0),
-                'revenue' => round((float) ($licenseAggregate?->revenue ?? 0), 2),
+                'revenue' => $revenue,
                 'team_members' => (int) (($roleCounts[UserRole::MANAGER->value] ?? 0) + ($roleCounts[UserRole::RESELLER->value] ?? 0)),
                 'total_customers' => (int) ($roleCounts[UserRole::CUSTOMER->value] ?? 0),
-                'monthly_revenue' => round((float) ($licenseAggregate?->monthly_revenue ?? 0), 2),
+                'monthly_revenue' => $monthlyRevenue,
             ];
         });
 

@@ -47,7 +47,15 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => env('SANCTUM_TOKEN_EXPIRATION', 60 * 24 * 14), // 14 days default, override via .env
+
+    /*
+    |--------------------------------------------------------------------------
+    | Auth Cookie Name
+    |--------------------------------------------------------------------------
+    | The name of the httpOnly cookie used to store the Sanctum token.
+    */
+    'cookie_name' => env('SANCTUM_COOKIE_NAME', 'auth_token'),
 
     /*
     |--------------------------------------------------------------------------

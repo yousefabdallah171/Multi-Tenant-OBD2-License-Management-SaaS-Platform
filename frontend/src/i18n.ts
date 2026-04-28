@@ -4,7 +4,7 @@ import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY } from '@/lib/constants'
 
 type SupportedLanguage = 'ar' | 'en'
 
-const runtimeLocale = (globalThis as { __VITE_DEFAULT_LOCALE__?: string }).__VITE_DEFAULT_LOCALE__ || DEFAULT_LANGUAGE
+const runtimeLocale: SupportedLanguage = DEFAULT_LANGUAGE
 
 const localeLoaders: Record<SupportedLanguage, () => Promise<{ default: Record<string, unknown> }>> = {
   ar: () => import('@/locales/ar.json'),

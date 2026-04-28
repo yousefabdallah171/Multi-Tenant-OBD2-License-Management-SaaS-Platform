@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { biosService } from '@/services/bios.service'
 import { tenantService } from '@/services/tenant.service'
 import type { BiosHistoryEvent } from '@/types/super-admin.types'
@@ -48,11 +49,11 @@ export function BiosHistoryPage() {
   })
 
   const columns: Array<DataTableColumn<BiosHistoryEvent>> = [
-    { key: 'bios', label: t('superAdmin.pages.biosHistory.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <code>{row.bios_id}</code> },
+    { key: 'bios', label: t('superAdmin.pages.biosHistory.biosId'), sortable: true, sortValue: (row) => row.bios_id, render: (row) => <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.superAdmin.biosDetail(lang, row.bios_id)}><code>{row.bios_id}</code></Link> },
     { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant ?? '', render: (row) => row.tenant ?? '-' },
     { key: 'customer', label: t('common.customer'), sortable: true, sortValue: (row) => row.customer ?? '', render: (row) => row.customer ?? '-' },
-    { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => row.action },
-    { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status as never} /> },
+    { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => formatActivityActionLabel(row.action, t) },
+    { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
     { key: 'date', label: t('common.date'), sortable: true, sortValue: (row) => row.occurred_at, render: (row) => formatDate(row.occurred_at, locale) },
   ]
 
@@ -92,10 +93,10 @@ export function BiosHistoryPage() {
             {detailQuery.data.data.events.slice(0, 5).map((event) => (
               <div key={event.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium text-slate-950 dark:text-white">{event.action}</p>
-                  <StatusBadge status={event.status as never} />
+                  <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(event.action, t)}</p>
+                  <StatusBadge status={event.status} />
                 </div>
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{event.description}</p>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(event.description, locale)}</p>
               </div>
             ))}
           </CardContent>
@@ -106,6 +107,7 @@ export function BiosHistoryPage() {
         <LoadingSpinner fullPage label={t('common.loading')} />
       ) : (
         <DataTable
+          tableKey="super_admin_bios_history"
           columns={columns}
           data={historyQuery.data?.data ?? []}
           rowKey={(row) => row.id}

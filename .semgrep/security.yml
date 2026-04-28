@@ -1,0 +1,73 @@
+rules:
+  - id: license.request-input-in-orderby
+    message: Do not pass request input directly into orderBy. Use an allowlist first.
+    severity: ERROR
+    languages: [php]
+    patterns:
+      - pattern-either:
+          - pattern: $QUERY->orderBy($REQUEST->input(...), ...)
+          - pattern: $QUERY->orderBy($REQUEST->query(...), ...)
+          - pattern: $QUERY->orderBy(request(...), ...)
+          - pattern: $QUERY->orderBy(request()->input(...), ...)
+          - pattern: $QUERY->orderBy(request()->query(...), ...)
+          - pattern: $QUERY->orderByRaw("..." . $REQUEST->input(...) . "..." , ...)
+          - pattern: $QUERY->orderByRaw("..." . $REQUEST->query(...) . "..." , ...)
+          - pattern: $QUERY->orderByRaw("..." . request(... ) . "..." , ...)
+    metadata:
+      category: security
+      confidence: medium
+      technology: [php, laravel]
+
+  - id: license.request-input-in-raw-query
+    message: Do not concatenate request input into raw SQL fragments. Validate first and bind parameters.
+    severity: ERROR
+    languages: [php]
+    patterns:
+      - pattern-either:
+          - pattern: $QUERY->whereRaw("..." . $REQUEST->input(...) . "..." , ...)
+          - pattern: $QUERY->whereRaw("..." . $REQUEST->query(...) . "..." , ...)
+          - pattern: $QUERY->whereRaw("..." . request(... ) . "..." , ...)
+          - pattern: $QUERY->orWhereRaw("..." . $REQUEST->input(...) . "..." , ...)
+          - pattern: $QUERY->selectRaw("..." . $REQUEST->input(...) . "..." , ...)
+          - pattern: $QUERY->groupByRaw("..." . $REQUEST->input(...) . "..." , ...)
+          - pattern: DB::raw("..." . $REQUEST->input(...) . "..." )
+          - pattern: DB::raw("..." . request(... ) . "..." )
+    metadata:
+      category: security
+      confidence: medium
+      technology: [php, laravel]
+
+  - id: license.sensitive-data-in-logger-context
+    message: Do not log passwords, temporary passwords, tokens, or API keys. Redact first.
+    severity: ERROR
+    languages: [php]
+    patterns:
+      - pattern-either:
+          - pattern: Log::$METHOD(..., [..., 'password' => $VALUE, ...])
+          - pattern: Log::$METHOD(..., [..., 'temporary_password' => $VALUE, ...])
+          - pattern: Log::$METHOD(..., [..., 'token' => $VALUE, ...])
+          - pattern: Log::$METHOD(..., [..., 'api_key' => $VALUE, ...])
+          - pattern: logger(..., [..., 'password' => $VALUE, ...])
+          - pattern: logger(..., [..., 'temporary_password' => $VALUE, ...])
+          - pattern: logger(..., [..., 'token' => $VALUE, ...])
+          - pattern: logger(..., [..., 'api_key' => $VALUE, ...])
+    metadata:
+      category: security
+      confidence: high
+      technology: [php, laravel]
+
+  - id: license.sensitive-data-in-persisted-log-payload
+    message: Do not persist passwords, temporary passwords, tokens, or API keys into ActivityLog or ApiLog payloads.
+    severity: ERROR
+    languages: [php]
+    patterns:
+      - pattern-either:
+          - pattern: ActivityLog::query()->create($PAYLOAD)
+          - pattern: ApiLog::create($PAYLOAD)
+      - metavariable-regex:
+          metavariable: $PAYLOAD
+          regex: (?is).*(password|temporary_password|token|api_key).*
+    metadata:
+      category: security
+      confidence: high
+      technology: [php, laravel]

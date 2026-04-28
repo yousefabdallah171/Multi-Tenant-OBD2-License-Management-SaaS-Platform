@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { ArrowUpRight, PackageSearch } from 'lucide-react'
+import { Activity, ArrowUpRight, BadgeDollarSign, PackageSearch } from 'lucide-react'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StaggerGroup, StaggerItem } from '@/components/shared/PageTransition'
@@ -19,10 +19,12 @@ interface ProgramCatalogPageProps {
   title: string
   description: string
   translationPrefix: string
+  showBasePrice?: boolean
+  showLicensesSold?: boolean
   onActivate?: (program: { id: number; name: string; base_price: number; has_external_api: boolean; external_software_id: number | null }) => void
 }
 
-export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix, onActivate }: ProgramCatalogPageProps) {
+export function ProgramCatalogPage({ eyebrow, title, description, translationPrefix, showBasePrice = true, showLicensesSold = true, onActivate }: ProgramCatalogPageProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
@@ -36,6 +38,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
   })
 
   const programs = programsQuery.data?.data ?? []
+  const effectiveShowLicensesSold = translationPrefix === 'reseller.pages.software' ? false : showLicensesSold
 
   return (
     <div className="space-y-6">
@@ -76,8 +79,8 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
         <StaggerGroup className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {programs.map((program) => (
             <StaggerItem key={program.id}>
-              <Card className="overflow-hidden">
-                <CardHeader className="border-b border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/40">
+              <Card className="overflow-hidden border-b-2 border-b-sky-500 border-slate-200/80 shadow-sm transition-shadow duration-200 hover:shadow-lg dark:border-slate-800">
+                <CardHeader className="border-b border-slate-200 bg-gradient-to-r from-sky-100 via-cyan-50 to-blue-100 dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-sky-950/40">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <CardTitle className="text-lg">{program.name}</CardTitle>
@@ -91,23 +94,25 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                 <CardContent className="space-y-4 p-5">
                   <p className="min-h-16 text-sm text-slate-600 dark:text-slate-300">{program.description || t(`${translationPrefix}.noDescription`)}</p>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(`${translationPrefix}.basePrice`)}</p>
-                      <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(`${translationPrefix}.trialDays`)}</p>
-                      <p className="mt-1 font-semibold">{program.trial_days}</p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(`${translationPrefix}.licensesSold`)}</p>
-                      <p className="mt-1 font-semibold">{program.licenses_sold}</p>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t(`${translationPrefix}.activeLicenses`)}</p>
-                      <p className="mt-1 font-semibold">{program.active_licenses_count}</p>
-                    </div>
+                  <div className={`grid gap-3 ${(showBasePrice || effectiveShowLicensesSold) && showBasePrice !== effectiveShowLicensesSold ? 'sm:grid-cols-1' : showBasePrice && effectiveShowLicensesSold ? 'sm:grid-cols-2' : ''}`}>
+                    {showBasePrice ? (
+                      <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                        <p className="inline-flex items-center gap-1 text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          <BadgeDollarSign className="h-3.5 w-3.5 rounded-full bg-sky-200/60 p-0.5 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" />
+                          {t(`${translationPrefix}.basePrice`)}
+                        </p>
+                        <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
+                      </div>
+                    ) : null}
+                    {effectiveShowLicensesSold ? (
+                      <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                        <p className="inline-flex items-center gap-1 text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          <Activity className="h-3.5 w-3.5 rounded-full bg-blue-200/60 p-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" />
+                          {t(`${translationPrefix}.licensesSold`)}
+                        </p>
+                        <p className="mt-1 font-semibold">{program.licenses_sold}</p>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="flex gap-2">
@@ -118,7 +123,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                     {onActivate ? (
                       <Button
                         type="button"
-                        className="shrink-0"
+                        className="shrink-0 shadow-[0_0_0_0_rgba(14,165,233,0.5)] transition-shadow hover:shadow-[0_0_0_8px_rgba(14,165,233,0.15)]"
                         onClick={() =>
                           onActivate({
                             id: program.id,
@@ -133,7 +138,7 @@ export function ProgramCatalogPage({ eyebrow, title, description, translationPre
                       </Button>
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs">
+                  <div className="flex flex-wrap gap-2 text-sm">
                     <span className={`rounded-full px-2 py-1 ${program.has_external_api ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'}`}>
                       {program.has_external_api ? t('software.apiConfigured') : t('software.apiNotConfigured')}
                     </span>

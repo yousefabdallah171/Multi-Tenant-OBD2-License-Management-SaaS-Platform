@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ManagerParent;
 use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends BaseManagerParentController
 {
@@ -22,7 +23,7 @@ class SettingsController extends BaseManagerParentController
         $validated = $request->validate([
             'business' => ['sometimes', 'array'],
             'business.company_name' => ['sometimes', 'string', 'max:255'],
-            'business.email' => ['sometimes', 'email', 'max:255'],
+            'business.email' => ['nullable', 'email', 'max:255'],
             'business.phone' => ['nullable', 'string', 'max:20'],
             'business.address' => ['nullable', 'string', 'max:500'],
             'defaults' => ['sometimes', 'array'],
@@ -33,6 +34,7 @@ class SettingsController extends BaseManagerParentController
             'notifications.expiry_warnings' => ['sometimes', 'boolean'],
             'branding' => ['sometimes', 'array'],
             'branding.logo' => ['nullable', 'string', 'max:1000'],
+            'branding.primary_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
         $tenant = Tenant::query()->findOrFail($this->currentTenantId($request));
@@ -44,6 +46,37 @@ class SettingsController extends BaseManagerParentController
         return response()->json([
             'data' => $settings,
             'message' => 'Settings updated successfully.',
+        ]);
+    }
+
+    public function uploadLogo(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'logo' => ['required', 'image', 'max:2048'],
+        ]);
+
+        $tenant = Tenant::query()->findOrFail($this->currentTenantId($request));
+        $settings = is_array($tenant->settings) ? $tenant->settings : [];
+
+        // Delete old logo if it exists
+        if (isset($settings['branding']['logo']) && $settings['branding']['logo']) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $settings['branding']['logo']));
+        }
+
+        // Store new logo
+        $logoPath = $request->file('logo')->store('tenant-logos', 'public');
+        $logoUrl = Storage::disk('public')->url($logoPath);
+
+        // Update settings
+        $settings['branding'] = $settings['branding'] ?? [];
+        $settings['branding']['logo'] = $logoUrl;
+        $tenant->update(['settings' => $settings]);
+
+        $this->logActivity($request, 'settings.logo_uploaded', 'Uploaded tenant logo.');
+
+        return response()->json([
+            'data' => ['logo' => $logoUrl],
+            'message' => 'Logo uploaded successfully.',
         ]);
     }
 
@@ -68,6 +101,7 @@ class SettingsController extends BaseManagerParentController
             ],
             'branding' => [
                 'logo' => null,
+                'primary_color' => null,
             ],
         ], $settings);
     }

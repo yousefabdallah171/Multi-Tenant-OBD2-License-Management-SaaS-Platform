@@ -27,8 +27,8 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 2. [Tech Stack](#2-tech-stack)
 3. [Architecture](#3-architecture)
 4. [User Roles & RBAC](#4-user-roles--rbac)
-5. [All Pages (42 Total)](#5-all-pages-42-total)
-6. [Database Schema (12 Tables)](#6-database-schema-12-tables)
+5. [Dashboard Pages & Key Routes](#5-dashboard-pages--key-routes)
+6. [Database Schema (Core Runtime Tables)](#6-database-schema-core-runtime-tables)
 7. [External API Integration](#7-external-api-integration)
 8. [BIOS Activation Flow](#8-bios-activation-flow)
 9. [Frontend Structure & Coding Standards](#9-frontend-structure--coding-standards)
@@ -40,6 +40,7 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 15. [Environment Variables](#15-environment-variables)
 16. [License & Ownership](#16-license--ownership)
 17. [Laragon Local Setup Guide](#17-laragon-local-setup-guide)
+18. [Backup & Disaster Recovery](#18-backup--disaster-recovery)
 
 ---
 
@@ -48,9 +49,9 @@ featuring RBAC with 4 active dashboard roles (customer portal removed), hardware
 | Field | Value |
 |-------|-------|
 | **Version** | 1.0.0 |
-| **Status** | Phase 12 UX Editing + Phase 08 Testing complete (deployment hardening pending) |
-| **Last Updated** | 2026-03-01 |
-| **Scale** | Multi-tenant SaaS, 42 Pages, 12 Tables, 101 API Endpoints |
+| **Status** | Phase 15 UX consolidation, detail-page unification, and runtime verification in progress |
+| **Last Updated** | 2026-03-10 |
+| **Scale** | Multi-tenant SaaS, 4 active dashboard roles, queued exports, tenant-scoped external API workflows |
 | **Budget** | $30 |
 | **Timeline** | 15 Days (Day 0 - Day 14) |
 | **Domain** | obd2sw.com |
@@ -83,14 +84,132 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 | PHASE-09-Deployment | :red_circle: Not Started | Day 12-13 |
 | PHASE-10-Documentation | :red_circle: Not Started | Day 14 |
 
-### Latest Implemented UX Updates (2026-03-01)
+### Latest Implemented Features (2026-03-10)
 
-- IP Analytics now reads tenant-matched global logs and defaults to newest-first rows.
-- GeoIP and VPN/hosting detection moved to ip-api.com batch flow.
-- Manager Parent sidebar now has a collapsible Logs group.
+**Super Admin Customers + BIOS Consistency**
+- Added a full global Super Admin customer workspace at `/:lang/super-admin/customers` with list, detail, create, edit, renew, deactivate, pause, resume, retry, and delete actions.
+- Added canonical Super Admin customer routes:
+  - `/:lang/super-admin/customers`
+  - `/:lang/super-admin/customers/create`
+  - `/:lang/super-admin/customers/:id`
+- Super Admin customer tables and detail pages now drill into canonical BIOS and user/customer pages consistently.
+- BIOS detail username resolution now prefers stored license/customer usernames instead of parsed BIOS prefixes, with schema-safe fallback logic for legacy rows.
+- Super Admin BIOS blacklist now shows tenant-scoped entries across the full platform, not only global rows.
+- Super Admin BIOS conflicts now drill into canonical BIOS and customer pages.
+- Super Admin customer detail was hardened for older local schemas where optional `user_ip_logs` columns are missing.
+- Shared license action routes now allow `super_admin`, so customer actions from the Super Admin workspace reuse the same backend workflows as other roles.
+
+**Super Admin Safety Hardening**
+- Super Admin cannot delete the currently authenticated Super Admin account.
+- Super Admin cannot deactivate the currently authenticated Super Admin account.
+- Super Admin cannot delete or deactivate the last remaining active Super Admin account.
+- Frontend actions are disabled for protected Super Admin rows, and backend validation enforces the same safety rules.
+
+**Super Admin Alignment + Reseller Runtime Cleanup**
+- Super Admin admin-management rows, names, and usernames now open the canonical full user detail route at `/:lang/super-admin/users/:id`.
+- Super Admin API Status was hardened to avoid loading the full `api_logs` table into memory; endpoint health now resolves through targeted latest-log lookups.
+- Reseller activation form labels now use translated user-facing copy instead of raw i18n keys.
+- Reseller dashboard and activity feeds now translate license/customer action labels into readable UI text.
+- Reseller dashboard chart containers were hardened so the prior Recharts `width(-1)/height(-1)` warnings no longer appear during runtime verification.
+- Completed a real browser/runtime verification pass for Reseller and Super Admin routes after these fixes.
+
+**Canonical Detail Pages + BIOS Linking**
+- Manager now has a real team-member detail page at `/:lang/manager/team/:id` instead of a drawer-only flow.
+- Manager reseller logs now open canonical manager team-member pages from the user column.
+- BIOS IDs across manager and manager-parent detail/log pages now route into canonical BIOS detail pages.
+- BIOS detail pages now support activity-only BIOS records, so scheduled/deactivated BIOS IDs still show program, reseller, external username, and last activity context even after the license row is gone.
+
+**Runtime Verification Pass**
+- Ran a real browser smoke pass across Manager and Manager Parent dashboard workspaces after the latest consolidation changes.
+- Verified canonical detail pages for team members, customers, and BIOS IDs load without in-page server/access error states.
+- Reconfirmed customer lists, software pages, reports, activity, reseller logs, API status, settings, and profile routes for both role scopes.
+
+**Customer Summary Updates**
+- Added `Expired` summary cards to Manager Parent, Manager, and Reseller customer pages alongside the existing 1-day, 3-day, and 7-day expiry alerts.
+
+**Cross-Role UX Consistency**
+- Manager Parent, Manager, and Super Admin dashboard stat cards now route into the relevant canonical pages instead of acting as static tiles.
+- Manager Parent and Manager customer pages now keep filter state in the URL, so dashboard deep-links like `?status=active` open the correct tab immediately.
+- Manager Parent, Manager, and Super Admin reports now default to the last-year date range so charts and tables render immediately on first load.
+- Manager and Super Admin dashboard activity feeds now format raw event keys into readable action labels.
+
+### Previous Implemented Features (2026-03-09)
+
+**Route Consolidation & Detail UX**
+- Merged duplicate report pages into single canonical report pages for Super Admin and Manager Parent.
+- Merged duplicate license pages into the customer pages for Manager Parent, Manager, and Reseller.
+- Replaced duplicate username-management pages with canonical team/admin-management pages.
+- Added full-page detail routes for Manager Parent team members and Super Admin users.
+
+**Password & Profile UX**
+- Manual reset-password flows now accept typed passwords.
+- Added show/hide password toggles to create/reset/profile password forms.
+
+**Sidebar Information Architecture**
+- Grouped related sidebar entries into submenus for Super Admin and Manager Parent:
+  - Admin Management + Users
+  - BIOS Blacklist + BIOS Details + BIOS Conflicts
+  - Settings + Profile
+
+**Manager + Software Workflow Alignment**
+- Manager team page now supports reseller invite, edit, deactivate/reactivate, delete, unlock, username change, and password reset actions.
+- Manager reports now use the same tenant-wide financial reporting surface as Manager Parent reports.
+- Removed reseller-specific pricing from the product flow so resellers use the normal software base price.
+- Removed `Trial Days` from manager-parent software catalog and program-management UI.
+
+**Customer Page Stability**
+- Fixed authenticated customer pages failing on older local schemas missing scheduled-license columns.
+- Added schema-safe guards to scheduled-license processing and customer list queries.
+
+### Previously Implemented Features (2026-03-05)
+
+**Pause/Resume & Reactivate Licensing (New)**
+- Added `pause` and `resume` actions for resellers to temporarily pause active licenses
+- Paused licenses have status `pending` and disable the software externally via API
+- Resume/Reactivate buttons restore access using the `resume` endpoint (reuses external API `activateUser`)
+- Added "Reactivate" button for `cancelled` licenses (deactivated licenses can be re-activated)
+- Pause/Resume/Reactivate dialogs with full localization (English + Arabic)
+- All UI strings moved to `frontend/src/locales/{en,ar}.json` (no more hardcoded JSX strings)
+- Action buttons converted to dropdown menu (`...`) for cleaner UX
+- Pause/Resume/Reactivate action logging in `bios_access_logs` table
+
+**Backend Changes**
+- `LicenseService::pause()` - calls external API `deactivateUser`, sets status='pending'
+- `LicenseService::resume()` - calls external API `activateUser`, sets status='active' (works for both pause→resume and cancelled→reactivate)
+- Routes: `POST /licenses/{id}/pause` and `POST /licenses/{id}/resume` (reseller + manager + manager_parent)
+- Migration: Extended `bios_access_logs.action` ENUM to include `'pause'`, `'resume'`, `'reactivate'`
+
+**Translation Keys Added**
+- `common.pause`, `common.resume`, `common.reactivate`
+- `common.pauseSuccess`, `common.resumeSuccess`, `common.reactivateSuccess`
+- `reseller.pages.customers.pauseDialog` (title + description with biosId interpolation)
+- `reseller.pages.licenses.confirm.pauseTitle`, `pauseDescription`
+- All keys in both `en.json` and `ar.json`
+
+### Previously Implemented UX Updates (2026-03-03)
+
+- IP Analytics is now software-scoped with a program selector, parsed external timestamps, and tenant/program-aware matching.
+- Manager Parent and Manager now have dedicated seller activity pages for activations, renewals, deactivations, and deletions.
+- Manager and Manager Parent customer names in licenses/logs now link into customer detail/history views.
+- Manager Parent Team Management and Manager Team now expose richer recent-license and recent-activity drill-down panels.
+- Manager Parent sidebar now has a collapsible Logs group and seller-log navigation.
 - Manager and Manager Parent now have Licenses pages with bulk actions.
 - Online users floating widget is live with role-based visibility and Super Admin settings toggle.
 - Single and bulk deactivate flows now return clearer, actionable API errors.
+
+### Latest Stability Fixes (2026-03-03)
+
+- License expiry now auto-reconciles to `expired` when duration is over:
+  - Scheduled command: `php artisan licenses:expire` (every minute).
+  - Request-time fallback added (tenant-throttled) so status still updates even if scheduler is delayed.
+- Program edit flow now supports clearing optional fields correctly:
+  - `file_size`
+  - `system_requirements`
+  - `installation_guide_url`
+  - `external_logs_endpoint`
+- Program edit validation hardened to reduce false `422` errors for optional external API fields.
+- Activation/customer flows now accept long external usernames and numeric-looking customer names.
+- Manager and Manager Parent direct sales are now attributed consistently across reports, customer history, and seller-log views.
 
 ---
 
@@ -143,7 +262,7 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
            │                                  │
            v                                  v
 ┌─────────────────────┐          ┌─────────────────────────┐
-│   Laravel 11 API    │          │  Static Frontend Build   │
+│   Laravel 12 API    │          │  Static Frontend Build   │
 │   PHP 8.3 + FPM     │          │  (Vite → dist/ ~1.2MB)   │
 │                     │          └─────────────────────────┘
 │  Middleware Stack:   │
@@ -156,8 +275,8 @@ OBD2SW.com is a **multi-tenant SaaS platform** that manages software licenses fo
 │                     │    └──────────────────────────┘
 │  Pusher Events      │
 └──────────┬──────────┘    ┌──────────────────────────┐
-           │               │    ipapi.co               │
-           │               │    IP Geolocation API     │
+           │               │    ip-api.com             │
+           │               │    Batch IP geolocation   │
            v               └──────────────────────────┘
     ┌──────────────┐    ┌──────────────┐
     │  MySQL 8.0   │    │    Redis 7   │
@@ -205,7 +324,7 @@ Super Admin (GLOBAL scope)
 |-----------|:-----------:|:--------------:|:-------:|:--------:|:--------:|
 | Scope | Global | Tenant | Team | Personal | Removed |
 | Login to dashboard | Yes | Yes | Yes | Yes | No (silent 401) |
-| Dashboard page count | 10 | 18 | 9 | 5 | 0 |
+| Dashboard page count | 14 | 21 | 11 | 5 | 0 |
 | Tenant management | Yes | No | No | No | No |
 | Team management | No | Yes | Read-only team scope | No | No |
 | Username management | No | Yes | Yes (team scope) | No | No |
@@ -213,8 +332,9 @@ Super Admin (GLOBAL scope)
 | BIOS conflicts page | No | Yes | No | No | No |
 | Logs + API status pages | Yes | Yes | No | No | No |
 | Software management CRUD | No | Yes | Yes | No | No |
-| Software catalog + activate modal | No | No | Yes | Yes | No |
-| Customers + licenses workflow | No | Tenant visibility | Team visibility | Yes | No |
+| Software catalog + activate modal | No | Yes | Yes | Yes | No |
+| Customers + licenses workflow | No | Tenant visibility + detail views | Team visibility + detail views | Yes | No |
+| Seller activity tracking | Yes | Yes | Yes | No | No |
 
 ### Username & Password Rules
 
@@ -238,69 +358,74 @@ const canManageUsers = useHasPermission('manage_users');
 
 ---
 
-## 5. All Pages (42 Total)
+## 5. Dashboard Pages & Key Routes
 
 > **i18n URL Routing:** All routes use `/:lang/` prefix (`/ar/...` or `/en/...`). Default language is Arabic. Root `/` redirects to `/ar/`.
 
-### Super Admin (10 pages) - SYSTEM OWNER
+### Super Admin (14 pages) - SYSTEM OWNER
 
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/super-admin/dashboard` | Dashboard | 5 stats cards + 3 charts + activity feed |
 | `/:lang/super-admin/tenants` | Tenant Management | CRUD + stats per tenant |
-| `/:lang/super-admin/users` | All Users | Cross-tenant user table + IP info |
-| `/:lang/super-admin/reports` | Reports | Cross-tenant analytics + export |
-| `/:lang/super-admin/financial-reports` | Financial Reports | Revenue breakdown all tenants |
+| `/:lang/super-admin/users` | All Users | Cross-tenant user table + full-page user detail |
+| `/:lang/super-admin/admin-management` | Admin Management | Manage admin-level accounts |
+| `/:lang/super-admin/reports` | Reports | Canonical reports page (financial merged) |
 | `/:lang/super-admin/bios-blacklist` | BIOS Blacklist | Global BIOS blacklist CRUD |
 | `/:lang/super-admin/bios-history` | BIOS History | Full history all tenants |
+| `/:lang/super-admin/security-locks` | Security Locks | Locked-account and blocked-IP review |
 | `/:lang/super-admin/logs` | System Logs | All activity + API logs |
 | `/:lang/super-admin/api-status` | API Health | External API monitor |
 | `/:lang/super-admin/settings` | Settings | System configuration + profile tab |
+| `/:lang/super-admin/profile` | Profile | Profile management |
 
-### Manager Parent (18 pages) - TENANT OWNER
+### Manager Parent (21 pages) - TENANT OWNER
 
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/dashboard` | Dashboard | Tenant stats overview |
 | `/:lang/team-management` | Team Management | Add Managers/Resellers |
-| `/:lang/reseller-pricing` | Reseller Pricing | Pricing tiers & commissions |
+| `/:lang/team-management/:id` | Team Member Detail | Full-page team-member detail |
+| `/:lang/software` | Software | Tenant software catalog |
+| `/:lang/customers` | Customers | Canonical tenant customer/license view |
+| `/:lang/program-logs` | Program Logs | External activation/login events per program |
 | `/:lang/software-management` | Software Management | Programs + Download Links CRUD |
-| `/:lang/financial-reports` | Financial Reports | Tenant-level revenue |
 | `/:lang/bios-blacklist` | BIOS Blacklist | Tenant-level blacklist |
 | `/:lang/bios-history` | BIOS History | Tenant activation history |
 | `/:lang/bios-conflicts` | BIOS Conflicts | Conflict history + resolution |
 | `/:lang/ip-analytics` | IP Analytics | Geolocation analytics |
 | `/:lang/logs` | Logs | Tenant API/operation logs |
-| `/:lang/program-logs` | Program Logs | External activation/login events per program |
+| `/:lang/reseller-logs` | Reseller Logs | Seller activity + revenue tracking |
 | `/:lang/api-status` | API Status | Tenant view for API health |
-| `/:lang/username-management` | Username Management | Tenant user credentials |
-| `/:lang/reports` | Reports | Tenant revenue & analytics |
+| `/:lang/reports` | Reports | Canonical tenant reports page (financial merged) |
 | `/:lang/activity` | Activity Log | Tenant-wide audit log |
-| `/:lang/customers` | Customers | Aggregated customer view |
 | `/:lang/settings` | Settings | Tenant configuration |
 | `/:lang/profile` | Profile | Profile management |
 
-### Manager (9 pages) - TEAM LEADER
+Additional workflow/detail routes also exist for program create/edit/activate and customer detail pages.
+
+### Manager (11 pages) - TEAM LEADER
 
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/manager/dashboard` | Dashboard | Personal + team stats |
-| `/:lang/manager/team` | Team | Manage resellers only |
-| `/:lang/manager/username-management` | Username Management | Team credentials only |
-| `/:lang/manager/customers` | Customers | Team customer overview |
+| `/:lang/manager/team` | Team | Canonical reseller-management page with full reseller actions |
+| `/:lang/manager/customers` | Customers | Canonical team customer/license view |
 | `/:lang/manager/software` | Software | Available programs (read-only) |
 | `/:lang/manager/software-management` | Software Management | Team-scoped CRUD + activation popup |
-| `/:lang/manager/reports` | Reports | Personal/team reports |
+| `/:lang/manager/reports` | Reports | Tenant-wide reports with the same financial layout as Manager Parent |
 | `/:lang/manager/activity` | Activity | Team activity logs |
+| `/:lang/manager/reseller-logs` | Reseller Logs | Team seller activity and direct-sale tracking |
 | `/:lang/manager/profile` | Profile | Profile management |
+
+Additional workflow/detail routes also exist for customer detail pages and program create/edit/activate flows.
 
 ### Reseller (5 pages) - ACTIVATOR
 
 | Route | Page | Key Features |
 |-------|------|-------------|
 | `/:lang/reseller/dashboard` | Dashboard | Personal stats + balance |
-| `/:lang/reseller/customers` | Customers | BIOS activation wizard |
-| `/:lang/reseller/licenses` | Licenses | License management |
+| `/:lang/reseller/customers` | Customers | Canonical customer/license page with BIOS activation wizard |
 | `/:lang/reseller/software` | Software Catalog | Read-only list + Activate modal |
 | `/:lang/reseller/reports` | Reports | Personal sales reports |
  
@@ -316,7 +441,9 @@ const canManageUsers = useHasPermission('manage_users');
 
 ---
 
-## 6. Database Schema (12 Tables)
+## 6. Database Schema (Core Runtime Tables)
+
+> Core runtime tables are documented below. Phase 13 also adds `export_tasks` for queued CSV/PDF generation.
 
 ```sql
 -- ============================================
@@ -336,7 +463,7 @@ CREATE TABLE tenants (
 CREATE TABLE users (
     id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tenant_id       BIGINT UNSIGNED NULL,
-    name            VARCHAR(255) NOT NULL,
+    name            TEXT NOT NULL,
     email           VARCHAR(255) UNIQUE NOT NULL,
     username        VARCHAR(255) NULL,
     password        VARCHAR(255) NOT NULL,
@@ -971,7 +1098,7 @@ frontend/
 │   │   │   ├── ApiStatus.tsx
 │   │   │   ├── Settings.tsx
 │   │   │   └── Profile.tsx
-│   │   ├── manager-parent/                # 12 pages
+│   │   ├── manager-parent/                # manager parent pages
 │   │   │   ├── Dashboard.tsx
 │   │   │   ├── TeamManagement.tsx
 │   │   │   ├── SoftwareManagement.tsx
@@ -987,7 +1114,7 @@ frontend/
 │   │   │   ├── Customers.tsx
 │   │   │   ├── Settings.tsx
 │   │   │   └── Profile.tsx
-│   │   ├── manager/                       # 8 pages
+│   │   ├── manager/                       # manager pages
 │   │   │   ├── Dashboard.tsx
 │   │   │   ├── Team.tsx
 │   │   │   ├── UsernameManagement.tsx
@@ -1171,7 +1298,7 @@ backend/
 │       ├── SuperAdminSeeder.php
 │       └── TestDataSeeder.php
 ├── routes/
-│   └── api.php                                # 101 API endpoints
+│   └── api.php                                # role and workflow API routes
 ├── config/
 │   ├── external-api.php
 │   └── ip-geolocation.php
@@ -1266,8 +1393,8 @@ obd2sw/
 │   │   ├── pages/
 │   │   │   ├── auth/Login.test.tsx
 │   │   │   ├── super-admin/     # 13 page tests (45 tests)
-│   │   │   ├── manager-parent/  # 12 page tests (30 tests)
-│   │   │   ├── manager/         # 8 page tests (12 tests)
+│   │   │   ├── manager-parent/  # manager parent page tests
+│   │   │   ├── manager/         # manager page tests
 │   │   │   ├── reseller/        # 7 page tests (12 tests)
 │   │   │   └── customer/        # 3 page tests (8 tests)
 │   │   ├── hooks/
@@ -1556,8 +1683,8 @@ const { isRtl } = useLanguage();
 | 00 Setup | 0 | Monorepo scaffold + Docker + packages | Smoke checks |
 | 01 Foundation | 1-2 | Laravel + Docker + MySQL (12 tables) + Auth + IP Geo + BIOS | 15 unit |
 | 02 Super Admin | 3 | 13 pages + Admin Mgmt + BIOS + Username + RTL | 35 component |
-| 03 Manager Parent | 4-5 | 17 pages + Software + Team + BIOS + IP + Financial | 43 integration |
-| 04 Manager+Reseller | 6 | Manager 9p + Reseller 5p + BIOS activation + Username | 25 E2E |
+| 03 Manager Parent | 4-5 | Tenant dashboards, software, logs, BIOS, pricing, and financial flows | 43 integration |
+| 04 Manager+Reseller | 6 | Manager team oversight + reseller activation, customer, and license flows | 25 E2E |
 | 05 Customer Portal | 7 | Portal removed (silent deny + route cleanup) | 15 component |
 | 06 Reports | 8 | 18 Charts (Recharts) + Export CSV/PDF | 20 unit |
 | 07 UI/UX Polish | 9-10 | Animations + Dark/Light + Mobile (41 pages) | 25 responsive |
@@ -1584,8 +1711,8 @@ Week 2:  Reports → UI Polish → Testing → Deployment → Documentation
 | [`PHASE-00-Setup/`](docs-organized/PHASE-00-Setup/) | Monorepo + Docker + packages | [Overview](docs-organized/PHASE-00-Setup/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-00-Setup/02-TODO-List.md) |
 | [`PHASE-01-Foundation/`](docs-organized/PHASE-01-Foundation/) | Laravel + Auth + DB (12 tables) | [Overview](docs-organized/PHASE-01-Foundation/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-01-Foundation/02-TODO-List.md) |
 | [`PHASE-02-SuperAdmin/`](docs-organized/PHASE-02-SuperAdmin/) | 13 pages + RBAC + RTL | [Overview](docs-organized/PHASE-02-SuperAdmin/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-02-SuperAdmin/02-TODO-List.md) |
-| [`PHASE-03-ManagerParent/`](docs-organized/PHASE-03-ManagerParent/) | 17 pages + Software + Financial | [Overview](docs-organized/PHASE-03-ManagerParent/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-03-ManagerParent/02-TODO-List.md) |
-| [`PHASE-04-ManagerReseller/`](docs-organized/PHASE-04-ManagerReseller/) | Manager (9p) + Reseller (4p) | [Overview](docs-organized/PHASE-04-ManagerReseller/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-04-ManagerReseller/02-TODO-List.md) / [Checklist](docs-organized/PHASE-04-ManagerReseller/03-Completion-Checklist.md) |
+| [`PHASE-03-ManagerParent/`](docs-organized/PHASE-03-ManagerParent/) | Tenant owner dashboards, logs, software, and financial flows | [Overview](docs-organized/PHASE-03-ManagerParent/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-03-ManagerParent/02-TODO-List.md) |
+| [`PHASE-04-ManagerReseller/`](docs-organized/PHASE-04-ManagerReseller/) | Manager team oversight + reseller customer/license workflows | [Overview](docs-organized/PHASE-04-ManagerReseller/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-04-ManagerReseller/02-TODO-List.md) / [Checklist](docs-organized/PHASE-04-ManagerReseller/03-Completion-Checklist.md) |
 | [`PHASE-05-CustomerPortal/`](docs-organized/PHASE-05-CustomerPortal/) | Portal removed in Phase 11 | [Overview](docs-organized/PHASE-05-CustomerPortal/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-05-CustomerPortal/02-TODO-List.md) |
 | [`PHASE-06-ReportsAnalytics/`](docs-organized/PHASE-06-ReportsAnalytics/) | 18 Charts + Export | [Overview](docs-organized/PHASE-06-ReportsAnalytics/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-06-ReportsAnalytics/02-TODO-List.md) |
 | [`PHASE-07-UIUXPolish/`](docs-organized/PHASE-07-UIUXPolish/) | Animations + Mobile | [Overview](docs-organized/PHASE-07-UIUXPolish/01-Phase-Overview.md) / [TODO](docs-organized/PHASE-07-UIUXPolish/02-TODO-List.md) |
@@ -1637,6 +1764,14 @@ cd backend && composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 sudo systemctl reload nginx
+```
+
+### Scheduler (Required for Auto Expiry)
+
+Add Laravel scheduler to server cron (once):
+
+```bash
+* * * * * cd /home/obd2sw-panel/htdocs/panel.obd2sw.com/backend && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 ### CI/CD Pipeline
@@ -2209,6 +2344,185 @@ curl -i -X POST https://panel.obd2sw.com/api/auth/login \
   - `2026_03_02_120000_add_performance_indexes`
   - `2026_03_02_130000_create_export_tasks_table`
 - Telescope is installed for dev/staging and guarded for production-safe boot.
+
+---
+
+## 18. Backup & Disaster Recovery
+
+### ⚠️ CRITICAL: Automatic Daily Backups
+
+**Location:** `/home/obd2sw-panel/backups/databases/obd2sw/YYYY-MM-DD/`
+
+**Structure:**
+```
+/home/obd2sw-panel/backups/databases/
+└── obd2sw/
+    ├── 2026-04-18/
+    │   └── obd2sw_1776512345.sql.gz  (compressed backup ~159MB)
+    ├── 2026-04-19/
+    │   └── obd2sw_1776598745.sql.gz
+    └── 2026-04-20/
+        └── obd2sw_1776654902.sql.gz
+```
+
+**Backup Timing:** 03:15 UTC daily (automated cron job)
+
+**Retention:** At least 7 days of daily backups kept on disk
+
+### Emergency Restore (Zero-Downtime)
+
+**If data is corrupted/deleted:**
+
+1. **Identify the correct backup** (must be BEFORE the incident):
+```bash
+ls -lah /home/obd2sw-panel/backups/databases/obd2sw/
+# Find the date from BEFORE your incident happened
+```
+
+2. **Restore from backup** (app stays running):
+```bash
+cd /home/obd2sw-panel/backups/databases/obd2sw/YYYY-MM-DD/
+
+# Get MySQL credentials from .env
+cat /home/obd2sw-panel/htdocs/panel.obd2sw.com/backend/.env | grep DB_
+
+# Restore (replace USERNAME, PASSWORD, DATABASE, FILENAME)
+zcat obd2sw_TIMESTAMP.sql.gz | mysql -u USERNAME -pPASSWORD DATABASE
+```
+
+**Example:**
+```bash
+zcat obd2sw_1776654902.sql.gz | mysql -u obd2sw1 -pEg7uo57FKwJRsK1Bd8se obd2sw
+```
+
+3. **Verify restore:**
+```bash
+cd /home/obd2sw-panel/htdocs/panel.obd2sw.com/backend
+
+php artisan tinker
+echo \App\Models\ActivityLog::count();  # Should show thousands
+echo \App\Support\RevenueAnalytics::totalRevenue();  # Should show $amount
+exit
+```
+
+### ⚠️ DANGEROUS OPERATIONS - DO NOT RUN WITHOUT UNDERSTANDING
+
+**The following Tinker commands can DELETE critical data. ALWAYS test in non-production first:**
+
+#### ❌ DO NOT RUN: Automatic Log Cleanup
+```php
+// DANGEROUS: This deleted 788+ logs in production (Apr 20, 2026)
+// ONLY use after fully understanding the scope and testing on backup
+
+$duplicates = \App\Models\ActivityLog::query()
+    ->whereIn('action', ['license.activated', 'license.renewed'])
+    ->where('metadata->price_source', 'super_admin_override')
+    ->get()
+    ->groupBy(fn ($log) => \Illuminate\Support\Str::of($log->metadata['license_id'] ?? 0)->toString())
+    ->filter(fn ($group) => $group->count() > 1)
+    ->flatMap(fn ($group) => $group->sortBy('id')->skip(1)->values());
+
+// BEFORE running delete():
+// 1. Export/backup the $duplicates collection manually
+// 2. Verify the count is EXACTLY what you expect
+// 3. Test in staging environment first
+// 4. If uncertain, RESTORE from backup instead of deleting
+
+echo "About to delete " . $duplicates->count() . " logs. CONFIRM IN STAGING FIRST\n";
+
+// Only after staging confirmation:
+// $duplicates->each(fn ($log) => $log->delete());
+```
+
+**Why it's dangerous:**
+- Activity logs drive revenue reports, reseller payments, and audit trails
+- Deleting activity logs breaks financial calculations
+- Group logic can match more logs than intended (e.g., missing license_id matches as "0")
+- 1 typo = data loss
+
+**Safe alternative to cleanup:**
+- Keep all logs (they're just data)
+- OR manually review each log before deleting
+- OR use database transactions to rollback if something goes wrong
+
+### Bulk Customer Sync to External API
+
+**Command:** `php artisan licenses:sync-missing-to-api`
+
+**Purpose:** Find all active licenses in local DB that are missing from external API and activate them.
+
+**Usage:**
+
+```bash
+# Test first (safe, shows what would happen):
+php artisan licenses:sync-missing-to-api --dry-run
+
+# Run actual sync (activates customers in external API):
+php artisan licenses:sync-missing-to-api
+```
+
+**When to use:**
+- After database restore (customers restored to DB but not in external API)
+- If external API was wiped/reset
+- If some customers appear active locally but not in API
+- After major sync issues
+
+**What it does:**
+1. Gets all active licenses from DB with `status = 'active'`
+2. For each license, checks if username exists in external API (case-insensitive)
+3. If missing, activates user in external API with `activateUser()`
+4. Reports: Synced count, Failed count, Skipped count
+
+**Output:**
+```
+Found 78 active licenses in DB
+✓ IRAQ26 already in API (skipped)
+Activating ALLOY262 (BIOS: pf3337cg)...
+✓ Activated ALLOY262
+...
+=== Sync Complete ===
+Synced: 71
+Failed: 0
+Skipped: 7
+```
+
+---
+
+### Safe Maintenance Practices
+
+1. **Before any data operation on production:**
+   - Take a manual backup: `mysqldump -u USER -p DB > /tmp/backup.sql`
+   - Test the operation on a restored copy locally
+   - Get code review
+
+2. **For automatic cleanups:**
+   - Always filter to a small, specific dataset first
+   - Log what you're about to delete before actually deleting
+   - Never use `delete()` without `limit()` or explicit `where()` conditions
+   - Add a "dry-run" flag to test without committing
+
+3. **Monitor backups:**
+   - Verify backups exist daily
+   - Test restore from backup monthly
+   - Alert if backup job fails for >1 day
+
+4. **Activity logs are critical:**
+   - Never delete without understanding the impact
+   - They fund reseller payments (metadata.price is used in revenue calculations)
+   - They track all system changes (audit trail)
+   - They fill reports (dashboard revenue, graphs, etc.)
+
+### Incident Recovery Timeline (Apr 20, 2026)
+
+**07:33 UTC:** Tinker cleanup script deleted 788 activity_logs (revenue calculation broke, dashboard showed $0)
+
+**07:55 UTC:** Noticed issue, immediately restored from Apr 20 03:15 backup
+
+**08:05 UTC:** Database restored, revenue recalculated, dashboard healthy
+
+**Lesson:** Always test destructive Tinker scripts in staging or on a backup first.
+
+---
 
 **Author:** Yousef Abdallah | Full Stack Developer | Tanta, Egypt
 

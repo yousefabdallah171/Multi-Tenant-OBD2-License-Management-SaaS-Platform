@@ -1,21 +1,40 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Banknote, Globe2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { ExportButtons } from '@/components/shared/ExportButtons'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
+import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent } from '@/components/ui/card'
-import { DateRangePicker } from '@/components/ui/date-range-picker'
+import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { useLanguage } from '@/hooks/useLanguage'
+import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { reportService } from '@/services/report.service'
+import { superAdminPlatformService } from '@/services/super-admin-platform.service'
+import type { ResellerPaymentRow } from '@/types/manager-reseller.types'
+import type { UserRole } from '@/types/user.types'
+
+type TopResellerRow = {
+  reseller_id?: number | null
+  reseller: string
+  reseller_role?: string | null
+  tenant: string
+  activations: number
+  revenue: number
+}
 
 export function ReportsPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
-  const [dateRange, setDateRange] = useState({ from: '', to: '' })
+  const [dateRange, setDateRange] = useState<DateRangeValue>(() => resolvePresetRange(365))
   const params = useMemo(
     () => ({
       from: dateRange.from || undefined,
@@ -23,6 +42,11 @@ export function ReportsPage() {
     }),
     [dateRange],
   )
+
+  const financialQuery = useQuery({
+    queryKey: ['super-admin', 'financial-reports', params],
+    queryFn: () => reportService.getFinancialReports(params),
+  })
 
   const revenueQuery = useQuery({
     queryKey: ['super-admin', 'reports', 'revenue', params],
@@ -44,13 +68,57 @@ export function ReportsPage() {
     queryFn: () => reportService.getTopResellers(params),
   })
 
-  const resellerColumns: Array<DataTableColumn<{ reseller: string; tenant: string; activations: number; revenue: number }>> = [
-    { key: 'reseller', label: t('superAdmin.pages.reports.topResellers'), sortable: true, sortValue: (row) => row.reseller, render: (row) => row.reseller },
+  const paymentRowsQuery = useQuery({
+    queryKey: ['super-admin', 'reports', 'reseller-payments-table'],
+    queryFn: () => superAdminPlatformService.getResellerPayments(),
+  })
+
+  const financialData = financialQuery.data?.data
+  const breakdownSeries = (financialData?.revenue_breakdown_series ?? []).map((program) => ({ key: program, label: program, stackId: 'revenue' }))
+  const monthlyRevenueData = (financialData?.monthly_revenue ?? []).map((item) => ({
+    ...item,
+    month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
+  }))
+
+  const balanceColumns: Array<DataTableColumn<ResellerPaymentRow>> = [
+    {
+      key: 'reseller_name',
+      label: t('payments.columns.reseller', { defaultValue: 'Seller' }),
+      sortable: true,
+      sortValue: (row) => row.reseller_name ?? '',
+      render: (row) => (
+        <RoleIdentity
+          name={row.reseller_name}
+          role={resolveUserRole(row.reseller_role)}
+          href={row.reseller_id ? routePaths.superAdmin.userDetail(lang, row.reseller_id) : undefined}
+          secondary={row.reseller_email ?? '-'}
+        />
+      ),
+    },
+    { key: 'total_sales', label: t('payments.columns.sales', { defaultValue: 'Sales' }), sortable: true, sortValue: (row) => row.total_sales, render: (row) => formatCurrency(row.total_sales, 'USD', locale) },
+    { key: 'commission_owed', label: t('payments.columns.owed', { defaultValue: 'Commission Owed' }), sortable: true, sortValue: (row) => row.commission_owed, render: (row) => formatCurrency(row.commission_owed, 'USD', locale) },
+    { key: 'amount_paid', label: t('payments.columns.paid', { defaultValue: 'Amount Paid' }), sortable: true, sortValue: (row) => row.amount_paid, render: (row) => formatCurrency(row.amount_paid, 'USD', locale) },
+    { key: 'outstanding', label: t('payments.columns.outstanding', { defaultValue: 'Outstanding' }), sortable: true, sortValue: (row) => row.outstanding, render: (row) => formatCurrency(row.outstanding, 'USD', locale) },
+  ]
+
+  const resellerColumns: Array<DataTableColumn<TopResellerRow>> = [
+    {
+      key: 'reseller',
+      label: t('superAdmin.pages.reports.topResellers'),
+      sortable: true,
+      sortValue: (row) => row.reseller,
+      render: (row) => (
+        <RoleIdentity
+          name={row.reseller}
+          role={resolveUserRole(row.reseller_role)}
+          href={row.reseller_id ? routePaths.superAdmin.userDetail(lang, row.reseller_id) : undefined}
+        />
+      ),
+    },
     { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant, render: (row) => row.tenant },
     { key: 'activations', label: t('common.activations'), sortable: true, sortValue: (row) => row.activations, render: (row) => row.activations },
     { key: 'revenue', label: t('common.revenue'), sortable: true, sortValue: (row) => row.revenue, render: (row) => formatCurrency(row.revenue, 'USD', locale) },
   ]
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -58,7 +126,7 @@ export function ReportsPage() {
           <h2 className="text-3xl font-semibold">{t('superAdmin.pages.reports.title')}</h2>
           <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.reports.description')}</p>
         </div>
-        <ExportButtons onExportCsv={() => reportService.exportCsv(params)} onExportPdf={() => reportService.exportPdf(params)} />
+        <ExportButtons onExportCsv={() => reportService.exportFinancialCsv(params)} onExportPdf={() => reportService.exportFinancialPdf(params)} />
       </div>
 
       <Card>
@@ -66,6 +134,37 @@ export function ReportsPage() {
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalPlatformRevenue')} value={formatCurrency(financialData?.summary.total_platform_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" /></button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.customers(lang))}><StatsCard title={t('superAdmin.pages.financialReports.totalCustomers')} value={financialData?.summary.total_customers ?? 0} icon={Globe2} color="sky" /></button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(`${routePaths.superAdmin.customers(lang)}?status=active`)}><StatsCard title={t('superAdmin.pages.financialReports.activeCustomers')} value={financialData?.summary.active_licenses ?? 0} icon={Users} color="amber" /></button>
+        <button type="button" className="w-full text-start" onClick={() => navigate(routePaths.superAdmin.tenants(lang))}><StatsCard title={t('superAdmin.pages.financialReports.avgRevenuePerTenant')} value={formatCurrency(financialData?.summary.avg_revenue_per_tenant ?? 0, 'USD', locale)} color="rose" /></button>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <BarChartWidget
+          title={t('superAdmin.pages.financialReports.revenueBreakdown')}
+          description={t('superAdmin.pages.financialReports.revenueBreakdownDescription')}
+          data={(financialData?.revenue_breakdown ?? []) as Array<Record<string, string | number | null | undefined>>}
+          isLoading={financialQuery.isLoading}
+          xKey="tenant"
+          series={breakdownSeries}
+          showLegend
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
+        <BarChartWidget
+          title={t('superAdmin.pages.financialReports.sellerRevenueTitle')}
+          description={t('superAdmin.pages.financialReports.sellerRevenueDescription')}
+          data={financialData?.reseller_balances ?? []}
+          isLoading={financialQuery.isLoading}
+          xKey="reseller"
+          horizontal
+          showLabels
+          series={[{ key: 'total_revenue', label: t('common.revenue') }]}
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <BarChartWidget
@@ -87,15 +186,53 @@ export function ReportsPage() {
         />
       </div>
 
-      <LineChartWidget
-        title={t('superAdmin.pages.reports.growthTrend')}
-        data={growthQuery.data?.data ?? []}
-        isLoading={growthQuery.isLoading}
-        xKey="month"
-        series={[{ key: 'users', label: t('common.users') }]}
-      />
+      <div className="grid gap-6 xl:grid-cols-2">
+        <LineChartWidget
+          title={t('superAdmin.pages.financialReports.monthlyRevenue')}
+          data={monthlyRevenueData}
+          isLoading={financialQuery.isLoading}
+          xKey="month"
+          series={[{ key: 'revenue', label: t('common.revenue') }]}
+          valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
+        />
+        <LineChartWidget
+          title={t('superAdmin.pages.reports.growthTrend')}
+          data={growthQuery.data?.data ?? []}
+          isLoading={growthQuery.isLoading}
+          xKey="month"
+          series={[{ key: 'users', label: t('common.users') }]}
+        />
+      </div>
 
-      <DataTable columns={resellerColumns} data={topResellersQuery.data?.data ?? []} rowKey={(row) => `${row.tenant}-${row.reseller}`} isLoading={topResellersQuery.isLoading} />
+      <DataTable tableKey="super_admin_reports_balances" columns={balanceColumns} data={paymentRowsQuery.data?.data ?? []} rowKey={(row) => row.reseller_id} isLoading={paymentRowsQuery.isLoading} />
+      <DataTable tableKey="super_admin_reports_top_resellers" columns={resellerColumns} data={(topResellersQuery.data?.data ?? []) as TopResellerRow[]} rowKey={(row) => `${row.tenant}-${row.reseller}-${row.reseller_id ?? 'unknown'}`} isLoading={topResellersQuery.isLoading} />
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
+}
+
+function resolvePresetRange(days: number): DateRangeValue {
+  const today = new Date()
+  const from = new Date(today)
+  from.setDate(today.getDate() - (days - 1))
+
+  return {
+    from: formatDateInput(from),
+    to: formatDateInput(today),
+  }
+}
+
+function formatDateInput(value: Date) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }

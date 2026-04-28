@@ -2,14 +2,33 @@
 
 namespace App\Http\Controllers\ManagerParent;
 
+use App\Enums\UserRole;
+use App\Models\ActivityLog;
 use App\Models\Program;
 use App\Models\License;
+use App\Models\User;
 use App\Services\ExternalApiService;
+use App\Support\CustomerOwnership;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProgramLogsController extends BaseManagerParentController
 {
+    private const TRACKED_ACTIONS = [
+        'license.activated',
+        'license.scheduled',
+        'license.renewed',
+        'license.deactivated',
+        'license.delete',
+        'license.paused',
+        'license.resumed',
+        'license.scheduled_activation_executed',
+        'license.scheduled_activation_failed',
+        'manager.program.activate',
+    ];
+
     public function __construct(private readonly ExternalApiService $externalApiService)
     {
     }
@@ -19,9 +38,12 @@ class ProgramLogsController extends BaseManagerParentController
         $validated = $request->validate([
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'seller_id' => ['nullable', 'integer'],
+            'action' => ['nullable', 'string', Rule::in(self::TRACKED_ACTIONS)],
         ]);
         $page = (int) ($validated['page'] ?? 1);
         $perPage = (int) ($validated['per_page'] ?? 100);
+        $tenantId = $this->currentTenantId($request);
 
         $resolved = $this->resolveProgram($request, $program);
         $guard = $this->guardExternalApi($resolved);
@@ -29,13 +51,18 @@ class ProgramLogsController extends BaseManagerParentController
             return $guard;
         }
 
-        $response = $this->externalApiService->getProgramLogs((int) $resolved->external_software_id);
+        $response = $this->externalApiService->getProgramLogs(
+            (int) $resolved->external_software_id,
+            $resolved->external_api_base_url,
+            (string) ($resolved->external_logs_endpoint ?: 'apilogs'),
+        );
         $externalOk = (bool) ($response['success'] ?? false);
-        $licensesMap = License::query()
-            ->where('tenant_id', $this->currentTenantId($request))
+        $licenses = License::query()
+            ->where('tenant_id', $tenantId)
             ->where('program_id', $resolved->id)
             ->with(['reseller:id,name,email', 'customer:id,name,email,username'])
-            ->get()
+            ->get();
+        $licensesMap = $licenses
             ->filter(fn (License $license): bool => filled($license->external_username))
             ->mapWithKeys(fn (License $license): array => [
                 (string) $license->external_username => [[
@@ -50,6 +77,37 @@ class ProgramLogsController extends BaseManagerParentController
                     'reseller_email' => $license->reseller?->email,
                 ]],
             ]);
+        $licensesById = $licenses->keyBy('id');
+        $licenseIds = $licensesById->keys()->map(fn ($id): int => (int) $id)->all();
+        $activityQuery = $this->programActivityQuery($tenantId, (int) $resolved->id, $licenseIds);
+        $actorIds = (clone $activityQuery)
+            ->select('user_id')
+            ->distinct()
+            ->pluck('user_id')
+            ->filter()
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        if (! empty($validated['seller_id'])) {
+            $allowedActor = User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+                ->whereKey((int) $validated['seller_id'])
+                ->exists();
+
+            if (! $allowedActor) {
+                $activityQuery->whereRaw('1 = 0');
+            } else {
+                $activityQuery->where('user_id', (int) $validated['seller_id']);
+            }
+        }
+
+        if (! empty($validated['action'])) {
+            $activityQuery->where('action', $validated['action']);
+        }
+
+        $summaryQuery = clone $activityQuery;
+        $activities = $activityQuery->latest()->paginate($perPage, ['*'], 'page', $page);
 
         $raw = (string) ($response['data']['raw'] ?? '');
         $lines = preg_split('/\r\n|\r|\n/', $raw) ?: [];
@@ -99,24 +157,37 @@ class ProgramLogsController extends BaseManagerParentController
             }
         }
 
-        $total = count($rows);
-        $offset = max(0, ($page - 1) * $perPage);
-        $pagedRows = array_slice($rows, $offset, $perPage);
-        $lastPage = max(1, (int) ceil($total / $perPage));
+        $users = User::query()
+            ->select(['id', 'name', 'role'])
+            ->where('tenant_id', $tenantId)
+            ->whereIn('id', $actorIds)
+            ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'role' => $user->role?->value ?? (string) $user->role,
+            ])
+            ->values();
 
         return response()->json([
             'data' => [
-                ...$response['data'],
-                'licenses' => $licensesMap,
-                'rows' => $pagedRows,
+                'raw' => $raw,
+                'rows' => $rows,
+                'user_rows' => collect($activities->items())
+                    ->map(fn (ActivityLog $activity): array => $this->serializeActivity($activity, $licensesById, $resolved))
+                    ->values(),
+                'users' => $users,
+                'summary' => $this->activitySummary($summaryQuery),
                 'external_available' => $externalOk,
                 'meta' => [
-                    'page' => $page,
-                    'per_page' => $perPage,
-                    'total' => $total,
-                    'last_page' => $lastPage,
-                    'has_next_page' => $page < $lastPage,
-                    'next_page' => $page < $lastPage ? $page + 1 : null,
+                    'page' => $activities->currentPage(),
+                    'per_page' => $activities->perPage(),
+                    'total' => $activities->total(),
+                    'last_page' => $activities->lastPage(),
+                    'has_next_page' => $activities->hasMorePages(),
+                    'next_page' => $activities->hasMorePages() ? $activities->currentPage() + 1 : null,
                 ],
             ],
             'message' => $externalOk ? null : 'External API is currently unavailable. Showing cached/empty logs.',
@@ -131,7 +202,7 @@ class ProgramLogsController extends BaseManagerParentController
             return $guard;
         }
 
-        $response = $this->externalApiService->getActiveUsers((int) $resolved->external_software_id);
+        $response = $this->externalApiService->getActiveUsers((int) $resolved->external_software_id, $resolved->external_api_base_url);
         $externalOk = (bool) ($response['success'] ?? false);
 
         return response()->json([
@@ -149,7 +220,7 @@ class ProgramLogsController extends BaseManagerParentController
             return $guard;
         }
 
-        $response = $this->externalApiService->getSoftwareStats((int) $resolved->external_software_id);
+        $response = $this->externalApiService->getSoftwareStats((int) $resolved->external_software_id, $resolved->external_api_base_url);
         $externalOk = (bool) ($response['success'] ?? false);
 
         return response()->json([
@@ -166,6 +237,24 @@ class ProgramLogsController extends BaseManagerParentController
         return $program;
     }
 
+    private function programActivityQuery(int $tenantId, int $programId, array $licenseIds): Builder
+    {
+        $query = ActivityLog::query()
+            ->with('user:id,name,role')
+            ->where('tenant_id', $tenantId)
+            ->whereIn('action', self::TRACKED_ACTIONS)
+            ->where(function (Builder $builder) use ($programId, $licenseIds): void {
+                $builder->where('metadata->program_id', $programId);
+
+                foreach (array_chunk($licenseIds, 200) as $chunk) {
+                    $placeholders = implode(', ', array_fill(0, count($chunk), '?'));
+                    $builder->orWhereRaw("CAST(JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.license_id')) AS UNSIGNED) IN ({$placeholders})", $chunk);
+                }
+            });
+
+        return $query;
+    }
+
     private function guardExternalApi(Program $program): ?JsonResponse
     {
         if (! $program->has_external_api || ! $program->external_software_id) {
@@ -175,5 +264,48 @@ class ProgramLogsController extends BaseManagerParentController
         }
 
         return null;
+    }
+
+    private function serializeActivity(ActivityLog $activity, $licensesById, Program $program): array
+    {
+        $metadata = $activity->metadata ?? [];
+        $licenseId = (int) ($metadata['license_id'] ?? 0);
+        $license = $licenseId > 0 ? $licensesById->get($licenseId) : null;
+        $actorRole = $activity->user?->role?->value ?? (string) $activity->user?->role;
+        $customerId = (int) ($metadata['customer_id'] ?? $license?->customer_id ?? 0);
+
+        return [
+            'id' => $activity->id,
+            'action' => $activity->action,
+            'actor' => $activity->user ? [
+                'id' => $activity->user->id,
+                'name' => $activity->user->name,
+                'role' => $actorRole,
+            ] : null,
+            'license_id' => $license?->id ?? ($licenseId > 0 ? $licenseId : null),
+            'customer_id' => $customerId > 0 ? $customerId : null,
+            'customer_name' => $license?->customer?->name,
+            'customer_username' => $license?->customer?->username,
+            'bios_id' => (string) ($metadata['bios_id'] ?? $license?->bios_id ?? ''),
+            'external_username' => (string) ($metadata['external_username'] ?? $license?->external_username ?? $license?->customer?->username ?? ''),
+            'program_id' => (int) ($metadata['program_id'] ?? $program->id),
+            'program_name' => $program->name,
+            'price' => CustomerOwnership::displayPriceFromMetadataOrLicense($metadata, $license),
+            'license_status' => $license?->status,
+            'created_at' => $activity->created_at?->toIso8601String(),
+        ];
+    }
+
+    private function activitySummary(Builder $query): array
+    {
+        return [
+            'total_entries' => (clone $query)->count(),
+            'activations' => (clone $query)->whereIn('action', ['license.activated', 'manager.program.activate'])->count(),
+            'scheduled' => (clone $query)->where('action', 'license.scheduled')->count(),
+            'executed' => (clone $query)->where('action', 'license.scheduled_activation_executed')->count(),
+            'renewals' => (clone $query)->where('action', 'license.renewed')->count(),
+            'deactivations' => (clone $query)->where('action', 'license.deactivated')->count(),
+            'failures' => (clone $query)->where('action', 'license.scheduled_activation_failed')->count(),
+        ];
     }
 }

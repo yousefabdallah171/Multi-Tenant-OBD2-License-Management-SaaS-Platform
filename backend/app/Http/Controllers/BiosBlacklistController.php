@@ -5,12 +5,18 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Http\Controllers\ManagerParent\BiosBlacklistController as ManagerParentBiosBlacklistController;
 use App\Models\BiosBlacklist;
+use App\Models\License;
+use App\Services\ExternalApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class BiosBlacklistController extends Controller
 {
+    public function __construct(private readonly ExternalApiService $externalApiService)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         if ($request->user()?->role === UserRole::MANAGER_PARENT) {
@@ -64,6 +70,9 @@ class BiosBlacklistController extends Controller
             ],
         );
 
+        // Deactivate any matching active licenses immediately
+        $this->deactivateMatchingLicenses($validated['bios_id'], (int) $request->user()?->tenant_id);
+
         return response()->json(['data' => $this->serializeEntry($entry->fresh('addedBy'))], 201);
     }
 
@@ -76,6 +85,33 @@ class BiosBlacklistController extends Controller
         $biosBlacklist->update(['status' => 'removed']);
 
         return response()->json(['message' => 'Blacklist entry removed.']);
+    }
+
+    private function deactivateMatchingLicenses(string $biosId, int $tenantId): void
+    {
+        $licenses = License::query()
+            ->where('tenant_id', $tenantId)
+            ->whereRaw('LOWER(bios_id) = ?', [strtolower($biosId)])
+            ->whereIn('status', ['active', 'pending', 'suspended'])
+            ->with('program:id,external_api_key_encrypted,external_api_base_url')
+            ->get();
+
+        foreach ($licenses as $license) {
+            try {
+                $program = $license->program;
+                if ($program) {
+                    $apiKey = $program->getDecryptedApiKey();
+                    if ($apiKey !== null) {
+                        $username = $license->external_username ?: $license->bios_id;
+                        $this->externalApiService->deactivateUser($apiKey, $username, $program->external_api_base_url);
+                    }
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            $license->forceFill(['status' => 'cancelled'])->save();
+        }
     }
 
     private function paginationMeta(LengthAwarePaginator $paginator): array

@@ -1,5 +1,6 @@
 import { api } from '@/services/api'
 import type { PaginatedResponse, ProgramStats, ProgramSummary } from '@/types/manager-parent.types'
+import type { ProgramDurationPreset, ProgramDurationPresetCountryPrice } from '@/types/manager-reseller.types'
 
 export interface ProgramListParams {
   page?: number
@@ -21,14 +22,30 @@ export interface ProgramPayload {
   icon?: File | string | null
   external_api_key?: string | null
   external_software_id?: number | null
+  external_api_base_url?: string | null
+  external_logs_endpoint?: string | null
   status?: 'active' | 'inactive'
+  presets?: Array<Partial<ProgramDurationPreset> & {
+    label: string
+    duration_days: number
+    price: number
+    country_prices?: Array<Partial<ProgramDurationPresetCountryPrice> & { country_name: string; price: number }>
+  }>
 }
 
-function buildProgramPayload(payload: Partial<ProgramPayload>) {
+function buildProgramPayload(payload: Partial<ProgramPayload>, includeEmptyKeys: string[] = []) {
   const formData = new FormData()
+  const includeEmpty = new Set(includeEmptyKeys)
 
   for (const [key, value] of Object.entries(payload)) {
-    if (value === undefined || value === null || value === '') {
+    if (value === undefined) {
+      continue
+    }
+
+    if (value === null || value === '') {
+      if (includeEmpty.has(key)) {
+        formData.append(key, '')
+      }
       continue
     }
 
@@ -37,7 +54,42 @@ function buildProgramPayload(payload: Partial<ProgramPayload>) {
       continue
     }
 
-    formData.append(key, String(value))
+    if (key === 'presets' && Array.isArray(value)) {
+      value.forEach((preset, index) => {
+        Object.entries(preset)
+          .filter(([presetKey]) => ['id', 'label', 'duration_days', 'price', 'sort_order', 'is_active'].includes(presetKey))
+          .forEach(([presetKey, presetValue]) => {
+          if (presetValue === undefined || presetValue === null || presetValue === '') {
+            return
+          }
+
+          formData.append(
+            `presets[${index}][${presetKey}]`,
+            typeof presetValue === 'boolean' ? (presetValue ? '1' : '0') : String(presetValue),
+          )
+          })
+
+        if (Array.isArray((preset as any).country_prices)) {
+          ;(preset as any).country_prices.forEach((countryPrice: Record<string, unknown>, countryIndex: number) => {
+            Object.entries(countryPrice)
+              .filter(([priceKey]) => ['id', 'country_name', 'price', 'is_active'].includes(priceKey))
+              .forEach(([priceKey, priceValue]) => {
+                if (priceValue === undefined || priceValue === null || priceValue === '') {
+                  return
+                }
+
+                formData.append(
+                  `presets[${index}][country_prices][${countryIndex}][${priceKey}]`,
+                  typeof priceValue === 'boolean' ? (priceValue ? '1' : '0') : String(priceValue),
+                )
+              })
+          })
+        }
+      })
+      continue
+    }
+
+    formData.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value))
   }
 
   return formData
@@ -57,7 +109,12 @@ export const programService = {
     return data
   },
   async update(id: number, payload: Partial<ProgramPayload>) {
-    const formData = buildProgramPayload(payload)
+    const formData = buildProgramPayload(payload, [
+      'file_size',
+      'system_requirements',
+      'installation_guide_url',
+      'external_logs_endpoint',
+    ])
     formData.append('_method', 'PUT')
 
     const { data } = await api.post<{ data: ProgramSummary }>(`/programs/${id}`, formData, {

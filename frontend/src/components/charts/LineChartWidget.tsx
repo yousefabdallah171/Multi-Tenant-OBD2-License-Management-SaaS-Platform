@@ -7,6 +7,24 @@ import { type ChartSeries, formatChartNumber, resolveSeriesColor, useChartTheme 
 type ChartRow = object
 type ValueFormatter<TData extends ChartRow> = (value: number | string, seriesKey: string, payload: TData) => string
 
+type TooltipLabelFormatter<TData extends ChartRow> = (value: string | number, payload?: TData) => string
+
+function resolveTooltipValue(value: unknown): number | string {
+  if (typeof value === 'number' || typeof value === 'string') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    const firstPrimitive = value.find((item) => typeof item === 'number' || typeof item === 'string')
+
+    if (typeof firstPrimitive === 'number' || typeof firstPrimitive === 'string') {
+      return firstPrimitive
+    }
+  }
+
+  return 0
+}
+
 interface LineChartWidgetProps<TData extends ChartRow = ChartRow> {
   title: string
   description?: string
@@ -20,7 +38,7 @@ interface LineChartWidgetProps<TData extends ChartRow = ChartRow> {
   showLegend?: boolean
   valueFormatter?: ValueFormatter<TData>
   xAxisFormatter?: (value: string | number) => string
-  tooltipLabelFormatter?: (value: string | number) => string
+  tooltipLabelFormatter?: TooltipLabelFormatter<TData>
 }
 
 export function LineChartWidget<TData extends ChartRow>({
@@ -57,15 +75,22 @@ export function LineChartWidget<TData extends ChartRow>({
           <Tooltip
             contentStyle={{ backgroundColor: palette.tooltipBackground, borderColor: palette.tooltipBorder, borderRadius: 16 }}
             labelStyle={{ color: palette.axis }}
-            formatter={(value: number | string | undefined, name: string | undefined, item) => {
+            formatter={(value, name, item) => {
               const payload = item.payload as TData
-              const label = series.find((entry) => entry.key === name)?.label ?? name ?? ''
-              const resolvedValue = value ?? 0
-              const formatted = valueFormatter ? valueFormatter(resolvedValue, name ?? '', payload) : formatChartNumber(resolvedValue, locale)
+              const seriesKey = String(name ?? '')
+              const label = series.find((entry) => entry.key === seriesKey)?.label ?? seriesKey
+              const resolvedValue = resolveTooltipValue(value)
+              const formatted = valueFormatter ? valueFormatter(resolvedValue, seriesKey, payload) : formatChartNumber(resolvedValue, locale)
 
               return [formatted, label]
             }}
-            labelFormatter={(value) => (tooltipLabelFormatter ? tooltipLabelFormatter(value) : xAxisFormatter ? xAxisFormatter(value) : String(value))}
+            labelFormatter={(value, payload) => {
+              const row = (payload?.[0]?.payload as TData | undefined)
+              if (tooltipLabelFormatter) {
+                return tooltipLabelFormatter(value, row)
+              }
+              return xAxisFormatter ? xAxisFormatter(value) : String(value)
+            }}
           />
           {(showLegend ?? series.length > 1) ? <Legend /> : null}
           {series.map((entry, index) => (

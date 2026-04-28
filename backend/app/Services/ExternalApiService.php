@@ -3,53 +3,90 @@
 namespace App\Services;
 
 use App\Models\ApiLog;
+use App\Support\ExternalApiSecurity;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use Throwable;
 
 class ExternalApiService
 {
-    public function activateUser(string $apiKey, string $username, string $biosId): array
+    public function activateUser(string $apiKey, string $username, string $biosId, ?string $baseUrl = null): array
     {
+        $requestPath = $this->buildPath('apiuseradd', [$apiKey, $username, $biosId]);
+        $logPath = $this->buildPath('apiuseradd', ['[REDACTED]', $username, $biosId]);
+
         return $this->sendPlainText(
             'GET',
-            $this->buildPath('apiuseradd', [$apiKey, $username, $biosId]),
+            $requestPath,
             [
-                'api_key' => $apiKey,
                 'username' => $username,
                 'bios_id' => $biosId,
             ],
+            $baseUrl,
+            $logPath,
             fn (string $body, int $statusCode): array => [
                 'success' => $statusCode === 200 && Str::contains(Str::lower($body), 'true'),
                 'data' => ['response' => $body],
                 'status_code' => $statusCode,
             ],
+            $this->fastFailOptions(),
         );
     }
 
-    public function deactivateUser(string $apiKey, string $username): array
+    public function deactivateUser(string $apiKey, string $username, ?string $baseUrl = null): array
     {
+        $requestPath = $this->buildPath('apideluser', [$apiKey, $username]);
+        $logPath = $this->buildPath('apideluser', ['[REDACTED]', $username]);
+
         return $this->sendPlainText(
             'GET',
-            $this->buildPath('apideluser', [$apiKey, $username]),
+            $requestPath,
             [
-                'api_key' => $apiKey,
                 'username' => $username,
             ],
+            $baseUrl,
+            $logPath,
             fn (string $body, int $statusCode): array => [
                 'success' => $statusCode === 200 && Str::contains(Str::lower($body), 'true'),
                 'data' => ['response' => $body],
                 'status_code' => $statusCode,
             ],
+            $this->fastFailOptions(),
         );
     }
 
-    public function getActiveUsers(int $softwareId): array
+    public function changeBiosId(string $apiKey, string $username, string $oldBiosId, string $newBiosId, ?string $baseUrl = null): array
+    {
+        $deactivateResponse = $this->deactivateUser($apiKey, $username, $baseUrl);
+        if (! ($deactivateResponse['success'] ?? false)) {
+            return $deactivateResponse;
+        }
+
+        $activateResponse = $this->activateUser($apiKey, $username, $newBiosId, $baseUrl);
+        if ($activateResponse['success'] ?? false) {
+            return $activateResponse;
+        }
+
+        return [
+            'success' => false,
+            'data' => [
+                ...($activateResponse['data'] ?? []),
+                'rollback' => $this->activateUser($apiKey, $username, $oldBiosId, $baseUrl),
+            ],
+            'status_code' => (int) ($activateResponse['status_code'] ?? 503),
+        ];
+    }
+
+    public function getActiveUsers(int $softwareId, ?string $baseUrl = null): array
     {
         return $this->sendPlainText(
             'GET',
             $this->buildPath('apiusers', [$softwareId]),
             ['software_id' => $softwareId],
+            $baseUrl,
+            null,
             function (string $body, int $statusCode): array {
                 $normalized = str_replace(["'", 'True', 'False'], ['"', 'true', 'false'], $body);
                 $decoded = json_decode($normalized, true);
@@ -60,43 +97,54 @@ class ExternalApiService
                     'status_code' => $statusCode,
                 ];
             },
+            $this->fastFailOptions(),
         );
     }
 
-    public function getSoftwareStats(int $softwareId): array
+    public function getSoftwareStats(int $softwareId, ?string $baseUrl = null): array
     {
         return $this->sendPlainText(
             'GET',
             $this->buildPath('showallapi', [$softwareId]),
             ['software_id' => $softwareId],
+            $baseUrl,
+            null,
             fn (string $body, int $statusCode): array => [
                 'success' => $statusCode === 200,
                 'data' => ['count' => (int) trim($body)],
                 'status_code' => $statusCode,
             ],
+            $this->fastFailOptions(),
         );
     }
 
-    public function getProgramLogs(int $softwareId): array
+    public function getProgramLogs(int $softwareId, ?string $baseUrl = null, string $logsEndpoint = 'apilogs'): array
     {
+        $normalizedLogsEndpoint = $this->normalizeLogsEndpoint($logsEndpoint);
+
         return $this->sendPlainText(
             'GET',
-            $this->buildPath('apilogs', [$softwareId]),
+            $this->buildPath($normalizedLogsEndpoint, [$softwareId]),
             ['software_id' => $softwareId],
+            $baseUrl,
+            null,
             fn (string $body, int $statusCode): array => [
                 'success' => $statusCode === 200,
                 'data' => ['raw' => $body],
                 'status_code' => $statusCode,
             ],
+            $this->fastFailOptions(),
         );
     }
 
-    public function getGlobalLogs(): array
+    public function getGlobalLogs(?string $baseUrl = null): array
     {
         return $this->sendPlainText(
             'GET',
             $this->buildPath('getmylogs'),
             [],
+            $baseUrl,
+            null,
             fn (string $body, int $statusCode): array => [
                 'success' => $statusCode === 200,
                 'data' => ['raw' => $body],
@@ -112,6 +160,8 @@ class ExternalApiService
             'GET',
             $this->buildPath('showallapi', [8]),
             ['software_id' => 8],
+            null,
+            null,
             fn (string $body, int $statusCode): array => [
                 'success' => $statusCode === 200,
                 'data' => [
@@ -143,27 +193,46 @@ class ExternalApiService
     /**
      * @param array<string, mixed> $payload
      * @param \Closure(string, int): array{success: bool, data: array<string, mixed>, status_code: int} $formatter
+     * @param array{timeout?: int, retries?: int, connect_timeout?: int}|null $options
      * @return array{success: bool, data: array<string, mixed>, status_code: int}
      */
-    private function sendPlainText(string $method, string $path, array $payload, \Closure $formatter): array
-    {
+    private function sendPlainText(
+        string $method,
+        string $path,
+        array $payload,
+        ?string $baseUrl,
+        ?string $logPath,
+        \Closure $formatter,
+        ?array $options = null,
+    ): array {
         $startedAt = microtime(true);
-        $url = rtrim((string) config('external-api.url'), '/').'/'.ltrim($path, '/');
+        $resolvedBaseUrl = $this->resolveBaseUrl($baseUrl);
+        $url = rtrim($resolvedBaseUrl, '/').'/'.ltrim($path, '/');
+        $endpointForLogs = '/'.ltrim($logPath ?? $path, '/');
+        $safePayload = $this->sanitizePayloadForLogs($payload);
+        $timeoutSeconds = max(1, (int) ($options['timeout'] ?? config('external-api.timeout', 10)));
+        $retryAttempts = max(1, (int) ($options['retries'] ?? config('external-api.retries', 3)));
+        $connectTimeoutSeconds = max(1, (int) ($options['connect_timeout'] ?? min($timeoutSeconds, 3)));
 
         try {
-            $response = Http::timeout((int) config('external-api.timeout', 10))
-                ->retry((int) config('external-api.retries', 3), 200)
-                ->accept('*/*')
-                ->send($method, $url);
+            $request = Http::connectTimeout($connectTimeoutSeconds)
+                ->timeout($timeoutSeconds)
+                ->accept('*/*');
+
+            if ($retryAttempts > 1) {
+                $request = $request->retry($retryAttempts, 200);
+            }
+
+            $response = $request->send($method, $url);
 
             $body = trim((string) $response->body());
             $result = $formatter($body, $response->status());
-            $this->logApiCall($path, strtoupper($method), $payload, $result['data'], $response->status(), $startedAt);
+            $this->logApiCall($endpointForLogs, strtoupper($method), $safePayload, $result['data'], $response->status(), $startedAt);
 
             return $result;
         } catch (Throwable $exception) {
-            $body = ['message' => $exception->getMessage()];
-            $this->logApiCall($path, strtoupper($method), $payload, $body, 503, $startedAt);
+            $body = $this->formatExceptionPayload($exception);
+            $this->logApiCall($endpointForLogs, strtoupper($method), $safePayload, $body, 503, $startedAt);
 
             return [
                 'success' => false,
@@ -171,6 +240,21 @@ class ExternalApiService
                 'status_code' => 503,
             ];
         }
+    }
+
+    /**
+     * @return array{timeout: int, retries: int, connect_timeout: int}
+     */
+    private function fastFailOptions(): array
+    {
+        $configuredTimeout = max(1, (int) config('external-api.timeout', 10));
+        $timeout = min($configuredTimeout, 4);
+
+        return [
+            'timeout' => $timeout,
+            'retries' => 1,
+            'connect_timeout' => min($timeout, 2),
+        ];
     }
 
     /**
@@ -183,6 +267,76 @@ class ExternalApiService
         return $root.(empty($parts) ? '' : '/'.implode('/', $parts));
     }
 
+    private function resolveBaseUrl(?string $baseUrl = null): string
+    {
+        $candidate = ExternalApiSecurity::normalizeBaseUrl($baseUrl)
+            ?? ExternalApiSecurity::normalizeBaseUrl((string) config('external-api.url'));
+
+        if ($candidate === null) {
+            throw new InvalidArgumentException('External API base URL is not configured.');
+        }
+
+        ExternalApiSecurity::assertSafeBaseUrl($candidate);
+
+        return $candidate;
+    }
+
+    private function normalizeLogsEndpoint(string $value): string
+    {
+        $normalized = trim($value, " \t\n\r\0\x0B/");
+        if ($normalized === '') {
+            return 'apilogs';
+        }
+
+        if (! preg_match('/^[A-Za-z0-9_-]+$/', $normalized)) {
+            throw new InvalidArgumentException('External logs endpoint is invalid.');
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function sanitizePayloadForLogs(array $payload): array
+    {
+        $safePayload = $payload;
+
+        foreach (['api_key', 'key', 'token', 'authorization'] as $key) {
+            if (array_key_exists($key, $safePayload)) {
+                $safePayload[$key] = '[REDACTED]';
+            }
+        }
+
+        return $safePayload;
+    }
+
+    /**
+     * @return array{message: string, error_type: string, raw_message?: string}
+     */
+    private function formatExceptionPayload(Throwable $exception): array
+    {
+        $rawMessage = trim($exception->getMessage());
+        $normalizedMessage = Str::lower($rawMessage);
+        $isTimeout = $exception instanceof ConnectionException
+            || Str::contains($normalizedMessage, ['curl error 28', 'timed out', 'timeout']);
+
+        if ($isTimeout) {
+            return [
+                'message' => 'The external API endpoint is not responding right now. Try again later or use a scheduled activation.',
+                'error_type' => 'timeout',
+                'raw_message' => $rawMessage,
+            ];
+        }
+
+        return [
+            'message' => 'The external API endpoint is unavailable right now. Verify the endpoint settings and try again later.',
+            'error_type' => 'unavailable',
+            'raw_message' => $rawMessage,
+        ];
+    }
+
     private function logApiCall(string $endpoint, string $method, array $payload, array $responseBody, int $statusCode, float $startedAt): void
     {
         try {
@@ -191,7 +345,7 @@ class ExternalApiService
             ApiLog::query()->create([
                 'tenant_id' => $user?->tenant_id,
                 'user_id' => $user?->id,
-                'endpoint' => '/'.$endpoint,
+                'endpoint' => $endpoint,
                 'method' => $method,
                 'request_body' => $payload === [] ? null : $payload,
                 'response_body' => $responseBody === [] ? null : $responseBody,

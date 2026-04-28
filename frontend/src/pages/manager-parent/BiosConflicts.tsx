@@ -1,15 +1,12 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { Link, useNavigate } from 'react-router-dom'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatDate } from '@/lib/utils'
 import { managerParentService } from '@/services/manager-parent.service'
@@ -17,7 +14,7 @@ import { routePaths } from '@/router/routes'
 import type { BiosConflictFilters, BiosConflictItem } from '@/types/manager-parent.types'
 
 function StatusPill({ status, label }: { status: BiosConflictItem['status']; label: string }) {
-  const base = 'inline-flex rounded-full px-3 py-1 text-xs font-semibold'
+  const base = 'inline-flex rounded-full px-3 py-1 text-sm font-semibold'
   const className = status === 'resolved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
 
   return <span className={`${base} ${className}`}>{label}</span>
@@ -25,43 +22,29 @@ function StatusPill({ status, label }: { status: BiosConflictItem['status']; lab
 
 export function BiosConflictsPage() {
   const { t } = useTranslation()
-  const queryClient = useQueryClient()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(15)
-  const [status, setStatus] = useState<BiosConflictFilters['status']>('')
   const [conflictType, setConflictType] = useState('')
   const [dateRange, setDateRange] = useState({ from: '', to: '' })
   const [selectedConflict, setSelectedConflict] = useState<BiosConflictItem | null>(null)
-  const [resolveTarget, setResolveTarget] = useState<BiosConflictItem | null>(null)
-  const [resolutionNotes, setResolutionNotes] = useState('')
 
   const params: BiosConflictFilters = useMemo(
     () => ({
       page,
       per_page: perPage,
-      status,
       conflict_type: conflictType || undefined,
       from: dateRange.from || undefined,
       to: dateRange.to || undefined,
     }),
-    [conflictType, dateRange.from, dateRange.to, page, perPage, status],
+    [conflictType, dateRange.from, dateRange.to, page, perPage],
   )
 
   const conflictsQuery = useQuery({
     queryKey: ['manager-parent', 'bios-conflicts', params],
     queryFn: () => managerParentService.getBiosConflicts(params),
-  })
-
-  const resolveMutation = useMutation({
-    mutationFn: ({ id, notes }: { id: number; notes: string }) => managerParentService.resolveBiosConflict(id, { resolution_notes: notes }),
-    onSuccess: () => {
-      toast.success(t('managerParent.pages.biosConflicts.resolveSuccess'))
-      setResolveTarget(null)
-      setResolutionNotes('')
-      void queryClient.invalidateQueries({ queryKey: ['manager-parent', 'bios-conflicts'] })
-    },
   })
 
   const columns: Array<DataTableColumn<BiosConflictItem>> = [
@@ -72,8 +55,10 @@ export function BiosConflictsPage() {
       sortValue: (row) => row.bios_id,
       render: (row) => (
         <div>
-          <code>{row.bios_id}</code>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <button type="button" className="text-sky-600 hover:underline dark:text-sky-300" onClick={() => navigate(routePaths.managerParent.biosDetail(lang, row.bios_id))}>
+            <code>{row.bios_id}</code>
+          </button>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             @{row.affected_customers[0]?.username ?? '-'}
           </p>
         </div>
@@ -102,6 +87,11 @@ export function BiosConflictsPage() {
         : t('managerParent.pages.biosConflicts.noCustomers')),
     },
     {
+      key: 'reseller',
+      label: t('common.reseller'),
+      render: (row) => row.reseller_name || '-',
+    },
+    {
       key: 'date',
       label: t('managerParent.pages.biosConflicts.columns.dateDetected'),
       sortable: true,
@@ -123,11 +113,6 @@ export function BiosConflictsPage() {
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedConflict(row)}>
             {t('common.view')}
           </Button>
-          {!row.resolved ? (
-            <Button type="button" size="sm" variant="outline" onClick={() => setResolveTarget(row)}>
-              {t('managerParent.pages.biosConflicts.resolve')}
-            </Button>
-          ) : null}
         </div>
       ),
     },
@@ -142,17 +127,6 @@ export function BiosConflictsPage() {
 
       <Card>
         <CardContent className="space-y-4 p-4">
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant={status === '' ? 'default' : 'secondary'} onClick={() => setStatus('')}>
-              {t('common.all')}
-            </Button>
-            <Button type="button" size="sm" variant={status === 'open' ? 'default' : 'secondary'} onClick={() => setStatus('open')}>
-              {t('managerParent.pages.biosConflicts.status.open')}
-            </Button>
-            <Button type="button" size="sm" variant={status === 'resolved' ? 'default' : 'secondary'} onClick={() => setStatus('resolved')}>
-              {t('managerParent.pages.biosConflicts.status.resolved')}
-            </Button>
-          </div>
           <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
             <select
               value={conflictType}
@@ -164,8 +138,8 @@ export function BiosConflictsPage() {
             >
               <option value="">{t('managerParent.pages.biosConflicts.allTypes')}</option>
               <option value="duplicate_activation">{t('managerParent.pages.biosConflicts.types.duplicate_activation')}</option>
-              <option value="bios_mismatch">{t('managerParent.pages.biosConflicts.types.bios_mismatch')}</option>
-              <option value="multi_tenant_conflict">{t('managerParent.pages.biosConflicts.types.multi_tenant_conflict')}</option>
+              <option value="username_bios_mismatch">{t('managerParent.pages.biosConflicts.types.username_bios_mismatch')}</option>
+              <option value="blacklisted_bios">{t('managerParent.pages.biosConflicts.types.blacklisted_bios')}</option>
             </select>
             <DateRangePicker
               value={dateRange}
@@ -179,6 +153,7 @@ export function BiosConflictsPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_parent_bios_conflicts"
         columns={columns}
         data={conflictsQuery.data?.data ?? []}
         rowKey={(row) => row.id}
@@ -223,36 +198,6 @@ export function BiosConflictsPage() {
           ) : null}
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={resolveTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setResolveTarget(null)
-            setResolutionNotes('')
-          }
-        }}
-        title={t('managerParent.pages.biosConflicts.resolveTitle')}
-        description={resolveTarget ? t('managerParent.pages.biosConflicts.resolveDescription', { biosId: resolveTarget.bios_id }) : undefined}
-        confirmLabel={t('managerParent.pages.biosConflicts.resolve')}
-        onConfirm={() => {
-          if (!resolveTarget) {
-            return
-          }
-
-          if (!resolutionNotes.trim()) {
-            toast.error(t('managerParent.pages.biosConflicts.notesRequired'))
-            return
-          }
-
-          resolveMutation.mutate({ id: resolveTarget.id, notes: resolutionNotes.trim() })
-        }}
-      >
-        <div className="space-y-2">
-          <p className="text-sm text-slate-600 dark:text-slate-300">{t('managerParent.pages.biosConflicts.notesLabel')}</p>
-          <Textarea value={resolutionNotes} onChange={(event) => setResolutionNotes(event.target.value)} />
-        </div>
-      </ConfirmDialog>
     </div>
   )
 }

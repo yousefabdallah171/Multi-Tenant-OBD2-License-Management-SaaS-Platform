@@ -8,15 +8,17 @@
     "require": {
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "^3.1",
+        "darkaonline/l5-swagger": "*",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.10.1",
         "php-open-source-saver/jwt-auth": "^2.8",
+        "phpoffice/phpspreadsheet": "2.1",
         "pusher/pusher-php-server": "^7.2"
     },
     "require-dev": {
-        "darkaonline/l5-swagger": "^10.1",
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "3.1",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
         "laravel/sail": "^1.41",
@@ -53,6 +55,15 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "test:security": [
+            "@php artisan test tests/Feature/Security"
+        ],
+        "analyse": [
+            "vendor/bin/phpstan analyse --memory-limit=1G --configuration=phpstan.neon"
+        ],
+        "security:routes": [
+            "@php scripts/check-sensitive-routes.php"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

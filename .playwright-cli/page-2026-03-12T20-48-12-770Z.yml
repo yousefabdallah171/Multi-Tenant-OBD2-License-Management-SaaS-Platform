@@ -1,0 +1,278 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - link "Skip to content" [ref=e5] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e9]:
+          - paragraph [ref=e10]: Manager
+          - generic [ref=e11]:
+            - heading "Manager Workspace" [level=1] [ref=e12]
+            - generic [ref=e13]: "Server Timezone: UTC"
+        - generic [ref=e14]:
+          - button "Toggle theme" [ref=e15] [cursor=pointer]:
+            - img [ref=e16]
+            - generic [ref=e18]: Dark mode
+          - button "Switch language" [ref=e19] [cursor=pointer]:
+            - img [ref=e20]
+            - generic [ref=e23]: AR
+          - button "Open user menu" [ref=e24] [cursor=pointer]:
+            - generic [ref=e25]:
+              - generic [ref=e26]: Mohamed Reseller
+              - generic [ref=e27]: reseller2@obd2sw.com
+            - generic [ref=e29]: Manager
+    - generic [ref=e30]:
+      - complementary [ref=e32]:
+        - navigation [ref=e33]:
+          - link "Dashboard" [ref=e34] [cursor=pointer]:
+            - /url: /en/manager/dashboard
+            - img [ref=e35]
+            - generic [ref=e40]: Dashboard
+          - link "Team" [ref=e41] [cursor=pointer]:
+            - /url: /en/manager/team
+            - img [ref=e42]
+            - generic [ref=e47]: Team
+          - link "Customers" [ref=e48] [cursor=pointer]:
+            - /url: /en/manager/customers
+            - img [ref=e49]
+            - generic [ref=e52]: Customers
+          - link "Software" [ref=e53] [cursor=pointer]:
+            - /url: /en/manager/software
+            - img [ref=e54]
+            - generic [ref=e58]: Software
+          - link "Software Management" [ref=e59] [cursor=pointer]:
+            - /url: /en/manager/software-management
+            - img [ref=e60]
+            - generic [ref=e64]: Software Management
+          - link "Reports" [ref=e65] [cursor=pointer]:
+            - /url: /en/manager/reports
+            - img [ref=e66]
+            - generic [ref=e68]: Reports
+          - link "Panel Activity" [ref=e69] [cursor=pointer]:
+            - /url: /en/manager/activity
+            - img [ref=e70]
+            - generic [ref=e73]: Panel Activity
+          - link "Reseller Logs" [ref=e74] [cursor=pointer]:
+            - /url: /en/manager/reseller-logs
+            - img [ref=e75]
+            - generic [ref=e78]: Reseller Logs
+          - link "Profile" [ref=e79] [cursor=pointer]:
+            - /url: /en/manager/profile
+            - img [ref=e80]
+            - generic [ref=e83]: Profile
+      - generic [ref=e84]:
+        - main [ref=e85]:
+          - generic [ref=e410]:
+            - generic [ref=e411]:
+              - generic [ref=e412]:
+                - paragraph [ref=e413]: Manager
+                - heading "Reseller Logs" [level=2] [ref=e414]
+                - paragraph [ref=e415]: Review reseller-side license actions across your team.
+              - button "Clear" [ref=e417] [cursor=pointer]
+            - generic [ref=e418]:
+              - button "All actions 27" [ref=e419] [cursor=pointer]:
+                - generic [ref=e421]:
+                  - paragraph [ref=e422]: All actions
+                  - paragraph [ref=e423]: "27"
+              - button "Activate 5" [ref=e424] [cursor=pointer]:
+                - generic [ref=e426]:
+                  - paragraph [ref=e427]: Activate
+                  - paragraph [ref=e428]: "5"
+              - button "Renew 11" [ref=e429] [cursor=pointer]:
+                - generic [ref=e431]:
+                  - paragraph [ref=e432]: Renew
+                  - paragraph [ref=e433]: "11"
+              - button "Deactivate 11" [ref=e434] [cursor=pointer]:
+                - generic [ref=e436]:
+                  - paragraph [ref=e437]: Deactivate
+                  - paragraph [ref=e438]: "11"
+              - button "Delete 0" [ref=e439] [cursor=pointer]:
+                - generic [ref=e441]:
+                  - paragraph [ref=e442]: Delete
+                  - paragraph [ref=e443]: "0"
+              - generic [ref=e445]:
+                - paragraph [ref=e446]: Revenue
+                - generic [ref=e447]: $298.99
+            - generic [ref=e449]:
+              - combobox [ref=e450]:
+                - option "All Users" [selected]
+                - option "Mohamed Reseller (Manager)"
+                - option "Ahmed Reseller (Reseller)"
+              - combobox [ref=e451]:
+                - option "All actions"
+                - option "Activate" [selected]
+                - option "Renew"
+                - option "Deactivate"
+                - option "Delete"
+              - generic [ref=e452]:
+                - generic [ref=e453]:
+                  - button "Last 7 Days" [ref=e454] [cursor=pointer]
+                  - button "Last 30 Days" [ref=e455] [cursor=pointer]
+                  - button "Last 3 Months" [ref=e456] [cursor=pointer]
+                  - button "Last Year" [ref=e457] [cursor=pointer]
+                  - button "Custom" [ref=e458] [cursor=pointer]
+                - generic [ref=e459]:
+                  - generic [ref=e460]:
+                    - generic [ref=e461]: From
+                    - textbox "From" [ref=e462]: 2025-03-13
+                  - generic [ref=e463]:
+                    - generic [ref=e464]: To
+                    - textbox "To" [ref=e465]: 2026-03-12
+                  - button "Clear" [ref=e466] [cursor=pointer]
+            - generic [ref=e467]:
+              - table [ref=e470]:
+                - rowgroup [ref=e471]:
+                  - row "Timestamp User Action Customer Program BIOS ID Price Status IP" [ref=e472]:
+                    - columnheader "Timestamp" [ref=e473]:
+                      - button "Timestamp" [ref=e474] [cursor=pointer]:
+                        - generic [ref=e475]: Timestamp
+                        - img [ref=e476]
+                    - columnheader "User" [ref=e479]:
+                      - button "User" [ref=e480] [cursor=pointer]:
+                        - generic [ref=e481]: User
+                        - img [ref=e482]
+                    - columnheader "Action" [ref=e485]:
+                      - button "Action" [ref=e486] [cursor=pointer]:
+                        - generic [ref=e487]: Action
+                        - img [ref=e488]
+                    - columnheader "Customer" [ref=e491]:
+                      - button "Customer" [ref=e492] [cursor=pointer]:
+                        - generic [ref=e493]: Customer
+                        - img [ref=e494]
+                    - columnheader "Program" [ref=e497]:
+                      - button "Program" [ref=e498] [cursor=pointer]:
+                        - generic [ref=e499]: Program
+                        - img [ref=e500]
+                    - columnheader "BIOS ID" [ref=e503]:
+                      - button "BIOS ID" [ref=e504] [cursor=pointer]:
+                        - generic [ref=e505]: BIOS ID
+                        - img [ref=e506]
+                    - columnheader "Price" [ref=e509]:
+                      - button "Price" [ref=e510] [cursor=pointer]:
+                        - generic [ref=e511]: Price
+                        - img [ref=e512]
+                    - columnheader "Status" [ref=e515]:
+                      - button "Status" [ref=e516] [cursor=pointer]:
+                        - generic [ref=e517]: Status
+                        - img [ref=e518]
+                    - columnheader "IP" [ref=e521]:
+                      - button "IP" [ref=e522] [cursor=pointer]:
+                        - generic [ref=e523]: IP
+                        - img [ref=e524]
+                - rowgroup [ref=e527]:
+                  - row "Mar 12, 2026, 7:55 PM Ahmed Reseller Reseller Activate - OBD2SW Pro TEST-BIOS-20260312195505367 $1.11 - 127.0.0.1" [ref=e528]:
+                    - cell "Mar 12, 2026, 7:55 PM" [ref=e529]
+                    - cell "Ahmed Reseller Reseller" [ref=e530]:
+                      - generic [ref=e531]:
+                        - link "Ahmed Reseller" [ref=e532] [cursor=pointer]:
+                          - /url: /en/manager/team/3
+                        - generic [ref=e533]: Reseller
+                    - cell "Activate" [ref=e534]:
+                      - generic [ref=e535]: Activate
+                    - cell "-" [ref=e536]:
+                      - link "-" [ref=e537] [cursor=pointer]:
+                        - /url: /en/manager/customers/29
+                    - cell "OBD2SW Pro" [ref=e538]
+                    - cell "TEST-BIOS-20260312195505367" [ref=e539]:
+                      - link "TEST-BIOS-20260312195505367" [ref=e540] [cursor=pointer]:
+                        - /url: /en/manager/bios-details/TEST-BIOS-20260312195505367
+                    - cell "$1.11" [ref=e541]
+                    - cell "-" [ref=e542]
+                    - cell "127.0.0.1" [ref=e543]
+                  - row "Mar 12, 2026, 7:53 PM Ahmed Reseller Reseller Activate - OBD2SW Pro TEST-BIOS-20260312195313342 $1.11 - 127.0.0.1" [ref=e544]:
+                    - cell "Mar 12, 2026, 7:53 PM" [ref=e545]
+                    - cell "Ahmed Reseller Reseller" [ref=e546]:
+                      - generic [ref=e547]:
+                        - link "Ahmed Reseller" [ref=e548] [cursor=pointer]:
+                          - /url: /en/manager/team/3
+                        - generic [ref=e549]: Reseller
+                    - cell "Activate" [ref=e550]:
+                      - generic [ref=e551]: Activate
+                    - cell "-" [ref=e552]:
+                      - link "-" [ref=e553] [cursor=pointer]:
+                        - /url: /en/manager/customers/25
+                    - cell "OBD2SW Pro" [ref=e554]
+                    - cell "TEST-BIOS-20260312195313342" [ref=e555]:
+                      - link "TEST-BIOS-20260312195313342" [ref=e556] [cursor=pointer]:
+                        - /url: /en/manager/bios-details/TEST-BIOS-20260312195313342
+                    - cell "$1.11" [ref=e557]
+                    - cell "-" [ref=e558]
+                    - cell "127.0.0.1" [ref=e559]
+                  - row "Mar 11, 2026, 8:50 PM Ahmed Reseller Reseller Activate toea OBD2SW Pro toea $24.99 Cancelled 127.0.0.1" [ref=e560]:
+                    - cell "Mar 11, 2026, 8:50 PM" [ref=e561]
+                    - cell "Ahmed Reseller Reseller" [ref=e562]:
+                      - generic [ref=e563]:
+                        - link "Ahmed Reseller" [ref=e564] [cursor=pointer]:
+                          - /url: /en/manager/team/3
+                        - generic [ref=e565]: Reseller
+                    - cell "Activate" [ref=e566]:
+                      - generic [ref=e567]: Activate
+                    - cell "toea" [ref=e568]:
+                      - link "toea" [ref=e569] [cursor=pointer]:
+                        - /url: /en/manager/customers/23
+                    - cell "OBD2SW Pro" [ref=e570]
+                    - cell "toea" [ref=e571]:
+                      - link "toea" [ref=e572] [cursor=pointer]:
+                        - /url: /en/manager/bios-details/toea
+                    - cell "$24.99" [ref=e573]
+                    - cell "Cancelled" [ref=e574]:
+                      - 'generic "Cancelled: Stopped and removed from the software until renewed or reactivated." [ref=e575]': Cancelled
+                    - cell "127.0.0.1" [ref=e576]
+                  - row "Mar 10, 2026, 4:58 AM Ahmed Reseller Reseller Activate - OBD2SW Pro RESELLER-TEST-045555 $25.00 - 127.0.0.1" [ref=e577]:
+                    - cell "Mar 10, 2026, 4:58 AM" [ref=e578]
+                    - cell "Ahmed Reseller Reseller" [ref=e579]:
+                      - generic [ref=e580]:
+                        - link "Ahmed Reseller" [ref=e581] [cursor=pointer]:
+                          - /url: /en/manager/team/3
+                        - generic [ref=e582]: Reseller
+                    - cell "Activate" [ref=e583]:
+                      - generic [ref=e584]: Activate
+                    - cell "-" [ref=e585]:
+                      - link "-" [ref=e586] [cursor=pointer]:
+                        - /url: /en/manager/customers/18
+                    - cell "OBD2SW Pro" [ref=e587]
+                    - cell "RESELLER-TEST-045555" [ref=e588]:
+                      - link "RESELLER-TEST-045555" [ref=e589] [cursor=pointer]:
+                        - /url: /en/manager/bios-details/RESELLER-TEST-045555
+                    - cell "$25.00" [ref=e590]
+                    - cell "-" [ref=e591]
+                    - cell "127.0.0.1" [ref=e592]
+                  - row "Mar 10, 2026, 2:10 AM Mohamed Reseller Manager Activate - OBD2SW Pro API-TEST-20260310021020 $25.00 - 127.0.0.1" [ref=e593]:
+                    - cell "Mar 10, 2026, 2:10 AM" [ref=e594]
+                    - cell "Mohamed Reseller Manager" [ref=e595]:
+                      - generic [ref=e596]:
+                        - link "Mohamed Reseller" [ref=e597] [cursor=pointer]:
+                          - /url: /en/manager/team/4
+                        - generic [ref=e598]: Manager
+                    - cell "Activate" [ref=e599]:
+                      - generic [ref=e600]: Activate
+                    - cell "-" [ref=e601]:
+                      - link "-" [ref=e602] [cursor=pointer]:
+                        - /url: /en/manager/customers/13
+                    - cell "OBD2SW Pro" [ref=e603]
+                    - cell "API-TEST-20260310021020" [ref=e604]:
+                      - link "API-TEST-20260310021020" [ref=e605] [cursor=pointer]:
+                        - /url: /en/manager/bios-details/API-TEST-20260310021020
+                    - cell "$25.00" [ref=e606]
+                    - cell "-" [ref=e607]
+                    - cell "127.0.0.1" [ref=e608]
+              - generic [ref=e609]:
+                - generic [ref=e610]: 5 total
+                - generic [ref=e611]:
+                  - generic [ref=e612]:
+                    - generic [ref=e613]: Rows per page
+                    - combobox "Rows per page" [ref=e614]:
+                      - option "10" [selected]
+                      - option "25"
+                      - option "50"
+                  - generic [ref=e615]:
+                    - button "Previous" [disabled]
+                    - generic [ref=e616]: 1 / 1
+                    - button "Next" [disabled]
+        - contentinfo [ref=e403]: 2026 OBD2SW License Platform
+    - button "1 online" [ref=e405] [cursor=pointer]:
+      - img [ref=e406]
+      - text: 1 online
+    - generic:
+      - region "Notifications alt+T"
+  - generic [ref=e408]: "70"

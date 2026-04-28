@@ -2,24 +2,19 @@
 
 namespace App\Http\Controllers\ManagerParent;
 
-use App\Models\License;
 use App\Services\ExternalApiService;
+use App\Services\IpAnalyticsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class IpAnalyticsController extends BaseManagerParentController
 {
-    private const PRIVATE_IP_PATTERNS = [
-        '/^127\./',
-        '/^::1$/',
-        '/^10\./',
-        '/^192\.168\./',
-        '/^172\.(1[6-9]|2\d|3[01])\./',
-    ];
-
-    public function __construct(private readonly ExternalApiService $externalApiService)
-    {
+    public function __construct(
+        private readonly ExternalApiService $externalApiService,
+        private readonly IpAnalyticsService $ipAnalyticsService,
+    ) {
     }
 
     public function index(Request $request): JsonResponse
@@ -28,71 +23,48 @@ class IpAnalyticsController extends BaseManagerParentController
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
             'search' => ['nullable', 'string'],
+            'country' => ['nullable', 'string', 'max:100'],
+            'program_id' => ['nullable', 'integer', 'min:1'],
             'reputation' => ['nullable', 'in:all,safe,proxy'],
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date'],
         ]);
+
+        $tenantId = $this->currentTenantId($request);
         $page = (int) ($validated['page'] ?? 1);
         $perPage = (int) ($validated['per_page'] ?? 100);
+        $cacheKey = "ip-analytics:matched:{$tenantId}";
+        $matched = Cache::get($cacheKey);
+        if (! is_array($matched)) {
+            $response = $this->externalApiService->getGlobalLogs();
+            if (! ($response['success'] ?? false)) {
+                return response()->json([
+                    'data' => [],
+                    'meta' => [
+                        'page' => $page,
+                        'per_page' => $perPage,
+                        'total' => 0,
+                        'last_page' => 1,
+                        'has_next_page' => false,
+                        'next_page' => null,
+                    ],
+                    'message' => 'External API is currently unavailable.',
+                ]);
+            }
 
-        $response = $this->externalApiService->getGlobalLogs();
-
-        if (! ($response['success'] ?? false)) {
-            return response()->json(['data' => []]);
+            $parsed = $this->ipAnalyticsService->parseExternalLogs((string) ($response['data']['raw'] ?? ''));
+            $matched = $this->ipAnalyticsService->matchLogsToDatabaseRecords($parsed, $tenantId);
+            $matched = array_values(array_filter($matched, static fn (array $row): bool => ($row['program_id'] ?? null) !== null));
+            $matched = array_reverse($matched);
+            try {
+                Cache::put($cacheKey, $matched, now()->addMinutes(5));
+            } catch (\Throwable) {
+                // Skip cache failures so endpoint still works.
+            }
         }
 
-        $raw = (string) ($response['data']['raw'] ?? '');
-        $rows = collect(preg_split('/\r\n|\r|\n/', $raw) ?: [])
-            ->map(static function (string $line): ?array {
-                $trimmed = trim($line);
-                if ($trimmed === '') {
-                    return null;
-                }
-
-                if (! preg_match('/^(\S+)\s+(.+?)\s+((?:\d{1,3}\.){3}\d{1,3})$/', $trimmed, $matches)) {
-                    return null;
-                }
-
-                return [
-                    'username' => trim($matches[1]),
-                    'timestamp' => trim($matches[2]),
-                    'ip_address' => trim($matches[3]),
-                ];
-            })
-            ->filter()
-            ->values();
-
-        $usernames = $rows
-            ->pluck('username')
-            ->filter(static fn ($username): bool => is_string($username) && $username !== '')
-            ->unique()
-            ->values()
-            ->all();
-
-        $licenseLookup = License::query()
-            ->where('tenant_id', $this->currentTenantId($request))
-            ->whereIn('external_username', $usernames)
-            ->get(['external_username', 'bios_id', 'customer_id'])
-            ->keyBy('external_username');
-
-        $rows = $rows
-            ->filter(static fn (array $row): bool => $licenseLookup->has($row['username']))
-            ->sortByDesc('timestamp')
-            ->values();
-
-        // Collect unique public IPs for GeoIP enrichment
-        $uniquePublicIps = $rows
-            ->pluck('ip_address')
-            ->unique()
-            ->filter(fn (string $ip): bool => ! $this->isPrivateIp($ip))
-            ->values()
-            ->all();
-
-        $geoData = $this->fetchGeoData($uniquePublicIps);
-
-        $data = $rows->map(static function (array $row) use ($licenseLookup, $geoData): array {
-                $license = $licenseLookup->get($row['username']);
-                $geo = $geoData[$row['ip_address']] ?? [
+        $geoByIp = $this->fetchGeoData(array_values(array_unique(array_column($matched, 'ip_address'))));
+        $rows = collect($this->ipAnalyticsService->formatResponse($matched))
+            ->map(function (array $row) use ($geoByIp): array {
+                $geo = $geoByIp[$row['ip_address']] ?? [
                     'country' => 'Unknown',
                     'country_code' => '',
                     'city' => '',
@@ -102,60 +74,48 @@ class IpAnalyticsController extends BaseManagerParentController
                 ];
 
                 return [
-                    'username' => $row['username'],
-                    'bios_id' => $license?->bios_id,
-                    'customer_id' => $license?->customer_id,
-                    'ip_address' => $row['ip_address'],
-                    'timestamp' => $row['timestamp'],
+                    ...$row,
                     'country' => $geo['country'],
                     'country_code' => $geo['country_code'],
                     'city' => $geo['city'],
                     'isp' => $geo['isp'],
-                    'proxy' => $geo['proxy'],
-                    'hosting' => $geo['hosting'],
+                    'proxy' => (bool) $geo['proxy'],
+                    'hosting' => (bool) $geo['hosting'],
                 ];
-            })->values();
+            });
 
         if (! empty($validated['search'])) {
             $search = mb_strtolower((string) $validated['search']);
-            $data = $data->filter(fn (array $row): bool => str_contains(mb_strtolower((string) $row['ip_address']), $search)
-                || str_contains(mb_strtolower((string) $row['username']), $search));
+            $rows = $rows->filter(fn (array $row): bool => str_contains(mb_strtolower((string) ($row['username'] ?? '')), $search)
+                || str_contains(mb_strtolower((string) ($row['bios_id'] ?? '')), $search)
+                || str_contains(mb_strtolower((string) ($row['program_name'] ?? '')), $search)
+                || str_contains(mb_strtolower((string) ($row['ip_address'] ?? '')), $search));
         }
 
-        if (($validated['reputation'] ?? 'all') === 'proxy') {
-            $data = $data->filter(fn (array $row): bool => (bool) ($row['proxy'] || $row['hosting']));
-        } elseif (($validated['reputation'] ?? 'all') === 'safe') {
-            $data = $data->filter(fn (array $row): bool => ! ((bool) ($row['proxy'] || $row['hosting'])));
+        if (! empty($validated['country'])) {
+            $country = mb_strtolower((string) $validated['country']);
+            $rows = $rows->filter(fn (array $row): bool => str_contains(mb_strtolower((string) ($row['country'] ?? '')), $country));
         }
 
-        if (! empty($validated['from']) || ! empty($validated['to'])) {
-            $from = ! empty($validated['from']) ? strtotime((string) $validated['from']) : null;
-            $to = ! empty($validated['to']) ? strtotime((string) $validated['to'].' 23:59:59') : null;
-            $data = $data->filter(function (array $row) use ($from, $to): bool {
-                $time = strtotime((string) $row['timestamp']);
-                if ($time === false) {
-                    return false;
-                }
-
-                if ($from !== null && $time < $from) {
-                    return false;
-                }
-
-                if ($to !== null && $time > $to) {
-                    return false;
-                }
-
-                return true;
-            });
+        if (! empty($validated['program_id'])) {
+            $programId = (int) $validated['program_id'];
+            $rows = $rows->filter(fn (array $row): bool => (int) ($row['program_id'] ?? 0) === $programId);
         }
 
-        $data = $data->sortByDesc('timestamp')->values();
-        $total = $data->count();
+        $reputation = (string) ($validated['reputation'] ?? 'all');
+        if ($reputation === 'proxy') {
+            $rows = $rows->filter(fn (array $row): bool => (bool) ($row['proxy'] || $row['hosting']));
+        } elseif ($reputation === 'safe') {
+            $rows = $rows->filter(fn (array $row): bool => ! ((bool) ($row['proxy'] || $row['hosting'])));
+        }
+
+        $rows = $rows->values();
+        $total = $rows->count();
         $lastPage = max(1, (int) ceil($total / $perPage));
         $offset = max(0, ($page - 1) * $perPage);
 
         return response()->json([
-            'data' => $data->slice($offset, $perPage)->values(),
+            'data' => $rows->slice($offset, $perPage)->values(),
             'meta' => [
                 'page' => $page,
                 'per_page' => $perPage,
@@ -177,19 +137,8 @@ class IpAnalyticsController extends BaseManagerParentController
         ]);
     }
 
-    private function isPrivateIp(string $ip): bool
-    {
-        foreach (self::PRIVATE_IP_PATTERNS as $pattern) {
-            if (preg_match($pattern, $ip)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /**
-     * @param  string[]  $ips
+     * @param string[] $ips
      * @return array<string, array{country: string, country_code: string, city: string, isp: string, proxy: bool, hosting: bool}>
      */
     private function fetchGeoData(array $ips): array
@@ -200,16 +149,35 @@ class IpAnalyticsController extends BaseManagerParentController
 
         $fallback = ['country' => 'Unknown', 'country_code' => '', 'city' => '', 'isp' => '', 'proxy' => false, 'hosting' => false];
         $result = [];
+        $uncachedIps = [];
 
-        foreach (array_chunk($ips, 100) as $chunk) {
+        foreach ($ips as $ip) {
+            $cached = Cache::get('ip-analytics:geo:'.$ip);
+            if (is_array($cached)) {
+                $result[$ip] = [
+                    'country' => (string) ($cached['country'] ?? 'Unknown'),
+                    'country_code' => (string) ($cached['country_code'] ?? ''),
+                    'city' => (string) ($cached['city'] ?? ''),
+                    'isp' => (string) ($cached['isp'] ?? ''),
+                    'proxy' => (bool) ($cached['proxy'] ?? false),
+                    'hosting' => (bool) ($cached['hosting'] ?? false),
+                ];
+                continue;
+            }
+
+            $uncachedIps[] = $ip;
+        }
+
+        foreach (array_chunk($uncachedIps, 100) as $chunk) {
             try {
                 $payload = array_map(static fn (string $ip): array => ['query' => $ip], $chunk);
                 $response = Http::timeout(8)
-                    ->post('http://ip-api.com/batch?fields=status,country,countryCode,city,isp,org,proxy,hosting,query', $payload);
+                    ->post('http://ip-api.com/batch?fields=status,country,countryCode,city,isp,org,proxy,hosting,mobile,query', $payload);
 
                 if (! $response->successful()) {
                     foreach ($chunk as $ip) {
                         $result[$ip] = $fallback;
+                        $this->cacheGeo("ip-analytics:geo:{$ip}", $fallback);
                     }
                     continue;
                 }
@@ -219,26 +187,48 @@ class IpAnalyticsController extends BaseManagerParentController
                     if ($ip === '' || ($item['status'] ?? '') !== 'success') {
                         if ($ip !== '') {
                             $result[$ip] = $fallback;
+                            $this->cacheGeo("ip-analytics:geo:{$ip}", $fallback);
                         }
                         continue;
                     }
 
-                    $result[$ip] = [
+                    $isHosting = (bool) ($item['hosting'] ?? false);
+                    $isProxy = (bool) ($item['proxy'] ?? false);
+
+                    $geo = [
                         'country' => (string) ($item['country'] ?? 'Unknown'),
                         'country_code' => (string) ($item['countryCode'] ?? ''),
                         'city' => (string) ($item['city'] ?? ''),
-                        'isp' => (string) ($item['org'] !== '' ? ($item['org'] ?? '') : ($item['isp'] ?? '')),
-                        'proxy' => (bool) (($item['proxy'] ?? false) || ($item['hosting'] ?? false)),
-                        'hosting' => (bool) ($item['hosting'] ?? false),
+                        'isp' => (string) (($item['org'] ?? '') !== '' ? ($item['org'] ?? '') : ($item['isp'] ?? '')),
+                        // Strict mode: flag only high-confidence VPN/proxy signals.
+                        // This minimizes false positives for mobile/carrier networks.
+                        'proxy' => $isProxy && $isHosting,
+                        'hosting' => $isHosting,
                     ];
+
+                    $result[$ip] = $geo;
+                    $this->cacheGeo("ip-analytics:geo:{$ip}", $geo);
                 }
             } catch (\Throwable) {
                 foreach ($chunk as $ip) {
                     $result[$ip] = $fallback;
+                    $this->cacheGeo("ip-analytics:geo:{$ip}", $fallback);
                 }
             }
         }
 
         return $result;
+    }
+
+    /**
+     * @param array{country: string, country_code: string, city: string, isp: string, proxy: bool, hosting: bool} $payload
+     */
+    private function cacheGeo(string $key, array $payload): void
+    {
+        try {
+            Cache::put($key, $payload, now()->addHour());
+        } catch (\Throwable) {
+            // Skip cache failures so analytics endpoint remains available.
+        }
     }
 }

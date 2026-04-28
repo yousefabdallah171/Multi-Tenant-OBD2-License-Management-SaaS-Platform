@@ -1,4 +1,5 @@
 import path from 'node:path'
+import fs from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
@@ -11,6 +12,28 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg'],
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        // Precache the app shell because Workbox generates a navigation fallback to index.html.
+        // Without HTML in the precache manifest, createHandlerBoundToURL('index.html') throws
+        // non-precached-url on SPA navigations in production.
+        globPatterns: ['**/*.{html,js,css,ico,png,svg,webmanifest}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'OBD2SW License Platform',
         short_name: 'OBD2SW',
@@ -42,11 +65,11 @@ export default defineConfig({
     }),
     process.env.BUNDLE_ANALYZE === 'true'
       ? visualizer({
-          filename: 'dist/bundle-report.html',
-          gzipSize: true,
-          brotliSize: true,
-          open: false,
-        })
+        filename: 'dist/bundle-report.html',
+        gzipSize: true,
+        brotliSize: true,
+        open: false,
+      })
       : undefined,
   ],
   build: {
@@ -86,7 +109,7 @@ export default defineConfig({
             return 'vendor-icons'
           }
 
-          if (['axios', 'clsx', 'class-variance-authority', 'framer-motion', 'sonner', 'tailwind-merge', 'zustand'].includes(normalizedPackage)) {
+          if (['axios', 'clsx', 'class-variance-authority', 'framer-motion', 'motion-dom', 'motion-utils', 'sonner', 'tailwind-merge', 'zustand'].includes(normalizedPackage)) {
             return 'vendor-ui'
           }
 
@@ -102,6 +125,22 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 3000,
+    port: 3002,
+    proxy: {
+      '/api': {
+        target:
+          process.env.VITE_PROXY_TARGET
+          ?? (fs.existsSync('/.dockerenv') ? 'http://nginx' : 'http://127.0.0.1'),
+        changeOrigin: true,
+        secure: false,
+        ...(fs.existsSync('/.dockerenv')
+          ? {}
+          : {
+            headers: {
+              Host: 'license.test',
+            },
+          }),
+      },
+    },
   },
 })

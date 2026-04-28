@@ -5,6 +5,44 @@
 @layer base {
   :root {
     color-scheme: light;
+    /* Default brand: deep indigo — professional, B2B, non-AI-cyan */
+    --brand-50: #eef2ff;
+    --brand-100: #e0e7ff;
+    --brand-200: #c7d2fe;
+    --brand-300: #a5b4fc;
+    --brand-400: #818cf8;
+    --brand-500: #6366f1;
+    --brand-600: #4f46e5;
+    --brand-700: #4338ca;
+    --brand-800: #3730a3;
+    --brand-900: #312e81;
+    --brand-950: #1e1b4b;
+
+    /* Surfaces: slightly warm-tinted slate — less sterile than pure cool */
+    --surface-50: #f8f8fb;
+    --surface-100: #f1f1f7;
+    --surface-900: #13111e;
+    --surface-950: #09080f;
+
+    --dashboard-font-family: 'Cairo', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --dashboard-font-size-display: 28px;
+    --dashboard-font-size-heading: 18px;
+    --dashboard-font-size-body: 14px;
+    --dashboard-font-size-label: 13px;
+    --dashboard-font-size-table-header: 14px;
+    --dashboard-font-size-table-cell: 14px;
+    --dashboard-font-size-helper: 12px;
+    --dashboard-font-weight-display: 800;
+    --dashboard-font-weight-heading: 700;
+    --dashboard-font-weight-body: 500;
+    --dashboard-font-weight-label: 600;
+    --dashboard-font-weight-table-header: 700;
+    --dashboard-cards-opacity: 100;
+    --dashboard-cards-brightness: 100;
+    --dashboard-charts-opacity: 100;
+    --dashboard-charts-brightness: 100;
+    --dashboard-badges-opacity: 100;
+    --dashboard-badges-brightness: 100;
   }
 
   .dark {
@@ -20,6 +58,113 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #f8fafc;
+  /* Public pages keep the base UI font.
+     Authenticated dashboard screens can override it at runtime through
+     the global appearance settings and cached CSS variables. */
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background: var(--surface-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer utilities {
+  html[data-dashboard-appearance='active'],
+  html[data-dashboard-appearance='active'] body,
+  html[data-dashboard-appearance='active'] #root {
+    font-family: var(--dashboard-font-family);
+  }
+
+  html[data-dashboard-appearance='active'] :is(button, input, select, textarea) {
+    font-family: inherit;
+  }
+
+  .dashboard-app {
+    font-family: var(--dashboard-font-family);
+  }
+
+  .dashboard-app :is(button, input, select, textarea) {
+    font-family: inherit;
+  }
+
+  .dashboard-app .text-xs {
+    font-size: var(--dashboard-font-size-helper);
+  }
+
+  .dashboard-app .text-sm {
+    font-size: var(--dashboard-font-size-body);
+  }
+
+  .dashboard-app .text-base {
+    font-size: calc(var(--dashboard-font-size-body) + 1px);
+  }
+
+  .dashboard-app .text-lg {
+    font-size: var(--dashboard-font-size-heading);
+  }
+
+  .dashboard-app .text-xl {
+    font-size: calc(var(--dashboard-font-size-heading) + 2px);
+  }
+
+  .dashboard-app .text-2xl {
+    font-size: calc(var(--dashboard-font-size-display) - 4px);
+  }
+
+  .dashboard-app .text-3xl {
+    font-size: var(--dashboard-font-size-display);
+  }
+
+  .dashboard-app .font-medium {
+    font-weight: var(--dashboard-font-weight-body);
+  }
+
+  .dashboard-app .font-semibold {
+    font-weight: var(--dashboard-font-weight-heading);
+  }
+
+  .dashboard-app .font-bold {
+    font-weight: var(--dashboard-font-weight-display);
+  }
+
+  .dashboard-app .dashboard-text-display {
+    font-size: var(--dashboard-font-size-display);
+    font-weight: var(--dashboard-font-weight-display);
+    line-height: 1.1;
+  }
+
+  .dashboard-app .dashboard-text-heading {
+    font-size: var(--dashboard-font-size-heading);
+    font-weight: var(--dashboard-font-weight-heading);
+    line-height: 1.25;
+  }
+
+  .dashboard-app .dashboard-text-body {
+    font-size: var(--dashboard-font-size-body);
+    font-weight: var(--dashboard-font-weight-body);
+    line-height: 1.5;
+  }
+
+  .dashboard-app .dashboard-text-label {
+    font-size: var(--dashboard-font-size-label);
+    font-weight: var(--dashboard-font-weight-label);
+    line-height: 1.35;
+  }
+
+  .dashboard-app .dashboard-text-table-header {
+    font-size: var(--dashboard-font-size-table-header);
+    font-weight: var(--dashboard-font-weight-table-header);
+    line-height: 1.35;
+  }
+
+  .dashboard-app .dashboard-text-table-cell {
+    font-size: var(--dashboard-font-size-table-cell);
+    font-weight: var(--dashboard-font-weight-body);
+    line-height: 1.45;
+  }
+
+  .dashboard-app .dashboard-text-helper {
+    font-size: var(--dashboard-font-size-helper);
+    font-weight: var(--dashboard-font-weight-body);
+    line-height: 1.4;
+  }
 }

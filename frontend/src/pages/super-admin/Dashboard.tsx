@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, Building2, Globe2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { AreaChartWidget } from '@/components/charts/AreaChartWidget'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
@@ -11,13 +11,16 @@ import { StaggerGroup, StaggerItem } from '@/components/shared/PageTransition'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/hooks/useLanguage'
-import { localizeMonthLabel } from '@/lib/chart-labels'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { localizeMonthLabel, truncateChartLabel } from '@/lib/chart-labels'
+import { cn } from '@/lib/utils'
+import { formatActivityActionLabel, formatCurrency, formatDate, formatReadableActivityDescription } from '@/lib/utils'
+import { routePaths } from '@/router/routes'
 import { reportService } from '@/services/report.service'
 
 export function DashboardPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const navigate = useNavigate()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
 
   const statsQuery = useQuery({
@@ -48,6 +51,10 @@ export function DashboardPage() {
   const stats = statsQuery.data?.data.stats
   const statsLoading = statsQuery.isLoading && !stats
   const countryData = stats?.ip_country_map ?? []
+  const revenueTrendData = (revenueTrendQuery.data?.data ?? []).map((item) => ({
+    ...item,
+    month: item.month ? localizeMonthLabel(item.month, locale) : item.month,
+  }))
   const timelineData = (timelineQuery.data?.data ?? []).map((item) => ({
     ...item,
     label: item.label ? localizeMonthLabel(item.label, locale) : item.label,
@@ -56,30 +63,42 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <p className="text-sm uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400">{t('superAdmin.pages.dashboard.eyebrow')}</p>
-        <h2 className="text-3xl font-semibold">{t('superAdmin.pages.dashboard.title')}</h2>
+        <p className="text-sm uppercase tracking-[0.24em] text-brand-600 dark:text-brand-400">{t('superAdmin.pages.dashboard.eyebrow')}</p>
+        <h2 className="text-3xl font-bold tracking-tight">{t('superAdmin.pages.dashboard.title')}</h2>
         <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">{t('superAdmin.pages.dashboard.description')}</p>
       </div>
 
-      <StaggerGroup className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+      <StaggerGroup className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {statsLoading ? (
-          Array.from({ length: 5 }).map((_, index) => <SkeletonCard key={index} className="h-full" lines={2} />)
+          Array.from({ length: 5 }).map((_, index) => (
+            <SkeletonCard key={index} className={cn('h-full', index === 1 ? 'xl:col-span-2' : '')} lines={2} />
+          ))
         ) : (
           <>
-            <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.totalTenants')} value={stats?.total_tenants ?? 0} icon={Building2} color="sky" />
+            <StaggerItem className="h-full">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/tenants`)}>
+                <StatsCard title={t('superAdmin.cards.totalTenants')} value={stats?.total_tenants ?? 0} color="sky" />
+              </button>
             </StaggerItem>
-            <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.totalRevenue')} value={formatCurrency(stats?.total_revenue ?? 0, 'USD', locale)} icon={Banknote} color="emerald" />
+            <StaggerItem className="col-span-2 h-full xl:col-span-2">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/reports`)}>
+                <StatsCard title={t('superAdmin.cards.totalRevenue')} value={formatCurrency(stats?.total_revenue ?? 0, 'USD', locale)} color="emerald" />
+              </button>
             </StaggerItem>
-            <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.activeLicenses')} value={stats?.active_licenses ?? 0} icon={Globe2} color="amber" />
+            <StaggerItem className="h-full">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/customers?status=active`)}>
+                <StatsCard title={t('superAdmin.cards.activeCustomers')} value={stats?.active_licenses ?? 0} color="amber" />
+              </button>
             </StaggerItem>
-            <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.totalUsers')} value={stats?.total_users ?? 0} icon={Users} color="rose" />
+            <StaggerItem className="h-full">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/users`)}>
+                <StatsCard title={t('superAdmin.cards.totalUsers')} value={stats?.total_users ?? 0} color="rose" />
+              </button>
             </StaggerItem>
-            <StaggerItem>
-              <StatsCard title={t('superAdmin.cards.countryCoverage')} value={countryData.length} icon={Globe2} color="sky" />
+            <StaggerItem className="h-full">
+              <button type="button" className="h-full w-full text-start" onClick={() => navigate(`/${lang}/super-admin/reports`)}>
+                <StatsCard title={t('superAdmin.cards.countryCoverage')} value={countryData.length} color="sky" />
+              </button>
             </StaggerItem>
           </>
         )}
@@ -88,7 +107,7 @@ export function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <LineChartWidget
           title={t('superAdmin.pages.dashboard.revenueTrend')}
-          data={revenueTrendQuery.data?.data ?? []}
+          data={revenueTrendData}
           isLoading={revenueTrendQuery.isLoading}
           xKey="month"
           series={[{ key: 'revenue', label: t('common.revenue') }]}
@@ -101,6 +120,8 @@ export function DashboardPage() {
           xKey="tenant"
           horizontal
           showLabels
+          xAxisFormatter={(value) => truncateChartLabel(value, 24)}
+          tooltipLabelFormatter={(value) => String(value)}
           series={[{ key: 'revenue', label: t('common.revenue') }]}
           valueFormatter={(value) => formatCurrency(Number(value), 'USD', locale)}
         />
@@ -134,19 +155,41 @@ export function DashboardPage() {
         <CardContent className="space-y-3">
           {!activityQuery.isLoading && (activityQuery.data?.data.length ?? 0) === 0 ? <EmptyState title={t('common.noData')} description={t('superAdmin.pages.dashboard.noActivity')} /> : null}
           {activityQuery.data?.data.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+            <button key={item.id} type="button" className="block w-full rounded-2xl border border-slate-200 p-4 text-start dark:border-slate-800" onClick={() => {
+              const target = resolveActivityTarget(lang, item)
+              if (target) navigate(target)
+            }}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium text-slate-950 dark:text-white">{item.action}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
+                  <p className="font-medium text-slate-950 dark:text-white">{formatActivityActionLabel(item.action, t)}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(item.description, locale)}</p>
                 </div>
-                <span className="text-xs text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</span>
+                <span className="text-sm text-slate-400">{item.created_at ? formatDate(item.created_at, locale) : '-'}</span>
               </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{[item.user, item.tenant].filter(Boolean).join(' - ')}</p>
-            </div>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{[item.user, item.tenant].filter(Boolean).join(' - ')}</p>
+            </button>
           ))}
         </CardContent>
       </Card>
     </div>
   )
+}
+
+function resolveActivityTarget(lang: string, item: { metadata?: Record<string, unknown> }) {
+  const biosId = typeof item.metadata?.bios_id === 'string' ? item.metadata.bios_id : null
+  if (biosId) {
+    return routePaths.superAdmin.biosDetail(lang as 'ar' | 'en', biosId)
+  }
+
+  const customerId = typeof item.metadata?.customer_id === 'number' ? item.metadata.customer_id : null
+  if (customerId) {
+    return routePaths.superAdmin.customerDetail(lang as 'ar' | 'en', customerId)
+  }
+
+  const userId = typeof item.metadata?.target_user_id === 'number' ? item.metadata.target_user_id : null
+  if (userId) {
+    return routePaths.superAdmin.userDetail(lang as 'ar' | 'en', userId)
+  }
+
+  return null
 }

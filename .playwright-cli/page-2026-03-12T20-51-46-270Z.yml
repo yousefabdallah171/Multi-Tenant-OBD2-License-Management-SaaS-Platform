@@ -1,0 +1,206 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - link "Skip to content" [ref=e5] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e9]:
+          - paragraph [ref=e10]: Reseller
+          - generic [ref=e11]:
+            - heading "Reseller" [level=1] [ref=e12]
+            - generic [ref=e13]: "Server Timezone: UTC"
+        - generic [ref=e14]:
+          - button "Toggle theme" [ref=e15] [cursor=pointer]:
+            - img [ref=e16]
+            - generic [ref=e18]: Dark mode
+          - button "Switch language" [ref=e19] [cursor=pointer]:
+            - img [ref=e20]
+            - generic [ref=e23]: AR
+          - button "Open user menu" [ref=e24] [cursor=pointer]:
+            - generic [ref=e25]:
+              - generic [ref=e26]: Ahmed Reseller
+              - generic [ref=e27]: reseller1@obd2sw.com
+            - generic [ref=e29]: Reseller
+    - generic [ref=e30]:
+      - complementary [ref=e32]:
+        - navigation [ref=e33]:
+          - link "Dashboard" [ref=e34] [cursor=pointer]:
+            - /url: /en/reseller/dashboard
+            - img [ref=e35]
+            - generic [ref=e40]: Dashboard
+          - link "Customers" [ref=e41] [cursor=pointer]:
+            - /url: /en/reseller/customers
+            - img [ref=e42]
+            - generic [ref=e47]: Customers
+          - link "Software" [ref=e48] [cursor=pointer]:
+            - /url: /en/reseller/software
+            - img [ref=e49]
+            - generic [ref=e53]: Software
+          - link "Reports" [ref=e54] [cursor=pointer]:
+            - /url: /en/reseller/reports
+            - img [ref=e55]
+            - generic [ref=e57]: Reports
+          - link "Profile" [ref=e58] [cursor=pointer]:
+            - /url: /en/reseller/profile
+            - img [ref=e59]
+            - generic [ref=e62]: Profile
+      - generic [ref=e63]:
+        - main [ref=e64]:
+          - generic [ref=e282]:
+            - generic [ref=e284]:
+              - paragraph [ref=e285]: Reseller
+              - heading "Activations" [level=2] [ref=e286]
+              - paragraph [ref=e287]: Review activation rows, related customers, BIOS IDs, prices, and activation dates across the selected range.
+            - generic [ref=e289]:
+              - generic [ref=e290]:
+                - generic [ref=e291]:
+                  - button "Last 7 Days" [ref=e292] [cursor=pointer]
+                  - button "Last 30 Days" [ref=e293] [cursor=pointer]
+                  - button "Last 3 Months" [ref=e294] [cursor=pointer]
+                  - button "Last Year" [ref=e295] [cursor=pointer]
+                  - button "Custom" [ref=e296] [cursor=pointer]
+                - generic [ref=e297]:
+                  - generic [ref=e298]:
+                    - generic [ref=e299]: From
+                    - textbox "From" [ref=e300]: 2025-03-13
+                  - generic [ref=e301]:
+                    - generic [ref=e302]: To
+                    - textbox "To" [ref=e303]: 2026-03-12
+                  - button "Clear" [ref=e304] [cursor=pointer]
+              - textbox "Search by customer, email, BIOS ID, or program" [ref=e305]
+            - generic [ref=e306]:
+              - table [ref=e309]:
+                - rowgroup [ref=e310]:
+                  - row "Customer Username (API) BIOS ID Program Start Status Price" [ref=e311]:
+                    - columnheader "Customer" [ref=e312]:
+                      - button "Customer" [ref=e313]:
+                        - generic [ref=e314]: Customer
+                    - columnheader "Username (API)" [ref=e315]:
+                      - button "Username (API)" [ref=e316]:
+                        - generic [ref=e317]: Username (API)
+                    - columnheader "BIOS ID" [ref=e318]:
+                      - button "BIOS ID" [ref=e319]:
+                        - generic [ref=e320]: BIOS ID
+                    - columnheader "Program" [ref=e321]:
+                      - button "Program" [ref=e322]:
+                        - generic [ref=e323]: Program
+                    - columnheader "Start" [ref=e324]:
+                      - button "Start" [ref=e325]:
+                        - generic [ref=e326]: Start
+                    - columnheader "Status" [ref=e327]:
+                      - button "Status" [ref=e328]:
+                        - generic [ref=e329]: Status
+                    - columnheader "Price" [ref=e330]:
+                      - button "Price" [ref=e331]:
+                        - generic [ref=e332]: Price
+                - rowgroup [ref=e333]:
+                  - row "toea toea toea OBD2SW Pro Mar 11, 2026, 8:50 PM Cancelled $24.99" [ref=e334]:
+                    - cell "toea" [ref=e335]:
+                      - link "toea" [ref=e336] [cursor=pointer]:
+                        - /url: /en/reseller/customers/23
+                    - cell "toea" [ref=e337]:
+                      - link "toea" [ref=e338] [cursor=pointer]:
+                        - /url: /en/reseller/customers/23
+                    - cell "toea" [ref=e339]:
+                      - link "toea" [ref=e340] [cursor=pointer]:
+                        - /url: /en/reseller/customers/23
+                    - cell "OBD2SW Pro" [ref=e341]
+                    - cell "Mar 11, 2026, 8:50 PM" [ref=e342]
+                    - cell "Cancelled" [ref=e343]:
+                      - 'generic "Cancelled: Stopped and removed from the software until renewed or reactivated." [ref=e344]': Cancelled
+                    - cell "$24.99" [ref=e345]
+                  - row "yousef_abdallah yousef_abdallah ooooooooooooo OBD2SW Pro Mar 11, 2026, 8:43 PM Cancelled $19.99" [ref=e346]:
+                    - cell "yousef_abdallah" [ref=e347]:
+                      - link "yousef_abdallah" [ref=e348] [cursor=pointer]:
+                        - /url: /en/reseller/customers/21
+                    - cell "yousef_abdallah" [ref=e349]:
+                      - link "yousef_abdallah" [ref=e350] [cursor=pointer]:
+                        - /url: /en/reseller/customers/21
+                    - cell "ooooooooooooo" [ref=e351]:
+                      - link "ooooooooooooo" [ref=e352] [cursor=pointer]:
+                        - /url: /en/reseller/customers/21
+                    - cell "OBD2SW Pro" [ref=e353]
+                    - cell "Mar 11, 2026, 8:43 PM" [ref=e354]
+                    - cell "Cancelled" [ref=e355]:
+                      - 'generic "Cancelled: Stopped and removed from the software until renewed or reactivated." [ref=e356]': Cancelled
+                    - cell "$19.99" [ref=e357]
+                  - row "tester tester oooooooooooooo OBD2SW Pro Mar 11, 2026, 7:51 AM Expired $0.02" [ref=e358]:
+                    - cell "tester" [ref=e359]:
+                      - link "tester" [ref=e360] [cursor=pointer]:
+                        - /url: /en/reseller/customers/22
+                    - cell "tester" [ref=e361]:
+                      - link "tester" [ref=e362] [cursor=pointer]:
+                        - /url: /en/reseller/customers/22
+                    - cell "oooooooooooooo" [ref=e363]:
+                      - link "oooooooooooooo" [ref=e364] [cursor=pointer]:
+                        - /url: /en/reseller/customers/22
+                    - cell "OBD2SW Pro" [ref=e365]
+                    - cell "Mar 11, 2026, 7:51 AM" [ref=e366]
+                    - cell "Expired" [ref=e367]:
+                      - 'generic "Expired: Time ended automatically." [ref=e368]': Expired
+                    - cell "$0.02" [ref=e369]
+                  - row "tester tester oooooooooooooo OBD2SW Pro Mar 11, 2026, 7:40 AM Expired $0.02" [ref=e370]:
+                    - cell "tester" [ref=e371]:
+                      - link "tester" [ref=e372] [cursor=pointer]:
+                        - /url: /en/reseller/customers/22
+                    - cell "tester" [ref=e373]:
+                      - link "tester" [ref=e374] [cursor=pointer]:
+                        - /url: /en/reseller/customers/22
+                    - cell "oooooooooooooo" [ref=e375]:
+                      - link "oooooooooooooo" [ref=e376] [cursor=pointer]:
+                        - /url: /en/reseller/customers/22
+                    - cell "OBD2SW Pro" [ref=e377]
+                    - cell "Mar 11, 2026, 7:40 AM" [ref=e378]
+                    - cell "Expired" [ref=e379]:
+                      - 'generic "Expired: Time ended automatically." [ref=e380]': Expired
+                    - cell "$0.02" [ref=e381]
+                  - row "Customer Two Customer Two DEMO-BIOS-002 OBD2SW Pro Mar 10, 2026, 7:00 AM Expired $24.99" [ref=e382]:
+                    - cell "Customer Two" [ref=e383]:
+                      - link "Customer Two" [ref=e384] [cursor=pointer]:
+                        - /url: /en/reseller/customers/6
+                    - cell "Customer Two" [ref=e385]:
+                      - link "Customer Two" [ref=e386] [cursor=pointer]:
+                        - /url: /en/reseller/customers/6
+                    - cell "DEMO-BIOS-002" [ref=e387]:
+                      - link "DEMO-BIOS-002" [ref=e388] [cursor=pointer]:
+                        - /url: /en/reseller/customers/6
+                    - cell "OBD2SW Pro" [ref=e389]
+                    - cell "Mar 10, 2026, 7:00 AM" [ref=e390]
+                    - cell "Expired" [ref=e391]:
+                      - 'generic "Expired: Time ended automatically." [ref=e392]': Expired
+                    - cell "$24.99" [ref=e393]
+                  - row "Customer One Customer One DEMO-BIOS-001 OBD2SW Pro Jan 25, 2026, 6:55 PM Pending $25.00" [ref=e394]:
+                    - cell "Customer One" [ref=e395]:
+                      - link "Customer One" [ref=e396] [cursor=pointer]:
+                        - /url: /en/reseller/customers/5
+                    - cell "Customer One" [ref=e397]:
+                      - link "Customer One" [ref=e398] [cursor=pointer]:
+                        - /url: /en/reseller/customers/5
+                    - cell "DEMO-BIOS-001" [ref=e399]:
+                      - link "DEMO-BIOS-001" [ref=e400] [cursor=pointer]:
+                        - /url: /en/reseller/customers/5
+                    - cell "OBD2SW Pro" [ref=e401]
+                    - cell "Jan 25, 2026, 6:55 PM" [ref=e402]
+                    - cell "Pending" [ref=e403]:
+                      - 'generic "Pending: Saved or created, but not active yet." [ref=e404]': Pending
+                    - cell "$25.00" [ref=e405]
+              - generic [ref=e406]:
+                - generic [ref=e407]: 6 total
+                - generic [ref=e408]:
+                  - generic [ref=e409]:
+                    - generic [ref=e410]: Rows per page
+                    - combobox "Rows per page" [ref=e411]:
+                      - option "10" [selected]
+                      - option "25"
+                      - option "50"
+                  - generic [ref=e412]:
+                    - button "Previous" [disabled]
+                    - generic [ref=e413]: 1 / 1
+                    - button "Next" [disabled]
+        - contentinfo [ref=e275]: 2026 OBD2SW License Platform
+    - button "2 online" [ref=e277] [cursor=pointer]:
+      - img [ref=e278]
+      - text: 2 online
+    - generic:
+      - region "Notifications alt+T"
+  - generic [ref=e280]: "2"

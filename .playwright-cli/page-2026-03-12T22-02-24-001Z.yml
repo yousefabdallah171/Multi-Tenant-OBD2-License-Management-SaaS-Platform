@@ -1,0 +1,188 @@
+- generic [ref=e1]:
+  - generic [ref=e33]:
+    - link "Skip to content" [ref=e34] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e38]:
+          - paragraph [ref=e39]: Tenant Operations
+          - generic [ref=e40]:
+            - heading "Manager Parent Console" [level=1] [ref=e41]
+            - generic [ref=e42]: "Server Timezone: UTC"
+        - generic [ref=e43]:
+          - button "Toggle theme" [ref=e44] [cursor=pointer]:
+            - img [ref=e45]
+            - generic [ref=e47]: Dark mode
+          - button "Switch language" [ref=e48] [cursor=pointer]:
+            - img [ref=e49]
+            - generic [ref=e52]: AR
+          - button "Open user menu" [ref=e53] [cursor=pointer]:
+            - generic [ref=e54]:
+              - generic [ref=e55]: Main Manager
+              - generic [ref=e56]: manager@obd2sw.com
+            - generic [ref=e58]: Manager Parent
+    - generic [ref=e59]:
+      - complementary [ref=e61]:
+        - navigation [ref=e62]:
+          - link "Dashboard" [ref=e63] [cursor=pointer]:
+            - /url: /en/dashboard
+            - img [ref=e64]
+            - generic [ref=e69]: Dashboard
+          - link "Team Management" [active] [ref=e70] [cursor=pointer]:
+            - /url: /en/team-management
+            - img [ref=e71]
+            - generic [ref=e76]: Team Management
+          - link "Customers" [ref=e77] [cursor=pointer]:
+            - /url: /en/customers
+            - img [ref=e78]
+            - generic [ref=e83]: Customers
+          - link "Software" [ref=e84] [cursor=pointer]:
+            - /url: /en/software
+            - img [ref=e85]
+            - generic [ref=e89]: Software
+          - link "Software Management" [ref=e90] [cursor=pointer]:
+            - /url: /en/software-management
+            - img [ref=e91]
+            - generic [ref=e95]: Software Management
+          - link "Reports" [ref=e96] [cursor=pointer]:
+            - /url: /en/reports
+            - img [ref=e97]
+            - generic [ref=e99]: Reports
+          - link "User Logs" [ref=e100] [cursor=pointer]:
+            - /url: /en/program-logs
+            - img [ref=e101]
+            - generic [ref=e104]: User Logs
+          - button "BIOS Blacklist" [ref=e106] [cursor=pointer]:
+            - img [ref=e107]
+            - generic [ref=e110]: BIOS Blacklist
+            - img [ref=e111]
+          - link "IP Analytics" [ref=e113] [cursor=pointer]:
+            - /url: /en/ip-analytics
+            - img [ref=e114]
+            - generic [ref=e116]: IP Analytics
+          - button "Logs" [ref=e118] [cursor=pointer]:
+            - img [ref=e119]
+            - generic [ref=e122]: Logs
+            - img [ref=e123]
+          - button "Settings" [ref=e126] [cursor=pointer]:
+            - img [ref=e127]
+            - generic [ref=e130]: Settings
+            - img [ref=e131]
+      - generic [ref=e133]:
+        - main [ref=e134]:
+          - generic [ref=e371]:
+            - generic [ref=e372]:
+              - generic [ref=e373]:
+                - paragraph [ref=e374]: Manager Parent
+                - heading "Team Management" [level=2] [ref=e375]
+                - paragraph [ref=e376]: Invite and manage managers and resellers under this tenant. Revenue and customer counts are shown per member.
+              - button "Invite team member" [ref=e378] [cursor=pointer]
+            - generic [ref=e379]:
+              - tablist [ref=e380]:
+                - tab "All" [selected] [ref=e381] [cursor=pointer]
+                - tab "Managers" [ref=e382] [cursor=pointer]
+                - tab "Resellers" [ref=e383] [cursor=pointer]
+              - tabpanel "All" [ref=e384]:
+                - generic [ref=e386]:
+                  - textbox "Search by name or email" [ref=e387]
+                  - combobox [ref=e388]:
+                    - option "All statuses" [selected]
+                    - option "Active"
+                    - option "Deactive"
+                    - option "Inactive"
+                - generic [ref=e389]:
+                  - table [ref=e392]:
+                    - rowgroup [ref=e393]:
+                      - row "Name Username Email Phone Account Status Customers Active Licenses Revenue Actions" [ref=e394]:
+                        - columnheader "Name" [ref=e395]:
+                          - button "Name" [ref=e396] [cursor=pointer]:
+                            - generic [ref=e397]: Name
+                            - img [ref=e398]
+                        - columnheader "Username" [ref=e401]:
+                          - button "Username" [ref=e402] [cursor=pointer]:
+                            - generic [ref=e403]: Username
+                            - img [ref=e404]
+                        - columnheader "Email" [ref=e407]:
+                          - button "Email" [ref=e408] [cursor=pointer]:
+                            - generic [ref=e409]: Email
+                            - img [ref=e410]
+                        - columnheader "Phone" [ref=e413]:
+                          - button "Phone" [ref=e414] [cursor=pointer]:
+                            - generic [ref=e415]: Phone
+                            - img [ref=e416]
+                        - columnheader "Account Status" [ref=e419]:
+                          - button "Account Status" [ref=e420] [cursor=pointer]:
+                            - generic [ref=e421]: Account Status
+                            - img [ref=e422]
+                        - columnheader "Customers" [ref=e425]:
+                          - button "Customers" [ref=e426] [cursor=pointer]:
+                            - generic [ref=e427]: Customers
+                            - img [ref=e428]
+                        - columnheader "Active Licenses" [ref=e431]:
+                          - button "Active Licenses" [ref=e432] [cursor=pointer]:
+                            - generic [ref=e433]: Active Licenses
+                            - img [ref=e434]
+                        - columnheader "Revenue" [ref=e437]:
+                          - button "Revenue" [ref=e438] [cursor=pointer]:
+                            - generic [ref=e439]: Revenue
+                            - img [ref=e440]
+                        - columnheader "Actions" [ref=e443]:
+                          - button "Actions" [ref=e444]:
+                            - generic [ref=e445]: Actions
+                    - rowgroup [ref=e446]:
+                      - row "Mohamed Reseller Manager mohamed_reseller reseller2@obd2sw.com - Active 2 2 $50.00 Actions" [ref=e447] [cursor=pointer]:
+                        - cell "Mohamed Reseller Manager" [ref=e448]:
+                          - generic [ref=e449]:
+                            - paragraph [ref=e450]: Mohamed Reseller
+                            - generic [ref=e451]: Manager
+                        - cell "mohamed_reseller" [ref=e452]:
+                          - paragraph [ref=e453]: mohamed_reseller
+                        - cell "reseller2@obd2sw.com" [ref=e454]
+                        - cell "-" [ref=e455]
+                        - cell "Active" [ref=e456]:
+                          - 'generic "Active: Live and usable right now." [ref=e457]': Active
+                        - cell "2" [ref=e458]
+                        - cell "2" [ref=e459]
+                        - cell "$50.00" [ref=e460]
+                        - cell "Actions" [ref=e461]:
+                          - button "Actions" [ref=e463]:
+                            - img [ref=e464]
+                            - generic [ref=e468]: Actions
+                      - row "Ahmed Reseller Reseller ahmed_reseller reseller1@obd2sw.com - Active 5 0 $95.01 Actions" [ref=e469] [cursor=pointer]:
+                        - cell "Ahmed Reseller Reseller" [ref=e470]:
+                          - generic [ref=e471]:
+                            - paragraph [ref=e472]: Ahmed Reseller
+                            - generic [ref=e473]: Reseller
+                        - cell "ahmed_reseller" [ref=e474]:
+                          - paragraph [ref=e475]: ahmed_reseller
+                        - cell "reseller1@obd2sw.com" [ref=e476]
+                        - cell "-" [ref=e477]
+                        - cell "Active" [ref=e478]:
+                          - 'generic "Active: Live and usable right now." [ref=e479]': Active
+                        - cell "5" [ref=e480]
+                        - cell "0" [ref=e481]
+                        - cell "$95.01" [ref=e482]
+                        - cell "Actions" [ref=e483]:
+                          - button "Actions" [ref=e485]:
+                            - img [ref=e486]
+                            - generic [ref=e490]: Actions
+                  - generic [ref=e491]:
+                    - generic [ref=e492]: 2 total
+                    - generic [ref=e493]:
+                      - generic [ref=e494]:
+                        - generic [ref=e495]: Rows per page
+                        - combobox "Rows per page" [ref=e496]:
+                          - option "10" [selected]
+                          - option "25"
+                          - option "50"
+                      - generic [ref=e497]:
+                        - button "Previous" [disabled]
+                        - generic [ref=e498]: 1 / 1
+                        - button "Next" [disabled]
+        - contentinfo [ref=e364]: 2026 OBD2SW License Platform
+    - button "1 online" [ref=e366] [cursor=pointer]:
+      - img [ref=e367]
+      - text: 1 online
+    - generic:
+      - region "Notifications alt+T"
+  - generic [ref=e369]: "0.5"

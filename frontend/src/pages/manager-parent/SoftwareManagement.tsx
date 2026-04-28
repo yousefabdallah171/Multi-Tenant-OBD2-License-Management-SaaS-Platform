@@ -28,7 +28,6 @@ interface ProgramFormState {
   file_size: string
   system_requirements: string
   installation_guide_url: string
-  trial_days: string
   base_price: string
   external_api_key: string
   external_software_id: string
@@ -44,7 +43,6 @@ const EMPTY_FORM: ProgramFormState = {
   file_size: '',
   system_requirements: '',
   installation_guide_url: '',
-  trial_days: '0',
   base_price: '0',
   external_api_key: '',
   external_software_id: '',
@@ -127,7 +125,7 @@ export function SoftwareManagementPage() {
           )}
           <div>
             <p className="font-medium text-slate-950 dark:text-white">{row.name}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.version')} {row.version}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.version')} {row.version}</p>
           </div>
         </div>
       ),
@@ -145,7 +143,7 @@ export function SoftwareManagementPage() {
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => navigate(routePaths.managerParent.activateLicense(lang, row.id), { state: { returnTo: routePaths.managerParent.softwareManagement(lang) } })}
+            onClick={() => navigate(`${routePaths.managerParent.customerCreate(lang)}?program_id=${row.id}`)}
           >
             {t('common.activate')}
           </Button>
@@ -183,9 +181,8 @@ export function SoftwareManagementPage() {
     }
 
     const basePrice = Number(form.base_price)
-    const trialDays = Number(form.trial_days)
 
-    if (Number.isNaN(basePrice) || basePrice < 0 || Number.isNaN(trialDays) || trialDays < 0) {
+    if (Number.isNaN(basePrice) || basePrice < 0) {
       toast.error(t('managerParent.pages.softwareManagement.numberValidation'))
       return
     }
@@ -208,7 +205,6 @@ export function SoftwareManagementPage() {
       file_size: form.file_size.trim() || null,
       system_requirements: form.system_requirements.trim() || null,
       installation_guide_url: form.installation_guide_url.trim() || null,
-      trial_days: trialDays,
       base_price: basePrice,
       external_software_id: form.external_software_id.trim() ? Number(form.external_software_id) : null,
       status: form.status,
@@ -307,19 +303,15 @@ export function SoftwareManagementPage() {
                 <p className="min-h-12 text-sm text-slate-600 dark:text-slate-300">{program.description || t('managerParent.pages.softwareManagement.noDescription')}</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.basePrice')}</p>
+                    <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.basePrice')}</p>
                     <p className="mt-1 font-semibold">{formatCurrency(program.base_price, 'USD', locale)}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('managerParent.pages.softwareManagement.trialDays')}</p>
-                    <p className="mt-1 font-semibold">{program.trial_days}</p>
-                  </div>
-                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalSoftwareId')}</p>
+                    <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalSoftwareId')}</p>
                     <p className="mt-1 font-semibold">{program.external_software_id ?? '-'}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalApiKey')}</p>
+                    <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{t('software.externalApiKey')}</p>
                     <p className={`mt-1 font-semibold ${program.has_external_api ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}`}>
                       {program.has_external_api ? t('software.apiConfigured') : t('software.apiNotConfigured')}
                     </p>
@@ -330,7 +322,7 @@ export function SoftwareManagementPage() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate(routePaths.managerParent.activateLicense(lang, program.id), { state: { returnTo: routePaths.managerParent.softwareManagement(lang) } })}
+                    onClick={() => navigate(`${routePaths.managerParent.customerCreate(lang)}?program_id=${program.id}`)}
                   >
                     {t('common.activate')}
                   </Button>
@@ -347,6 +339,7 @@ export function SoftwareManagementPage() {
         </div>
       ) : (
         <DataTable
+          tableKey="manager_parent_software_management"
           columns={columns}
           data={list}
           rowKey={(row) => row.id}
@@ -401,10 +394,6 @@ export function SoftwareManagementPage() {
               <Textarea id="program-requirements" value={form.system_requirements} onChange={(event) => setForm((current) => ({ ...current, system_requirements: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program-trial">{t('managerParent.pages.softwareManagement.trialDays')}</Label>
-              <Input id="program-trial" type="number" value={form.trial_days} onChange={(event) => setForm((current) => ({ ...current, trial_days: event.target.value }))} />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="program-price">{t('managerParent.pages.softwareManagement.basePrice')}</Label>
               <Input id="program-price" type="number" step="0.01" value={form.base_price} onChange={(event) => setForm((current) => ({ ...current, base_price: event.target.value }))} />
             </div>
@@ -418,7 +407,7 @@ export function SoftwareManagementPage() {
                 placeholder="e.g. 8"
                 onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))}
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="program-api-key">{t('software.externalApiKey')}</Label>
@@ -435,10 +424,10 @@ export function SoftwareManagementPage() {
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyHint')}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('software.apiKeyUrlHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.apiKeyHint')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.apiKeyUrlHint')}</p>
               {editingProgram?.has_external_api ? (
-                <p className="text-xs text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p>
+                <p className="text-sm text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p>
               ) : null}
             </div>
             <div className="space-y-2">

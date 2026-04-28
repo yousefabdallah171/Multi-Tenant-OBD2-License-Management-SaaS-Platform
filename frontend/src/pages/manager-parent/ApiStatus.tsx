@@ -76,12 +76,7 @@ export function ApiStatusPage() {
         <CardHeader>
           <CardTitle>{t('managerParent.pages.apiStatus.summaryTitle')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-2xl bg-slate-100 p-4 dark:bg-slate-900">
-            <span>{t('managerParent.pages.apiStatus.endpoint')}</span>
-            <code>{status?.external_url ?? '—'}</code>
-          </div>
-          <div className="flex items-center justify-between rounded-2xl bg-slate-100 p-4 dark:bg-slate-900">
+        <CardContent className="space-y-4">          <div className="flex items-center justify-between rounded-2xl bg-slate-100 p-4 dark:bg-slate-900">
             <span>{t('software.externalSoftwareId')}</span>
             <code>{status?.software_id ?? '-'}</code>
           </div>
@@ -89,6 +84,11 @@ export function ApiStatusPage() {
             <span>{t('common.status')}</span>
             {status ? <StatusBadge status={status.status} /> : '-'}
           </div>
+          {status?.message ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+              {status.message}
+            </div>
+          ) : null}
           <Button type="button" onClick={() => pingMutation.mutate()} disabled={pingMutation.isPending}>
             {t('managerParent.pages.apiStatus.pingNow')}
           </Button>
@@ -97,3 +97,5 @@ export function ApiStatusPage() {
     </div>
   )
 }
+
+

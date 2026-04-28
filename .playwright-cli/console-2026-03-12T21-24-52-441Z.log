@@ -1,0 +1,6 @@
+[  102163ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/super-admin/financial-reports?from=2026-01-01&to=2026-03-12:0
+[  102179ms] Unexpected token '<', "<!-- renam"... is not valid JSON
+[  105266ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/super-admin/financial-reports/export/csv?from=2026-01-01&to=2026-03-12:0
+[  105284ms] Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+[  111303ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/super-admin/financial-reports?from=2026-01-01&to=2026-03-12:0
+[  111317ms] Unexpected token '<', "<!DOCTYPE "... is not valid JSON

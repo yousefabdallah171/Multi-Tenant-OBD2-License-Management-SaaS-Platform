@@ -1,12 +1,14 @@
 import { api } from '@/services/api'
-import type { PaginatedResponse, TeamMemberStats, TeamMemberSummary } from '@/types/manager-parent.types'
+import type { PaginatedResponse, TeamMemberDetail, TeamMemberStats, TeamMemberSummary } from '@/types/manager-parent.types'
 
 export interface TeamListParams {
   page?: number
   per_page?: number
   role?: 'manager' | 'reseller' | ''
-  status?: 'active' | 'suspended' | 'inactive' | ''
+  status?: 'active' | 'inactive' | 'deactive' | ''
   search?: string
+  manager_parent_id?: number | ''
+  manager_id?: number | ''
 }
 
 export interface TeamPayload {
@@ -40,6 +42,10 @@ export const teamService = {
   },
   async getStats(id: number) {
     const { data } = await api.get<{ data: TeamMemberStats }>(`/team/${id}/stats`)
+    return data
+  },
+  async getOne(id: number) {
+    const { data } = await api.get<{ data: TeamMemberDetail }>(`/team/${id}`)
     return data
   },
 }

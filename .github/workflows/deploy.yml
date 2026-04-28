@@ -2,11 +2,16 @@ name: Test and Deploy
 
 on:
   push:
-    branches: [master]
+    branches: [dev, master]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  test-prod:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -98,14 +103,39 @@ jobs:
             exit 1
           fi
 
-  deploy:
-    needs: test
+  deploy-dev:
+    runs-on: [self-hosted, Linux, X64]
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - name: Deploy dev locally on VPS runner
+        run: |
+          set -e
+          cd /home/obd2sw-panel/htdocs/panel.obd2sw.com
+          git fetch origin
+          git checkout dev
+          git pull origin dev
+
+          cd backend
+          composer install --no-dev --optimize-autoloader --no-interaction
+          php artisan migrate --force --step
+          php artisan optimize:clear
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          php artisan queue:restart
+
+          cd ../frontend
+          npm ci
+          npm run build
+
+  deploy-prod:
+    needs: test-prod
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy over SSH
+      - name: Deploy production over SSH
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -121,7 +151,7 @@ jobs:
 
             cd backend
             composer install --no-dev --optimize-autoloader --no-interaction
-            php artisan migrate --force
+            php artisan migrate --force --step
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache

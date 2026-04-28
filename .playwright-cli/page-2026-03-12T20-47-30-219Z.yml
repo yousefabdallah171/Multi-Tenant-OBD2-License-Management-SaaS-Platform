@@ -1,0 +1,237 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#dashboard-main-content"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e8]:
+          - paragraph [ref=e9]: Manager
+          - generic [ref=e10]:
+            - heading "Manager Workspace" [level=1] [ref=e11]
+            - generic [ref=e12]: "Server Timezone: UTC"
+        - generic [ref=e13]:
+          - button "Toggle theme" [ref=e14] [cursor=pointer]:
+            - img [ref=e15]
+            - generic [ref=e17]: Dark mode
+          - button "Switch language" [ref=e18] [cursor=pointer]:
+            - img [ref=e19]
+            - generic [ref=e22]: AR
+          - button "Open user menu" [ref=e23] [cursor=pointer]:
+            - generic [ref=e24]:
+              - generic [ref=e25]: Mohamed Reseller
+              - generic [ref=e26]: reseller2@obd2sw.com
+            - generic [ref=e28]: Manager
+    - generic [ref=e29]:
+      - complementary [ref=e31]:
+        - navigation [ref=e32]:
+          - link "Dashboard" [ref=e33] [cursor=pointer]:
+            - /url: /en/manager/dashboard
+            - img [ref=e34]
+            - generic [ref=e39]: Dashboard
+          - link "Team" [ref=e40] [cursor=pointer]:
+            - /url: /en/manager/team
+            - img [ref=e41]
+            - generic [ref=e46]: Team
+          - link "Customers" [ref=e47] [cursor=pointer]:
+            - /url: /en/manager/customers
+            - img [ref=e48]
+            - generic [ref=e51]: Customers
+          - link "Software" [ref=e52] [cursor=pointer]:
+            - /url: /en/manager/software
+            - img [ref=e53]
+            - generic [ref=e57]: Software
+          - link "Software Management" [ref=e58] [cursor=pointer]:
+            - /url: /en/manager/software-management
+            - img [ref=e59]
+            - generic [ref=e63]: Software Management
+          - link "Reports" [ref=e64] [cursor=pointer]:
+            - /url: /en/manager/reports
+            - img [ref=e65]
+            - generic [ref=e67]: Reports
+          - link "Panel Activity" [ref=e68] [cursor=pointer]:
+            - /url: /en/manager/activity
+            - img [ref=e69]
+            - generic [ref=e72]: Panel Activity
+          - link "Reseller Logs" [ref=e73] [cursor=pointer]:
+            - /url: /en/manager/reseller-logs
+            - img [ref=e74]
+            - generic [ref=e77]: Reseller Logs
+          - link "Profile" [ref=e78] [cursor=pointer]:
+            - /url: /en/manager/profile
+            - img [ref=e79]
+            - generic [ref=e82]: Profile
+      - generic [ref=e83]:
+        - main [ref=e84]:
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - paragraph [ref=e89]: Manager
+                - heading "Reports" [level=2] [ref=e90]
+                - paragraph [ref=e91]: Review tenant revenue, reseller balances, activation quality, retention, and export the current reporting view.
+              - generic [ref=e93]:
+                - button "CSV" [ref=e94] [cursor=pointer]:
+                  - img [ref=e95]
+                  - text: CSV
+                - button "PDF" [ref=e98] [cursor=pointer]:
+                  - img [ref=e99]
+                  - text: PDF
+            - generic [ref=e104]:
+              - generic [ref=e105]:
+                - button "Last 7 Days" [ref=e106] [cursor=pointer]
+                - button "Last 30 Days" [ref=e107] [cursor=pointer]
+                - button "Last 3 Months" [ref=e108] [cursor=pointer]
+                - button "Last Year" [ref=e109] [cursor=pointer]
+                - button "Custom" [ref=e110] [cursor=pointer]
+              - generic [ref=e111]:
+                - generic [ref=e112]:
+                  - generic [ref=e113]: From
+                  - textbox "From" [ref=e114]: 2025-03-13
+                - generic [ref=e115]:
+                  - generic [ref=e116]: To
+                  - textbox "To" [ref=e117]: 2026-03-12
+                - button "Clear" [ref=e118] [cursor=pointer]
+            - generic [ref=e119]:
+              - generic [ref=e121]:
+                - generic [ref=e122]:
+                  - paragraph [ref=e123]: Total Tenant Revenue
+                  - paragraph [ref=e124]: $145.01
+                - img [ref=e126]
+              - button "Total Customers 7" [ref=e129] [cursor=pointer]:
+                - generic [ref=e131]:
+                  - generic [ref=e132]:
+                    - paragraph [ref=e133]: Total Customers
+                    - paragraph [ref=e134]: "7"
+                  - img [ref=e136]
+              - button "Active Customers 2" [ref=e141] [cursor=pointer]:
+                - generic [ref=e143]:
+                  - generic [ref=e144]:
+                    - paragraph [ref=e145]: Active Customers
+                    - paragraph [ref=e146]: "2"
+                  - img [ref=e148]
+              - button "Total Activations 8" [ref=e151] [cursor=pointer]:
+                - generic [ref=e153]:
+                  - generic [ref=e154]:
+                    - paragraph [ref=e155]: Total Activations
+                    - paragraph [ref=e156]: "8"
+                  - img [ref=e158]
+            - generic [ref=e160]:
+              - generic [ref=e161]:
+                - heading "Revenue by Reseller" [level=2] [ref=e164]
+                - application [ref=e169]:
+                  - generic [ref=e181]:
+                    - generic [ref=e182]:
+                      - generic [ref=e184]: "0"
+                      - generic [ref=e186]: "25"
+                      - generic [ref=e188]: "50"
+                      - generic [ref=e190]: "75"
+                      - generic [ref=e192]: "100"
+                    - generic [ref=e193]:
+                      - generic [ref=e195]: AhmedReseller
+                      - generic [ref=e197]: MohamedReseller
+                    - generic [ref=e198]:
+                      - generic [ref=e199]: "95.01"
+                      - generic [ref=e200]: "50"
+              - generic [ref=e201]:
+                - heading "Revenue by Program" [level=2] [ref=e204]
+                - application [ref=e209]:
+                  - generic [ref=e220]:
+                    - generic [ref=e223]: OBD2SW Pro
+                    - generic [ref=e224]:
+                      - generic [ref=e226]: "0"
+                      - generic [ref=e228]: "40"
+                      - generic [ref=e230]: "80"
+                      - generic [ref=e232]: "120"
+                      - generic [ref=e234]: "160"
+            - generic [ref=e235]:
+              - generic [ref=e236]:
+                - heading "Monthly Revenue Trend" [level=2] [ref=e239]
+                - application [ref=e244]:
+                  - generic [ref=e251]:
+                    - generic [ref=e252]:
+                      - generic [ref=e254]: Nov 2025
+                      - generic [ref=e256]: Jan 2026
+                      - generic [ref=e258]: Mar 2026
+                    - generic [ref=e259]:
+                      - generic [ref=e261]: "0"
+                      - generic [ref=e263]: "20"
+                      - generic [ref=e265]: "40"
+                      - generic [ref=e267]: "60"
+                      - generic [ref=e269]: "80"
+              - generic [ref=e270]:
+                - heading "Reseller Balances" [level=2] [ref=e273]
+                - application [ref=e278]:
+                  - generic [ref=e290]:
+                    - generic [ref=e291]:
+                      - generic [ref=e293]: "0"
+                      - generic [ref=e295]: "70"
+                      - generic [ref=e297]: "140"
+                      - generic [ref=e299]: "210"
+                      - generic [ref=e301]: "280"
+                    - generic [ref=e302]:
+                      - generic [ref=e304]: MohamedReseller
+                      - generic [ref=e306]: AhmedReseller
+                    - generic [ref=e307]:
+                      - generic [ref=e308]: "50"
+                      - generic [ref=e309]: "274.08"
+            - generic [ref=e310]:
+              - heading "Customer Retention" [level=2] [ref=e313]
+              - application [ref=e318]:
+                - generic [ref=e325]:
+                  - generic [ref=e326]:
+                    - generic [ref=e328]: Oct 2025
+                    - generic [ref=e330]: Nov 2025
+                    - generic [ref=e332]: Dec 2025
+                    - generic [ref=e334]: Jan 2026
+                    - generic [ref=e336]: Feb 2026
+                    - generic [ref=e338]: Mar 2026
+                  - generic [ref=e339]:
+                    - generic [ref=e341]: "0"
+                    - generic [ref=e343]: "1"
+                    - generic [ref=e345]: "2"
+                    - generic [ref=e347]: "3"
+                    - generic [ref=e349]: "4"
+            - generic [ref=e351]:
+              - heading "Reseller Balances" [level=3] [ref=e352]
+              - table [ref=e356]:
+                - rowgroup [ref=e357]:
+                  - row "Reseller Total Revenue Activations Avg Price Commission" [ref=e358]:
+                    - columnheader "Reseller" [ref=e359]:
+                      - button "Reseller" [ref=e360] [cursor=pointer]:
+                        - generic [ref=e361]: Reseller
+                        - img [ref=e362]
+                    - columnheader "Total Revenue" [ref=e365]:
+                      - button "Total Revenue" [ref=e366] [cursor=pointer]:
+                        - generic [ref=e367]: Total Revenue
+                        - img [ref=e368]
+                    - columnheader "Activations" [ref=e371]:
+                      - button "Activations" [ref=e372] [cursor=pointer]:
+                        - generic [ref=e373]: Activations
+                        - img [ref=e374]
+                    - columnheader "Avg Price" [ref=e377]:
+                      - button "Avg Price" [ref=e378] [cursor=pointer]:
+                        - generic [ref=e379]: Avg Price
+                        - img [ref=e380]
+                    - columnheader "Commission" [ref=e383]:
+                      - button "Commission" [ref=e384] [cursor=pointer]:
+                        - generic [ref=e385]: Commission
+                        - img [ref=e386]
+                - rowgroup [ref=e389]:
+                  - row "Mohamed Reseller $50.00 2 $25.00 $50.00" [ref=e390]:
+                    - cell "Mohamed Reseller" [ref=e391]
+                    - cell "$50.00" [ref=e392]
+                    - cell "2" [ref=e393]
+                    - cell "$25.00" [ref=e394]
+                    - cell "$50.00" [ref=e395]
+                  - row "Ahmed Reseller $274.08 6 $45.68 $274.08" [ref=e396]:
+                    - cell "Ahmed Reseller" [ref=e397]
+                    - cell "$274.08" [ref=e398]
+                    - cell "6" [ref=e399]
+                    - cell "$45.68" [ref=e400]
+                    - cell "$274.08" [ref=e401]
+        - contentinfo [ref=e402]: 2026 OBD2SW License Platform
+    - button "1 online" [ref=e404] [cursor=pointer]:
+      - img [ref=e405]
+      - text: 1 online
+    - generic:
+      - region "Notifications alt+T"
+  - generic [ref=e407]: "1"

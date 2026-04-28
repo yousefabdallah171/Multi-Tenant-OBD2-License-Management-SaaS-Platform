@@ -37,21 +37,24 @@ class ApiStatusController extends BaseManagerParentController
     }
 
     /**
-     * @return array{status: string, response_time_ms: int, last_checked: string, external_url: string}
+     * @return array{status: string, response_time_ms: int, last_checked: string, external_url: null, status_code: int, message: string|null}
      */
     private function probeExternalServer(?Program $program): array
     {
         $softwareId = (int) ($program?->external_software_id ?? 8);
         $startedAt = microtime(true);
-        $response = $this->externalApiService->getSoftwareStats($softwareId);
+        $response = $this->externalApiService->getSoftwareStats($softwareId, $program?->external_api_base_url);
         $responseTime = (int) round((microtime(true) - $startedAt) * 1000);
         $statusCode = (int) ($response['status_code'] ?? 503);
+        $message = $response['data']['message'] ?? null;
 
         return [
             'status' => $statusCode >= 500 ? 'offline' : ($statusCode >= 400 ? 'degraded' : 'online'),
             'response_time_ms' => $responseTime,
             'last_checked' => now()->toIso8601String(),
-            'external_url' => rtrim((string) config('external-api.url'), '/'),
+            'external_url' => null,
+            'status_code' => $statusCode,
+            'message' => is_string($message) && $message !== '' ? $message : null,
             'program_id' => $program?->id,
             'program_name' => $program?->name,
             'software_id' => $softwareId,

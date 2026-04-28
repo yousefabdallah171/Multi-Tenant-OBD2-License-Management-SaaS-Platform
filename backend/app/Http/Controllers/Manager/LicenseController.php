@@ -3,27 +3,42 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Models\License;
+use App\Services\LicenseService;
+use App\Support\CustomerOwnership;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LicenseController extends BaseManagerController
 {
+    public function __construct(private readonly LicenseService $licenseService)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:active,expired,suspended,pending'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
             'search' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
         $query = License::query()
-            ->whereIn('reseller_id', $resellerIds)
-            ->with(['customer:id,name,email', 'program:id,name'])
+            ->whereIn('reseller_id', $sellerIds)
+            ->with(['customer:id,name,email', 'program:id,name', 'reseller:id,name'])
             ->latest('activated_at');
 
         if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
+            if ($validated['status'] === 'scheduled') {
+                $query->where('status', 'pending')->where('is_scheduled', true);
+            } elseif ($validated['status'] === 'pending') {
+                $query->where('status', 'pending')->where(function ($pendingQuery): void {
+                    $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                });
+            } else {
+                $query->whereEffectiveStatus($validated['status']);
+            }
         }
 
         if (! empty($validated['search'])) {
@@ -69,28 +84,45 @@ class LicenseController extends BaseManagerController
 
     public function expiring(Request $request): JsonResponse
     {
-        $resellerIds = $this->teamResellerIds($request);
+        $sellerIds = $this->teamSellerIds($request);
         $baseQuery = License::query()
-            ->whereIn('reseller_id', $resellerIds)
-            ->where('status', 'active')
+            ->whereIn('reseller_id', $sellerIds)
+            ->whereEffectivelyActive()
             ->where('expires_at', '>=', now());
 
         $day1 = (clone $baseQuery)->where('expires_at', '<=', now()->addDay())->count();
         $day3 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(3))->count();
         $day7 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(7))->count();
+        $expired = License::query()
+            ->whereIn('reseller_id', $sellerIds)
+            ->whereEffectivelyExpired()
+            ->count();
 
         return response()->json([
             'data' => [
                 'day1' => $day1,
                 'day3' => $day3,
                 'day7' => $day7,
+                'expired' => $expired,
             ],
+        ]);
+    }
+
+    public function cancelPending(Request $request, License $license): JsonResponse
+    {
+        $resolved  = $this->resolveTeamLicense($request, $license);
+        $cancelled = $this->licenseService->cancelPending($resolved);
+        LicenseCacheInvalidation::invalidateForLicense($cancelled);
+
+        return response()->json([
+            'message' => 'Pending license cancelled successfully.',
+            'data'    => $this->serializeLicense($cancelled),
         ]);
     }
 
     private function serializeLicense(License $license): array
     {
-        $license->loadMissing(['customer:id,name,email', 'program:id,name']);
+        $license->loadMissing(['customer:id,name,email', 'program:id,name', 'reseller:id,name']);
 
         return [
             'id' => $license->id,
@@ -101,12 +133,23 @@ class LicenseController extends BaseManagerController
             'external_username' => $license->external_username ?: $license->customer?->username,
             'program' => $license->program?->name,
             'program_id' => $license->program_id,
+            'reseller_id' => $license->reseller_id,
+            'reseller_name' => $license->reseller?->name,
             'duration_days' => $license->duration_days,
-            'price' => (float) $license->price,
+            'price' => CustomerOwnership::displayPriceForLicense($license),
             'activated_at' => $license->activated_at?->toIso8601String(),
+            'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),
-            'status' => $license->status,
+            'scheduled_at' => $license->scheduled_at?->toIso8601String(),
+            'scheduled_timezone' => $license->scheduled_timezone,
+            'is_scheduled' => (bool) $license->is_scheduled,
+            'scheduled_last_attempt_at' => $license->scheduled_last_attempt_at?->toIso8601String(),
+            'scheduled_failed_at' => $license->scheduled_failed_at?->toIso8601String(),
+            'scheduled_failure_message' => $license->scheduled_failure_message,
+            'paused_at' => $license->paused_at?->toIso8601String(),
+            'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license->pause_reason,
+            'status' => $license->effectiveStatus(),
         ];
     }
 }
-

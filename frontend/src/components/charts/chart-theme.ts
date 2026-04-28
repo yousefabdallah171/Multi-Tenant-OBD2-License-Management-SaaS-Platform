@@ -1,5 +1,10 @@
+import { useDashboardAppearance } from '@/hooks/useDashboardAppearance'
+import { useBranding } from '@/hooks/useBranding'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useTheme } from '@/hooks/useTheme'
+import { resolveDashboardChartColors } from '@/lib/dashboard-appearance'
+import { generateColorRamp } from '@/lib/role-branding'
+import { NEUTRAL_COLORS, SEMANTIC_COLORS } from '@/lib/colors'
 
 export interface ChartSeries {
   key: string
@@ -8,44 +13,63 @@ export interface ChartSeries {
   stackId?: string
 }
 
-const LIGHT_COLORS = {
-  grid: '#dbe4ef',
-  axis: '#64748b',
-  tooltipBackground: '#ffffff',
-  tooltipBorder: '#cbd5e1',
-  primary: '#0284c7',
-  secondary: '#0f766e',
-  tertiary: '#f59e0b',
-  quaternary: '#c026d3',
-  positive: '#16a34a',
-  negative: '#dc2626',
+// Neutral colors reference NEUTRAL_COLORS / SEMANTIC_COLORS tokens — no raw hex values.
+const LIGHT_NEUTRAL = {
+  grid: NEUTRAL_COLORS[200],           // slate-200
+  axis: NEUTRAL_COLORS[500],           // slate-500
+  tooltipBackground: '#ffffff',        // pure white — intentional, not a surface token
+  tooltipBorder: NEUTRAL_COLORS[300],  // slate-300
+  secondary: '#7c3aed',                // violet-600 — complements indigo brand palette
+  tertiary: SEMANTIC_COLORS.warning.main,
+  quaternary: '#c026d3',               // fuchsia-600 — semantic chart series color, no token equivalent
+  positive: SEMANTIC_COLORS.success.dark,
+  negative: SEMANTIC_COLORS.danger.dark,
 }
 
-const DARK_COLORS = {
-  grid: '#334155',
-  axis: '#cbd5e1',
-  tooltipBackground: '#0f172a',
-  tooltipBorder: '#334155',
-  primary: '#38bdf8',
-  secondary: '#34d399',
-  tertiary: '#fbbf24',
-  quaternary: '#c084fc',
-  positive: '#4ade80',
-  negative: '#fb7185',
+const DARK_NEUTRAL = {
+  grid: NEUTRAL_COLORS[700],           // slate-700
+  axis: NEUTRAL_COLORS[300],           // slate-300
+  tooltipBackground: NEUTRAL_COLORS[900], // slate-900
+  tooltipBorder: NEUTRAL_COLORS[700],  // slate-700
+  secondary: '#a78bfa',                // violet-400 — lighter for dark bg
+  tertiary: '#fbbf24',                 // amber-400 — lighter for dark bg
+  quaternary: '#c084fc',               // purple-400 — lighter for dark bg
+  positive: '#4ade80',                 // green-400 — lighter for dark bg
+  negative: '#fb7185',                 // rose-400 — lighter for dark bg
 }
-
-const LIGHT_SERIES_COLORS = ['#0284c7', '#0f766e', '#f59e0b', '#c026d3', '#2563eb', '#e11d48', '#7c3aed']
-const DARK_SERIES_COLORS = ['#38bdf8', '#34d399', '#fbbf24', '#c084fc', '#60a5fa', '#fb7185', '#a78bfa']
 
 export function useChartTheme() {
   const { isDark } = useTheme()
+  const { primaryColor } = useBranding()
+  const { appearance } = useDashboardAppearance()
   const { lang, isRtl } = useLanguage()
+
+  const ramp = generateColorRamp(primaryColor)
+  const brandPrimary = ramp['--brand-600'] || primaryColor
+  const brandSecondary = ramp['--brand-400'] || primaryColor
+  const brandTertiary = ramp['--brand-700'] || primaryColor
+  const brandLight = ramp['--brand-300'] || primaryColor
+
+  const themeNeutral = isDark ? DARK_NEUTRAL : LIGHT_NEUTRAL
+
+  const seriesColors = resolveDashboardChartColors([
+    isDark ? brandLight : brandPrimary,
+    isDark ? brandSecondary : brandTertiary,
+    themeNeutral.secondary,
+    themeNeutral.tertiary,
+    themeNeutral.quaternary,
+    themeNeutral.negative,
+    themeNeutral.positive,
+  ], appearance)
 
   return {
     locale: lang === 'ar' ? 'ar-EG' : 'en-US',
     isRtl,
-    palette: isDark ? DARK_COLORS : LIGHT_COLORS,
-    seriesColors: isDark ? DARK_SERIES_COLORS : LIGHT_SERIES_COLORS,
+    palette: {
+      ...themeNeutral,
+      primary: seriesColors[0],
+    },
+    seriesColors,
   }
 }
 

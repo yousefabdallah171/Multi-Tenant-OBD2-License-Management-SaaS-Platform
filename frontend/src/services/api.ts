@@ -1,11 +1,14 @@
 import axios from 'axios'
 import { toast } from 'sonner'
 import type { SupportedLanguage } from '@/hooks/useLanguage'
-import i18n from '@/i18n'
+  import i18n from '@/i18n'
+import { extractAccountDisabledState, storeAccountDisabledState } from '@/lib/account-disabled'
 import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY } from '@/lib/constants'
-import { routePaths } from '@/router/routes'
+import { getImpersonationState, isImpersonationActive } from '@/lib/impersonation'
+import { getDashboardPath, routePaths } from '@/router/routes'
 import { useAuthStore } from '@/stores/authStore'
 import type { DashboardStats, HealthResponse } from '@/types/api.types'
+import type { User } from '@/types/user.types'
 
 function resolveApiBaseUrl() {
   const configuredBaseUrl = (globalThis as { __VITE_API_URL__?: string }).__VITE_API_URL__
@@ -14,14 +17,11 @@ function resolveApiBaseUrl() {
     return configuredBaseUrl
   }
 
-  if (typeof window !== 'undefined') {
-    return new URL('/api', window.location.origin).toString().replace(/\/$/, '')
-  }
-
-  return 'http://127.0.0.1:8000/api'
+  return '/api'
 }
 
 export const api = axios.create({
+  withCredentials: true,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
@@ -52,27 +52,61 @@ function resolveCurrentLanguage(): SupportedLanguage {
   return document.documentElement.lang === 'ar' ? 'ar' : DEFAULT_LANGUAGE
 }
 
+async function fetchCurrentUserSnapshot(): Promise<User | null> {
+  const token = useAuthStore.getState().token
+  const { data } = await axios.get<{ user: User | null }>('/auth/me', {
+    baseURL: resolveApiBaseUrl(),
+    withCredentials: true,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'Accept-Language': resolveCurrentLanguage(),
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  })
+
+  return data.user ?? null
+}
+
 api.interceptors.request.use((config) => {
   config.baseURL ??= resolveApiBaseUrl()
+  config.headers['Accept-Language'] = resolveCurrentLanguage()
 
-  const token = useAuthStore.getState().token
-  const lang = resolveCurrentLanguage()
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  if (isImpersonationActive()) {
+    const state = getImpersonationState()
+    if (state?.token) {
+      config.headers.Authorization = `Bearer ${state.token}`
+    }
+  } else {
+    const token = useAuthStore.getState().token
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
   }
-
-  config.headers['Accept-Language'] = lang
 
   return config
 })
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error?.response?.status
     const requestUrl = String(error?.config?.url ?? '')
+    const requestMethod = String(error?.config?.method ?? 'get').toUpperCase()
+    const isReadRequest = requestMethod === 'GET' || requestMethod === 'HEAD'
     const isAuthLoginRequest = /\/auth\/login(?:\?.*)?$/.test(requestUrl)
+    const accountDisabledState = extractAccountDisabledState(error?.response?.data)
+
+    if (status === 403 && accountDisabledState && typeof window !== 'undefined') {
+      storeAccountDisabledState(accountDisabledState)
+      useAuthStore.getState().clearSession()
+
+      if (!window.location.pathname.includes('/account-disabled')) {
+        window.location.assign(routePaths.errors.accountDisabled(resolveCurrentLanguage()))
+      }
+
+      return Promise.reject(error)
+    }
 
     if (status === 401) {
       useAuthStore.getState().clearSession()
@@ -82,7 +116,46 @@ api.interceptors.response.use(
       }
     }
 
-    if (status === 403 && typeof window !== 'undefined' && !window.location.pathname.includes('/access-denied')) {
+    if (status === 403 && typeof window !== 'undefined') {
+      if (!isReadRequest) {
+        toast.error(
+          error?.response?.data?.message
+            ?? i18n.t('common.errorPages.accessDenied.description'),
+        )
+
+        return Promise.reject(error)
+      }
+
+      if (window.location.pathname.includes('/access-denied')) {
+        return Promise.reject(error)
+      }
+
+      const isMeRequest = /\/auth\/me(?:\?.*)?$/.test(requestUrl)
+
+      if (!isMeRequest && useAuthStore.getState().user) {
+        try {
+          const previousUser = useAuthStore.getState().user
+          const currentUser = await fetchCurrentUserSnapshot()
+
+          if (currentUser) {
+            useAuthStore.getState().setUser(currentUser)
+
+            if (!previousUser || previousUser.role !== currentUser.role || previousUser.status !== currentUser.status) {
+              if (currentUser.status !== 'active') {
+                useAuthStore.getState().clearSession()
+                window.location.assign(routePaths.login(resolveCurrentLanguage()))
+                return Promise.reject(error)
+              }
+
+              window.location.assign(getDashboardPath(currentUser.role, resolveCurrentLanguage()))
+              return Promise.reject(error)
+            }
+          }
+        } catch {
+          // Fall through to the access denied route when the session cannot be refreshed.
+        }
+      }
+
       window.location.assign(routePaths.errors.accessDenied(resolveCurrentLanguage()))
     }
 

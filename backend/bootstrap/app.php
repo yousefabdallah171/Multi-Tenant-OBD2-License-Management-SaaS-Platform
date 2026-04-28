@@ -2,15 +2,18 @@
 
 use App\Http\Middleware\ApiLogger;
 use App\Http\Middleware\ApiSecurityHeaders;
-use App\Http\Middleware\ActiveRoleMiddleware;
+use App\Http\Middleware\AuthCookieToBearer;
 use App\Http\Middleware\BiosBlacklistCheck;
 use App\Http\Middleware\IpTracker;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\TenantScope;
+use App\Http\Middleware\TrackOnlineStatus;
 use App\Http\Middleware\UpdateLastSeen;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Illuminate\Console\Scheduling\Schedule;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -22,7 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(ApiSecurityHeaders::class);
-        $middleware->appendToGroup('api', ActiveRoleMiddleware::class);
+        $middleware->prepend(AuthCookieToBearer::class);
+        $middleware->redirectGuestsTo(static function (Request $request): ?string {
+            return $request->is('api/*') ? null : '/';
+        });
 
         $middleware->alias([
             'role' => RoleMiddleware::class,
@@ -31,8 +37,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'bios.blacklist' => BiosBlacklistCheck::class,
             'ip.tracker' => IpTracker::class,
             'update.last_seen' => UpdateLastSeen::class,
+            'track.online' => TrackOnlineStatus::class,
         ]);
     })
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command('licenses:expire')->everyMinute()->withoutOverlapping();
+        $schedule->command('licenses:schedule-activate')->everyMinute()->withoutOverlapping();
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->shouldRenderJsonWhen(static function (Request $request, \Throwable $exception): bool {
+            return $request->is('api/*') || $request->expectsJson();
+        });
     })->create();

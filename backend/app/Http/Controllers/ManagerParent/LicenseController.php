@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Models\License;
+use App\Support\CustomerOwnership;
+use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class LicenseController extends BaseManagerParentController
 {
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'in:active,expired,suspended,pending'],
+            'status' => ['nullable', 'in:active,expired,suspended,cancelled,pending,scheduled'],
             'search' => ['nullable', 'string'],
             'reseller_id' => ['nullable', 'integer'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -23,7 +26,15 @@ class LicenseController extends BaseManagerParentController
             ->latest('activated_at');
 
         if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
+            if ($validated['status'] === 'scheduled') {
+                $query->where('status', 'pending')->where('is_scheduled', true);
+            } elseif ($validated['status'] === 'pending') {
+                $query->where('status', 'pending')->where(function ($pendingQuery): void {
+                    $pendingQuery->where('is_scheduled', false)->orWhereNull('is_scheduled');
+                });
+            } else {
+                $query->whereEffectiveStatus($validated['status']);
+            }
         }
 
         if (! empty($validated['reseller_id'])) {
@@ -75,20 +86,65 @@ class LicenseController extends BaseManagerParentController
     {
         $baseQuery = License::query()
             ->where('tenant_id', $this->currentTenantId($request))
-            ->where('status', 'active')
+            ->whereEffectivelyActive()
             ->where('expires_at', '>=', now());
 
         $day1 = (clone $baseQuery)->where('expires_at', '<=', now()->addDay())->count();
         $day3 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(3))->count();
         $day7 = (clone $baseQuery)->where('expires_at', '<=', now()->addDays(7))->count();
+        $expired = License::query()
+            ->where('tenant_id', $this->currentTenantId($request))
+            ->whereEffectivelyExpired()
+            ->count();
 
         return response()->json([
             'data' => [
                 'day1' => $day1,
                 'day3' => $day3,
                 'day7' => $day7,
+                'expired' => $expired,
             ],
         ]);
+    }
+
+    public function destroy(Request $request, License $license): JsonResponse
+    {
+        $resolved = $this->resolveTenantLicense($request, $license);
+
+        if (! $this->canDeleteLicense($resolved)) {
+            return response()->json([
+                'message' => 'Only expired or cancelled licenses can be deleted.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $licenseId = $resolved->id;
+        $biosId = $resolved->bios_id;
+        $customerId = $resolved->customer_id;
+        $programId = $resolved->program_id;
+
+        LicenseCacheInvalidation::invalidateForLicense($resolved);
+        $resolved->delete();
+
+        $this->logActivity(
+            $request,
+            'license.delete',
+            sprintf('Deleted license #%d for BIOS %s.', $licenseId, $biosId),
+            [
+                'license_id' => $licenseId,
+                'customer_id' => $customerId,
+                'program_id' => $programId,
+                'bios_id' => $biosId,
+            ],
+        );
+
+        return response()->json([
+            'message' => 'License deleted successfully.',
+        ]);
+    }
+
+    private function canDeleteLicense(License $license): bool
+    {
+        return in_array($license->effectiveStatus(), ['cancelled', 'expired'], true);
     }
 
     private function resolveTenantLicense(Request $request, License $license): License
@@ -114,11 +170,20 @@ class LicenseController extends BaseManagerParentController
             'reseller_id' => $license->reseller_id,
             'reseller_name' => $license->reseller?->name,
             'duration_days' => $license->duration_days,
-            'price' => (float) $license->price,
+            'price' => CustomerOwnership::displayPriceForLicense($license),
             'activated_at' => $license->activated_at?->toIso8601String(),
+            'start_at' => ($license->scheduled_at ?? $license->activated_at)?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),
-            'status' => $license->status,
+            'scheduled_at' => $license->scheduled_at?->toIso8601String(),
+            'scheduled_timezone' => $license->scheduled_timezone,
+            'is_scheduled' => (bool) $license->is_scheduled,
+            'scheduled_last_attempt_at' => $license->scheduled_last_attempt_at?->toIso8601String(),
+            'scheduled_failed_at' => $license->scheduled_failed_at?->toIso8601String(),
+            'scheduled_failure_message' => $license->scheduled_failure_message,
+            'paused_at' => $license->paused_at?->toIso8601String(),
+            'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
+            'pause_reason' => $license->pause_reason,
+            'status' => $license->effectiveStatus(),
         ];
     }
 }
-

@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\ManagerParent;
 
 use App\Enums\UserRole;
+use App\Models\BiosUsernameLink;
+use App\Models\License;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class UsernameManagementController extends BaseManagerParentController
 {
@@ -52,7 +56,14 @@ class UsernameManagementController extends BaseManagerParentController
     public function unlock(Request $request, User $user): JsonResponse
     {
         $user = $this->resolveTenantUser($request, $user);
+
+        abort_unless(
+            in_array($user->role?->value ?? (string) $user->role, [UserRole::MANAGER->value, UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
+            403,
+        );
+
         $validated = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
+        $this->assertUsernameCanBeManaged($user);
         $user->update(['username_locked' => false]);
 
         $this->logActivity($request, 'username.unlock', sprintf('Unlocked username for %s.', $user->email), [
@@ -66,6 +77,13 @@ class UsernameManagementController extends BaseManagerParentController
     public function changeUsername(Request $request, User $user): JsonResponse
     {
         $user = $this->resolveTenantUser($request, $user);
+
+        abort_unless(
+            in_array($user->role?->value ?? (string) $user->role, [UserRole::MANAGER->value, UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
+            403,
+        );
+
+        $this->assertUsernameCanBeManaged($user);
 
         $validated = $request->validate([
             'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$user->id],
@@ -90,15 +108,27 @@ class UsernameManagementController extends BaseManagerParentController
     {
         $user = $this->resolveTenantUser($request, $user);
 
+        abort_unless(
+            in_array($user->role?->value ?? (string) $user->role, [UserRole::MANAGER->value, UserRole::RESELLER->value, UserRole::CUSTOMER->value], true),
+            403,
+        );
+
         $validated = $request->validate([
             'password' => ['nullable', 'string', 'min:8'],
+            'revoke_tokens' => ['nullable', 'boolean'],
         ]);
 
-        $password = $validated['password'] ?? 'password1234';
+        $password = $validated['password'] ?? Str::password(12, symbols: false);
         $user->update(['password' => Hash::make($password)]);
+
+        if (($validated['revoke_tokens'] ?? false) === true) {
+            $exceptTokenId = $request->user()?->is($user) ? $request->user()?->currentAccessToken()?->getKey() : null;
+            $user->revokeAuthTokens($exceptTokenId);
+        }
 
         $this->logActivity($request, 'username.reset_password', sprintf('Reset password for %s.', $user->email), [
             'target_user_id' => $user->id,
+            'revoke_tokens' => $validated['revoke_tokens'] ?? false,
         ]);
 
         return response()->json([
@@ -119,5 +149,23 @@ class UsernameManagementController extends BaseManagerParentController
             'username_locked' => $user->username_locked,
             'created_at' => $user->created_at?->toIso8601String(),
         ];
+    }
+
+    private function assertUsernameCanBeManaged(User $user): void
+    {
+        $usernameLower = strtolower((string) $user->username);
+
+        $hasPermanentLink = ($usernameLower !== '' && BiosUsernameLink::where('tenant_id', $user->tenant_id)->whereRaw('LOWER(username) = ?', [$usernameLower])->exists())
+            || License::query()
+                ->where('customer_id', $user->id)
+                ->whereNotNull('bios_id')
+                ->get(['bios_id'])
+                ->contains(fn (License $license): bool => BiosUsernameLink::whereRaw('LOWER(bios_id) = ?', [strtolower((string) $license->bios_id)])->exists());
+
+        if ($hasPermanentLink) {
+            throw ValidationException::withMessages([
+                'username' => 'This user has a permanent BIOS-username link. Unlock and username change are blocked.',
+            ]);
+        }
     }
 }

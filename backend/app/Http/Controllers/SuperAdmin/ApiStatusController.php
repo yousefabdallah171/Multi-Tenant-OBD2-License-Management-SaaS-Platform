@@ -111,19 +111,18 @@ class ApiStatusController extends BaseSuperAdminController
         return round(($successCount / $logs->count()) * 100, 1);
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, array{endpoint: string, status: string, status_code: int|null, last_checked_at: string|null}>
+     */
     private function endpointStatuses()
     {
-        $latestByEndpoint = ApiLog::query()
-            ->latest()
-            ->get()
-            ->groupBy('endpoint')
-            ->map(fn ($group) => $group->first());
-
         $endpoints = ['/status', '/users', '/activate', '/renew'];
 
-        return collect($endpoints)->map(function (string $endpoint) use ($latestByEndpoint): array {
-            /** @var ApiLog|null $log */
-            $log = $latestByEndpoint->get($endpoint);
+        return collect($endpoints)->map(function (string $endpoint): array {
+            $log = ApiLog::query()
+                ->where('endpoint', $endpoint)
+                ->latest('created_at')
+                ->first(['status_code', 'created_at']);
 
             return [
                 'endpoint' => $endpoint,

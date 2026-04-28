@@ -5,17 +5,19 @@ import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DateRangePicker, type DateRangeValue } from '@/components/ui/date-range-picker'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatDate } from '@/lib/utils'
+import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import { teamService } from '@/services/team.service'
 import type { BiosHistoryEntry } from '@/types/manager-parent.types'
+import type { UserRole } from '@/types/user.types'
 
 export function BiosHistoryPage() {
   const { t } = useTranslation()
@@ -65,8 +67,10 @@ export function BiosHistoryPage() {
         sortValue: (row) => row.bios_id,
         render: (row) => (
           <div>
-            <code>{row.bios_id}</code>
-            <p className="text-xs text-slate-500 dark:text-slate-400">@{row.external_username ?? '-'}</p>
+            <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.biosDetail(lang, row.bios_id)}>
+              <code>{row.bios_id}</code>
+            </Link>
+            <p className="text-sm text-slate-500 dark:text-slate-400">@{row.external_username ?? '-'}</p>
           </div>
         ),
       },
@@ -77,9 +81,21 @@ export function BiosHistoryPage() {
         sortValue: (row) => row.customer ?? '',
         render: (row) => (row.customer_id ? <Link className="text-sky-600 hover:underline dark:text-sky-300" to={routePaths.managerParent.customerDetail(lang, row.customer_id)}>{row.customer ?? '-'}</Link> : (row.customer ?? '-')),
       },
-      { key: 'reseller', label: t('common.reseller'), sortable: true, sortValue: (row) => row.reseller ?? '', render: (row) => row.reseller ?? '-' },
-      { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => row.action },
-      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} /> },
+      {
+        key: 'reseller',
+        label: t('common.reseller'),
+        sortable: true,
+        sortValue: (row) => row.reseller ?? '',
+        render: (row) => (
+          <RoleIdentity
+            name={row.reseller}
+            role={resolveUserRole(row.reseller_role)}
+            href={row.reseller_id ? routePaths.managerParent.teamMemberDetail(lang, row.reseller_id) : undefined}
+          />
+        ),
+      },
+      { key: 'action', label: t('common.action'), sortable: true, sortValue: (row) => row.action, render: (row) => formatActivityActionLabel(row.action, t) },
+      { key: 'status', label: t('common.status'), sortable: true, sortValue: (row) => row.status, render: (row) => <StatusBadge status={row.status} /> },
       { key: 'date', label: t('common.date'), sortable: true, sortValue: (row) => row.occurred_at ?? '', render: (row) => (row.occurred_at ? formatDate(row.occurred_at, locale) : '-') },
     ],
     [locale, t],
@@ -149,15 +165,15 @@ export function BiosHistoryPage() {
             <div key={entry.id} className="rounded-3xl border border-slate-200 p-4 dark:border-slate-800">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-slate-950 dark:text-white">{entry.action}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{entry.description}</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="font-semibold text-slate-950 dark:text-white">{formatActivityActionLabel(entry.action, t)}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{formatReadableActivityDescription(entry.description, locale)}</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {t('managerParent.pages.biosHistory.timelineMeta', { customer: entry.customer ?? '-', reseller: entry.reseller ?? '-' })}
                   </p>
                 </div>
-                <div className="text-right">
-                  <StatusBadge status={entry.status as 'active' | 'expired' | 'suspended' | 'inactive' | 'pending' | 'removed'} />
-                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{entry.occurred_at ? formatDate(entry.occurred_at, locale) : '-'}</p>
+                <div className="text-end">
+                  <StatusBadge status={entry.status} />
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{entry.occurred_at ? formatDate(entry.occurred_at, locale) : '-'}</p>
                 </div>
               </div>
             </div>
@@ -166,6 +182,7 @@ export function BiosHistoryPage() {
       </Card>
 
       <DataTable
+        tableKey="manager_parent_bios_history"
         columns={columns}
         data={historyQuery.data?.data ?? []}
         rowKey={(row) => row.id}
@@ -184,4 +201,12 @@ export function BiosHistoryPage() {
       />
     </div>
   )
+}
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
 }

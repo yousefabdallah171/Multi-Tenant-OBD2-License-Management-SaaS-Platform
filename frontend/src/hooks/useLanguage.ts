@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import i18n, { ensureLocaleLoaded } from '@/i18n'
-import { LANGUAGE_STORAGE_KEY } from '@/lib/constants'
+import { DEFAULT_LANGUAGE, LANGUAGE_STORAGE_KEY } from '@/lib/constants'
 
 export const supportedLanguages = ['ar', 'en'] as const
 
@@ -16,7 +16,7 @@ export function useLanguage() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const currentLanguage: SupportedLanguage = isSupportedLanguage(lang) ? lang : 'ar'
+  const currentLanguage: SupportedLanguage = isSupportedLanguage(lang) ? lang : DEFAULT_LANGUAGE
 
   useEffect(() => {
     void (async () => {

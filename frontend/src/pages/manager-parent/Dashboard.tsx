@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, LayoutDashboard, ShieldCheck, Users, UserSquare2 } from 'lucide-react'
+import { LayoutDashboard } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { BarChartWidget } from '@/components/charts/BarChartWidget'
 import { LineChartWidget } from '@/components/charts/LineChartWidget'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { RoleIdentity } from '@/components/shared/RoleIdentity'
+import { SkeletonCard } from '@/components/shared/SkeletonCard'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,6 +15,7 @@ import { localizeMonthLabel } from '@/lib/chart-labels'
 import { formatCurrency } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
+import type { UserRole } from '@/types/user.types'
 
 function localizeExpiryRange(range: string, t: ReturnType<typeof useTranslation>['t']) {
   const match = range.match(/^(\d+)-(\d+)\s+days$/i)
@@ -64,23 +67,49 @@ export function DashboardPage() {
             <Button type="button" variant="secondary" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
               {t('managerParent.pages.dashboard.actions.teamManagement')}
             </Button>
-            <Button type="button" onClick={() => navigate(routePaths.managerParent.softwareManagement(lang))}>
-              {t('managerParent.pages.dashboard.actions.managePrograms')}
+            <Button type="button" variant="secondary" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
+              {t('managerParent.pages.dashboard.actions.reviewCustomers')}
+            </Button>
+            <Button type="button" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
+              {t('managerParent.pages.dashboard.actions.openReports')}
             </Button>
           </>
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatsCard title={t('managerParent.pages.dashboard.teamMembers')} value={stats?.team_members ?? 0} icon={Users} color="sky" />
-        <StatsCard title={t('managerParent.pages.dashboard.customers')} value={stats?.total_customers ?? 0} icon={UserSquare2} color="emerald" />
-        <StatsCard title={t('managerParent.pages.dashboard.activeLicenses')} value={stats?.active_licenses ?? 0} icon={ShieldCheck} color="amber" />
-        <StatsCard title={t('managerParent.pages.dashboard.monthlyRevenue')} value={formatCurrency(stats?.monthly_revenue ?? 0, 'USD', locale)} icon={Banknote} color="rose" />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {statsQuery.isLoading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : (
+          <>
+            <button type="button" className="h-full text-start" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
+              <StatsCard title={t('managerParent.pages.dashboard.teamMembers')} value={stats?.team_members ?? 0} color="sky" />
+            </button>
+            <button type="button" className="h-full text-start" onClick={() => navigate(`${routePaths.managerParent.teamManagement(lang)}?role=reseller`)}>
+              <StatsCard title={t('managerParent.pages.dashboard.resellers')} value={stats?.resellers ?? 0} color="rose" />
+            </button>
+            <button type="button" className="h-full text-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
+              <StatsCard title={t('managerParent.pages.dashboard.customers')} value={stats?.total_customers ?? 0} color="emerald" />
+            </button>
+            <button type="button" className="h-full text-start" onClick={() => navigate(`${routePaths.managerParent.customers(lang)}?status=active`)}>
+              <StatsCard title={t('managerParent.pages.dashboard.activeCustomers')} value={stats?.active_licenses ?? 0} color="amber" />
+            </button>
+            <button type="button" className="h-full text-start" onClick={() => navigate(routePaths.managerParent.reports(lang))}>
+              <StatsCard title={t('managerParent.pages.dashboard.totalRevenue')} value={formatCurrency(stats?.revenue ?? 0, 'USD', locale)} color="rose" />
+            </button>
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <LineChartWidget
-          title={t('managerParent.pages.dashboard.monthlyRevenue')}
+          title={t('managerParent.pages.dashboard.monthlyRevenueTrend')}
           data={revenueSeries}
           isLoading={statsQuery.isLoading}
           xKey="month"
@@ -113,12 +142,24 @@ export function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <BarChartWidget
           title={t('managerParent.pages.dashboard.teamPerformance')}
-          data={(statsQuery.data?.teamPerformance ?? []).map((member) => ({ name: member.name, activations: member.activations }))}
+          data={(statsQuery.data?.teamPerformance ?? []).map((member) => ({
+            id: member.id,
+            role: member.role,
+            name: member.name,
+            activations: member.activations,
+          }))}
           isLoading={statsQuery.isLoading}
           xKey="name"
           horizontal
           showLabels
           series={[{ key: 'activations', label: t('common.activations') }]}
+          onEntryClick={(payload) => {
+            const id = (payload as { id?: number }).id
+            const role = (payload as { role?: string }).role
+            if (id && (role === 'manager' || role === 'reseller')) {
+              navigate(routePaths.managerParent.teamMemberDetail(lang, id))
+            }
+          }}
         />
         <LineChartWidget
           title={t('managerParent.pages.dashboard.conflictRate')}
@@ -139,9 +180,6 @@ export function DashboardPage() {
             <div className="grid gap-3">
               <Button type="button" className="justify-start" onClick={() => navigate(routePaths.managerParent.teamManagement(lang))}>
                 {t('managerParent.pages.dashboard.actions.inviteTeamMember')}
-              </Button>
-              <Button type="button" variant="secondary" className="justify-start" onClick={() => navigate(routePaths.managerParent.resellerPricing(lang))}>
-                {t('managerParent.pages.dashboard.actions.updateResellerPricing')}
               </Button>
               <Button type="button" variant="secondary" className="justify-start" onClick={() => navigate(routePaths.managerParent.customers(lang))}>
                 {t('managerParent.pages.dashboard.actions.reviewCustomers')}
@@ -167,12 +205,15 @@ export function DashboardPage() {
               <div key={member.id} className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/40">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-950 dark:text-white">{member.name}</p>
-                    <p className="text-xs capitalize text-slate-500 dark:text-slate-400">{t(`roles.${member.role}`)}</p>
+                    <RoleIdentity
+                      name={member.name}
+                      role={resolveUserRole(member.role)}
+                      href={member.id ? routePaths.managerParent.teamMemberDetail(lang, member.id) : undefined}
+                    />
                   </div>
-                  <div className="text-right">
+                  <div className="text-start">
                     <p className="font-semibold text-slate-950 dark:text-white">{formatCurrency(member.revenue, 'USD', locale)}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('managerParent.pages.dashboard.activationsCount', { count: member.activations })}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('managerParent.pages.dashboard.activationsCount', { count: member.activations })}</p>
                   </div>
                 </div>
               </div>
@@ -183,3 +224,12 @@ export function DashboardPage() {
     </div>
   )
 }
+
+function resolveUserRole(role?: string | null): UserRole | null {
+  if (role === 'super_admin' || role === 'manager_parent' || role === 'manager' || role === 'reseller' || role === 'customer') {
+    return role
+  }
+
+  return null
+}
+

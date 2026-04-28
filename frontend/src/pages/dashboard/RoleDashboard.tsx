@@ -11,7 +11,7 @@ import type { UserRole } from '@/types/user.types'
 
 export function RoleDashboard({ role }: { role: UserRole }) {
   const { t } = useTranslation()
-  const { lang, switchLanguage, isRtl } = useLanguage()
+  const { lang, switchLanguage } = useLanguage()
   const { logout, user } = useAuth()
   const { toggleTheme, isDark } = useTheme()
   const { data } = useQuery({
@@ -22,11 +22,11 @@ export function RoleDashboard({ role }: { role: UserRole }) {
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className={`mx-auto max-w-6xl space-y-6 ${isRtl ? 'text-right' : 'text-left'}`}>
+      <div className="mx-auto max-w-6xl space-y-6 text-start">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.24em] text-sky-600 dark:text-sky-400">{t('dashboard.roleLabel')}</p>
-            <h1 className="text-3xl font-semibold">{t(`roles.${role}`)}</h1>
+            <p className="text-sm uppercase tracking-[0.24em] text-brand-600 dark:text-brand-400">{t('dashboard.roleLabel')}</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t(`roles.${role}`)}</h1>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{user?.email}</p>
           </div>
           <div className="flex gap-2">

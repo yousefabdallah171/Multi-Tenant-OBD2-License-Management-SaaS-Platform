@@ -16,8 +16,8 @@ export function getFlag(code: string | null | undefined): string {
   )
 }
 
-export function parseUserAgent(userAgent: string): string {
-  const ua = userAgent.toLowerCase()
+export function parseUserAgent(userAgent: string | null | undefined): string {
+  const ua = typeof userAgent === 'string' ? userAgent.toLowerCase() : ''
 
   const device = (() => {
     if (ua.includes('iphone')) return 'iPhone'

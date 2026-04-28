@@ -31,7 +31,11 @@ class OnlineUsersController extends Controller
         } elseif ($role === UserRole::MANAGER_PARENT->value) {
             $query
                 ->where('tenant_id', $actor->tenant_id)
-                ->whereIn('role', [UserRole::MANAGER->value, UserRole::RESELLER->value]);
+                ->whereIn('role', [
+                    UserRole::MANAGER_PARENT->value,
+                    UserRole::MANAGER->value,
+                    UserRole::RESELLER->value,
+                ]);
         } elseif ($role === UserRole::MANAGER->value) {
             $query->where(function ($builder) use ($actor): void {
                 $builder
@@ -59,21 +63,35 @@ class OnlineUsersController extends Controller
         $users = $query
             ->orderByDesc('last_seen_at')
             ->limit(100)
-            ->get(['id', 'name', 'role']);
+            ->get(['id', 'name', 'role', 'last_seen_at']);
 
         return response()->json([
-            'data' => $users->map(fn (User $user): array => [
-                'masked_name' => $this->maskName((string) $user->name),
-                'role' => $user->role?->value ?? (string) $user->role,
-            ])->values(),
+            'data' => $users->map(function (User $user) use ($actor, $role): array {
+                $isSelf = (int) $user->id === (int) $actor->id;
+                $masked = $this->maskName((string) $user->name);
+                $canViewFullNames = $this->canViewFullNames($role);
+
+                return [
+                    'id' => $user->id,
+                    'display_name' => $isSelf ? 'You' : ($canViewFullNames ? $user->name : $masked),
+                    'full_name' => $canViewFullNames || $isSelf ? $user->name : null,
+                    'is_self' => $isSelf,
+                    'masked_name' => $masked,
+                    'role' => $user->role?->value ?? (string) $user->role,
+                    'last_seen_at' => $user->last_seen_at?->toIso8601String(),
+                ];
+            })->values(),
         ]);
     }
 
     public function widgetSettings(): JsonResponse
     {
+        $settings = $this->settingsStore->all();
+
         return response()->json([
             'data' => [
-                'show_online_widget_to_resellers' => (bool) data_get($this->settingsStore->all(), 'widgets.show_online_widget_to_resellers', false),
+                'show_online_widget_to_resellers' => (bool) data_get($settings, 'widgets.show_online_widget_to_resellers', false),
+                'server_timezone' => (string) data_get($settings, 'general.server_timezone', config('app.timezone', 'UTC')),
             ],
         ]);
     }
@@ -92,5 +110,9 @@ class OnlineUsersController extends Controller
 
         return $first.str_repeat('*', max(1, $length - 2)).$last;
     }
-}
 
+    private function canViewFullNames(string $role): bool
+    {
+        return in_array($role, [UserRole::SUPER_ADMIN->value, UserRole::MANAGER_PARENT->value], true);
+    }
+}

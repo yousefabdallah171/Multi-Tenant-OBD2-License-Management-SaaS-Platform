@@ -26,7 +26,7 @@ export function LogsPage() {
   const { lang } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(10)
+  const [perPage, setPerPage] = useState(25)
   const [tenantId, setTenantId] = useState<number | ''>('')
   const [endpoint, setEndpoint] = useState('')
   const [method, setMethod] = useState('')
@@ -72,7 +72,7 @@ export function LogsPage() {
     { key: 'timestamp', label: t('common.timestamp'), sortable: true, sortValue: (row) => row.created_at ?? '', render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-') },
     { key: 'user', label: t('common.user'), sortable: true, sortValue: (row) => row.user ?? '', render: (row) => row.user ?? '-' },
     { key: 'tenant', label: t('common.tenant'), sortable: true, sortValue: (row) => row.tenant ?? '', render: (row) => row.tenant ?? '-' },
-    { key: 'endpoint', label: t('superAdmin.pages.logs.endpoint'), sortable: true, sortValue: (row) => row.endpoint, render: (row) => <code className="text-xs">{row.endpoint}</code> },
+    { key: 'endpoint', label: t('superAdmin.pages.logs.endpoint'), sortable: true, sortValue: (row) => row.endpoint, render: (row) => <code className="text-sm">{row.endpoint}</code> },
     { key: 'method', label: t('superAdmin.pages.logs.method'), sortable: true, sortValue: (row) => row.method, render: (row) => row.method },
     { key: 'status', label: t('superAdmin.pages.logs.statusCode'), sortable: true, sortValue: (row) => row.status_code, render: (row) => <StatusBadge status={statusGroup(row.status_code)} /> },
     { key: 'time', label: t('superAdmin.pages.logs.responseTime'), sortable: true, sortValue: (row) => row.response_time_ms, render: (row) => `${row.response_time_ms}ms` },
@@ -176,6 +176,7 @@ export function LogsPage() {
       </Card>
 
       <DataTable
+        tableKey="super_admin_logs"
         columns={columns}
         data={logsQuery.data?.data ?? []}
         rowKey={(row) => row.id}
