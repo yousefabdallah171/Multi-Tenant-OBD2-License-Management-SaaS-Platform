@@ -165,10 +165,6 @@ export const superAdminPlatformService = {
     const { data } = await api.post<{ message: string }>('/super-admin/impersonation/stop', payload ?? {})
     return data
   },
-  async getTransactionHistory(filters?: TransactionHistoryFilters) {
-    const { data } = await api.get<TransactionHistoryListResponse>('/super-admin/transaction-history', { params: filters })
-    return data
-  },
   async getTransactionHistorySellers(params?: { tenant_id?: number | ''; from?: string; to?: string }) {
     const { data } = await api.get<{ data: TransactionHistorySellerOption[] }>('/super-admin/transaction-history/sellers', { params })
     return data

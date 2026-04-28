@@ -99,7 +99,6 @@ const SuperAdminManagerSalesCustomersPage = lazyNamed(() => import('@/pages/supe
 const SuperAdminResellerSalesCustomersPage = lazyNamed(() => import('@/pages/super-admin/ResellerSalesCustomers'), 'ResellerSalesCustomersPage')
 const SuperAdminTransactionHistoryPage = lazyNamed(() => import('@/pages/super-admin/TransactionHistory'), 'TransactionHistoryPage')
 const SuperAdminResellerLogsPage = lazyNamed(() => import('@/pages/super-admin/ResellerLogs'), 'ResellerLogsPage')
-const SuperAdminTransactionHistoryPage = lazyNamed(() => import('@/pages/super-admin/TransactionHistory'), 'TransactionHistoryPage')
 const ReportsPage = lazyNamed(() => import('@/pages/super-admin/Reports'), 'ReportsPage')
 const SettingsPage = lazyNamed(() => import('@/pages/super-admin/Settings'), 'SettingsPage')
 const TenantsPage = lazyNamed(() => import('@/pages/super-admin/Tenants'), 'TenantsPage')
@@ -188,7 +187,6 @@ export function AppRouter() {
                   <Route path="logs" element={<LogsPage />} />
                   <Route path="activity" element={<SuperAdminActivityPage />} />
                   <Route path="reseller-logs" element={<SuperAdminResellerLogsPage />} />
-                  <Route path="transaction-history" element={<SuperAdminTransactionHistoryPage />} />
                   <Route path="api-status" element={<ApiStatusPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="profile" element={<SuperAdminProfilePage />} />
