@@ -41,6 +41,7 @@ class TransactionHistoryController extends BaseSuperAdminController
         }
 
         $events = RevenueAnalytics::baseQuery($filters, $tenantId, $sellerIds)
+            ->whereRaw(RevenueAnalytics::earnedCondition())
             ->leftJoin('users as sellers', 'sellers.id', '=', 'activity_logs.user_id')
             ->leftJoin('tenants', 'tenants.id', '=', 'activity_logs.tenant_id')
             ->select([
@@ -131,6 +132,7 @@ class TransactionHistoryController extends BaseSuperAdminController
         $tenantId = ! empty($validated['tenant_id']) ? (int) $validated['tenant_id'] : null;
 
         $sellerIds = RevenueAnalytics::baseQuery($filters, $tenantId)
+            ->whereRaw(RevenueAnalytics::earnedCondition())
             ->whereNotNull('activity_logs.user_id')
             ->pluck('activity_logs.user_id')
             ->unique()
