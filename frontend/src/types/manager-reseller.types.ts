@@ -806,12 +806,12 @@ export interface TransactionHistoryListResponse {
   data: TransactionHistoryRow[]
   summary: TransactionHistorySummary
   meta: {
-    page: number
+    current_page: number
+    last_page: number
     per_page: number
     total: number
-    last_page: number
-    has_next_page: boolean
-    next_page: number | null
+    from: number | null
+    to: number | null
   }
 }
 

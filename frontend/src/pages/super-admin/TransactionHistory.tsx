@@ -338,7 +338,7 @@ export function TransactionHistoryPage() {
           >
             {t('common.previous')}
           </Button>
-          <span>{meta ? `${meta.page} / ${meta.last_page}` : '1 / 1'}</span>
+          <span>{meta ? `${meta.current_page} / ${meta.last_page}` : '1 / 1'}</span>
           <Button
             type="button"
             variant="outline"
