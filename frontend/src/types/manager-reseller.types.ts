@@ -766,51 +766,58 @@ export interface BiosChangeHistoryItem {
 
 export interface TransactionHistoryRow {
   id: number
-  action: 'license.activated' | 'license.renewed'
-  seller_id: number
+  seller_id: number | null
   seller_name: string
   seller_email: string
-  seller_role: 'manager_parent' | 'manager' | 'reseller'
-  tenant_id: number | null
-  tenant_name: string | null
+  seller_role: string
+  tenant_name: string
   customer_id: number | null
-  customer_name: string | null
-  customer_username: string | null
+  customer_name: string
+  customer_username: string
   bios_id: string
-  program_id: number | null
-  program_name: string | null
-  country_name: string | null
-  sale_amount: number
-  attribution_type: 'earned' | 'granted'
+  program_id: number
+  program_name: string
+  country_name: string
+  country_code: string
+  amount: number
+  type: 'Activation' | 'Renewal'
   sale_date: string | null
   license_id: number | null
 }
 
+export interface TransactionHistorySummary {
+  total_events: number
+  total_sales: number
+  total_sellers: number
+}
+
 export interface TransactionHistoryFilters {
-  from?: string
-  to?: string
   search?: string
   tenant_id?: number | ''
-  role?: 'manager_parent' | 'manager' | 'reseller' | ''
   seller_id?: number | ''
+  role?: 'manager_parent' | 'manager' | 'reseller' | ''
+  from?: string
+  to?: string
   page?: number
   per_page?: number
 }
 
 export interface TransactionHistoryListResponse {
   data: TransactionHistoryRow[]
-  summary: {
-    total_sales: number
-    total_events: number
-    total_sellers: number
-    total_customers: number
-  }
+  summary: TransactionHistorySummary
   meta: {
-    current_page: number
-    last_page: number
+    page: number
     per_page: number
     total: number
-    from: number | null
-    to: number | null
+    last_page: number
+    has_next_page: boolean
+    next_page: number | null
   }
+}
+
+export interface TransactionHistorySellerOption {
+  id: number
+  name: string
+  email: string
+  role: 'manager_parent' | 'manager' | 'reseller'
 }

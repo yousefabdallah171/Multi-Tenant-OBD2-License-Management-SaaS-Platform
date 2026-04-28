@@ -134,6 +134,7 @@ export const routePaths = {
     resellerLogs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/reseller-logs`,
     apiStatus: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/api-status`,
     biosChangeAudit: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-change-audit`,
+    transactionHistory: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/transaction-history`,
     settings: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/settings`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/profile`,
   },

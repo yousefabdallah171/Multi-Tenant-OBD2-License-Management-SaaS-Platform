@@ -78,8 +78,8 @@ use App\Http\Controllers\SuperAdmin\ProgramLogsController as SuperAdminProgramLo
 use App\Http\Controllers\SuperAdmin\ReportController;
 use App\Http\Controllers\SuperAdmin\ResellerLogController as SuperAdminResellerLogController;
 use App\Http\Controllers\SuperAdmin\ResellerPaymentController as SuperAdminResellerPaymentController;
-use App\Http\Controllers\SuperAdmin\TransactionHistoryController;
 use App\Http\Controllers\SuperAdmin\SecurityController;
+use App\Http\Controllers\SuperAdmin\TransactionHistoryController as SuperAdminTransactionHistoryController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\SuperAdmin\TenantResetController as SuperAdminTenantResetController;
@@ -502,6 +502,8 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/activity', [SuperAdminActivityController::class, 'index']);
         Route::get('/activity/export', [SuperAdminActivityController::class, 'export']);
         Route::get('/reseller-logs', [SuperAdminResellerLogController::class, 'index']);
+        Route::get('/transaction-history', [SuperAdminTransactionHistoryController::class, 'index']);
+        Route::get('/transaction-history/sellers', [SuperAdminTransactionHistoryController::class, 'sellers']);
         Route::get('/logs', [LogController::class, 'index']);
         Route::get('/logs/{log}', [LogController::class, 'show']);
 
