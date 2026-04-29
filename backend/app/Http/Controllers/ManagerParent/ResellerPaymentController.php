@@ -373,7 +373,7 @@ class ResellerPaymentController extends BaseManagerParentController
 
     public function managerCustomers(Request $request, User $user): JsonResponse
     {
-        $seller = $this->resolveSeller($request, $user);
+        $seller = $user;
         $role = $seller->role?->value ?? (string) $seller->role;
         abort_unless($role === UserRole::MANAGER->value, 404);
 
@@ -476,7 +476,8 @@ class ResellerPaymentController extends BaseManagerParentController
 
     public function resellerCustomers(Request $request, User $user): JsonResponse
     {
-        $seller = $this->resolveReseller($request, $user);
+        $seller = $user;
+        abort_unless($seller->role?->value === UserRole::RESELLER->value || (string) $seller->role === UserRole::RESELLER->value, 404);
 
         $validated = $request->validate([
             'from' => ['nullable', 'date'],
