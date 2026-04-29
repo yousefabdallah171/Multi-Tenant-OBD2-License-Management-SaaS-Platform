@@ -215,6 +215,7 @@ class ResellerPaymentController extends BaseSuperAdminController
         ];
 
         $events = RevenueAnalytics::baseQuery($filters, (int) $managerParent->tenant_id, null, (int) $managerParent->id)
+            ->whereRaw(RevenueAnalytics::earnedCondition())
             ->select(['activity_logs.metadata', 'activity_logs.created_at'])
             ->orderByDesc('activity_logs.created_at')
             ->get();
@@ -366,6 +367,7 @@ class ResellerPaymentController extends BaseSuperAdminController
         ];
 
         $events = RevenueAnalytics::baseQuery($filters, (int) $manager->tenant_id, null, (int) $manager->id)
+            ->whereRaw(RevenueAnalytics::earnedCondition())
             ->select(['activity_logs.metadata', 'activity_logs.created_at'])
             ->orderByDesc('activity_logs.created_at')
             ->get();
@@ -515,6 +517,7 @@ class ResellerPaymentController extends BaseSuperAdminController
         ];
 
         $events = RevenueAnalytics::baseQuery($filters, (int) $reseller->tenant_id, null, (int) $reseller->id)
+            ->whereRaw(RevenueAnalytics::earnedCondition())
             ->select(['activity_logs.metadata', 'activity_logs.created_at'])
             ->orderByDesc('activity_logs.created_at')
             ->get();

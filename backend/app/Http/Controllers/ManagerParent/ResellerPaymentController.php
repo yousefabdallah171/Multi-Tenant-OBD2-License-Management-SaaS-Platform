@@ -245,6 +245,7 @@ class ResellerPaymentController extends BaseManagerParentController
         ];
 
         $events = RevenueAnalytics::baseQuery($filters, $tenantId, null, (int) $managerParent->id)
+            ->whereRaw(RevenueAnalytics::earnedCondition())
             ->select(['activity_logs.metadata', 'activity_logs.created_at'])
             ->orderByDesc('activity_logs.created_at')
             ->get();
@@ -394,6 +395,7 @@ class ResellerPaymentController extends BaseManagerParentController
         ];
 
         $events = RevenueAnalytics::baseQuery($filters, $tenantId, null, (int) $seller->id)
+            ->whereRaw(RevenueAnalytics::earnedCondition())
             ->select(['activity_logs.metadata', 'activity_logs.created_at'])
             ->orderByDesc('activity_logs.created_at')
             ->get();
@@ -496,6 +498,7 @@ class ResellerPaymentController extends BaseManagerParentController
         ];
 
         $events = RevenueAnalytics::baseQuery($filters, $tenantId, null, (int) $seller->id)
+            ->whereRaw(RevenueAnalytics::earnedCondition())
             ->select(['activity_logs.metadata', 'activity_logs.created_at'])
             ->orderByDesc('activity_logs.created_at')
             ->get();
