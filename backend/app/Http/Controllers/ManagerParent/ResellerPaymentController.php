@@ -249,8 +249,18 @@ class ResellerPaymentController extends BaseManagerParentController
             ->orderByDesc('activity_logs.created_at')
             ->get();
 
+        $biosIds = $events->map(fn ($e) => (string) (((array) ($e->metadata ?? []))['bios_id'] ?? ''))->filter()->unique()->values()->all();
+        $currentPricesByBios = $this->resolveCurrentPricesByBios($biosIds, $tenantId);
+
         $rows = $events
-            ->map(fn ($event): array => $this->serializeManagerParentEventRow((array) ($event->metadata ?? []), $event->created_at?->toIso8601String()))
+            ->map(function ($event) use ($currentPricesByBios): array {
+                $metadata = (array) ($event->metadata ?? []);
+                $biosId = (string) ($metadata['bios_id'] ?? '');
+                if ($biosId !== '' && $currentPricesByBios->has($biosId)) {
+                    $metadata['price'] = (float) $currentPricesByBios->get($biosId);
+                }
+                return $this->serializeManagerParentEventRow($metadata, $event->created_at?->toIso8601String());
+            })
             ->filter(fn (array $row): bool => $row['sale_amount'] > 0)
             ->values();
 
@@ -388,8 +398,18 @@ class ResellerPaymentController extends BaseManagerParentController
             ->orderByDesc('activity_logs.created_at')
             ->get();
 
+        $biosIds = $events->map(fn ($e) => (string) (((array) ($e->metadata ?? []))['bios_id'] ?? ''))->filter()->unique()->values()->all();
+        $currentPricesByBios = $this->resolveCurrentPricesByBios($biosIds, $tenantId);
+
         $rows = $events
-            ->map(fn ($event): array => $this->serializeManagerParentEventRow((array) ($event->metadata ?? []), $event->created_at?->toIso8601String()))
+            ->map(function ($event) use ($currentPricesByBios): array {
+                $metadata = (array) ($event->metadata ?? []);
+                $biosId = (string) ($metadata['bios_id'] ?? '');
+                if ($biosId !== '' && $currentPricesByBios->has($biosId)) {
+                    $metadata['price'] = (float) $currentPricesByBios->get($biosId);
+                }
+                return $this->serializeManagerParentEventRow($metadata, $event->created_at?->toIso8601String());
+            })
             ->filter(fn (array $row): bool => $row['sale_amount'] > 0)
             ->values();
 
@@ -479,8 +499,18 @@ class ResellerPaymentController extends BaseManagerParentController
             ->orderByDesc('activity_logs.created_at')
             ->get();
 
+        $biosIds = $events->map(fn ($e) => (string) (((array) ($e->metadata ?? []))['bios_id'] ?? ''))->filter()->unique()->values()->all();
+        $currentPricesByBios = $this->resolveCurrentPricesByBios($biosIds, $tenantId);
+
         $rows = $events
-            ->map(fn ($event): array => $this->serializeManagerParentEventRow((array) ($event->metadata ?? []), $event->created_at?->toIso8601String()))
+            ->map(function ($event) use ($currentPricesByBios): array {
+                $metadata = (array) ($event->metadata ?? []);
+                $biosId = (string) ($metadata['bios_id'] ?? '');
+                if ($biosId !== '' && $currentPricesByBios->has($biosId)) {
+                    $metadata['price'] = (float) $currentPricesByBios->get($biosId);
+                }
+                return $this->serializeManagerParentEventRow($metadata, $event->created_at?->toIso8601String());
+            })
             ->filter(fn (array $row): bool => $row['sale_amount'] > 0)
             ->values();
 
@@ -925,6 +955,20 @@ class ResellerPaymentController extends BaseManagerParentController
                 'created_at' => $seller->created_at?->toIso8601String(),
             ];
         })->filter(fn (array $row): bool => $statusFilter ? $row['status'] === $statusFilter : true)->values();
+    }
+
+    private function resolveCurrentPricesByBios(array $biosIds, int $tenantId): \Illuminate\Support\Collection
+    {
+        if ($biosIds === []) {
+            return collect();
+        }
+
+        return License::where('tenant_id', $tenantId)
+            ->whereIn('bios_id', $biosIds)
+            ->orderByDesc('id')
+            ->get(['bios_id', 'price'])
+            ->unique('bios_id')
+            ->pluck('price', 'bios_id');
     }
 
     private function serializeManagerParentEventRow(array $metadata, ?string $saleDate): array
