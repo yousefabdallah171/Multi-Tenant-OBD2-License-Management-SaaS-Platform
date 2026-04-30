@@ -79,3 +79,6 @@ playwright-report/
 README.txt
 impeccable-style-universal.zip
 skills-lock.json
+
+# Mandiag credentials — never commit
+partner-api-docs/1. START-HERE.txt
