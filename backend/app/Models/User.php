@@ -30,6 +30,8 @@ class User extends Authenticatable
         'email',
         'phone',
         'country_name',
+        'mandiag_sub_id',
+        'mandiag_priced_software_keys',
         'timezone',
         'password',
         'role',
@@ -64,6 +66,7 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'username_locked' => 'boolean',
             'branding' => 'json',
+            'mandiag_priced_software_keys' => 'array',
         ];
     }
 

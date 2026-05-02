@@ -30,6 +30,8 @@ interface FormState {
   external_software_id: string
   external_api_base_url: string
   external_logs_endpoint: string
+  api_type: 'legacy' | 'mandiag'
+  mandiag_software_key: string
 }
 
 const EMPTY_FORM: FormState = {
@@ -46,6 +48,8 @@ const EMPTY_FORM: FormState = {
   external_software_id: '',
   external_api_base_url: '',
   external_logs_endpoint: 'apilogs',
+  api_type: 'legacy',
+  mandiag_software_key: '',
 }
 
 export function ProgramFormPage() {
@@ -86,13 +90,15 @@ export function ProgramFormPage() {
       external_software_id: program.external_software_id ? String(program.external_software_id) : '',
       external_api_base_url: '',
       external_logs_endpoint: program.external_logs_endpoint || 'apilogs',
+      api_type: program.api_type === 'mandiag' ? 'mandiag' : 'legacy',
+      mandiag_software_key: program.mandiag_software_key ?? '',
     })
     setPresets(mapProgramPresetsToEditable(program.duration_presets))
   }, [programQuery.data])
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!editingId && !form.external_api_base_url.trim()) {
+      if (form.api_type === 'legacy' && !editingId && !form.external_api_base_url.trim()) {
         throw new Error(t('software.externalApiBaseUrlRequired'))
       }
 
@@ -109,6 +115,8 @@ export function ProgramFormPage() {
         installation_guide_url: form.installation_guide_url.trim() || null,
         base_price: Number.isFinite(basePrice) ? basePrice : 0,
         status: form.status,
+        api_type: form.api_type,
+        mandiag_software_key: form.api_type === 'mandiag' ? (form.mandiag_software_key.trim() || null) : null,
         external_software_id: Number.isFinite(parsedExternalSoftwareId) && parsedExternalSoftwareId > 0 ? parsedExternalSoftwareId : null,
         external_logs_endpoint: form.external_logs_endpoint.trim() || 'apilogs',
         presets: presets
@@ -131,11 +139,11 @@ export function ProgramFormPage() {
           })),
       }
 
-      if (form.external_api_key.trim()) {
+      if (form.api_type === 'legacy' && form.external_api_key.trim()) {
         payload.external_api_key = form.external_api_key.trim()
       }
 
-      if (form.external_api_base_url.trim()) {
+      if (form.api_type === 'legacy' && form.external_api_base_url.trim()) {
         payload.external_api_base_url = form.external_api_base_url.trim()
       }
 
@@ -187,6 +195,27 @@ export function ProgramFormPage() {
                 <option value="inactive">{t('common.inactive')}</option>
               </select>
             </Field>
+            <Field label="API Type" hint="Choose which provider handles activation for this program.">
+              <select
+                value={form.api_type}
+                onChange={(event) => setForm((current) => ({ ...current, api_type: event.target.value as 'legacy' | 'mandiag' }))}
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="legacy">Legacy API</option>
+                <option value="mandiag">Mandiag Partner API</option>
+              </select>
+            </Field>
+            {form.api_type === 'mandiag' ? (
+              <Field label="Mandiag Software Key" hint="Software key registered at Mandiag (example: topix).">
+                <Input
+                  placeholder="topix"
+                  value={form.mandiag_software_key}
+                  onChange={(event) => setForm((current) => ({ ...current, mandiag_software_key: event.target.value }))}
+                />
+              </Field>
+            ) : null}
+            {form.api_type === 'legacy' ? (
+              <>
             <Field label={t('software.externalSoftwareId')} hint={t('software.fieldHints.externalSoftwareId', { defaultValue: 'Numeric software ID used by the external API for user add/remove and logs.' })}>
               <Input type="number" min={1} placeholder={t('software.externalSoftwareIdPlaceholder')} value={form.external_software_id} onChange={(event) => setForm((current) => ({ ...current, external_software_id: event.target.value }))} />
               <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.softwareIdUrlHint')}</p>
@@ -220,6 +249,8 @@ export function ProgramFormPage() {
               <p className="text-sm text-slate-500 dark:text-slate-400">{t('software.addUserUrlExample')}</p>
               {editingId && hasConfiguredApi ? <p className="text-sm text-emerald-600 dark:text-emerald-300">{t('software.apiConfigured')}</p> : null}
             </Field>
+              </>
+            ) : null}
             </div>
           </div>
 

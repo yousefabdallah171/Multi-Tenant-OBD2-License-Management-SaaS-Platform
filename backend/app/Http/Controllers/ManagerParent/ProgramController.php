@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 class ProgramController extends BaseManagerParentController
@@ -71,6 +72,13 @@ class ProgramController extends BaseManagerParentController
             'status' => ['nullable', 'in:active,inactive'],
             'external_api_key' => ['nullable', 'string', 'max:100'],
             'external_software_id' => ['nullable', 'integer', 'min:1'],
+            'api_type' => ['nullable', 'in:legacy,mandiag'],
+            'mandiag_software_key' => [
+                Rule::requiredIf(fn () => $request->input('api_type') === 'mandiag'),
+                'nullable',
+                'string',
+                'max:128',
+            ],
             'external_api_base_url' => ['nullable', 'url', 'max:1000', function (string $attribute, mixed $value, \Closure $fail): void {
                 $normalized = trim((string) $value);
                 if ($normalized === '') {
@@ -119,6 +127,8 @@ class ProgramController extends BaseManagerParentController
                 'external_api_base_url' => ExternalApiSecurity::normalizeBaseUrl($validated['external_api_base_url'] ?? null),
                 'external_logs_endpoint' => $this->normalizeExternalLogsEndpoint($validated['external_logs_endpoint'] ?? null),
                 'has_external_api' => ! empty($validated['external_api_key']),
+                'api_type' => $validated['api_type'] ?? 'legacy',
+                'mandiag_software_key' => $validated['mandiag_software_key'] ?? null,
             ]);
 
             if (! empty($validated['external_api_key'])) {
@@ -161,6 +171,13 @@ class ProgramController extends BaseManagerParentController
             'status' => ['sometimes', 'in:active,inactive'],
             'external_api_key' => ['nullable', 'string', 'max:100'],
             'external_software_id' => ['nullable', 'integer', 'min:1'],
+            'api_type' => ['nullable', 'in:legacy,mandiag'],
+            'mandiag_software_key' => [
+                Rule::requiredIf(fn () => $request->input('api_type') === 'mandiag'),
+                'nullable',
+                'string',
+                'max:128',
+            ],
             'external_api_base_url' => ['nullable', 'url', 'max:1000', function (string $attribute, mixed $value, \Closure $fail): void {
                 $normalized = trim((string) $value);
                 if ($normalized === '') {
@@ -210,12 +227,27 @@ class ProgramController extends BaseManagerParentController
             $program->external_logs_endpoint = $this->normalizeExternalLogsEndpoint($validated['external_logs_endpoint']);
         }
 
+        if (array_key_exists('api_type', $validated)) {
+            $program->api_type = $validated['api_type'] ?? 'legacy';
+        }
+
+        if (array_key_exists('mandiag_software_key', $validated)) {
+            $program->mandiag_software_key = $validated['mandiag_software_key'] ?: null;
+        }
+
         if (! empty($validated['external_api_key'])) {
             $program->setExternalApiKeyAttribute($validated['external_api_key']);
             $program->has_external_api = true;
         }
 
-        unset($validated['external_api_key'], $validated['external_software_id'], $validated['external_api_base_url'], $validated['external_logs_endpoint']);
+        unset(
+            $validated['external_api_key'],
+            $validated['external_software_id'],
+            $validated['external_api_base_url'],
+            $validated['external_logs_endpoint'],
+            $validated['api_type'],
+            $validated['mandiag_software_key']
+        );
 
         DB::transaction(function () use ($program, $validated): void {
             $program->update($validated);
@@ -319,6 +351,8 @@ class ProgramController extends BaseManagerParentController
             'external_software_id' => $program->external_software_id,
             'external_api_base_url' => null,
             'external_logs_endpoint' => $this->normalizeExternalLogsEndpoint($program->external_logs_endpoint),
+            'api_type' => $program->api_type ?? 'legacy',
+            'mandiag_software_key' => $program->mandiag_software_key,
             'status' => $program->status,
             'licenses_sold' => $licensesSold,
             'active_licenses_count' => (int) ($program->active_licenses_count ?? 0),
