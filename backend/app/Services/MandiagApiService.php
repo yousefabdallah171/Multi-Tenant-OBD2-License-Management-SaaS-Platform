@@ -85,6 +85,26 @@ class MandiagApiService
         return $this->sendJson('GET', '/ping');
     }
 
+    public function getBalance(): array
+    {
+        return $this->sendJson('GET', '/balance');
+    }
+
+    public function getCommission(string $period = 'month'): array
+    {
+        return $this->sendJson('GET', '/commission?period='.urlencode($period));
+    }
+
+    public function getResellers(string $period = 'month'): array
+    {
+        return $this->sendJson('GET', '/resellers?include_stats=1&period='.urlencode($period));
+    }
+
+    public function getLicenses(int $page = 1, int $perPage = 25): array
+    {
+        return $this->sendJson('GET', '/licenses?page='.$page.'&per_page='.$perPage);
+    }
+
     public static function durationDaysToKey(int $days): string
     {
         $map = [

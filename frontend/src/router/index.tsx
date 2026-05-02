@@ -74,6 +74,7 @@ const ManagerParentProgramFormPage = lazyNamed(() => import('@/pages/manager-par
 const TeamManagementPage = lazyNamed(() => import('@/pages/manager-parent/TeamManagement'), 'TeamManagementPage')
 const TeamNetworkPage = lazyNamed(() => import('@/pages/manager-parent/TeamNetwork'), 'TeamNetworkPage')
 const TeamMemberDetailPage = lazyNamed(() => import('@/pages/manager-parent/TeamMemberDetail'), 'TeamMemberDetailPage')
+const MandiagTrackingPage = lazyNamed(() => import('@/pages/manager-parent/MandiagTracking'), 'MandiagTrackingPage')
 
 const ApiStatusPage = lazyNamed(() => import('@/pages/super-admin/ApiStatus'), 'ApiStatusPage')
 const SuperAdminBiosChangeRequestsPage = lazyNamed(() => import('@/pages/super-admin/BiosChangeRequests'), 'BiosChangeRequestsPage')
@@ -235,6 +236,7 @@ export function AppRouter() {
                   <Route path="customers/:id" element={<ManagerParentCustomerDetailPage />} />
                   <Route path="settings" element={<ManagerParentSettingsPage />} />
                   <Route path="profile" element={<ManagerParentProfilePage />} />
+                  <Route path="mandiag-tracking" element={<MandiagTrackingPage />} />
                 </Route>
               </Route>
               <Route element={<RoleGuard allowedRoles={['manager']} />}>

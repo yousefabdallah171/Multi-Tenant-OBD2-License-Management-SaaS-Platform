@@ -192,6 +192,7 @@
     "selectRow": "Select {{name}}",
     "previous": "Previous",
     "next": "Next",
+    "page": "Page",
     "retry": "Retry",
     "custom": "Custom",
     "saved": "Saved successfully.",
@@ -702,7 +703,8 @@
       "settings": "Settings",
       "profile": "Profile",
       "software": "Software",
-      "licenses": "Licenses"
+      "licenses": "Licenses",
+      "mandiagTracking": "Mandiag Tracking"
     },
     "pages": {
       "dashboard": {
@@ -778,6 +780,18 @@
           "manager": "selected manager",
           "reseller": "selected reseller"
         }
+      },
+      "mandiagTracking": {
+        "title": "Mandiag Tracking",
+        "description": "Live financial overview from the Mandiag Partner API — revenue, costs, commissions, and all transactions across your sub-resellers.",
+        "totalRevenue": "Sub-Reseller Revenue",
+        "mandiagCost": "Mandiag Cost",
+        "netCommission": "Net Commission",
+        "activeResellers": "Active Resellers",
+        "totalLicenses": "Total Licenses",
+        "activationsCount": "Activations",
+        "resellersTitle": "Per-Reseller Stats",
+        "licensesTitle": "All Transactions"
       },
       "settings": {
         "title": "Settings",

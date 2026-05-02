@@ -50,6 +50,7 @@ export const routePaths = {
     customerDetail: (lang: SupportedLanguage = DEFAULT_LANGUAGE, id: number | string = ':id') => `/${lang}/customers/${id}`,
     settings: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/settings`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/profile`,
+    mandiagTracking: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/mandiag-tracking`,
   },
   manager: {
     root: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager`,
