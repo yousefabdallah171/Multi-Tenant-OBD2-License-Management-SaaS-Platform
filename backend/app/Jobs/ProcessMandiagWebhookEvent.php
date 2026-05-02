@@ -26,6 +26,15 @@ class ProcessMandiagWebhookEvent implements ShouldQueue
             'license.enabled'       => $this->handleEnabled($this->data),
             'license.banned'        => $this->handleBanned($this->data),
             'license.unbanned'      => $this->handleUnbanned($this->data),
+            'license.created'       => Log::info('Mandiag license.created', ['license_id' => $this->data['license_id'] ?? null]),
+            'license.transferred'   => Log::info('Mandiag license.transferred', ['license_id' => $this->data['license_id'] ?? null, 'to_sub_id' => $this->data['to_sub_id'] ?? null]),
+            'license.hwid_changed'  => Log::info('Mandiag license.hwid_changed', ['license_id' => $this->data['license_id'] ?? null, 'new_hwid' => $this->data['new_hwid'] ?? null]),
+            'reseller.created',
+            'reseller.updated',
+            'reseller.deleted'      => Log::info('Mandiag reseller event', ['event' => $this->event, 'sub_id' => $this->data['sub_id'] ?? null]),
+            'code.created',
+            'code.redeemed',
+            'code.expiring_soon'    => Log::info('Mandiag code event', ['event' => $this->event, 'code_id' => $this->data['code_id'] ?? null]),
             default                 => null,
         };
     }

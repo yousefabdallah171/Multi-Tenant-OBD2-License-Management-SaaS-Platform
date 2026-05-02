@@ -340,4 +340,16 @@ export const managerParentService = {
   async exportFinancialPdf(params?: { from?: string; to?: string } & SellerScopeParams) {
     await downloadFile('/financial-reports/export/pdf', 'manager-parent-financial.pdf', params)
   },
+  async getMandiagSummary(period: string) {
+    const { data } = await api.get<{ data: MandiagSummary }>('/mandiag/summary', { params: { period } })
+    return data.data
+  },
+  async getMandiagResellers(period: string) {
+    const { data } = await api.get<{ data: MandiagReseller[] }>('/mandiag/resellers', { params: { period } })
+    return data.data
+  },
+  async getMandiagLicenses(page: number, perPage: number) {
+    const { data } = await api.get<{ data: MandiagLicensePage }>('/mandiag/licenses', { params: { page, per_page: perPage } })
+    return data.data
+  },
 }

@@ -85,6 +85,7 @@ use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantControll
 use App\Http\Controllers\SuperAdmin\TenantResetController as SuperAdminTenantResetController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
 use App\Http\Controllers\MandiagWebhookController;
+use App\Http\Controllers\ManagerParent\MandiagTrackingController as ManagerParentMandiagTrackingController;
 use App\Http\Controllers\TablePreferenceController;
 use App\Http\Middleware\ProcessDueScheduledLicenses;
 use Illuminate\Http\JsonResponse;
@@ -254,6 +255,12 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/financial-reports/export/csv', [ManagerParentFinancialReportController::class, 'exportCsv']);
         Route::get('/financial-reports/export/pdf', [ManagerParentFinancialReportController::class, 'exportPdf']);
         Route::get('/online-users', [OnlineUsersController::class, 'index']);
+
+        Route::prefix('mandiag')->group(function (): void {
+            Route::get('/summary',   [ManagerParentMandiagTrackingController::class, 'summary']);
+            Route::get('/resellers', [ManagerParentMandiagTrackingController::class, 'resellers']);
+            Route::get('/licenses',  [ManagerParentMandiagTrackingController::class, 'licenses']);
+        });
     });
 
     Route::prefix('manager')->middleware('role:manager')->group(function (): void {

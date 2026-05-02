@@ -652,3 +652,55 @@ export interface NetworkDiagramPayload {
   managers: NetworkManagerNode[]
   resellers: NetworkResellerNode[]
 }
+
+export interface MandiagSummary {
+  total_revenue: number
+  total_manager_cost: number
+  net_commission: number
+  balance: number
+  active_resellers: number
+  total_licenses: number
+  activations_count: number
+  period: string
+}
+
+export interface MandiagResellerStats {
+  activations_count?: number
+  revenue_total?: number
+  manager_cost_total?: number
+  commission?: number
+  period?: string
+}
+
+export interface MandiagReseller {
+  sub_id: string
+  panel_username?: string
+  realname?: string
+  status?: string
+  stats?: MandiagResellerStats
+  [key: string]: unknown
+}
+
+export interface MandiagLicensePage {
+  licenses: MandiagLicenseRow[]
+  total: number | null
+  per_page: number
+  current_page: number
+  last_page: number | null
+}
+
+export interface MandiagLicenseRow {
+  license_id: number
+  sub_id?: string
+  software?: string
+  hwid?: string
+  customer?: string
+  customer_name?: string
+  duration?: string
+  price?: number
+  manager_price?: number
+  status?: string[]
+  expire_date?: string
+  created_at?: string
+  [key: string]: unknown
+}

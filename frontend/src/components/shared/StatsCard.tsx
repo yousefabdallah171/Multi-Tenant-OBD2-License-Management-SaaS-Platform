@@ -11,6 +11,7 @@ const cardColors = {
   emerald: '#059669',
   amber: '#d97706',
   rose: '#e11d48',
+  violet: '#7c3aed',
 } as const
 
 interface StatsCardProps {

@@ -190,6 +190,7 @@
     "selectRow": "تحديد {{name}}",
     "previous": "السابق",
     "next": "التالي",
+    "page": "صفحة",
     "retry": "إعادة المحاولة",
     "custom": "مخصص",
     "saved": "تم الحفظ بنجاح.",
@@ -697,6 +698,7 @@
       "profile": "الملف الشخصي",
       "software": "البرامج",
       "licenses": "التراخيص",
+      "mandiagTracking": "تتبع ماندياج",
       "logsGroup": "السجلات",
       "biosDetails": "تفاصيل BIOS",
       "resellerLogs": "سجلات الموزعين",
@@ -778,6 +780,18 @@
           "manager": "المدير المحدد",
           "reseller": "الموزع المحدد"
         }
+      },
+      "mandiagTracking": {
+        "title": "تتبع ماندياج",
+        "description": "نظرة مالية مباشرة من واجهة برمجة ماندياج — الإيرادات والتكاليف والعمولات وجميع المعاملات عبر الموزعين الفرعيين.",
+        "totalRevenue": "إيرادات الموزعين",
+        "mandiagCost": "تكلفة ماندياج",
+        "netCommission": "صافي العمولة",
+        "activeResellers": "الموزعون النشطون",
+        "totalLicenses": "إجمالي التراخيص",
+        "activationsCount": "عدد التفعيلات",
+        "resellersTitle": "إحصائيات الموزعين",
+        "licensesTitle": "جميع المعاملات"
       },
       "settings": {
         "profileTab": "الملف الشخصي",
