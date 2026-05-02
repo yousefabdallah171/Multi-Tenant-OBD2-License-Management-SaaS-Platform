@@ -23,6 +23,7 @@ class License extends Model
         'external_username',
         'external_activation_response',
         'external_deletion_response',
+        'mandiag_license_id',
         'duration_days',
         'price',
         'activated_at',
@@ -55,6 +56,7 @@ class License extends Model
             'activated_at_scheduled' => 'datetime',
             'paused_at' => 'datetime',
             'pause_remaining_minutes' => 'integer',
+            'mandiag_license_id' => 'integer',
         ];
     }
 

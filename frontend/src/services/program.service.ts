@@ -24,6 +24,8 @@ export interface ProgramPayload {
   external_software_id?: number | null
   external_api_base_url?: string | null
   external_logs_endpoint?: string | null
+  api_type?: 'legacy' | 'mandiag'
+  mandiag_software_key?: string | null
   status?: 'active' | 'inactive'
   presets?: Array<Partial<ProgramDurationPreset> & {
     label: string

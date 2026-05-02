@@ -21,6 +21,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -29,6 +30,7 @@ class LicenseService
 {
     public function __construct(
         private readonly ExternalApiService $externalApiService,
+        private readonly MandiagApiService $mandiagApiService,
         private readonly BalanceService $balanceService,
     ) {
     }
@@ -66,13 +68,15 @@ class LicenseService
             throw ValidationException::withMessages(['program_id' => 'The selected program is not active.']);
         }
 
-        if ($apiKey === null) {
+        if (! $program->isMandiag() && $apiKey === null) {
             throw ValidationException::withMessages([
                 'program_id' => 'This program is not configured for external activation. Contact your manager.',
             ]);
         }
 
         $this->assertBiosAvailable($reseller, $program, $biosId, $externalUsername);
+        $preset = $this->resolveActivationPreset($actor, $program, $data);
+        $durationDays = $preset ? (float) $preset->duration_days : (float) $data['duration_days'];
 
         $apiResponse = [
             'success' => true,
@@ -81,7 +85,37 @@ class LicenseService
         ];
 
         if (! $isScheduled) {
-            $apiResponse = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId, $program->external_api_base_url);
+            if ($program->isMandiag()) {
+                throw_unless(
+                    $program->mandiag_software_key,
+                    ValidationException::withMessages([
+                        'program_id' => 'Mandiag software key is not configured. مفتاح برنامج ماندياج غير مُعد. تواصل مع المدير.',
+                    ])
+                );
+
+                try {
+                    $duration = MandiagApiService::durationDaysToKey((int) round($durationDays));
+                } catch (\InvalidArgumentException $exception) {
+                    throw ValidationException::withMessages([
+                        'bios_id' => $exception->getMessage().' المدة غير مدعومة في ماندياج.',
+                    ]);
+                }
+
+                $this->ensureMandiagSubReseller($reseller, $program);
+                $resellerSubId = (string) ($reseller->fresh()->mandiag_sub_id ?? '');
+                $customerIdentifier = trim((string) ($data['customer_email'] ?? $data['email'] ?? '')) ?: $externalUsername;
+
+                $apiResponse = $this->mandiagApiService->createLicense(
+                    $resellerSubId,
+                    (string) $program->mandiag_software_key,
+                    $duration,
+                    $biosId,
+                    $customerIdentifier,
+                    $customerName,
+                );
+            } else {
+                $apiResponse = $this->externalApiService->activateUser($apiKey, $externalUsername, $biosId, $program->external_api_base_url);
+            }
         }
 
         $this->logBiosAccess($reseller, $biosId, 'activate', [
@@ -96,7 +130,7 @@ class LicenseService
             ]);
         }
 
-        return DB::transaction(function () use ($actor, $data, $externalUsername, $reseller, $program, $biosId, $apiResponse, $isScheduled, $scheduledTimezone, $scheduledAt): License {
+        return DB::transaction(function () use ($actor, $data, $externalUsername, $reseller, $program, $biosId, $apiResponse, $isScheduled, $scheduledTimezone, $scheduledAt, $preset, $durationDays): License {
             // Re-check inside transaction with lock to prevent race on new activations
             if (! $isScheduled) {
                 $biosIdLowerActivate = strtolower($biosId);
@@ -113,10 +147,8 @@ class LicenseService
             }
 
             $customer = $this->upsertCustomer($reseller, $data, $externalUsername);
-            $preset = $this->resolveActivationPreset($actor, $program, $data);
             $countryName = ProgramDurationPresetCountryPrice::normalizeCountryName((string) ($data['country_name'] ?? $customer->country_name ?? ''));
             $presetPricing = $preset ? $this->resolvePresetEffectivePricing($preset, $countryName) : null;
-            $durationDays = $preset ? (float) $preset->duration_days : (float) $data['duration_days'];
             $durationMinutes = (int) max(1, round($durationDays * 1440));
             $price = $preset ? (float) ($presetPricing['effective_price'] ?? $preset->price) : (float) $data['price'];
             $this->assertReasonablePrice($price);
@@ -131,7 +163,12 @@ class LicenseService
                 'program_id' => $program->id,
                 'bios_id' => $biosId,
                 'external_username' => $externalUsername,
-                'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
+                'external_activation_response' => $program->isMandiag()
+                    ? (string) (($apiResponse['data']['activation_key'] ?? null) ?: json_encode($apiResponse['data'] ?? []))
+                    : (string) ($apiResponse['data']['response'] ?? ''),
+                'mandiag_license_id' => $program->isMandiag()
+                    ? (isset($apiResponse['data']['license_id']) ? (int) $apiResponse['data']['license_id'] : null)
+                    : null,
                 'duration_days' => $durationDays,
                 'price' => $price,
                 'activated_at' => $activatedAt,
@@ -203,6 +240,7 @@ class LicenseService
         $preset = $this->resolveRenewalPreset($license, $data);
         $countryName = ProgramDurationPresetCountryPrice::normalizeCountryName((string) ($license->customer?->country_name ?? ''));
         $presetPricing = $preset ? $this->resolvePresetEffectivePricing($preset, $countryName) : null;
+        $durationDays = $preset ? (float) $preset->duration_days : (float) $data['duration_days'];
         $renewalOwner = $this->resolveRenewalOwner($actor, $license, $reseller);
         $shouldCreateTakeover = $this->shouldCreateRenewalTakeover($actor, $license);
 
@@ -232,7 +270,23 @@ class LicenseService
             $program = $license->program;
             $apiKey = $program?->getDecryptedApiKey();
 
-            if ($program && $apiKey !== null) {
+            if ($program?->isMandiag() && $license->mandiag_license_id) {
+                try {
+                    $durationKey = MandiagApiService::durationDaysToKey((int) round($durationDays));
+                } catch (\InvalidArgumentException $exception) {
+                    throw ValidationException::withMessages([
+                        'license' => $exception->getMessage().' المدة غير مدعومة في ماندياج.',
+                    ]);
+                }
+
+                $apiResponse = $this->mandiagApiService->renewLicense((int) $license->mandiag_license_id, $durationKey);
+
+                if (! $apiResponse['success']) {
+                    throw ValidationException::withMessages([
+                        'license' => $this->extractExternalMessage($apiResponse, 'The Mandiag renewal request was rejected. تم رفض طلب التجديد من ماندياج.'),
+                    ]);
+                }
+            } elseif ($program && $apiKey !== null) {
                 $externalUsername = (string) ($license->external_username ?: $license->customer?->username ?: $license->bios_id);
                 $apiResponse = $this->externalApiService->activateUser(
                     $apiKey,
@@ -394,7 +448,16 @@ class LicenseService
             'status_code' => 0,
         ];
 
-        if ($apiKey !== null) {
+        if ($program?->isMandiag() && $license->mandiag_license_id) {
+            $apiResponse = $this->mandiagApiService->disableLicense((int) $license->mandiag_license_id);
+            if (! ($apiResponse['success'] ?? false)) {
+                Log::warning('Mandiag deactivate failed, proceeding with local cancellation.', [
+                    'license_id' => $license->id,
+                    'mandiag_license_id' => $license->mandiag_license_id,
+                    'response' => $apiResponse,
+                ]);
+            }
+        } elseif ($apiKey !== null) {
             $apiResponse = $this->externalApiService->deactivateUser($apiKey, (string) $license->external_username, $program?->external_api_base_url);
         }
 
@@ -512,7 +575,17 @@ class LicenseService
             'status_code' => 0,
         ];
 
-        if ($apiKey !== null) {
+        if ($program?->isMandiag() && $license->mandiag_license_id) {
+            $apiResponse = $this->mandiagApiService->disableLicense(
+                (int) $license->mandiag_license_id,
+                isset($data['pause_reason']) ? (string) $data['pause_reason'] : null
+            );
+            if (! ($apiResponse['success'] ?? false)) {
+                throw ValidationException::withMessages([
+                    'license' => $this->extractExternalMessage($apiResponse, 'The Mandiag pause request was rejected. تم رفض طلب الإيقاف المؤقت من ماندياج.'),
+                ]);
+            }
+        } elseif ($apiKey !== null) {
             $apiResponse = $this->externalApiService->deactivateUser($apiKey, (string) $license->external_username, $program?->external_api_base_url);
             if (! ($apiResponse['success'] ?? false)) {
                 throw ValidationException::withMessages([
@@ -618,7 +691,9 @@ class LicenseService
             'status_code' => 200,
         ];
 
-        if ($apiKey !== null) {
+        if ($program?->isMandiag() && $license->mandiag_license_id) {
+            $apiResponse = $this->mandiagApiService->enableLicense((int) $license->mandiag_license_id);
+        } elseif ($apiKey !== null) {
             $apiResponse = $this->externalApiService->activateUser(
                 $apiKey,
                 (string) $license->external_username,
@@ -636,6 +711,23 @@ class LicenseService
             throw ValidationException::withMessages([
                 'license' => $this->extractExternalMessage($apiResponse, 'The resume request was rejected by the external service.'),
             ]);
+        }
+
+        if ($program?->isMandiag() && $license->mandiag_license_id) {
+            $remainingMinutes = max(1, (int) ($license->pause_remaining_minutes ?? 0));
+            $newExpiry = now()->addMinutes($remainingMinutes);
+            $expiryResponse = $this->mandiagApiService->setExpiration(
+                (int) $license->mandiag_license_id,
+                $newExpiry->format('Y-m-d H:i:s')
+            );
+
+            if (! ($expiryResponse['success'] ?? false)) {
+                Log::warning('Mandiag setExpiration failed after resume.', [
+                    'license_id' => $license->id,
+                    'mandiag_license_id' => $license->mandiag_license_id,
+                    'response' => $expiryResponse,
+                ]);
+            }
         }
 
         $hasPausedByRole = \Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role');
@@ -992,6 +1084,12 @@ class LicenseService
                     ),
                 ]);
             }
+        }
+
+        if ($license->mandiag_license_id !== null && $license->status === 'active') {
+            throw ValidationException::withMessages([
+                'new_bios_id' => 'BIOS changes are not supported for active Mandiag licenses. تغيير BIOS غير مدعوم للتراخيص النشطة على ماندياج.',
+            ]);
         }
 
         // For non-active licenses or when no API key, update locally without external API
@@ -1584,13 +1682,111 @@ class LicenseService
         return $relatedReseller;
     }
 
+    private function ensureMandiagSubReseller(User $reseller, Program $program): void
+    {
+        DB::transaction(function () use ($reseller, $program): void {
+            $locked = User::query()->where('id', $reseller->id)->lockForUpdate()->first();
+            if (! $locked) {
+                throw ValidationException::withMessages([
+                    'bios_id' => 'Reseller account not found.',
+                ]);
+            }
+
+            if (! $locked->mandiag_sub_id) {
+                $subId = MandiagApiService::buildSubId((int) $reseller->id);
+                $response = $this->mandiagApiService->createReseller(
+                    $subId,
+                    (string) $reseller->name,
+                    $reseller->email,
+                );
+
+                if (! ($response['success'] ?? false) && (($response['error_code'] ?? '') === 'sub_id_collision')) {
+                    $subId = $subId.'x';
+                    $response = $this->mandiagApiService->createReseller(
+                        $subId,
+                        (string) $reseller->name,
+                        $reseller->email,
+                    );
+                }
+
+                if (! ($response['success'] ?? false)) {
+                    throw ValidationException::withMessages([
+                        'bios_id' => 'Could not register reseller at Mandiag. تعذر تسجيل الموزع على ماندياج.',
+                    ]);
+                }
+
+                $resolvedSubId = (string) (($response['data']['sub_id'] ?? null) ?: $subId);
+                $locked->forceFill(['mandiag_sub_id' => $resolvedSubId])->save();
+                $reseller->mandiag_sub_id = $resolvedSubId;
+            }
+
+            $pricedKeys = is_array($locked->mandiag_priced_software_keys) ? $locked->mandiag_priced_software_keys : [];
+            $softwareKey = (string) ($program->mandiag_software_key ?? '');
+
+            if ($softwareKey === '' || in_array($softwareKey, $pricedKeys, true)) {
+                return;
+            }
+
+            $pricingRows = $program->activeDurationPresets()
+                ->get()
+                ->map(function (ProgramDurationPreset $preset): ?array {
+                    try {
+                        return [
+                            'duration' => MandiagApiService::durationDaysToKey((int) round((float) $preset->duration_days)),
+                            'price' => (float) $preset->price,
+                        ];
+                    } catch (\InvalidArgumentException) {
+                        return null;
+                    }
+                })
+                ->filter()
+                ->unique('duration')
+                ->values()
+                ->all();
+
+            if ($pricingRows !== []) {
+                $pricingResponse = $this->mandiagApiService->setPricing((string) $locked->mandiag_sub_id, $softwareKey, $pricingRows);
+                if (! ($pricingResponse['success'] ?? false)) {
+                    Log::warning('Mandiag pricing setup failed.', [
+                        'reseller_id' => $locked->id,
+                        'sub_id' => $locked->mandiag_sub_id,
+                        'software_key' => $softwareKey,
+                        'response' => $pricingResponse,
+                    ]);
+                }
+            }
+
+            $locked->forceFill([
+                'mandiag_priced_software_keys' => array_values(array_unique(array_merge($pricedKeys, [$softwareKey]))),
+            ])->save();
+        });
+    }
+
     private function extractExternalMessage(array $response, string $fallback): string
     {
-        $message = $response['data']['message'] ?? $response['data']['error'] ?? $response['data']['response'] ?? null;
+        $errorCode = (string) ($response['error_code'] ?? '');
+        $message = $response['error_message']
+            ?? $response['data']['message']
+            ?? $response['data']['error']
+            ?? $response['data']['response']
+            ?? null;
         $statusCode = (int) ($response['status_code'] ?? 0);
 
+        if ($errorCode !== '') {
+            return match ($errorCode) {
+                'rate_limited' => 'Too many requests to the external service. كثرة الطلبات، حاول لاحقاً أو جدولة العملية.',
+                'server_error' => 'The external service is unavailable. خدمة ماندياج غير متاحة حالياً.',
+                'feature_disabled' => 'The external service integration is disabled. التكامل مع ماندياج معطّل حالياً.',
+                'connection_timeout' => 'The external service is not responding. خدمة ماندياج لا تستجيب حالياً.',
+                'price_lookup_failed' => 'Pricing is not configured for this reseller/software. التسعير غير مُعد لهذا الموزع/البرنامج.',
+                'license_disabled' => 'License is disabled on Mandiag. الترخيص معطل على ماندياج.',
+                'license_banned' => 'License is banned on Mandiag. الترخيص محظور على ماندياج.',
+                default => $fallback,
+            };
+        }
+
         if ($statusCode >= 500) {
-            return 'this software not working right now plesae contact your MANGER';
+            return 'The external service is unavailable right now. الخدمة الخارجية غير متاحة حالياً.';
         }
 
         if (is_string($message) && $message !== '') {

@@ -29,6 +29,8 @@ class Program extends Model
         'external_api_base_url',
         'external_logs_endpoint',
         'has_external_api',
+        'api_type',
+        'mandiag_software_key',
         'status',
     ];
 
@@ -45,7 +47,14 @@ class Program extends Model
             'external_api_base_url' => 'string',
             'external_logs_endpoint' => 'string',
             'has_external_api' => 'boolean',
+            'api_type' => 'string',
+            'mandiag_software_key' => 'string',
         ];
+    }
+
+    public function isMandiag(): bool
+    {
+        return ($this->api_type ?? 'legacy') === 'mandiag';
     }
 
     public function setExternalApiKeyAttribute(?string $value): void

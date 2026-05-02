@@ -84,6 +84,7 @@ use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\SuperAdmin\TenantResetController as SuperAdminTenantResetController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
+use App\Http\Controllers\MandiagWebhookController;
 use App\Http\Controllers\TablePreferenceController;
 use App\Http\Middleware\ProcessDueScheduledLicenses;
 use Illuminate\Http\JsonResponse;
@@ -100,6 +101,9 @@ Route::get('/health', function (): JsonResponse {
 Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login'])->middleware('api.logger');
 });
+
+Route::post('/mandiag/webhook', [MandiagWebhookController::class, 'receive'])
+    ->middleware('throttle:60,1');
 
 Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 'ip.tracker', 'update.last_seen', 'track.online', ProcessDueScheduledLicenses::class, 'api.logger'])->group(function (): void {
     Route::prefix('auth')->group(function (): void {
