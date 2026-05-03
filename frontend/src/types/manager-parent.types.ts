@@ -116,8 +116,8 @@ export interface ProgramSummary {
   external_software_id: number | null
   external_api_base_url: string | null
   external_logs_endpoint: string
-  api_type?: 'legacy' | 'mandiag'
-  mandiag_software_key?: string | null
+  api_type: 'legacy' | 'mandiag'
+  mandiag_software_key: string | null
   status: 'active' | 'inactive'
   licenses_sold: number
   active_licenses_count: number

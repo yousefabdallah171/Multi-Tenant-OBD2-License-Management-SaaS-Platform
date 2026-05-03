@@ -103,6 +103,8 @@ Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login'])->middleware('api.logger');
 });
 
+// Intentionally outside the auth group — Mandiag calls this as an external service and cannot
+// authenticate as a tenant user. Request authenticity is verified via HMAC signature inside the controller.
 Route::post('/mandiag/webhook', [MandiagWebhookController::class, 'receive'])
     ->middleware('throttle:60,1');
 

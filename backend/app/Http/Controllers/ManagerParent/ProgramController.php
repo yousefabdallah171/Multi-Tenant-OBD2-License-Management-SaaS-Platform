@@ -126,7 +126,7 @@ class ProgramController extends BaseManagerParentController
                 'external_software_id' => $validated['external_software_id'] ?? null,
                 'external_api_base_url' => ExternalApiSecurity::normalizeBaseUrl($validated['external_api_base_url'] ?? null),
                 'external_logs_endpoint' => $this->normalizeExternalLogsEndpoint($validated['external_logs_endpoint'] ?? null),
-                'has_external_api' => ! empty($validated['external_api_key']),
+                'has_external_api' => ! empty($validated['external_api_key']) || ($validated['api_type'] ?? 'legacy') === 'mandiag',
                 'api_type' => $validated['api_type'] ?? 'legacy',
                 'mandiag_software_key' => $validated['mandiag_software_key'] ?? null,
             ]);
@@ -238,6 +238,9 @@ class ProgramController extends BaseManagerParentController
         if (! empty($validated['external_api_key'])) {
             $program->setExternalApiKeyAttribute($validated['external_api_key']);
             $program->has_external_api = true;
+        } elseif (array_key_exists('api_type', $validated)) {
+            // Recalculate when api_type changes: Mandiag always has an external API; legacy needs a key
+            $program->has_external_api = $program->api_type === 'mandiag' || $program->getDecryptedApiKey() !== null;
         }
 
         unset(
