@@ -16,6 +16,11 @@ class MandiagWebhookController extends Controller
         $sig     = $request->header('X-Mandiag-Signature', '');
         $secret  = (string) config('mandiag.webhook_secret');
 
+        // Guard: reject all requests if webhook secret is not configured
+        if ($secret === '') {
+            return response()->json(['error' => 'webhook not configured'], 503);
+        }
+
         // 1. Timestamp check — reject stale deliveries (±300 seconds)
         if (! ctype_digit((string) $ts) || abs(time() - (int) $ts) > 300) {
             return response()->json(['error' => 'stale'], 400);

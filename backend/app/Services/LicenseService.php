@@ -102,7 +102,7 @@ class LicenseService
                 }
 
                 $this->ensureMandiagSubReseller($reseller, $program);
-                $resellerSubId = (string) ($reseller->fresh()->mandiag_sub_id ?? '');
+                $resellerSubId = (string) ($reseller->mandiag_sub_id ?? '');
                 $customerIdentifier = trim((string) ($data['customer_email'] ?? $data['email'] ?? '')) ?: $externalUsername;
 
                 $apiResponse = $this->mandiagApiService->createLicense(
@@ -713,9 +713,12 @@ class LicenseService
             ]);
         }
 
+        // Capture the base time once so Mandiag and the local DB store the same expiry
+        $resumeBase = $this->currentMinute();
+
         if ($program?->isMandiag() && $license->mandiag_license_id) {
             $remainingMinutes = max(1, (int) ($license->pause_remaining_minutes ?? 0));
-            $newExpiry = now()->addMinutes($remainingMinutes);
+            $newExpiry = $resumeBase->copy()->addMinutes($remainingMinutes);
             $expiryResponse = $this->mandiagApiService->setExpiration(
                 (int) $license->mandiag_license_id,
                 $newExpiry->format('Y-m-d H:i:s')
@@ -732,7 +735,7 @@ class LicenseService
 
         $hasPausedByRole = \Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role');
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending, $biosIdLower, $hasPausedByRole): License {
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending, $biosIdLower, $hasPausedByRole, $resumeBase): License {
             // Re-check inside transaction with a lock to prevent race condition
             $conflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
@@ -754,7 +757,7 @@ class LicenseService
             $resumeData = [
                 'status' => 'active',
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
-                'expires_at' => $remainingMinutes !== null ? $this->currentMinute()->addMinutes($remainingMinutes) : $license->expires_at,
+                'expires_at' => $remainingMinutes !== null ? $resumeBase->copy()->addMinutes($remainingMinutes) : $license->expires_at,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
                 'pause_reason' => null,
@@ -814,7 +817,7 @@ class LicenseService
         $program = $license->program;
         $apiKey = $program?->getDecryptedApiKey();
 
-        if ($apiKey === null) {
+        if (! $program?->isMandiag() && $apiKey === null) {
             return $this->markScheduledActivationFailure($license, 'This program is not configured for external activation.', $attemptedAt, $reseller);
         }
 
@@ -835,12 +838,38 @@ class LicenseService
             );
         }
 
-        $apiResponse = $this->externalApiService->activateUser(
-            $apiKey,
-            (string) ($license->external_username ?: $license->bios_id),
-            (string) $license->bios_id,
-            $program?->external_api_base_url,
-        );
+        if ($program?->isMandiag()) {
+            $softwareKey = (string) ($program->mandiag_software_key ?? '');
+            if ($softwareKey === '') {
+                return $this->markScheduledActivationFailure($license, 'Mandiag software key is not configured.', $attemptedAt, $reseller);
+            }
+
+            try {
+                $duration = MandiagApiService::durationDaysToKey((int) round((float) $license->duration_days));
+            } catch (\InvalidArgumentException $exception) {
+                return $this->markScheduledActivationFailure($license, $exception->getMessage(), $attemptedAt, $reseller);
+            }
+
+            $this->ensureMandiagSubReseller($reseller, $program);
+            $resellerSubId = (string) ($reseller->mandiag_sub_id ?? '');
+            $customerIdentifier = (string) ($license->external_username ?: $license->bios_id);
+
+            $apiResponse = $this->mandiagApiService->createLicense(
+                $resellerSubId,
+                $softwareKey,
+                $duration,
+                (string) $license->bios_id,
+                $customerIdentifier,
+                $customerIdentifier,
+            );
+        } else {
+            $apiResponse = $this->externalApiService->activateUser(
+                $apiKey,
+                (string) ($license->external_username ?: $license->bios_id),
+                (string) $license->bios_id,
+                $program?->external_api_base_url,
+            );
+        }
 
         if (! ($apiResponse['success'] ?? false)) {
             return $this->markScheduledActivationFailure(
@@ -878,7 +907,12 @@ class LicenseService
                 'scheduled_last_attempt_at' => $attemptedAt,
                 'scheduled_failed_at' => null,
                 'scheduled_failure_message' => null,
-                'external_activation_response' => (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
+                'external_activation_response' => $program?->isMandiag()
+                    ? (string) (($apiResponse['data']['activation_key'] ?? null) ?: json_encode($apiResponse['data'] ?? []))
+                    : (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
+                'mandiag_license_id' => $program?->isMandiag()
+                    ? (isset($apiResponse['data']['license_id']) ? (int) $apiResponse['data']['license_id'] : $license->mandiag_license_id)
+                    : $license->mandiag_license_id,
             ])->save();
 
             $this->balanceService->recordRevenue($reseller, (float) $license->price, true);
@@ -933,7 +967,7 @@ class LicenseService
         }
 
         $licenses = License::query()
-            ->with(['program:id,external_api_key_encrypted,external_api_base_url', 'reseller:id,tenant_id'])
+            ->with(['program:id,external_api_key_encrypted,external_api_base_url,api_type,mandiag_software_key', 'reseller:id,tenant_id,mandiag_sub_id,mandiag_priced_software_keys'])
             ->where('is_scheduled', true)
             ->where('status', 'pending')
             ->whereNotNull('scheduled_at')
@@ -1086,9 +1120,9 @@ class LicenseService
             }
         }
 
-        if ($license->mandiag_license_id !== null && $license->status === 'active') {
+        if ($license->mandiag_license_id !== null) {
             throw ValidationException::withMessages([
-                'new_bios_id' => 'BIOS changes are not supported for active Mandiag licenses. تغيير BIOS غير مدعوم للتراخيص النشطة على ماندياج.',
+                'new_bios_id' => 'BIOS changes are not supported for Mandiag licenses. تغيير BIOS غير مدعوم لتراخيص ماندياج.',
             ]);
         }
 
@@ -1718,6 +1752,10 @@ class LicenseService
                 $resolvedSubId = (string) (($response['data']['sub_id'] ?? null) ?: $subId);
                 $locked->forceFill(['mandiag_sub_id' => $resolvedSubId])->save();
                 $reseller->mandiag_sub_id = $resolvedSubId;
+            } else {
+                // Always propagate the stored sub_id to the in-memory model so callers
+                // can read it directly without an extra fresh() DB round-trip.
+                $reseller->mandiag_sub_id = $locked->mandiag_sub_id;
             }
 
             $pricedKeys = is_array($locked->mandiag_priced_software_keys) ? $locked->mandiag_priced_software_keys : [];
@@ -1744,9 +1782,13 @@ class LicenseService
                 ->values()
                 ->all();
 
+            $pricingSucceeded = $pricingRows === [];
+
             if ($pricingRows !== []) {
                 $pricingResponse = $this->mandiagApiService->setPricing((string) $locked->mandiag_sub_id, $softwareKey, $pricingRows);
-                if (! ($pricingResponse['success'] ?? false)) {
+                if ($pricingResponse['success'] ?? false) {
+                    $pricingSucceeded = true;
+                } else {
                     Log::warning('Mandiag pricing setup failed.', [
                         'reseller_id' => $locked->id,
                         'sub_id' => $locked->mandiag_sub_id,
@@ -1756,9 +1798,11 @@ class LicenseService
                 }
             }
 
-            $locked->forceFill([
-                'mandiag_priced_software_keys' => array_values(array_unique(array_merge($pricedKeys, [$softwareKey]))),
-            ])->save();
+            if ($pricingSucceeded) {
+                $locked->forceFill([
+                    'mandiag_priced_software_keys' => array_values(array_unique(array_merge($pricedKeys, [$softwareKey]))),
+                ])->save();
+            }
         });
     }
 

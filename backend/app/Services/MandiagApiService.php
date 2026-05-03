@@ -141,18 +141,18 @@ class MandiagApiService
         $method = strtoupper($method);
         $url = rtrim((string) config('mandiag.base_url'), '/').'/'.ltrim($path, '/');
         $timestamp = (string) time();
-        $body = $method === 'GET' ? '' : json_encode($payload, JSON_UNESCAPED_SLASHES);
+        $body = $method === 'GET' ? '' : json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         $signature = hash_hmac('sha256', $timestamp.'.'.$body, (string) config('mandiag.signing_secret'));
 
         $headers = [
             'X-Mandiag-Key' => (string) config('mandiag.api_key'),
             'X-Mandiag-Timestamp' => $timestamp,
             'X-Mandiag-Signature' => $signature,
-            'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
 
         if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            $headers['Content-Type'] = 'application/json';
             $headers['Idempotency-Key'] = bin2hex(random_bytes(16));
         }
 
