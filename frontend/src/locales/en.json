@@ -704,7 +704,8 @@
       "profile": "Profile",
       "software": "Software",
       "licenses": "Licenses",
-      "mandiagTracking": "Mandiag Tracking"
+      "mandiagTracking": "Mandiag Tracking",
+      "mandiagDebug": "Mandiag Debug & Monitoring"
     },
     "pages": {
       "dashboard": {
@@ -792,6 +793,110 @@
         "activationsCount": "Activations",
         "resellersTitle": "Per-Reseller Stats",
         "licensesTitle": "All Transactions"
+      },
+      "mandiagDebug": {
+        "title": "Mandiag Debug & Monitoring",
+        "description": "Monitor API calls, webhook events, and local Mandiag integration state. Test connectivity and webhooks.",
+        "tabs": {
+          "apiLogs": "API Logs",
+          "activeLicenses": "Active Licenses",
+          "resellers": "Resellers",
+          "webhookEvents": "Webhook Events",
+          "testWebhook": "Test Webhook"
+        },
+        "statsCards": {
+          "apiCallsToday": "API Calls (Today)",
+          "errorsToday": "Errors (Today)",
+          "lastWebhook": "Last Webhook"
+        },
+        "health": {
+          "title": "Connection Health",
+          "ping": "Ping Mandiag",
+          "pinging": "Pinging..."
+        },
+        "apiLogs": {
+          "filterTitle": "API Logs Filters",
+          "methods": "All Methods",
+          "status": "All Status",
+          "status2xx": "2xx Success",
+          "status4xx": "4xx Client Error",
+          "status5xx": "5xx Server Error",
+          "columns": {
+            "timestamp": "Timestamp",
+            "method": "Method",
+            "endpoint": "Endpoint",
+            "status": "Status",
+            "responseTime": "Response Time",
+            "actions": "Actions"
+          },
+          "autoRefresh": "Auto-refresh"
+        },
+        "licenses": {
+          "filterTitle": "License Filters",
+          "statusFilter": "All Status",
+          "searchPlaceholder": "Search BIOS ID or customer...",
+          "columns": {
+            "mandiagId": "Mandiag ID",
+            "customer": "Customer",
+            "biosId": "BIOS ID",
+            "software": "Software",
+            "duration": "Duration",
+            "status": "Status",
+            "activated": "Activated",
+            "expires": "Expires",
+            "reseller": "Reseller"
+          }
+        },
+        "resellers": {
+          "columns": {
+            "name": "Name",
+            "username": "Username",
+            "mandiagSubId": "Mandiag Sub ID",
+            "pricedSoftwareKeys": "Priced Software Keys",
+            "status": "Status",
+            "created": "Created"
+          }
+        },
+        "webhooks": {
+          "eventTypeFilter": "All Event Types",
+          "columns": {
+            "eventId": "Event ID",
+            "eventType": "Event Type",
+            "occurred": "Occurred",
+            "processed": "Processed",
+            "payload": "Payload"
+          },
+          "eventTypes": {
+            "license_expired": "License Expired",
+            "license_renewed": "License Renewed",
+            "license_disabled": "License Disabled",
+            "license_enabled": "License Enabled",
+            "balance_low": "Balance Low"
+          }
+        },
+        "testWebhook": {
+          "warning": "This sends a real request to your webhook endpoint. It will create a MandiagWebhookEvent record and dispatch a job.",
+          "title": "Send Test Webhook",
+          "eventType": "Event Type",
+          "mockData": "Mock Data (JSON)",
+          "sendButton": "Send Test Webhook",
+          "sending": "Sending...",
+          "responseLabel": "Response"
+        },
+        "dialog": {
+          "title": "Request / Response Details",
+          "description": "View the full payload sent and received",
+          "requestLabel": "Request",
+          "responseLabel": "Response"
+        },
+        "pagination": {
+          "previous": "Previous",
+          "next": "Next",
+          "pageInfo": "Page {{current}} / {{total}}"
+        },
+        "view": "View",
+        "allMethods": "All Methods",
+        "never": "Never"
       },
       "settings": {
         "title": "Settings",

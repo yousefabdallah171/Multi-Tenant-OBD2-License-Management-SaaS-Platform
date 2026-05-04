@@ -54,7 +54,7 @@ const WEBHOOK_DEFAULTS: Record<string, Record<string, unknown>> = {
 
 export function MandiagDebugPage() {
   const { t } = useTranslation()
-  const { lang } = useLanguage()
+  const { lang, isRtl } = useLanguage()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [activeTab, setActiveTab] = useState<'logs' | 'licenses' | 'resellers' | 'webhook-events' | 'test-webhook'>('logs')
 
@@ -157,7 +157,6 @@ export function MandiagDebugPage() {
         data,
       })
       setTestWebhookResult(result)
-      // Refetch webhook events after sending test
       webhookEventsQuery.refetch()
     } catch (error) {
       setTestWebhookResult({ error: (error as Error).message })
@@ -180,137 +179,250 @@ export function MandiagDebugPage() {
   const logColumns: Array<DataTableColumn<MandiagDebugLog>> = [
     {
       key: 'timestamp',
-      label: 'Timestamp',
+      label: t('managerParent.pages.mandiagDebug.apiLogs.columns.timestamp'),
       sortable: true,
       sortValue: (row) => row.created_at ?? '',
       render: (row) => (row.created_at ? formatDate(row.created_at, locale) : '-'),
     },
-    { key: 'method', label: 'Method', sortable: true, sortValue: (row) => row.method, render: (row) => row.method },
+    {
+      key: 'method',
+      label: t('managerParent.pages.mandiagDebug.apiLogs.columns.method'),
+      sortable: true,
+      sortValue: (row) => row.method,
+      render: (row) => row.method,
+      hideOnMobile: true,
+    },
     {
       key: 'endpoint',
-      label: 'Endpoint',
+      label: t('managerParent.pages.mandiagDebug.apiLogs.columns.endpoint'),
       sortable: true,
       sortValue: (row) => row.endpoint,
-      render: (row) => <code className="text-xs">{row.endpoint}</code>,
+      render: (row) => <code className="text-xs break-all" dir={isRtl ? 'rtl' : 'ltr'}>{row.endpoint}</code>,
+      hideOnMobile: true,
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('managerParent.pages.mandiagDebug.apiLogs.columns.status'),
       sortable: true,
       sortValue: (row) => row.status_code,
       render: (row) => <StatusBadge status={statusGroup(row.status_code)} />,
     },
     {
       key: 'time',
-      label: 'Response Time',
+      label: t('managerParent.pages.mandiagDebug.apiLogs.columns.responseTime'),
       sortable: true,
       sortValue: (row) => row.response_time_ms,
       render: (row) => `${row.response_time_ms}ms`,
+      hideOnMobile: true,
     },
     {
       key: 'actions',
-      label: 'Actions',
+      label: t('managerParent.pages.mandiagDebug.apiLogs.columns.actions'),
       render: (row) => (
         <Button type="button" size="sm" variant="ghost" onClick={() => setSelectedLog(row)}>
-          View
+          {t('managerParent.pages.mandiagDebug.view')}
         </Button>
       ),
     },
   ]
 
   const licenseColumns: Array<DataTableColumn<MandiagLocalLicense>> = [
-    { key: 'mandiag_license_id', label: 'Mandiag ID', alwaysVisible: true, render: (row) => row.mandiag_license_id },
-    { key: 'external_username', label: 'Customer', render: (row) => row.external_username ?? '-' },
-    { key: 'bios_id', label: 'BIOS ID', render: (row) => row.bios_id ?? '-' },
-    { key: 'software_key', label: 'Software', render: (row) => row.software_key ?? '-' },
-    { key: 'duration_days', label: 'Duration', render: (row) => `${row.duration_days} days` },
-    { key: 'status', label: 'Status', render: (row) => <span className="text-sm font-medium">{row.status}</span> },
-    { key: 'activated_at', label: 'Activated', render: (row) => (row.activated_at ? formatDate(row.activated_at, locale) : '-') },
-    { key: 'expires_at', label: 'Expires', render: (row) => (row.expires_at ? formatDate(row.expires_at, locale) : '-') },
-    { key: 'reseller_name', label: 'Reseller', render: (row) => row.reseller_name ?? '-' },
+    {
+      key: 'mandiag_license_id',
+      label: t('managerParent.pages.mandiagDebug.licenses.columns.mandiagId'),
+      alwaysVisible: true,
+      render: (row) => row.mandiag_license_id
+    },
+    {
+      key: 'external_username',
+      label: t('managerParent.pages.mandiagDebug.licenses.columns.customer'),
+      render: (row) => row.external_username ?? '-',
+      hideOnMobile: true,
+    },
+    {
+      key: 'bios_id',
+      label: t('managerParent.pages.mandiagDebug.licenses.columns.biosId'),
+      render: (row) => row.bios_id ?? '-',
+      hideOnMobile: true,
+    },
+    {
+      key: 'software_key',
+      label: t('managerParent.pages.mandiagDebug.licenses.columns.software'),
+      render: (row) => row.software_key ?? '-'
+    },
+    {
+      key: 'duration_days',
+      label: t('managerParent.pages.mandiagDebug.licenses.columns.duration'),
+      render: (row) => `${row.duration_days} days`,
+      hideOnMobile: true,
+    },
+    {
+      key: 'status',
+      label: t('managerParent.pages.mandiagDebug.licenses.columns.status'),
+      render: (row) => <span className="text-sm font-medium">{row.status}</span>
+    },
+    {
+      key: 'activated_at',
+      label: t('managerParent.pages.mandiagDebug.licenses.columns.activated'),
+      render: (row) => (row.activated_at ? formatDate(row.activated_at, locale) : '-'),
+      hideOnMobile: true,
+    },
+    {
+      key: 'expires_at',
+      label: t('managerParent.pages.mandiagDebug.licenses.columns.expires'),
+      render: (row) => (row.expires_at ? formatDate(row.expires_at, locale) : '-'),
+      hideOnMobile: true,
+    },
+    {
+      key: 'reseller_name',
+      label: t('managerParent.pages.mandiagDebug.licenses.columns.reseller'),
+      render: (row) => row.reseller_name ?? '-',
+      hideOnMobile: true,
+    },
   ]
 
   const resellerColumns: Array<DataTableColumn<MandiagLocalReseller>> = [
-    { key: 'name', label: 'Name', alwaysVisible: true, render: (row) => row.name },
-    { key: 'username', label: 'Username', render: (row) => row.username },
-    { key: 'mandiag_sub_id', label: 'Mandiag Sub ID', render: (row) => <code className="text-xs">{row.mandiag_sub_id}</code> },
+    {
+      key: 'name',
+      label: t('managerParent.pages.mandiagDebug.resellers.columns.name'),
+      alwaysVisible: true,
+      render: (row) => row.name
+    },
+    {
+      key: 'username',
+      label: t('managerParent.pages.mandiagDebug.resellers.columns.username'),
+      render: (row) => row.username,
+      hideOnMobile: true,
+    },
+    {
+      key: 'mandiag_sub_id',
+      label: t('managerParent.pages.mandiagDebug.resellers.columns.mandiagSubId'),
+      render: (row) => <code className="text-xs break-all" dir="ltr">{row.mandiag_sub_id}</code>
+    },
     {
       key: 'software_keys',
-      label: 'Priced Software Keys',
+      label: t('managerParent.pages.mandiagDebug.resellers.columns.pricedSoftwareKeys'),
       render: (row) => (row.mandiag_priced_software_keys?.length ? row.mandiag_priced_software_keys.join(', ') : '-'),
+      hideOnMobile: true,
     },
-    { key: 'status', label: 'Status', render: (row) => <span className="text-sm font-medium">{row.status}</span> },
-    { key: 'created_at', label: 'Created', render: (row) => formatDate(row.created_at, locale) },
+    {
+      key: 'status',
+      label: t('managerParent.pages.mandiagDebug.resellers.columns.status'),
+      render: (row) => <span className="text-sm font-medium">{row.status}</span>
+    },
+    {
+      key: 'created_at',
+      label: t('managerParent.pages.mandiagDebug.resellers.columns.created'),
+      render: (row) => formatDate(row.created_at, locale),
+      hideOnMobile: true,
+    },
   ]
 
   const webhookColumns: Array<DataTableColumn<MandiagWebhookEventRow>> = [
-    { key: 'event_id', label: 'Event ID', alwaysVisible: true, render: (row) => <code className="text-xs">{row.event_id}</code> },
-    { key: 'event_type', label: 'Event Type', render: (row) => row.event_type },
-    { key: 'occurred_at', label: 'Occurred', render: (row) => (row.occurred_at ? formatDate(row.occurred_at, locale) : '-') },
-    { key: 'processed_at', label: 'Processed', render: (row) => (row.processed_at ? formatDate(row.processed_at, locale) : '-') },
+    {
+      key: 'event_id',
+      label: t('managerParent.pages.mandiagDebug.webhooks.columns.eventId'),
+      alwaysVisible: true,
+      render: (row) => <code className="text-xs break-all" dir="ltr">{row.event_id}</code>
+    },
+    {
+      key: 'event_type',
+      label: t('managerParent.pages.mandiagDebug.webhooks.columns.eventType'),
+      render: (row) => row.event_type
+    },
+    {
+      key: 'occurred_at',
+      label: t('managerParent.pages.mandiagDebug.webhooks.columns.occurred'),
+      render: (row) => (row.occurred_at ? formatDate(row.occurred_at, locale) : '-'),
+      hideOnMobile: true,
+    },
+    {
+      key: 'processed_at',
+      label: t('managerParent.pages.mandiagDebug.webhooks.columns.processed'),
+      render: (row) => (row.processed_at ? formatDate(row.processed_at, locale) : '-'),
+      hideOnMobile: true,
+    },
     {
       key: 'actions',
-      label: 'Payload',
+      label: t('managerParent.pages.mandiagDebug.webhooks.columns.payload'),
       render: (row) => (
         <Button
           type="button"
           size="sm"
           variant="ghost"
           onClick={() => {
-            setSelectedLog({ ...row, id: row.id, method: '', endpoint: '', user: null, response_time_ms: 0, status_code: 200, created_at: row.processed_at ?? '', response_body: row.payload } as never)
+            setSelectedLog({
+              ...row,
+              id: row.id,
+              method: '',
+              endpoint: '',
+              user: null,
+              response_time_ms: 0,
+              status_code: 200,
+              created_at: row.processed_at ?? '',
+              response_body: row.payload
+            } as never)
           }}
         >
-          View
+          {t('managerParent.pages.mandiagDebug.view')}
         </Button>
       ),
     },
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <h2 className="flex items-center gap-2 text-3xl font-semibold">
-            <Bug className="h-8 w-8" />
-            Mandiag Debug & Monitoring
+          <h2 className="flex items-center gap-2 text-xl sm:text-2xl lg:text-3xl font-semibold">
+            <Bug className="h-6 w-6 sm:h-8 sm:w-8" />
+            {t('managerParent.pages.mandiagDebug.title')}
           </h2>
-          <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">
-            Monitor API calls, webhook events, and local Mandiag integration state. Test connectivity and webhooks.
+          <p className="max-w-3xl text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            {t('managerParent.pages.mandiagDebug.description')}
           </p>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+      {/* Summary Cards - Responsive Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard
-          title="API Calls (Today)"
+          title={t('managerParent.pages.mandiagDebug.statsCards.apiCallsToday')}
           value={todayLogs.length}
           color="emerald"
         />
         <StatsCard
-          title="Errors (Today)"
+          title={t('managerParent.pages.mandiagDebug.statsCards.errorsToday')}
           value={errorCount}
           color={errorCount > 0 ? 'rose' : 'emerald'}
         />
         <StatsCard
-          title="Last Webhook"
-          value={lastWebhook ? formatDate(lastWebhook, locale) : 'Never'}
+          title={t('managerParent.pages.mandiagDebug.statsCards.lastWebhook')}
+          value={lastWebhook ? formatDate(lastWebhook, locale) : t('managerParent.pages.mandiagDebug.never')}
           color="sky"
         />
       </div>
 
-      {/* Health Check */}
+      {/* Health Check Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Connection Health</CardTitle>
+          <CardTitle className="text-lg sm:text-base">{t('managerParent.pages.mandiagDebug.health.title')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Button onClick={handlePing} disabled={pingLoading} size="lg">
-            {pingLoading ? 'Pinging...' : 'Ping Mandiag'}
+        <CardContent className="space-y-3 p-3 md:p-4">
+          <Button
+            onClick={handlePing}
+            disabled={pingLoading}
+            size="lg"
+            className="w-full sm:w-auto"
+          >
+            {pingLoading ? t('managerParent.pages.mandiagDebug.health.pinging') : t('managerParent.pages.mandiagDebug.health.ping')}
           </Button>
           {pingResult && (
-            <div className="space-y-2">
-              <pre className="overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100 dark:bg-slate-900">
+            <div className="space-y-2 overflow-x-auto">
+              <pre
+                className="rounded-lg bg-slate-950 p-2 md:p-3 text-xs text-slate-100 dark:bg-slate-900 overflow-x-auto"
+                dir={isRtl ? 'rtl' : 'ltr'}
+              >
                 {JSON.stringify(pingResult, null, 2)}
               </pre>
             </div>
@@ -319,28 +431,28 @@ export function MandiagDebugPage() {
       </Card>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
-        <TabsList>
-          <TabsTrigger value="logs">API Logs</TabsTrigger>
-          <TabsTrigger value="licenses">Active Licenses</TabsTrigger>
-          <TabsTrigger value="resellers">Resellers</TabsTrigger>
-          <TabsTrigger value="webhook-events">Webhook Events</TabsTrigger>
-          <TabsTrigger value="test-webhook">Test Webhook</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 h-auto">
+          <TabsTrigger value="logs" className="text-xs sm:text-sm">{t('managerParent.pages.mandiagDebug.tabs.apiLogs')}</TabsTrigger>
+          <TabsTrigger value="licenses" className="text-xs sm:text-sm">{t('managerParent.pages.mandiagDebug.tabs.activeLicenses')}</TabsTrigger>
+          <TabsTrigger value="resellers" className="text-xs sm:text-sm">{t('managerParent.pages.mandiagDebug.tabs.resellers')}</TabsTrigger>
+          <TabsTrigger value="webhook-events" className="text-xs sm:text-sm">{t('managerParent.pages.mandiagDebug.tabs.webhookEvents')}</TabsTrigger>
+          <TabsTrigger value="test-webhook" className="text-xs sm:text-sm">{t('managerParent.pages.mandiagDebug.tabs.testWebhook')}</TabsTrigger>
         </TabsList>
 
         {/* API Logs Tab */}
         <TabsContent value="logs" className="space-y-4">
           <Card>
-            <CardContent className="grid gap-3 p-4 md:grid-cols-2 lg:grid-cols-5">
+            <CardContent className="grid gap-3 p-3 md:p-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
               <select
                 value={logMethod}
                 onChange={(e) => {
                   setLogMethod(e.target.value)
                   setLogPage(1)
                 }}
-                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className="h-10 md:h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950 w-full"
               >
-                <option value="">All Methods</option>
+                <option value="">{t('managerParent.pages.mandiagDebug.apiLogs.methods')}</option>
                 <option value="GET">GET</option>
                 <option value="POST">POST</option>
                 <option value="PUT">PUT</option>
@@ -354,15 +466,15 @@ export function MandiagDebugPage() {
                   setLogStatusGroup(e.target.value)
                   setLogPage(1)
                 }}
-                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className="h-10 md:h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950 w-full"
               >
-                <option value="">All Status</option>
-                <option value="2xx">2xx Success</option>
-                <option value="4xx">4xx Client Error</option>
-                <option value="5xx">5xx Server Error</option>
+                <option value="">{t('managerParent.pages.mandiagDebug.apiLogs.status')}</option>
+                <option value="2xx">{t('managerParent.pages.mandiagDebug.apiLogs.status2xx')}</option>
+                <option value="4xx">{t('managerParent.pages.mandiagDebug.apiLogs.status4xx')}</option>
+                <option value="5xx">{t('managerParent.pages.mandiagDebug.apiLogs.status5xx')}</option>
               </select>
 
-              <div className="lg:col-span-2">
+              <div className="md:col-span-2 lg:col-span-1">
                 <DateRangePicker
                   value={logDateRange}
                   onChange={(range) => {
@@ -372,13 +484,14 @@ export function MandiagDebugPage() {
                 />
               </div>
 
-              <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 h-10 md:h-11">
                 <input
                   type="checkbox"
                   checked={logAutoRefresh}
                   onChange={(e) => setLogAutoRefresh(e.target.checked)}
+                  className="w-4 h-4"
                 />
-                Auto-refresh
+                <span className="whitespace-nowrap">{t('managerParent.pages.mandiagDebug.apiLogs.autoRefresh')}</span>
               </label>
             </CardContent>
           </Card>
@@ -392,24 +505,27 @@ export function MandiagDebugPage() {
           />
 
           {(logsQuery.data?.meta.last_page ?? 1) > 1 && (
-            <div className="flex items-center justify-between text-sm text-slate-500">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs sm:text-sm text-slate-500">
               <span>
-                Page {logsQuery.data?.meta.current_page ?? logPage} / {logsQuery.data?.meta.last_page ?? '?'}
+                {t('managerParent.pages.mandiagDebug.pagination.pageInfo', {
+                  current: logsQuery.data?.meta.current_page ?? logPage,
+                  total: logsQuery.data?.meta.last_page ?? '?',
+                })}
               </span>
               <div className="flex gap-2">
                 <button
                   disabled={logPage <= 1}
                   onClick={() => setLogPage(Math.max(1, logPage - 1))}
-                  className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  Previous
+                  {t('managerParent.pages.mandiagDebug.pagination.previous')}
                 </button>
                 <button
                   disabled={logPage >= (logsQuery.data?.meta.last_page ?? 1)}
                   onClick={() => setLogPage(logPage + 1)}
-                  className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  Next
+                  {t('managerParent.pages.mandiagDebug.pagination.next')}
                 </button>
               </div>
             </div>
@@ -419,16 +535,16 @@ export function MandiagDebugPage() {
         {/* Active Licenses Tab */}
         <TabsContent value="licenses" className="space-y-4">
           <Card>
-            <CardContent className="grid gap-3 p-4 md:grid-cols-2">
+            <CardContent className="grid gap-3 p-3 md:p-4 grid-cols-1 md:grid-cols-2">
               <select
                 value={licenseStatus}
                 onChange={(e) => {
                   setLicenseStatus(e.target.value)
                   setLicensePage(1)
                 }}
-                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className="h-10 md:h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950 w-full"
               >
-                <option value="">All Status</option>
+                <option value="">{t('managerParent.pages.mandiagDebug.licenses.statusFilter')}</option>
                 <option value="active">Active</option>
                 <option value="pending">Pending</option>
                 <option value="expired">Expired</option>
@@ -442,7 +558,8 @@ export function MandiagDebugPage() {
                   setLicenseSearch(e.target.value)
                   setLicensePage(1)
                 }}
-                placeholder="Search BIOS ID or customer..."
+                placeholder={t('managerParent.pages.mandiagDebug.licenses.searchPlaceholder')}
+                className="h-10 md:h-11"
               />
             </CardContent>
           </Card>
@@ -456,24 +573,27 @@ export function MandiagDebugPage() {
           />
 
           {(licensesQuery.data?.meta.last_page ?? 1) > 1 && (
-            <div className="flex items-center justify-between text-sm text-slate-500">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs sm:text-sm text-slate-500">
               <span>
-                Page {licensesQuery.data?.meta.current_page ?? licensePage} / {licensesQuery.data?.meta.last_page ?? '?'}
+                {t('managerParent.pages.mandiagDebug.pagination.pageInfo', {
+                  current: licensesQuery.data?.meta.current_page ?? licensePage,
+                  total: licensesQuery.data?.meta.last_page ?? '?',
+                })}
               </span>
               <div className="flex gap-2">
                 <button
                   disabled={licensePage <= 1}
                   onClick={() => setLicensePage(Math.max(1, licensePage - 1))}
-                  className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  Previous
+                  {t('managerParent.pages.mandiagDebug.pagination.previous')}
                 </button>
                 <button
                   disabled={licensePage >= (licensesQuery.data?.meta.last_page ?? 1)}
                   onClick={() => setLicensePage(licensePage + 1)}
-                  className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  Next
+                  {t('managerParent.pages.mandiagDebug.pagination.next')}
                 </button>
               </div>
             </div>
@@ -491,24 +611,27 @@ export function MandiagDebugPage() {
           />
 
           {(resellersQuery.data?.meta.last_page ?? 1) > 1 && (
-            <div className="flex items-center justify-between text-sm text-slate-500">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs sm:text-sm text-slate-500">
               <span>
-                Page {resellersQuery.data?.meta.current_page ?? resellerPage} / {resellersQuery.data?.meta.last_page ?? '?'}
+                {t('managerParent.pages.mandiagDebug.pagination.pageInfo', {
+                  current: resellersQuery.data?.meta.current_page ?? resellerPage,
+                  total: resellersQuery.data?.meta.last_page ?? '?',
+                })}
               </span>
               <div className="flex gap-2">
                 <button
                   disabled={resellerPage <= 1}
                   onClick={() => setResellerPage(Math.max(1, resellerPage - 1))}
-                  className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  Previous
+                  {t('managerParent.pages.mandiagDebug.pagination.previous')}
                 </button>
                 <button
                   disabled={resellerPage >= (resellersQuery.data?.meta.last_page ?? 1)}
                   onClick={() => setResellerPage(resellerPage + 1)}
-                  className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  Next
+                  {t('managerParent.pages.mandiagDebug.pagination.next')}
                 </button>
               </div>
             </div>
@@ -518,21 +641,21 @@ export function MandiagDebugPage() {
         {/* Webhook Events Tab */}
         <TabsContent value="webhook-events" className="space-y-4">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 md:p-4">
               <select
                 value={webhookEventType}
                 onChange={(e) => {
                   setWebhookEventType(e.target.value)
                   setWebhookPage(1)
                 }}
-                className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className="h-10 md:h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950 w-full"
               >
-                <option value="">All Event Types</option>
-                <option value="license_expired">License Expired</option>
-                <option value="license_renewed">License Renewed</option>
-                <option value="license_disabled">License Disabled</option>
-                <option value="license_enabled">License Enabled</option>
-                <option value="balance_low">Balance Low</option>
+                <option value="">{t('managerParent.pages.mandiagDebug.webhooks.eventTypeFilter')}</option>
+                {WEBHOOK_EVENT_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {t(`managerParent.pages.mandiagDebug.webhooks.eventTypes.${type}`)}
+                  </option>
+                ))}
               </select>
             </CardContent>
           </Card>
@@ -546,24 +669,27 @@ export function MandiagDebugPage() {
           />
 
           {(webhookEventsQuery.data?.meta.last_page ?? 1) > 1 && (
-            <div className="flex items-center justify-between text-sm text-slate-500">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs sm:text-sm text-slate-500">
               <span>
-                Page {webhookEventsQuery.data?.meta.current_page ?? webhookPage} / {webhookEventsQuery.data?.meta.last_page ?? '?'}
+                {t('managerParent.pages.mandiagDebug.pagination.pageInfo', {
+                  current: webhookEventsQuery.data?.meta.current_page ?? webhookPage,
+                  total: webhookEventsQuery.data?.meta.last_page ?? '?',
+                })}
               </span>
               <div className="flex gap-2">
                 <button
                   disabled={webhookPage <= 1}
                   onClick={() => setWebhookPage(Math.max(1, webhookPage - 1))}
-                  className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  Previous
+                  {t('managerParent.pages.mandiagDebug.pagination.previous')}
                 </button>
                 <button
                   disabled={webhookPage >= (webhookEventsQuery.data?.meta.last_page ?? 1)}
                   onClick={() => setWebhookPage(webhookPage + 1)}
-                  className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-2 disabled:opacity-40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
-                  Next
+                  {t('managerParent.pages.mandiagDebug.pagination.next')}
                 </button>
               </div>
             </div>
@@ -572,47 +698,56 @@ export function MandiagDebugPage() {
 
         {/* Test Webhook Tab */}
         <TabsContent value="test-webhook" className="space-y-4">
-          <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-200">
-            This sends a real request to your webhook endpoint. It will create a MandiagWebhookEvent record and dispatch a job.
+          <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 md:p-4 text-xs sm:text-sm text-orange-900 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-200">
+            {t('managerParent.pages.mandiagDebug.testWebhook.warning')}
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Send Test Webhook</CardTitle>
+              <CardTitle className="text-lg sm:text-base">{t('managerParent.pages.mandiagDebug.testWebhook.title')}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-3 md:p-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Event Type</label>
+                <label className="text-sm font-medium">{t('managerParent.pages.mandiagDebug.testWebhook.eventType')}</label>
                 <select
                   value={testWebhookEventType}
                   onChange={(e) => handleWebhookEventTypeChange(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+                  className="h-10 md:h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
                 >
                   {WEBHOOK_EVENT_TYPES.map((type) => (
                     <option key={type} value={type}>
-                      {type}
+                      {t(`managerParent.pages.mandiagDebug.webhooks.eventTypes.${type}`)}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Mock Data (JSON)</label>
+                <label className="text-sm font-medium">{t('managerParent.pages.mandiagDebug.testWebhook.mockData')}</label>
                 <textarea
                   value={testWebhookData}
                   onChange={(e) => setTestWebhookData(e.target.value)}
-                  className="h-48 w-full rounded-xl border border-slate-300 bg-white p-3 font-mono text-xs dark:border-slate-700 dark:bg-slate-950"
+                  className="w-full h-40 md:h-48 rounded-xl border border-slate-300 bg-white p-2 md:p-3 font-mono text-xs dark:border-slate-700 dark:bg-slate-950"
+                  dir={isRtl ? 'rtl' : 'ltr'}
                 />
               </div>
 
-              <Button onClick={handleTestWebhook} disabled={testWebhookLoading} size="lg">
-                {testWebhookLoading ? 'Sending...' : 'Send Test Webhook'}
+              <Button
+                onClick={handleTestWebhook}
+                disabled={testWebhookLoading}
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                {testWebhookLoading ? t('managerParent.pages.mandiagDebug.testWebhook.sending') : t('managerParent.pages.mandiagDebug.testWebhook.sendButton')}
               </Button>
 
               {testWebhookResult && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Response</label>
-                  <pre className="overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100 dark:bg-slate-900">
+                  <label className="text-sm font-medium">{t('managerParent.pages.mandiagDebug.testWebhook.responseLabel')}</label>
+                  <pre
+                    className="w-full overflow-x-auto rounded-lg bg-slate-950 p-2 md:p-3 text-xs text-slate-100 dark:bg-slate-900"
+                    dir={isRtl ? 'rtl' : 'ltr'}
+                  >
                     {JSON.stringify(testWebhookResult, null, 2)}
                   </pre>
                 </div>
@@ -626,25 +761,31 @@ export function MandiagDebugPage() {
       <Dialog open={selectedLog !== null} onOpenChange={(open) => !open && setSelectedLog(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Request / Response Details</DialogTitle>
-            <DialogDescription>View the full payload sent and received</DialogDescription>
+            <DialogTitle>{t('managerParent.pages.mandiagDebug.dialog.title')}</DialogTitle>
+            <DialogDescription>{t('managerParent.pages.mandiagDebug.dialog.description')}</DialogDescription>
           </DialogHeader>
           {logDetailQuery.isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="h-48 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
-              <div className="h-48 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+              <div className="h-40 md:h-48 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+              <div className="h-40 md:h-48 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 overflow-x-auto">
               <div>
-                <h3 className="mb-2 text-sm font-medium">Request</h3>
-                <pre className="overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100 dark:bg-slate-900">
+                <h3 className="mb-2 text-sm font-medium">{t('managerParent.pages.mandiagDebug.dialog.requestLabel')}</h3>
+                <pre
+                  className="overflow-auto rounded-lg bg-slate-950 p-2 md:p-3 text-xs text-slate-100 dark:bg-slate-900"
+                  dir={isRtl ? 'rtl' : 'ltr'}
+                >
                   {JSON.stringify(logDetailQuery.data?.request_body ?? {}, null, 2)}
                 </pre>
               </div>
               <div>
-                <h3 className="mb-2 text-sm font-medium">Response</h3>
-                <pre className="overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100 dark:bg-slate-900">
+                <h3 className="mb-2 text-sm font-medium">{t('managerParent.pages.mandiagDebug.dialog.responseLabel')}</h3>
+                <pre
+                  className="overflow-auto rounded-lg bg-slate-950 p-2 md:p-3 text-xs text-slate-100 dark:bg-slate-900"
+                  dir={isRtl ? 'rtl' : 'ltr'}
+                >
                   {JSON.stringify(logDetailQuery.data?.response_body ?? {}, null, 2)}
                 </pre>
               </div>

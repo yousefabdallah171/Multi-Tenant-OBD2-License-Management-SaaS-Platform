@@ -704,7 +704,8 @@
       "resellerLogs": "سجلات الموزعين",
       "biosChangeRequests": "طلبات تغيير BIOS",
       "biosChangeAudit": "سجل عمليات BIOS",
-      "resellerPayments": "مدفوعات الموزعين"
+      "resellerPayments": "مدفوعات الموزعين",
+      "mandiagDebug": "تصحيح وراقبة ماندياج"
     },
     "pages": {
       "dashboard": {
@@ -792,6 +793,110 @@
         "activationsCount": "عدد التفعيلات",
         "resellersTitle": "إحصائيات الموزعين",
         "licensesTitle": "جميع المعاملات"
+      },
+      "mandiagDebug": {
+        "title": "تصحيح وراقبة ماندياج",
+        "description": "راقب استدعاءات API والأحداث الفورية والحالة المحلية لتكامل ماندياج. اختبر الاتصال و webhooks.",
+        "tabs": {
+          "apiLogs": "سجلات API",
+          "activeLicenses": "التراخيص النشطة",
+          "resellers": "الموزعون",
+          "webhookEvents": "أحداث Webhook",
+          "testWebhook": "اختبار Webhook"
+        },
+        "statsCards": {
+          "apiCallsToday": "استدعاءات API (اليوم)",
+          "errorsToday": "الأخطاء (اليوم)",
+          "lastWebhook": "آخر Webhook"
+        },
+        "health": {
+          "title": "صحة الاتصال",
+          "ping": "فحص ماندياج",
+          "pinging": "جارٍ الفحص..."
+        },
+        "apiLogs": {
+          "filterTitle": "فلاتر سجلات API",
+          "methods": "جميع الطرق",
+          "status": "جميع الحالات",
+          "status2xx": "2xx نجاح",
+          "status4xx": "4xx خطأ العميل",
+          "status5xx": "5xx خطأ الخادم",
+          "columns": {
+            "timestamp": "الوقت",
+            "method": "الطريقة",
+            "endpoint": "المسار",
+            "status": "الحالة",
+            "responseTime": "زمن الاستجابة",
+            "actions": "الإجراءات"
+          },
+          "autoRefresh": "تحديث تلقائي"
+        },
+        "licenses": {
+          "filterTitle": "فلاتر التراخيص",
+          "statusFilter": "جميع الحالات",
+          "searchPlaceholder": "ابحث بمعرّف BIOS أو العميل...",
+          "columns": {
+            "mandiagId": "معرّف ماندياج",
+            "customer": "العميل",
+            "biosId": "معرّف BIOS",
+            "software": "البرنامج",
+            "duration": "المدة",
+            "status": "الحالة",
+            "activated": "تاريخ التفعيل",
+            "expires": "تاريخ الانتهاء",
+            "reseller": "الموزع"
+          }
+        },
+        "resellers": {
+          "columns": {
+            "name": "الاسم",
+            "username": "اسم المستخدم",
+            "mandiagSubId": "معرّف فرع ماندياج",
+            "pricedSoftwareKeys": "مفاتيح البرامج المدفوعة",
+            "status": "الحالة",
+            "created": "تاريخ الإنشاء"
+          }
+        },
+        "webhooks": {
+          "eventTypeFilter": "جميع أنواع الأحداث",
+          "columns": {
+            "eventId": "معرّف الحدث",
+            "eventType": "نوع الحدث",
+            "occurred": "وقت الحدوث",
+            "processed": "وقت المعالجة",
+            "payload": "الحمولة"
+          },
+          "eventTypes": {
+            "license_expired": "انتهى الترخيص",
+            "license_renewed": "تم تجديد الترخيص",
+            "license_disabled": "تم تعطيل الترخيص",
+            "license_enabled": "تم تفعيل الترخيص",
+            "balance_low": "الرصيد منخفض"
+          }
+        },
+        "testWebhook": {
+          "warning": "يُرسل هذا طلباً فعلياً إلى نقطة webhook الخاصة بك. سينشئ سجل MandiagWebhookEvent وينشر وظيفة.",
+          "title": "إرسال اختبار Webhook",
+          "eventType": "نوع الحدث",
+          "mockData": "بيانات وهمية (JSON)",
+          "sendButton": "إرسال اختبار Webhook",
+          "sending": "جارٍ الإرسال...",
+          "responseLabel": "الاستجابة"
+        },
+        "dialog": {
+          "title": "تفاصيل الطلب والاستجابة",
+          "description": "عرض الحمولة الكاملة المرسلة والمستقبلة",
+          "requestLabel": "الطلب",
+          "responseLabel": "الاستجابة"
+        },
+        "pagination": {
+          "previous": "السابق",
+          "next": "التالي",
+          "pageInfo": "الصفحة {{current}} / {{total}}"
+        },
+        "view": "عرض",
+        "allMethods": "جميع الطرق",
+        "never": "لم يحدث"
       },
       "settings": {
         "profileTab": "الملف الشخصي",
