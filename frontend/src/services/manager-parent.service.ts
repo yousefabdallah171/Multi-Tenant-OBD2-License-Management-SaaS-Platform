@@ -31,9 +31,14 @@ import type {
   TenantSettings,
   TeamMemberDetail,
   UsernameManagedUser,
+  MandiagDebugLog,
+  MandiagLocalLicense,
+  MandiagLocalReseller,
+  MandiagWebhookEventRow,
 } from '@/types/manager-parent.types'
 import type { LicenseFilters, LicenseSummary, SubmitBiosChangeRequestData } from '@/types/manager-reseller.types'
 import type { ManagerParentSalesCustomerFilters, ManagerParentSalesCustomerListResponse, RecordPaymentPayload, ResellerPaymentDetailData, ResellerPaymentFilters, ResellerPaymentListData, StoreCommissionPayload } from '@/types/manager-reseller.types'
+import type { PaginationMeta } from '@/types/super-admin.types'
 import { downloadFile } from '@/utils/download'
 
 /**
@@ -351,5 +356,33 @@ export const managerParentService = {
   async getMandiagLicenses(page: number, perPage: number) {
     const { data } = await api.get<{ data: MandiagLicensePage }>('/mandiag/licenses', { params: { page, per_page: perPage } })
     return data.data
+  },
+  async getMandiagDebugLogs(params?: Record<string, unknown>) {
+    const { data } = await api.get<{ data: MandiagDebugLog[]; meta: PaginationMeta }>('/mandiag/debug/logs', { params })
+    return data
+  },
+  async getMandiagDebugLogDetail(logId: number) {
+    const { data } = await api.get<{ data: MandiagDebugLog }>(`/mandiag/debug/logs/${logId}`)
+    return data.data
+  },
+  async getMandiagLocalLicenses(params?: Record<string, unknown>) {
+    const { data } = await api.get<{ data: MandiagLocalLicense[]; meta: PaginationMeta }>('/mandiag/debug/local-licenses', { params })
+    return data
+  },
+  async getMandiagLocalResellers(params?: Record<string, unknown>) {
+    const { data } = await api.get<{ data: MandiagLocalReseller[]; meta: PaginationMeta }>('/mandiag/debug/local-resellers', { params })
+    return data
+  },
+  async getMandiagWebhookEvents(params?: Record<string, unknown>) {
+    const { data } = await api.get<{ data: MandiagWebhookEventRow[]; meta: PaginationMeta }>('/mandiag/debug/webhook-events', { params })
+    return data
+  },
+  async testMandiagWebhook(payload: { event_type: string; data?: Record<string, unknown> }) {
+    const { data } = await api.post<{ success: boolean; status_code: number; body?: unknown; error?: string }>('/mandiag/debug/test-webhook', payload)
+    return data
+  },
+  async pingMandiag() {
+    const { data } = await api.post<{ success: boolean; latency_ms: number; status_code: number; error_code?: string | null; error_message?: string | null; error?: string }>('/mandiag/debug/ping')
+    return data
   },
 }

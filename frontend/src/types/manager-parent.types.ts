@@ -704,3 +704,48 @@ export interface MandiagLicenseRow {
   created_at?: string
   [key: string]: unknown
 }
+
+export interface MandiagDebugLog {
+  id: number
+  user: string | null
+  endpoint: string
+  method: string
+  status_code: number
+  response_time_ms: number
+  request_body?: Record<string, unknown> | null
+  response_body?: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface MandiagLocalLicense {
+  id: number
+  mandiag_license_id: number
+  status: string
+  bios_id: string | null
+  external_username: string | null
+  duration_days: number
+  activated_at: string | null
+  expires_at: string | null
+  reseller_name: string | null
+  program_name: string | null
+  software_key: string | null
+}
+
+export interface MandiagLocalReseller {
+  id: number
+  name: string
+  username: string
+  mandiag_sub_id: string
+  mandiag_priced_software_keys: string[]
+  status: string
+  created_at: string
+}
+
+export interface MandiagWebhookEventRow {
+  id: number
+  event_id: string
+  event_type: string
+  payload: Record<string, unknown> | null
+  occurred_at: string | null
+  processed_at: string | null
+}

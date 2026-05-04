@@ -86,6 +86,7 @@ use App\Http\Controllers\SuperAdmin\TenantResetController as SuperAdminTenantRes
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
 use App\Http\Controllers\MandiagWebhookController;
 use App\Http\Controllers\ManagerParent\MandiagTrackingController as ManagerParentMandiagTrackingController;
+use App\Http\Controllers\ManagerParent\MandiagDebugController as ManagerParentMandiagDebugController;
 use App\Http\Controllers\TablePreferenceController;
 use App\Http\Middleware\ProcessDueScheduledLicenses;
 use Illuminate\Http\JsonResponse;
@@ -262,6 +263,16 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
             Route::get('/summary',   [ManagerParentMandiagTrackingController::class, 'summary']);
             Route::get('/resellers', [ManagerParentMandiagTrackingController::class, 'resellers']);
             Route::get('/licenses',  [ManagerParentMandiagTrackingController::class, 'licenses']);
+
+            Route::prefix('debug')->group(function (): void {
+                Route::get('/logs',            [ManagerParentMandiagDebugController::class, 'apiLogs']);
+                Route::get('/logs/{log}',      [ManagerParentMandiagDebugController::class, 'apiLogDetail']);
+                Route::get('/local-licenses',  [ManagerParentMandiagDebugController::class, 'localLicenses']);
+                Route::get('/local-resellers', [ManagerParentMandiagDebugController::class, 'localResellers']);
+                Route::get('/webhook-events',  [ManagerParentMandiagDebugController::class, 'webhookEvents']);
+                Route::post('/test-webhook',   [ManagerParentMandiagDebugController::class, 'testWebhook']);
+                Route::post('/ping',           [ManagerParentMandiagDebugController::class, 'pingMandiag']);
+            });
         });
     });
 
