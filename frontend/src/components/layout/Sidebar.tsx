@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Network, Package, ScrollText, Settings, ShieldBan, Trash2, User, UserRound, Users } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, Bug, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Network, Package, ScrollText, Settings, ShieldBan, Trash2, User, UserRound, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -57,6 +57,7 @@ const managerParentItems: NavItem[] = [
   { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
   { key: 'resellerPayments', icon: BarChart3, href: routePaths.managerParent.resellerPayments, translationKey: 'managerParent.nav.resellerPayments' },
   { key: 'mandiagTracking', icon: BarChart3, href: routePaths.managerParent.mandiagTracking, translationKey: 'managerParent.nav.mandiagTracking' },
+  { key: 'mandiagDebug', icon: Bug, href: routePaths.managerParent.mandiagDebug, translationKey: 'managerParent.nav.mandiagDebug' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, translationKey: 'managerParent.nav.ipAnalytics' },
   { key: 'logsGroup', icon: FileText, href: routePaths.managerParent.logs, translationKey: 'managerParent.nav.logsGroup' },
   { key: 'settingsGroup', icon: Settings, href: routePaths.managerParent.settings, translationKey: 'managerParent.nav.settings' },

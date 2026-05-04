@@ -51,6 +51,7 @@ export const routePaths = {
     settings: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/settings`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/profile`,
     mandiagTracking: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/mandiag-tracking`,
+    mandiagDebug: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/mandiag-debug`,
   },
   manager: {
     root: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager`,
