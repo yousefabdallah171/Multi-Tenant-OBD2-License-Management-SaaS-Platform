@@ -76,12 +76,12 @@ export function MandiagDebugPage() {
   const [webhookEventType, setWebhookEventType] = useState('')
 
   const [pingLoading, setPingLoading] = useState(false)
-  const [pingResult, setPingResult] = useState<unknown>(null)
+  const [pingResult, setPingResult] = useState<Record<string, unknown> | null>(null)
 
   const [testWebhookEventType, setTestWebhookEventType] = useState('license_expired')
   const [testWebhookData, setTestWebhookData] = useState(JSON.stringify(WEBHOOK_DEFAULTS.license_expired, null, 2))
   const [testWebhookLoading, setTestWebhookLoading] = useState(false)
-  const [testWebhookResult, setTestWebhookResult] = useState<unknown>(null)
+  const [testWebhookResult, setTestWebhookResult] = useState<Record<string, unknown> | null>(null)
 
   // Queries
   const logsQuery = useQuery({
@@ -176,7 +176,7 @@ export function MandiagDebugPage() {
   const lastWebhook = webhookEventsQuery.data?.data?.[0]?.processed_at
 
   // Column definitions
-  const logColumns: Array<DataTableColumn<MandiagDebugLog>> = [
+  const logColumns: DataTableColumn<MandiagDebugLog>[] = [
     {
       key: 'timestamp',
       label: t('managerParent.pages.mandiagDebug.apiLogs.columns.timestamp'),
@@ -190,7 +190,6 @@ export function MandiagDebugPage() {
       sortable: true,
       sortValue: (row) => row.method,
       render: (row) => row.method,
-      hideOnMobile: true,
     },
     {
       key: 'endpoint',
@@ -198,7 +197,6 @@ export function MandiagDebugPage() {
       sortable: true,
       sortValue: (row) => row.endpoint,
       render: (row) => <code className="text-xs break-all" dir={isRtl ? 'rtl' : 'ltr'}>{row.endpoint}</code>,
-      hideOnMobile: true,
     },
     {
       key: 'status',
@@ -213,7 +211,6 @@ export function MandiagDebugPage() {
       sortable: true,
       sortValue: (row) => row.response_time_ms,
       render: (row) => `${row.response_time_ms}ms`,
-      hideOnMobile: true,
     },
     {
       key: 'actions',
@@ -226,121 +223,110 @@ export function MandiagDebugPage() {
     },
   ]
 
-  const licenseColumns: Array<DataTableColumn<MandiagLocalLicense>> = [
+  const licenseColumns: DataTableColumn<MandiagLocalLicense>[] = [
     {
       key: 'mandiag_license_id',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.mandiagId'),
       alwaysVisible: true,
-      render: (row) => row.mandiag_license_id
+      render: (row) => row.mandiag_license_id,
     },
     {
       key: 'external_username',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.customer'),
       render: (row) => row.external_username ?? '-',
-      hideOnMobile: true,
     },
     {
       key: 'bios_id',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.biosId'),
       render: (row) => row.bios_id ?? '-',
-      hideOnMobile: true,
     },
     {
       key: 'software_key',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.software'),
-      render: (row) => row.software_key ?? '-'
+      render: (row) => row.software_key ?? '-',
     },
     {
       key: 'duration_days',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.duration'),
       render: (row) => `${row.duration_days} days`,
-      hideOnMobile: true,
     },
     {
       key: 'status',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.status'),
-      render: (row) => <span className="text-sm font-medium">{row.status}</span>
+      render: (row) => <span className="text-sm font-medium">{row.status}</span>,
     },
     {
       key: 'activated_at',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.activated'),
       render: (row) => (row.activated_at ? formatDate(row.activated_at, locale) : '-'),
-      hideOnMobile: true,
     },
     {
       key: 'expires_at',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.expires'),
       render: (row) => (row.expires_at ? formatDate(row.expires_at, locale) : '-'),
-      hideOnMobile: true,
     },
     {
       key: 'reseller_name',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.reseller'),
       render: (row) => row.reseller_name ?? '-',
-      hideOnMobile: true,
     },
   ]
 
-  const resellerColumns: Array<DataTableColumn<MandiagLocalReseller>> = [
+  const resellerColumns: DataTableColumn<MandiagLocalReseller>[] = [
     {
       key: 'name',
       label: t('managerParent.pages.mandiagDebug.resellers.columns.name'),
       alwaysVisible: true,
-      render: (row) => row.name
+      render: (row) => row.name,
     },
     {
       key: 'username',
       label: t('managerParent.pages.mandiagDebug.resellers.columns.username'),
       render: (row) => row.username,
-      hideOnMobile: true,
     },
     {
       key: 'mandiag_sub_id',
       label: t('managerParent.pages.mandiagDebug.resellers.columns.mandiagSubId'),
-      render: (row) => <code className="text-xs break-all" dir="ltr">{row.mandiag_sub_id}</code>
+      render: (row) => <code className="text-xs break-all" dir="ltr">{row.mandiag_sub_id}</code>,
     },
     {
       key: 'software_keys',
       label: t('managerParent.pages.mandiagDebug.resellers.columns.pricedSoftwareKeys'),
       render: (row) => (row.mandiag_priced_software_keys?.length ? row.mandiag_priced_software_keys.join(', ') : '-'),
-      hideOnMobile: true,
     },
     {
       key: 'status',
       label: t('managerParent.pages.mandiagDebug.resellers.columns.status'),
-      render: (row) => <span className="text-sm font-medium">{row.status}</span>
+      render: (row) => <span className="text-sm font-medium">{row.status}</span>,
     },
     {
       key: 'created_at',
       label: t('managerParent.pages.mandiagDebug.resellers.columns.created'),
       render: (row) => formatDate(row.created_at, locale),
-      hideOnMobile: true,
     },
   ]
 
-  const webhookColumns: Array<DataTableColumn<MandiagWebhookEventRow>> = [
+  const webhookColumns: DataTableColumn<MandiagWebhookEventRow>[] = [
     {
       key: 'event_id',
       label: t('managerParent.pages.mandiagDebug.webhooks.columns.eventId'),
       alwaysVisible: true,
-      render: (row) => <code className="text-xs break-all" dir="ltr">{row.event_id}</code>
+      render: (row) => <code className="text-xs break-all" dir="ltr">{row.event_id}</code>,
     },
     {
       key: 'event_type',
       label: t('managerParent.pages.mandiagDebug.webhooks.columns.eventType'),
-      render: (row) => row.event_type
+      render: (row) => row.event_type,
     },
     {
       key: 'occurred_at',
       label: t('managerParent.pages.mandiagDebug.webhooks.columns.occurred'),
       render: (row) => (row.occurred_at ? formatDate(row.occurred_at, locale) : '-'),
-      hideOnMobile: true,
     },
     {
       key: 'processed_at',
       label: t('managerParent.pages.mandiagDebug.webhooks.columns.processed'),
       render: (row) => (row.processed_at ? formatDate(row.processed_at, locale) : '-'),
-      hideOnMobile: true,
     },
     {
       key: 'actions',
@@ -496,12 +482,12 @@ export function MandiagDebugPage() {
             </CardContent>
           </Card>
 
-          <DataTable
+          <DataTable<MandiagDebugLog>
             tableKey="mandiag_debug_logs"
             columns={logColumns}
-            rows={logsQuery.data?.data ?? []}
+            data={logsQuery.data?.data ?? []}
             isLoading={logsQuery.isLoading}
-            getRowKey={(row) => String(row.id)}
+            rowKey={(row) => String(row.id)}
           />
 
           {(logsQuery.data?.meta.last_page ?? 1) > 1 && (
@@ -564,12 +550,12 @@ export function MandiagDebugPage() {
             </CardContent>
           </Card>
 
-          <DataTable
+          <DataTable<MandiagLocalLicense>
             tableKey="mandiag_debug_licenses"
             columns={licenseColumns}
-            rows={licensesQuery.data?.data ?? []}
+            data={licensesQuery.data?.data ?? []}
             isLoading={licensesQuery.isLoading}
-            getRowKey={(row) => String(row.id)}
+            rowKey={(row) => String(row.id)}
           />
 
           {(licensesQuery.data?.meta.last_page ?? 1) > 1 && (
@@ -602,12 +588,12 @@ export function MandiagDebugPage() {
 
         {/* Resellers Tab */}
         <TabsContent value="resellers" className="space-y-4">
-          <DataTable
+          <DataTable<MandiagLocalReseller>
             tableKey="mandiag_debug_resellers"
             columns={resellerColumns}
-            rows={resellersQuery.data?.data ?? []}
+            data={resellersQuery.data?.data ?? []}
             isLoading={resellersQuery.isLoading}
-            getRowKey={(row) => String(row.id)}
+            rowKey={(row) => String(row.id)}
           />
 
           {(resellersQuery.data?.meta.last_page ?? 1) > 1 && (
@@ -660,12 +646,12 @@ export function MandiagDebugPage() {
             </CardContent>
           </Card>
 
-          <DataTable
+          <DataTable<MandiagWebhookEventRow>
             tableKey="mandiag_debug_webhook_events"
             columns={webhookColumns}
-            rows={webhookEventsQuery.data?.data ?? []}
+            data={webhookEventsQuery.data?.data ?? []}
             isLoading={webhookEventsQuery.isLoading}
-            getRowKey={(row) => String(row.id)}
+            rowKey={(row) => String(row.id)}
           />
 
           {(webhookEventsQuery.data?.meta.last_page ?? 1) > 1 && (
