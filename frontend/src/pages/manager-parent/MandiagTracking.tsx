@@ -47,7 +47,7 @@ export function MandiagTrackingPage() {
   const licensePage_data = licensesQuery.data
 
   const resellerColumns: DataTableColumn<MandiagReseller>[] = [
-    { key: 'sub_id', label: 'Sub ID', alwaysVisible: true },
+    { key: 'sub_id', label: 'Sub ID', alwaysVisible: true, render: (row) => row.sub_id },
     { key: 'realname', label: 'Reseller', render: (row) => row.realname ?? row.panel_username ?? row.sub_id },
     { key: 'status', label: 'Status', render: (row) => row.status ?? '—' },
     { key: 'activations', label: 'Activations', render: (row) => row.stats?.activations_count ?? '—' },
@@ -57,7 +57,7 @@ export function MandiagTrackingPage() {
   ]
 
   const licenseColumns: DataTableColumn<MandiagLicenseRow>[] = [
-    { key: 'license_id', label: 'ID', alwaysVisible: true },
+    { key: 'license_id', label: 'ID', alwaysVisible: true, render: (row) => row.license_id },
     { key: 'sub_id', label: 'Reseller', render: (row) => row.sub_id ?? '—' },
     { key: 'software', label: 'Software', render: (row) => row.software ?? '—' },
     { key: 'customer', label: 'Customer', render: (row) => row.customer_name ?? row.customer ?? '—' },
@@ -139,9 +139,9 @@ export function MandiagTrackingPage() {
           <DataTable<MandiagReseller>
             tableKey="mandiag-resellers"
             columns={resellerColumns}
-            rows={resellers}
+            data={resellers}
             isLoading={resellersQuery.isLoading}
-            getRowKey={(row) => row.sub_id}
+            rowKey={(row) => row.sub_id}
           />
         </CardContent>
       </Card>
@@ -155,9 +155,9 @@ export function MandiagTrackingPage() {
           <DataTable<MandiagLicenseRow>
             tableKey="mandiag-licenses"
             columns={licenseColumns}
-            rows={licensePage_data?.licenses ?? []}
+            data={licensePage_data?.licenses ?? []}
             isLoading={licensesQuery.isLoading}
-            getRowKey={(row) => String(row.license_id)}
+            rowKey={(row) => String(row.license_id)}
           />
           {(licensePage_data?.last_page ?? 1) > 1 && (
             <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
