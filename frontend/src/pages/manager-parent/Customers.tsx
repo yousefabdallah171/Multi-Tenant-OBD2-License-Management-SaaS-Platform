@@ -833,7 +833,7 @@ export function CustomersPage() {
                       <ChevronDown className="ms-2 h-4 w-4 shrink-0 opacity-60" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-64">
+                  <DropdownMenuContent align="start" side="bottom" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-64 max-h-80 overflow-y-auto">
                     <DropdownMenuItem onSelect={() => handleSellerChange(null)}>
                       <div className="flex w-full items-center justify-between gap-3">
                         <span>{t('common.allRoles', { defaultValue: 'All roles' })}</span>
