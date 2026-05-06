@@ -30,16 +30,19 @@ export function MandiagTrackingPage() {
   const summaryQuery = useQuery({
     queryKey: ['mandiag', 'summary', period],
     queryFn: () => managerParentService.getMandiagSummary(period),
+    refetchInterval: 30_000,
   })
 
   const resellersQuery = useQuery({
     queryKey: ['mandiag', 'resellers', period],
     queryFn: () => managerParentService.getMandiagResellers(period),
+    refetchInterval: 30_000,
   })
 
   const licensesQuery = useQuery({
     queryKey: ['mandiag', 'licenses', licensePage],
     queryFn: () => managerParentService.getMandiagLicenses(licensePage, 25),
+    refetchInterval: 30_000,
   })
 
   const summary = summaryQuery.data

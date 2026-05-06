@@ -20,7 +20,7 @@ class MandiagTrackingController extends Controller
         $tenantId = (int) auth()->user()?->tenant_id;
         $cacheKey = "mandiag_summary_{$tenantId}_{$period}";
 
-        $data = Cache::remember($cacheKey, 300, function () use ($period): array {
+        $data = Cache::remember($cacheKey, 30, function () use ($period): array {
             $balance    = $this->mandiagApiService->getBalance();
             $commission = null;
             try {
@@ -68,7 +68,7 @@ class MandiagTrackingController extends Controller
 
         // GET /resellers?include_stats=1&period={period} → data.items[]
         // Each item: { sub_id, realname, status, ..., stats: { activations_count, revenue_total, manager_cost_total, commission } }
-        $data = Cache::remember($cacheKey, 300, function () use ($period): array {
+        $data = Cache::remember($cacheKey, 30, function () use ($period): array {
             $response = $this->mandiagApiService->getResellers($period);
             $list     = $response['data']['items'] ?? [];
             return is_array($list) ? array_values($list) : [];
@@ -85,7 +85,7 @@ class MandiagTrackingController extends Controller
         $cacheKey = "mandiag_licenses_{$tenantId}_{$page}_{$perPage}";
 
         // GET /licenses?page=&per_page= → data.items[], data.pagination.{ page, per_page, total, total_pages }
-        $data = Cache::remember($cacheKey, 300, function () use ($page, $perPage): array {
+        $data = Cache::remember($cacheKey, 30, function () use ($page, $perPage): array {
             $response   = $this->mandiagApiService->getLicenses($page, $perPage);
             $pagination = $response['data']['pagination'] ?? [];
 
