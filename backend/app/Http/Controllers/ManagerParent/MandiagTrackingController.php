@@ -88,7 +88,7 @@ class MandiagTrackingController extends BaseManagerParentController
         $paginator = License::query()
             ->select([
                 'id', 'mandiag_license_id', 'status', 'bios_id', 'external_username',
-                'duration_days', 'starts_at', 'expires_at', 'program_id', 'reseller_id',
+                'duration_days', 'activated_at', 'expires_at', 'program_id', 'reseller_id',
             ])
             ->with(['program:id,name,mandiag_software_key', 'reseller:id,name'])
             ->where('tenant_id', $tenantId)
@@ -103,7 +103,7 @@ class MandiagTrackingController extends BaseManagerParentController
             'bios_id'             => $l->bios_id,
             'external_username'   => $l->external_username,
             'duration_days'       => $l->duration_days,
-            'activated_at'        => $l->starts_at?->toIso8601String(),
+            'activated_at'        => $l->activated_at?->toIso8601String(),
             'expires_at'          => $l->expires_at?->toIso8601String(),
             'reseller_name'       => $l->reseller?->name,
             'program_name'        => $l->program?->name,
