@@ -165,9 +165,14 @@ export function CustomersPage() {
     queryFn: () => teamService.getAll({ role: 'reseller', per_page: 100 }),
   })
 
-  const userOptionsQuery = useQuery({
-    queryKey: ['manager-parent', 'customers', 'user-options'],
-    queryFn: () => managerParentService.getUsernameManagement({ per_page: 100 }),
+  const managerParentsQuery = useQuery({
+    queryKey: ['manager-parent', 'customers', 'manager-parents'],
+    queryFn: () => managerParentService.getUsernameManagement({ role: 'manager_parent', per_page: 100 }),
+  })
+
+  const managersQuery = useQuery({
+    queryKey: ['manager-parent', 'customers', 'managers'],
+    queryFn: () => managerParentService.getUsernameManagement({ role: 'manager', per_page: 100 }),
   })
 
   const programsQuery = useQuery({
@@ -187,22 +192,24 @@ export function CustomersPage() {
   })
 
   const allSellerOptions = useMemo(() => {
-    const fromUserOptions = (userOptionsQuery.data?.data ?? [])
-      .filter((m) => m.role === 'manager_parent' || m.role === 'manager')
-      .map((m) => ({ id: m.id, name: m.name, role: m.role as UserRole }))
+    const fromManagerParents = (managerParentsQuery.data?.data ?? [])
+      .map((m) => ({ id: m.id, name: m.name, role: 'manager_parent' as UserRole }))
 
-    if (user && user.role === 'manager_parent' && !fromUserOptions.some((m) => m.id === user.id)) {
-      fromUserOptions.unshift({ id: user.id, name: user.name, role: 'manager_parent' as UserRole })
+    if (user && user.role === 'manager_parent' && !fromManagerParents.some((m) => m.id === user.id)) {
+      fromManagerParents.unshift({ id: user.id, name: user.name, role: 'manager_parent' as UserRole })
     }
+
+    const fromManagers = (managersQuery.data?.data ?? [])
+      .map((m) => ({ id: m.id, name: m.name, role: 'manager' as UserRole }))
 
     const fromResellers = (resellerQuery.data?.data ?? [])
       .map((r) => ({ id: r.id, name: r.name, role: 'reseller' as UserRole }))
 
-    return [...fromUserOptions, ...fromResellers].sort((a, b) => {
+    return [...fromManagerParents, ...fromManagers, ...fromResellers].sort((a, b) => {
       const roleDiff = SELLER_ROLE_ORDER.indexOf(a.role) - SELLER_ROLE_ORDER.indexOf(b.role)
       return roleDiff !== 0 ? roleDiff : a.name.localeCompare(b.name)
     })
-  }, [resellerQuery.data?.data, user, userOptionsQuery.data?.data])
+  }, [managerParentsQuery.data?.data, managersQuery.data?.data, resellerQuery.data?.data, user])
 
   const selectedSeller = useMemo(
     () =>
@@ -826,7 +833,7 @@ export function CustomersPage() {
                       <ChevronDown className="ms-2 h-4 w-4 shrink-0 opacity-60" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-64">
+                  <DropdownMenuContent align="start" side="bottom" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-64 max-h-80 overflow-y-auto">
                     <DropdownMenuItem onSelect={() => handleSellerChange(null)}>
                       <div className="flex w-full items-center justify-between gap-3">
                         <span>{t('common.allRoles', { defaultValue: 'All roles' })}</span>
