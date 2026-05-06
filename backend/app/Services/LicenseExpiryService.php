@@ -7,8 +7,10 @@ use App\Models\License;
 
 class LicenseExpiryService
 {
-    public function __construct(private readonly ExternalApiService $externalApiService)
-    {
+    public function __construct(
+        private readonly ExternalApiService $externalApiService,
+        private readonly MandiagApiService $mandiagApiService,
+    ) {
     }
 
     public function expireDue(?int $tenantId = null, bool $deactivateExternal = true, int $limit = 500): int
@@ -23,7 +25,7 @@ class LicenseExpiryService
 
         if ($deactivateExternal) {
             $query->with([
-                'program:id,external_api_key_encrypted,external_api_base_url',
+                'program:id,api_type,external_api_key_encrypted,external_api_base_url',
                 'customer:id,username',
             ]);
         }
@@ -41,7 +43,13 @@ class LicenseExpiryService
             try {
                 if ($deactivateExternal) {
                     $program = $license->program;
-                    if ($program) {
+                    if ($program?->isMandiag() && $license->mandiag_license_id) {
+                        $this->mandiagApiService->disableLicense(
+                            (int) $license->mandiag_license_id,
+                            'License expired'
+                        );
+                        $apiResponseText = 'Disabled on Mandiag (auto-expired).';
+                    } elseif ($program) {
                         $apiKey = $program->getDecryptedApiKey();
                         if ($apiKey !== null) {
                             $username = $license->external_username ?: $license->customer?->username ?: $license->bios_id;
