@@ -218,6 +218,12 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
   )
 
   useEffect(() => {
+    if (!isPresetSeller && availablePresets.length > 0) {
+      setMode('preset')
+    }
+  }, [programId, availablePresets.length, isPresetSeller])
+
+  useEffect(() => {
     if (!isPresetSeller && mode !== 'preset') {
       setSelectedPresetId(null)
       return
@@ -682,7 +688,13 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                     </div>
                     {selectedPreset ? (
                       <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • {t('activate.presetPriceSummary', { price: selectedPresetPricing.effectivePrice.toFixed(2), defaultValue: '$ {{price}}' })}
+                        {(function(d: number) {
+                              if (d < 1) return `${Math.round(d * 24)} hours`
+                              if (d % 365 === 0) return `${d / 365} year${d / 365 > 1 ? 's' : ''}`
+                              if (d % 30 === 0) return `${d / 30} month${d / 30 > 1 ? 's' : ''}`
+                              if (d % 7 === 0) return `${d / 7} week${d / 7 > 1 ? 's' : ''}`
+                              return `${d} days`
+                            })(selectedPreset.duration_days)} • {t('activate.presetPriceSummary', { price: selectedPresetPricing.effectivePrice.toFixed(2), defaultValue: '$ {{price}}' })}
                       </p>
                     ) : null}
                   </div>
@@ -694,10 +706,20 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                       <Button type="button" size="sm" variant={mode === 'end_date' ? 'default' : 'outline'} onClick={() => setMode('end_date')}>{t('common.endDate', { defaultValue: 'End Date' })}</Button>
                       {availablePresets.length > 0 ? (
                         <Button type="button" size="sm" variant={mode === 'preset' ? 'default' : 'outline'} onClick={() => setMode('preset')}>
-                          {t('software.durationPresetsTitle', { defaultValue: 'Duration Presets' })}
+                          {t('software.durationPresetsTitle', { defaultValue: 'Duration Presets (for Resellers)' })}
                         </Button>
                       ) : null}
                     </div>
+                    {availablePresets.length > 0 && mode !== 'preset' ? (
+                      <div className="rounded-xl border-2 border-rose-500 bg-rose-50 px-4 py-3 dark:border-rose-500/60 dark:bg-rose-950/30">
+                        <p className="text-sm font-bold text-rose-700 dark:text-rose-300">
+                          ⚠️ {t('activate.presetWarningTitle', { defaultValue: 'Duration & End Date are for display only' })}
+                        </p>
+                        <p className="mt-1 text-sm text-rose-600 dark:text-rose-400">
+                          {t('activate.presetWarningBody', { defaultValue: 'The actual billing and license duration charged to the reseller is controlled by the "Duration Presets (for Resellers)" tab — not by what you set here. Switch to that tab to set the real duration.' })}
+                        </p>
+                      </div>
+                    ) : null}
                     {mode === 'preset' ? (
                       <div className="space-y-2">
                         <div className="flex flex-wrap gap-2">
@@ -715,7 +737,13 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                         </div>
                         {selectedPreset ? (
                           <p className="text-sm text-slate-500 dark:text-slate-400">
-                            {t('activate.presetDurationSummary', { days: Number(selectedPreset.duration_days.toFixed(3)), defaultValue: '{{days}} days' })} • {formatCurrency(selectedPresetPricing.effectivePrice, 'USD', locale)}
+                            {(function(d: number) {
+                              if (d < 1) return `${Math.round(d * 24)} hours`
+                              if (d % 365 === 0) return `${d / 365} year${d / 365 > 1 ? 's' : ''}`
+                              if (d % 30 === 0) return `${d / 30} month${d / 30 > 1 ? 's' : ''}`
+                              if (d % 7 === 0) return `${d / 7} week${d / 7 > 1 ? 's' : ''}`
+                              return `${d} days`
+                            })(selectedPreset.duration_days)} • {formatCurrency(selectedPresetPricing.effectivePrice, 'USD', locale)}
                           </p>
                         ) : null}
                       </div>
