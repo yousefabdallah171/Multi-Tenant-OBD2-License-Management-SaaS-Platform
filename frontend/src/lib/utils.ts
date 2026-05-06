@@ -441,6 +441,13 @@ export function formatLicenseDurationDays(
   }
 
   if (resolvedDurationDays < 1) {
+    const totalMinutes = Math.round(resolvedDurationDays * 24 * 60)
+    if (totalMinutes < 60) {
+      return t('common.durationLabels.minutesValue', {
+        defaultValue: '{{count}} Minutes',
+        count: totalMinutes,
+      })
+    }
     const hours = Math.round(resolvedDurationDays * 24 * 10) / 10
     return t('common.durationLabels.hoursValue', {
       defaultValue: '{{count}} Hours',
