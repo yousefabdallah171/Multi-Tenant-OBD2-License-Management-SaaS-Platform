@@ -248,7 +248,14 @@ export function MandiagDebugPage() {
     {
       key: 'duration_days',
       label: t('managerParent.pages.mandiagDebug.licenses.columns.duration'),
-      render: (row) => `${row.duration_days} days`,
+      render: (row) => {
+        const d = row.duration_days
+        if (d < 1) return `${Math.round(d * 24)} hours`
+        if (d % 365 === 0) return `${d / 365} year${d / 365 > 1 ? 's' : ''}`
+        if (d % 30 === 0) return `${d / 30} month${d / 30 > 1 ? 's' : ''}`
+        if (d % 7 === 0) return `${d / 7} week${d / 7 > 1 ? 's' : ''}`
+        return `${d} days`
+      },
     },
     {
       key: 'status',
