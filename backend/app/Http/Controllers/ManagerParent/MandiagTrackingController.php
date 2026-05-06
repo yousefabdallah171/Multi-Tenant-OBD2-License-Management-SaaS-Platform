@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\ManagerParent;
 
-use App\Http\Controllers\Controller;
+use App\Models\License;
+use App\Models\User;
 use App\Services\MandiagApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
-class MandiagTrackingController extends Controller
+class MandiagTrackingController extends BaseManagerParentController
 {
     public function __construct(private readonly MandiagApiService $mandiagApiService)
     {
@@ -17,42 +18,36 @@ class MandiagTrackingController extends Controller
     public function summary(Request $request): JsonResponse
     {
         $period   = $this->normalizePeriod($request->query('period', 'month'));
-        $tenantId = (int) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId($request);
         $cacheKey = "mandiag_summary_{$tenantId}_{$period}";
 
-        $data = Cache::remember($cacheKey, 30, function () use ($period): array {
-            $balance    = $this->mandiagApiService->getBalance();
-            $commission = null;
-            try {
-                $raw = $this->mandiagApiService->getCommission($period);
-                if (($raw['success'] ?? false) === true) {
-                    $commission = $raw['data'] ?? $raw;
-                }
-            } catch (\Throwable) {
-                // commission endpoint unavailable — fall back to reseller rollup
-            }
+        $data = Cache::remember($cacheKey, 30, function () use ($period, $tenantId): array {
+            $tenantSubIds = $this->tenantMandiagSubIds($tenantId);
 
-            // Fall back: compute totals from /resellers if /commission fails
-            if ($commission === null) {
-                $resellers  = $this->mandiagApiService->getResellers($period);
-                $items      = $resellers['data']['items'] ?? [];
-                $commission = [
-                    'revenue_total'      => array_sum(array_column(array_column($items, 'stats'), 'revenue_total')),
-                    'manager_cost_total' => array_sum(array_column(array_column($items, 'stats'), 'manager_cost_total')),
-                    'commission_total'   => array_sum(array_column(array_column($items, 'stats'), 'commission')),
-                    'activations_count'  => array_sum(array_column(array_column($items, 'stats'), 'activations_count')),
-                    'sub_reseller_count' => count($items),
-                ];
-            }
+            $allResellers = $this->mandiagApiService->getResellers($period);
+            $items        = $allResellers['data']['items'] ?? [];
+            $items        = is_array($items) ? $items : [];
+
+            // Filter to resellers that belong to this tenant
+            $filtered = array_values(array_filter(
+                $items,
+                fn (array $item): bool => in_array($item['sub_id'] ?? '', $tenantSubIds, true)
+            ));
+
+            $stats = array_column($filtered, 'stats');
 
             return [
-                'total_revenue'      => $commission['revenue_total']      ?? 0,
-                'total_manager_cost' => $commission['manager_cost_total'] ?? 0,
-                'net_commission'     => $commission['commission_total']    ?? 0,
-                'balance'            => $balance['data']['manager_balance_total'] ?? 0,
-                'active_resellers'   => $commission['sub_reseller_count'] ?? $balance['data']['sub_reseller_count'] ?? 0,
-                'total_licenses'     => $balance['data']['license_count'] ?? 0,
-                'activations_count'  => $commission['activations_count']  ?? 0,
+                'total_revenue'      => array_sum(array_column($stats, 'revenue_total')),
+                'total_manager_cost' => array_sum(array_column($stats, 'manager_cost_total')),
+                'net_commission'     => array_sum(array_column($stats, 'commission')),
+                'balance'            => 0,
+                'active_resellers'   => count($filtered),
+                'total_licenses'     => License::query()
+                    ->where('tenant_id', $tenantId)
+                    ->whereNotNull('mandiag_license_id')
+                    ->whereIn('status', ['active', 'suspended'])
+                    ->count(),
+                'activations_count'  => array_sum(array_column($stats, 'activations_count')),
                 'period'             => $period,
             ];
         });
@@ -63,15 +58,21 @@ class MandiagTrackingController extends Controller
     public function resellers(Request $request): JsonResponse
     {
         $period   = $this->normalizePeriod($request->query('period', 'month'));
-        $tenantId = (int) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId($request);
         $cacheKey = "mandiag_resellers_{$tenantId}_{$period}";
 
-        // GET /resellers?include_stats=1&period={period} → data.items[]
-        // Each item: { sub_id, realname, status, ..., stats: { activations_count, revenue_total, manager_cost_total, commission } }
-        $data = Cache::remember($cacheKey, 30, function () use ($period): array {
+        $data = Cache::remember($cacheKey, 30, function () use ($period, $tenantId): array {
+            $tenantSubIds = $this->tenantMandiagSubIds($tenantId);
+
             $response = $this->mandiagApiService->getResellers($period);
             $list     = $response['data']['items'] ?? [];
-            return is_array($list) ? array_values($list) : [];
+            $list     = is_array($list) ? $list : [];
+
+            // Filter to this tenant's sub-resellers only
+            return array_values(array_filter(
+                $list,
+                fn (array $item): bool => in_array($item['sub_id'] ?? '', $tenantSubIds, true)
+            ));
         });
 
         return response()->json(['data' => $data]);
@@ -81,24 +82,58 @@ class MandiagTrackingController extends Controller
     {
         $page     = max(1, (int) $request->query('page', 1));
         $perPage  = min(100, max(10, (int) $request->query('per_page', 25)));
-        $tenantId = (int) auth()->user()?->tenant_id;
-        $cacheKey = "mandiag_licenses_{$tenantId}_{$page}_{$perPage}";
+        $tenantId = $this->currentTenantId($request);
 
-        // GET /licenses?page=&per_page= → data.items[], data.pagination.{ page, per_page, total, total_pages }
-        $data = Cache::remember($cacheKey, 30, function () use ($page, $perPage): array {
-            $response   = $this->mandiagApiService->getLicenses($page, $perPage);
-            $pagination = $response['data']['pagination'] ?? [];
+        // Serve from local DB scoped to this tenant — avoids cross-tenant data leaks
+        $paginator = License::query()
+            ->select([
+                'id', 'mandiag_license_id', 'status', 'bios_id', 'external_username',
+                'duration_days', 'starts_at', 'expires_at', 'program_id', 'reseller_id',
+            ])
+            ->with(['program:id,name,mandiag_software_key', 'reseller:id,name'])
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('mandiag_license_id')
+            ->latest('id')
+            ->paginate($perPage, ['*'], 'page', $page);
 
-            return [
-                'licenses'     => $response['data']['items'] ?? [],
-                'total'        => $pagination['total']       ?? null,
-                'per_page'     => $pagination['per_page']    ?? $perPage,
-                'current_page' => $pagination['page']        ?? $page,
-                'last_page'    => $pagination['total_pages'] ?? null,
-            ];
-        });
+        $licenses = collect($paginator->items())->map(fn (License $l): array => [
+            'id'                  => $l->id,
+            'mandiag_license_id'  => $l->mandiag_license_id,
+            'status'              => $l->status,
+            'bios_id'             => $l->bios_id,
+            'external_username'   => $l->external_username,
+            'duration_days'       => $l->duration_days,
+            'activated_at'        => $l->starts_at?->toIso8601String(),
+            'expires_at'          => $l->expires_at?->toIso8601String(),
+            'reseller_name'       => $l->reseller?->name,
+            'program_name'        => $l->program?->name,
+            'software_key'        => $l->program?->mandiag_software_key,
+        ])->values();
 
-        return response()->json(['data' => $data]);
+        return response()->json([
+            'data' => [
+                'licenses'     => $licenses,
+                'total'        => $paginator->total(),
+                'per_page'     => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * Returns the set of mandiag_sub_id values for resellers in this tenant.
+     *
+     * @return string[]
+     */
+    private function tenantMandiagSubIds(int $tenantId): array
+    {
+        return User::query()
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('mandiag_sub_id')
+            ->pluck('mandiag_sub_id')
+            ->map(fn ($v): string => (string) $v)
+            ->all();
     }
 
     private function normalizePeriod(mixed $value): string

@@ -182,9 +182,32 @@ class MandiagDebugController extends BaseManagerParentController
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
+        $tenantId = $this->currentTenantId($request);
+
+        // MandiagWebhookEvent has no tenant_id — scope by mandiag_license_ids belonging to this tenant
+        $tenantMandiagLicenseIds = License::query()
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('mandiag_license_id')
+            ->pluck('mandiag_license_id')
+            ->map(fn ($v): string => (string) $v)
+            ->all();
+
         $query = MandiagWebhookEvent::query()
             ->select(['id', 'event_id', 'event_type', 'payload', 'occurred_at', 'processed_at'])
-            ->latest('processed_at');
+            ->where(function ($q) use ($tenantMandiagLicenseIds): void {
+                if (! empty($tenantMandiagLicenseIds)) {
+                    $placeholders = implode(',', array_fill(0, count($tenantMandiagLicenseIds), '?'));
+                    // Events whose license_id is in tenant's licenses, or events with no license_id
+                    $q->whereRaw(
+                        "CAST(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.data.license_id')) AS CHAR) IN ({$placeholders})",
+                        $tenantMandiagLicenseIds
+                    )->orWhereRaw("JSON_EXTRACT(payload, '$.data.license_id') IS NULL");
+                } else {
+                    // Tenant has no Mandiag licenses — only show events not tied to a license
+                    $q->whereRaw("JSON_EXTRACT(payload, '$.data.license_id') IS NULL");
+                }
+            })
+            ->latest('id');
 
         if (! empty($validated['event_type'])) {
             $query->where('event_type', (string) $validated['event_type']);
