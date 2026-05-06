@@ -9,6 +9,7 @@ use App\Models\Program;
 use App\Models\User;
 use App\Services\ExternalApiService;
 use App\Services\LicenseService;
+use App\Services\MandiagApiService;
 use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,7 @@ class LicenseController extends BaseSuperAdminController
     public function __construct(
         private LicenseService $licenseService,
         private ExternalApiService $externalApiService,
+        private MandiagApiService $mandiagApiService,
     ) {}
 
     public function expiring(): JsonResponse
@@ -190,25 +192,30 @@ class LicenseController extends BaseSuperAdminController
     {
         $license->loadMissing(['program', 'customer', 'reseller']);
         $program = $license->program;
-        $apiKey = $program?->getDecryptedApiKey();
         $externalResponse = 'Local-only force expiration.';
 
-        if ($apiKey !== null && $license->external_username) {
-            try {
+        try {
+            if ($program?->isMandiag() && $license->mandiag_license_id) {
+                $this->mandiagApiService->disableLicense(
+                    (int) $license->mandiag_license_id,
+                    'Force expired by super admin'
+                );
+                $externalResponse = 'Disabled on Mandiag (force expired by super admin).';
+            } elseif ($program && ($apiKey = $program->getDecryptedApiKey()) && $license->external_username) {
                 $response = $this->externalApiService->deactivateUser(
                     $apiKey,
                     (string) $license->external_username,
-                    $program?->external_api_base_url,
+                    $program->external_api_base_url,
                 );
                 $externalResponse = (string) ($response['data']['response'] ?? $externalResponse);
-            } catch (\Throwable $exception) {
-                Log::warning('Super admin force-expire external deactivation failed.', [
-                    'license_id' => $license->id,
-                    'bios_id' => $license->bios_id,
-                    'message' => $exception->getMessage(),
-                ]);
-                $externalResponse = 'External deactivation failed; license expired locally.';
             }
+        } catch (\Throwable $exception) {
+            Log::warning('Super admin force-expire external deactivation failed.', [
+                'license_id' => $license->id,
+                'bios_id' => $license->bios_id,
+                'message' => $exception->getMessage(),
+            ]);
+            $externalResponse = 'External deactivation failed; license expired locally.';
         }
 
         $expired = DB::transaction(function () use ($license, $request, $externalResponse): License {
