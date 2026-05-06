@@ -314,7 +314,11 @@ class BiosDetailsService
         $matched = Cache::get($cacheKey);
 
         if (! is_array($matched)) {
-            $response = $this->externalApiService->getGlobalLogs();
+            try {
+                $response = $this->externalApiService->getGlobalLogs();
+            } catch (\Throwable) {
+                return [];
+            }
             if (! ($response['success'] ?? false)) {
                 return [];
             }
