@@ -22,18 +22,37 @@ class MandiagTrackingController extends Controller
 
         $data = Cache::remember($cacheKey, 300, function () use ($period): array {
             $balance    = $this->mandiagApiService->getBalance();
-            $commission = $this->mandiagApiService->getCommission($period);
+            $commission = null;
+            try {
+                $raw = $this->mandiagApiService->getCommission($period);
+                if (($raw['success'] ?? false) === true) {
+                    $commission = $raw['data'] ?? $raw;
+                }
+            } catch (\Throwable) {
+                // commission endpoint unavailable — fall back to reseller rollup
+            }
 
-            // GET /balance     → data.manager_balance_total, data.license_count, data.sub_reseller_count
-            // GET /commission  → data.revenue_total, data.manager_cost_total, data.commission_total, data.sub_reseller_count, data.activations_count
+            // Fall back: compute totals from /resellers if /commission fails
+            if ($commission === null) {
+                $resellers  = $this->mandiagApiService->getResellers($period);
+                $items      = $resellers['data']['items'] ?? [];
+                $commission = [
+                    'revenue_total'      => array_sum(array_column(array_column($items, 'stats'), 'revenue_total')),
+                    'manager_cost_total' => array_sum(array_column(array_column($items, 'stats'), 'manager_cost_total')),
+                    'commission_total'   => array_sum(array_column(array_column($items, 'stats'), 'commission')),
+                    'activations_count'  => array_sum(array_column(array_column($items, 'stats'), 'activations_count')),
+                    'sub_reseller_count' => count($items),
+                ];
+            }
+
             return [
-                'total_revenue'      => $commission['data']['revenue_total']      ?? 0,
-                'total_manager_cost' => $commission['data']['manager_cost_total'] ?? 0,
-                'net_commission'     => $commission['data']['commission_total']    ?? 0,
+                'total_revenue'      => $commission['revenue_total']      ?? 0,
+                'total_manager_cost' => $commission['manager_cost_total'] ?? 0,
+                'net_commission'     => $commission['commission_total']    ?? 0,
                 'balance'            => $balance['data']['manager_balance_total'] ?? 0,
-                'active_resellers'   => $commission['data']['sub_reseller_count'] ?? $balance['data']['sub_reseller_count'] ?? 0,
-                'total_licenses'     => $balance['data']['license_count']          ?? 0,
-                'activations_count'  => $commission['data']['activations_count']   ?? 0,
+                'active_resellers'   => $commission['sub_reseller_count'] ?? $balance['data']['sub_reseller_count'] ?? 0,
+                'total_licenses'     => $balance['data']['license_count'] ?? 0,
+                'activations_count'  => $commission['activations_count']  ?? 0,
                 'period'             => $period,
             ];
         });
