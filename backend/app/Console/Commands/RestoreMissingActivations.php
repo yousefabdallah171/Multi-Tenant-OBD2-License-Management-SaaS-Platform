@@ -101,17 +101,6 @@ class RestoreMissingActivations extends Command
             $log->updated_at = $createdAt;
             $log->save();
 
-            // Use BalanceService to add revenue back to reseller
-            $balanceService = app(BalanceService::class);
-            $balanceService->applyTransaction(
-                $license->reseller_id,
-                $restorePrice,
-                'credit',
-                'revenue_restored',
-                $log->id,
-                "Restored missing revenue for BIOS {$license->bios_id}"
-            );
-
             $this->info("Restored activation for BIOS: {$license->bios_id} at {$createdAt}");
             $restoredCount++;
         }
