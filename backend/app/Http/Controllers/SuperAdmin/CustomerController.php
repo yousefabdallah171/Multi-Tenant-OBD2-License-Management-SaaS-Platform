@@ -1106,7 +1106,7 @@ class CustomerController extends BaseSuperAdminController
                     $q->whereJsonContains('metadata->license_id', $license->id)
                         ->orWhereRaw("JSON_EXTRACT(metadata, '$.license_id') = ?", [(int) $license->id]);
                 })
-                ->where('metadata->price_source', 'super_admin_override')
+                ->where('metadata->price_source', 'super_admin_override_backfill')
                 ->where('id', '!=', $revenueLogs->max('id'))
                 ->delete();
         } else {
