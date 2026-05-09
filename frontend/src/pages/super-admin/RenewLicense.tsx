@@ -11,7 +11,6 @@ export function RenewLicensePageForSuperAdmin() {
       invalidateQueryKey={['super-admin']}
       eyebrow={t('roles.super_admin')}
       cachePattern={/^super-admin:/}
-      presetOnly
     />
   )
 }
