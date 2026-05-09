@@ -1094,6 +1094,11 @@ class CustomerController extends BaseSuperAdminController
                 $metadata['country_name'] = $customer->country_name;
                 $metadata['price_source'] = 'super_admin_override';
                 $metadata['price_override_previous'] = $oldLoggedPrice;
+                
+                if ($newPrice > 0) {
+                    $metadata['attribution_type'] = 'earned';
+                }
+
                 $revenueLog->forceFill(['metadata' => $metadata])->save();
 
                 $this->applyBalanceDifference($revenueLog, round($newPrice - $oldLoggedPrice, 2));
