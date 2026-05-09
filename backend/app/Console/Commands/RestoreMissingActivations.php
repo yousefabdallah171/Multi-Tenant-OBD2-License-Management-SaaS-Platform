@@ -15,6 +15,20 @@ class RestoreMissingActivations extends Command
 
     public function handle(): int
     {
+        $this->info('Fixing timestamps for previously restored logs...');
+        $restoredLogs = ActivityLog::where('metadata->restored_by_script', true)->get();
+        $fixedCount = 0;
+        foreach ($restoredLogs as $log) {
+            $license = License::find($log->metadata['license_id']);
+            if ($license && $log->created_at->format('Y-m-d H:i:s') !== $license->activated_at->format('Y-m-d H:i:s')) {
+                $log->timestamps = false;
+                $log->created_at = $license->activated_at;
+                $log->save();
+                $fixedCount++;
+            }
+        }
+        $this->info("Fixed timestamps for {$fixedCount} previously restored logs.");
+
         $this->info('Scanning licenses for missing activation logs...');
 
         // Get all licenses that have a reseller (to restore earned revenue)
@@ -48,7 +62,7 @@ class RestoreMissingActivations extends Command
                 }
 
                 // Create the missing activation log
-                ActivityLog::query()->create([
+                $log = new ActivityLog([
                     'tenant_id' => $license->tenant_id,
                     'user_id' => $license->reseller_id,
                     'action' => 'license.activated',
@@ -66,9 +80,12 @@ class RestoreMissingActivations extends Command
                         'restored_by_script' => true,
                     ],
                     'ip_address' => '127.0.0.1', // System restored
-                    'created_at' => $license->activated_at, // Very important: restore the original date!
-                    'updated_at' => now(),
                 ]);
+                $log->timestamps = false;
+                $log->created_at = $license->activated_at;
+                $log->updated_at = now();
+                $log->save();
+
 
                 $restoredCount++;
                 $this->line("Restored activation for BIOS: {$license->bios_id} at {$license->activated_at}");
