@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
 use App\Models\License;
-use App\Support\BalanceService;
+use App\Services\BalanceService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
