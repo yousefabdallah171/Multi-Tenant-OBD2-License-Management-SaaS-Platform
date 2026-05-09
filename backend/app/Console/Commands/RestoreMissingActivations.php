@@ -3,110 +3,77 @@
 namespace App\Console\Commands;
 
 use App\Models\ActivityLog;
-use App\Models\License;
-use App\Services\BalanceService;
 use Illuminate\Console\Command;
+use Carbon\Carbon;
 
 class RestoreMissingActivations extends Command
 {
     protected $signature = 'logs:restore-missing-activations';
-    protected $description = 'Restores deleted license.activated logs caused by the super_admin_override bug.';
+    protected $description = 'Safely restores missing revenue for zero-priced operations without duplicating activations.';
 
     public function handle(): int
     {
-        $this->info('Scanning licenses for strictly missing activation logs caused by the renewal bug...');
+        $this->info('Step 1: Removing all incorrectly restored script logs...');
+        $deleted = ActivityLog::where('metadata->restored_by_script', true)->delete();
+        $this->info("Deleted {$deleted} artificially restored logs.");
 
-        $licenses = License::query()
-            ->with(['customer', 'program'])
-            ->whereNotNull('reseller_id')
-            ->whereNotNull('activated_at')
+        $this->info('Step 2: Scanning for completely zero-revenue days to fix...');
+        
+        $revenueLogs = ActivityLog::query()
+            ->whereIn('action', ['license.renewed', 'license.activated'])
+            ->orderBy('id', 'asc')
             ->get();
 
-        $restoredCount = 0;
+        $logsByBios = $revenueLogs->groupBy(function($log) {
+            return $log->metadata['bios_id'] ?? 'UNKNOWN';
+        });
 
-        foreach ($licenses as $license) {
-            // 1. Check if this license has a renewal log
-            $renewalLogs = ActivityLog::query()
-                ->where('action', 'license.renewed')
-                ->where('metadata->license_id', (int) $license->id)
-                ->orderBy('id', 'asc')
-                ->get();
+        $fixedCount = 0;
 
-            if ($renewalLogs->isEmpty()) {
-                continue; // Only targeting licenses that were renewed
-            }
+        foreach ($logsByBios as $biosId => $logs) {
+            if ($biosId === 'UNKNOWN') continue;
 
-            // 2. Check if there was a price override AFTER the first renewal
-            $firstRenewal = $renewalLogs->first();
-            $overrideAfterRenewal = ActivityLog::query()
+            // Find the most recent price override for this BIOS to know the true intended price
+            $overrideLog = ActivityLog::query()
                 ->where('action', 'customer.price_overridden')
-                ->where('metadata->license_id', (int) $license->id)
-                ->where('id', '>', $firstRenewal->id)
+                ->whereJsonContains('metadata->bios_id', $biosId)
+                ->orderBy('id', 'desc')
                 ->first();
 
-            if (!$overrideAfterRenewal) {
-                continue; // Bug wasn't triggered after renewal
+            if (!$overrideLog) continue;
+            
+            $targetPrice = (float) ($overrideLog->metadata['new_price'] ?? 0);
+            if ($targetPrice <= 0) continue;
+
+            // Group the revenue logs by day
+            $logsByDay = $logs->groupBy(function($log) {
+                return Carbon::parse($log->created_at)->format('Y-m-d');
+            });
+
+            foreach ($logsByDay as $day => $dayLogs) {
+                $totalRevenueForDay = $dayLogs->sum(function($log) {
+                    return (float) ($log->metadata['price'] ?? 0);
+                });
+                
+                // If the entire day yielded $0 revenue despite having operations,
+                // and the Super Admin intended the price to be $targetPrice, we fix exactly ONE log.
+                if ($totalRevenueForDay == 0) {
+                    $logToFix = $dayLogs->first();
+                    
+                    $meta = is_array($logToFix->metadata) ? $logToFix->metadata : json_decode($logToFix->metadata, true);
+                    $meta['price'] = $targetPrice;
+                    $meta['fixed_by_script'] = true;
+                    
+                    $logToFix->metadata = $meta;
+                    $logToFix->save();
+
+                    $this->info("Fixed zero-revenue operation for BIOS {$biosId} on {$day} to \${$targetPrice}");
+                    $fixedCount++;
+                }
             }
-
-            // 3. Check if it already has an activation log
-            $hasActivation = ActivityLog::query()
-                ->where('action', 'license.activated')
-                ->where('metadata->license_id', (int) $license->id)
-                ->exists();
-
-            if ($hasActivation) {
-                continue;
-            }
-
-            // 4. Determine the original price before the override if possible
-            $restorePrice = $license->price;
-            $firstOverride = ActivityLog::query()
-                ->where('action', 'customer.price_overridden')
-                ->where('metadata->license_id', (int) $license->id)
-                ->orderBy('id', 'asc')
-                ->first();
-
-            if ($firstOverride && isset($firstOverride->metadata['old_price'])) {
-                $restorePrice = $firstOverride->metadata['old_price'];
-            }
-
-            // Create the missing activation log
-            $createdAt = $license->customer->created_at ?? $license->created_at;
-
-            $log = new ActivityLog([
-                'tenant_id' => $license->tenant_id,
-                'user_id' => $license->reseller_id,
-                'action' => 'license.activated',
-                'description' => sprintf('Activated license for BIOS %s. (Restored)', $license->bios_id),
-                'metadata' => [
-                    'license_id' => $license->id,
-                    'customer_id' => $license->customer_id,
-                    'target_user_id' => $license->customer_id,
-                    'program_id' => $license->program_id,
-                    'bios_id' => $license->bios_id,
-                    'external_username' => $license->external_username,
-                    'price' => (float) $restorePrice,
-                    'country_name' => $license->customer->country_name ?? null,
-                    'restored_by_script' => true,
-                    'attribution_type' => 'earned',
-                    'actor_id' => $license->reseller_id,
-                    'actor_role' => 'reseller',
-                    'seller_id' => $license->reseller_id,
-                    'seller_role' => 'reseller',
-                ],
-            ]);
-
-            $log->timestamps = false;
-            $log->created_at = $createdAt;
-            $log->updated_at = $createdAt;
-            $log->save();
-
-            $this->info("Restored activation for BIOS: {$license->bios_id} at {$createdAt}");
-            $restoredCount++;
         }
 
-        $this->info("Done! Restored {$restoredCount} missing activation logs.");
-
+        $this->info("Done! Fixed {$fixedCount} zero-revenue operations.");
         return self::SUCCESS;
     }
 }
