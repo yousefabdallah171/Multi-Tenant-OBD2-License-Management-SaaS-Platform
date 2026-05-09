@@ -62,6 +62,7 @@ class RestoreMissingActivations extends Command
                     
                     $meta = is_array($logToFix->metadata) ? $logToFix->metadata : json_decode($logToFix->metadata, true);
                     $meta['price'] = $targetPrice;
+                    $meta['attribution_type'] = 'earned';
                     $meta['fixed_by_script'] = true;
                     
                     $logToFix->metadata = $meta;
