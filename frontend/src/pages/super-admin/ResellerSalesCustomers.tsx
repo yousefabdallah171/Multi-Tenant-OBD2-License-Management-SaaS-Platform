@@ -29,6 +29,7 @@ export function ResellerSalesCustomersPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(25)
 
   const filters = useMemo<ManagerParentSalesCustomerFilters>(() => ({
     search: search || undefined,
@@ -37,8 +38,8 @@ export function ResellerSalesCustomersPage() {
     from: from || undefined,
     to: to || undefined,
     page,
-    per_page: 25,
-  }), [countryName, from, page, programId, search, to])
+    per_page: perPage,
+  }), [countryName, from, page, perPage, programId, search, to])
 
   const salesQuery = useQuery({
     queryKey: ['super-admin', 'reseller-payments', 'reseller-customers', resolvedResellerId, filters],
@@ -198,20 +199,25 @@ export function ResellerSalesCustomersPage() {
         </div>
       </div>
 
-      <DataTable tableKey="super_admin_reseller_sales_customers" columns={columns} data={rows} rowKey={(row) => `${row.license_id ?? 'no-license'}-${row.sale_date ?? ''}-${row.customer_id ?? 'no-customer'}`} isLoading={salesQuery.isLoading} emptyMessage={t('payments.managerParentCustomers.empty')} />
-
-      <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
-        <span>{t('common.totalCount', { count: meta?.total ?? 0 })}</span>
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" disabled={!meta || page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
-            {t('common.previous')}
-          </Button>
-          <span>{meta ? `${meta.current_page} / ${meta.last_page}` : '1 / 1'}</span>
-          <Button type="button" variant="outline" size="sm" disabled={!meta || page >= meta.last_page} onClick={() => setPage((current) => current + 1)}>
-            {t('common.next')}
-          </Button>
-        </div>
-      </div>
+      <DataTable 
+        tableKey="super_admin_reseller_sales_customers" 
+        columns={columns} 
+        data={rows} 
+        rowKey={(row) => `${row.license_id ?? 'no-license'}-${row.sale_date ?? ''}-${row.customer_id ?? 'no-customer'}`} 
+        isLoading={salesQuery.isLoading} 
+        emptyMessage={t('payments.managerParentCustomers.empty')} 
+        pagination={{
+          page: meta?.current_page ?? page,
+          lastPage: meta?.last_page ?? 1,
+          total: meta?.total ?? 0,
+          perPage: meta?.per_page ?? perPage,
+        }}
+        onPageChange={setPage}
+        onPageSizeChange={(newSize) => {
+          setPerPage(newSize)
+          setPage(1)
+        }}
+      />
     </div>
   )
 }
