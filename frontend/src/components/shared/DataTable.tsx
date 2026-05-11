@@ -80,7 +80,7 @@ export function DataTable<T>({
       })),
     [columns],
   )
-  const { visibleColumnSet, lockedColumns, toggleColumn, isLoading: preferencesLoading } = useTablePreferences({
+  const { visibleColumnSet, lockedColumns, toggleColumn } = useTablePreferences({
     tableKey,
     columns: preferenceColumns,
     perPage: pagination?.perPage,
@@ -161,7 +161,27 @@ export function DataTable<T>({
   return (
     <Card className="overflow-hidden">
       {tableKey ? (
-        <div className="flex justify-end border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          {onPageSizeChange && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Per page:</span>
+              {[10, 25, 50, 100].map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => onPageSizeChange(size)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    pagination?.perPage === size
+                      ? 'bg-blue-500 text-white'
+                      : 'border border-slate-300 bg-white text-slate-950 hover:border-blue-300 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:hover:border-blue-400'
+                  }`}
+                  aria-label={`Show ${size} items per page`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          )}
           <TableScreenOptions
             columns={screenOptionColumns.map((column) => ({
               key: column.key,
@@ -169,11 +189,7 @@ export function DataTable<T>({
               locked: lockedColumns.includes(column.key),
               visible: visibleColumnSet.has(column.key),
             }))}
-            pageSize={pagination?.perPage ?? null}
-            pageSizeOptions={pageSizeOptions}
             onToggleColumn={toggleColumn}
-            onPageSizeChange={handlePageSizeChange}
-            isLoading={preferencesLoading}
           />
         </div>
       ) : null}
