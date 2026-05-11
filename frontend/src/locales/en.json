@@ -185,6 +185,8 @@
     "screenOptions": "Screen Options",
     "pagination": "Pagination",
     "totalCount": "{{count}} total",
+    "itemRange": "Showing {{start}}-{{end}} of {{total}} items",
+    "noItems": "No items",
     "selectAllVisible": "Select all visible",
     "clearVisible": "Clear visible",
     "clearSelection": "Clear selection",

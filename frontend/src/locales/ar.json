@@ -183,6 +183,8 @@
     "screenOptions": "خيارات الشاشة",
     "pagination": "الترقيم",
     "totalCount": "الإجمالي {{count}}",
+    "itemRange": "عرض {{start}}-{{end}} من {{total}} عنصر",
+    "noItems": "لا توجد عناصر",
     "selectAllVisible": "تحديد الظاهر",
     "clearVisible": "إلغاء الظاهر",
     "clearSelection": "إلغاء التحديد",

@@ -83,8 +83,6 @@ export function DataTable<T>({
     onPerPageChange: onPageSizeChange,
   })
 
-  const handlePageSizeChange = (nextPageSize: number) => onPageSizeChange?.(nextPageSize)
-
   const visibleColumns = useMemo(() => columns.filter((column) => visibleColumnSet.has(column.key)), [columns, visibleColumnSet])
 
   const filteredData = useMemo(() => {
@@ -256,36 +254,26 @@ export function DataTable<T>({
       </div>
       {pagination && onPageChange ? (
         <div className="dashboard-text-body flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-          <span>{t('common.totalCount', { count: pagination.total })}</span>
-          <div className="flex flex-wrap items-center gap-3">
-            {onPageSizeChange && !tableKey ? (
-              <label className="flex items-center gap-2">
-                <span>{t('common.rowsPerPage')}</span>
-                <select
-                  aria-label={t('common.rowsPerPage')}
-                  className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                  value={pagination.perPage ?? 10}
-                  onChange={(event) => handlePageSizeChange(Number(event.target.value))}
-                >
-                  {[10, 25, 50, 100].map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" size="sm" disabled={pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)}>
-                {t('common.previous')}
-              </Button>
-              <span>
-                {pagination.page} / {pagination.lastPage}
-              </span>
-              <Button type="button" variant="ghost" size="sm" disabled={pagination.page >= pagination.lastPage} onClick={() => onPageChange(pagination.page + 1)}>
-                {t('common.next')}
-              </Button>
-            </div>
+          <span>
+            {pagination.total === 0
+              ? t('common.noItems', { defaultValue: 'No items' })
+              : t('common.itemRange', {
+                  defaultValue: 'Showing {{start}}-{{end}} of {{total}} items',
+                  start: (pagination.page - 1) * (pagination.perPage ?? 10) + 1,
+                  end: Math.min(pagination.page * (pagination.perPage ?? 10), pagination.total),
+                  total: pagination.total
+                })}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="sm" disabled={pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)}>
+              {t('common.previous')}
+            </Button>
+            <span>
+              {pagination.page} / {pagination.lastPage}
+            </span>
+            <Button type="button" variant="ghost" size="sm" disabled={pagination.page >= pagination.lastPage} onClick={() => onPageChange(pagination.page + 1)}>
+              {t('common.next')}
+            </Button>
           </div>
         </div>
       ) : null}
