@@ -13,13 +13,11 @@ interface TableScreenOptionsProps {
     visible: boolean
   }>
   onToggleColumn: (columnKey: string) => void
-  isLoading?: boolean
 }
 
 export function TableScreenOptions({
   columns,
   onToggleColumn,
-  isLoading = false,
 }: TableScreenOptionsProps) {
   const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
@@ -147,7 +145,6 @@ export function TableScreenOptions({
         aria-haspopup="dialog"
         className={cn(
           'rounded-xl md:text-base',
-          isLoading && 'opacity-100',
         )}
         onClick={handleToggle}
       >
