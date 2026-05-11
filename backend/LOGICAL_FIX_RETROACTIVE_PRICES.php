@@ -148,7 +148,7 @@ foreach ($multiTransactions as $combo) {
             $firstCurrentPrice = (float)$firstMeta['price'];
 
             // If they don't match, first log was wrongly changed
-            if ($claimedOriginal !== $firstCurrentPrice && !$firstMeta['price_fixed']) {
+            if ($claimedOriginal !== $firstCurrentPrice && !($firstMeta['price_fixed'] ?? false)) {
                 $customer = $loadUsers->get($combo->customer_id);
                 $reseller = $loadUsers->get($combo->reseller_id);
 
