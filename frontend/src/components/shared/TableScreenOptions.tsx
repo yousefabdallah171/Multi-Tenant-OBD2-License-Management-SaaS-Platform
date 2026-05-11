@@ -12,19 +12,13 @@ interface TableScreenOptionsProps {
     locked: boolean
     visible: boolean
   }>
-  pageSize: number | null
-  pageSizeOptions?: number[]
   onToggleColumn: (columnKey: string) => void
-  onPageSizeChange?: (pageSize: number) => void
   isLoading?: boolean
 }
 
 export function TableScreenOptions({
   columns,
-  pageSize,
-  pageSizeOptions = [10, 25, 50, 100],
   onToggleColumn,
-  onPageSizeChange,
   isLoading = false,
 }: TableScreenOptionsProps) {
   const { t } = useTranslation()
@@ -137,34 +131,6 @@ export function TableScreenOptions({
             </div>
           </div>
 
-          {onPageSizeChange ? (
-            <>
-              <div className="my-3 h-px bg-slate-200 dark:bg-slate-800" />
-              <div className="space-y-2">
-                <p className="dashboard-text-label text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 md:text-base">
-                  {t('common.pagination', { defaultValue: 'Pagination' })}
-                </p>
-                <div className="grid grid-cols-4 gap-2">
-                  {pageSizeOptions.map((option) => (
-                    <Button
-                      key={option}
-                      type="button"
-                      size="sm"
-                      variant={pageSize === option ? 'default' : 'outline'}
-                      className="h-10 rounded-lg px-3 text-sm md:h-11 md:px-4 md:text-base"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onPageSizeChange(option)
-                        setIsOpen(false)
-                      }}
-                    >
-                      {option}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </>
-          ) : null}
         </div>,
         document.body,
       )
