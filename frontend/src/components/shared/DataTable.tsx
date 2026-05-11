@@ -38,8 +38,6 @@ interface DataTableProps<T> {
   }
   onPageChange?: (page: number) => void
   onPageSizeChange?: (pageSize: number) => void
-  pageSizeOptions?: number[]
-  hidePageSizeSelector?: boolean
   tableKey?: string
 }
 
@@ -55,8 +53,6 @@ export function DataTable<T>({
   pagination,
   onPageChange,
   onPageSizeChange,
-  pageSizeOptions = [10, 25, 50, 100],
-  hidePageSizeSelector = false,
   tableKey,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
@@ -85,7 +81,6 @@ export function DataTable<T>({
     columns: preferenceColumns,
     perPage: pagination?.perPage,
     onPerPageChange: onPageSizeChange,
-    pageSizeOptions,
   })
 
   const handlePageSizeChange = (nextPageSize: number) => onPageSizeChange?.(nextPageSize)
@@ -170,6 +165,7 @@ export function DataTable<T>({
                   key={size}
                   type="button"
                   onClick={() => onPageSizeChange(size)}
+                  aria-current={pagination?.perPage === size ? 'page' : undefined}
                   className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                     pagination?.perPage === size
                       ? 'bg-blue-500 text-white'
@@ -262,16 +258,16 @@ export function DataTable<T>({
         <div className="dashboard-text-body flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
           <span>{t('common.totalCount', { count: pagination.total })}</span>
           <div className="flex flex-wrap items-center gap-3">
-            {onPageSizeChange && !hidePageSizeSelector && !tableKey ? (
+            {onPageSizeChange && !tableKey ? (
               <label className="flex items-center gap-2">
                 <span>{t('common.rowsPerPage')}</span>
                 <select
                   aria-label={t('common.rowsPerPage')}
                   className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                  value={pagination.perPage ?? pageSizeOptions[0]}
+                  value={pagination.perPage ?? 10}
                   onChange={(event) => handlePageSizeChange(Number(event.target.value))}
                 >
-                  {pageSizeOptions.map((option) => (
+                  {[10, 25, 50, 100].map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
