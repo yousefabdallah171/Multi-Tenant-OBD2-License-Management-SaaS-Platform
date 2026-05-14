@@ -7,7 +7,7 @@ use App\Models\License;
 use App\Models\TransactionEdit;
 use App\Models\User;
 use App\Support\LicenseCacheInvalidation;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
