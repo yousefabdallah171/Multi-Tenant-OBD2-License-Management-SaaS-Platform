@@ -52,7 +52,7 @@ export function TransactionEditLogsPage() {
       const { data } = await api.get<{
         data: TransactionEditLog[]
         meta: { current_page: number; last_page: number; total: number; per_page: number }
-      }>('/api/super-admin/transaction-edit-logs', { params: filters })
+      >('/super-admin/transaction-edit-logs', { params: filters })
       return data
     },
   })
