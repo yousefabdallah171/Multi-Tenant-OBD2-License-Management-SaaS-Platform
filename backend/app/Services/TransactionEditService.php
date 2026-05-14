@@ -198,6 +198,11 @@ class TransactionEditService
      */
     public function getTransactionHistory(License $license): Collection
     {
+        // Check if transaction_edits table exists (migration might not have been run)
+        if (!DB::connection()->getSchemaBuilder()->hasTable('transaction_edits')) {
+            return collect([]);
+        }
+
         return TransactionEdit::query()
             ->where('license_id', $license->id)
             ->with('superAdmin:id,name,email')
