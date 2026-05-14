@@ -2281,6 +2281,7 @@
       "to": "To:",
       "reason": "Reason",
       "no_history": "No edit history",
+      "history": "Edit History",
       "edit_history": "Edit History",
       "current_value": "Current:",
       "reason_label": "Reason for change",
@@ -2289,7 +2290,12 @@
       "save_changes": "Save Changes",
       "success": "Transaction edited successfully",
       "tab_edit": "Edit",
-      "tab_history": "History"
+      "tab_history": "History",
+      "edited_by": "Edited By",
+      "logs_title": "Transaction Edit Logs",
+      "logs_description": "View all transaction edits across all customers",
+      "search_placeholder": "Search by BIOS ID, customer name, or reseller...",
+      "logs_empty": "No transaction edits found"
     },
     "field": {
       "price": "Price (USD)",

@@ -46,14 +46,12 @@ export function TransactionEditLogsPage() {
     per_page: perPage,
   }), [from, page, perPage, search, to])
 
+  type LogsResponse = { data: TransactionEditLog[]; meta: { current_page: number; last_page: number; total: number; per_page: number } }
   const logsQuery = useQuery({
     queryKey: ['super-admin', 'transaction-edit-logs', filters],
     queryFn: async () => {
-      const { data } = await api.get<{
-        data: TransactionEditLog[]
-        meta: { current_page: number; last_page: number; total: number; per_page: number }
-      >('/super-admin/transaction-edit-logs', { params: filters })
-      return data
+      const response = await api.get<LogsResponse>('/super-admin/transaction-edit-logs', { params: filters })
+      return response.data
     },
   })
 

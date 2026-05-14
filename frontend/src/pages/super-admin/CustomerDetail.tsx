@@ -20,6 +20,7 @@ import { useLanguage } from '@/hooks/useLanguage'
 import { liveQueryOptions, LIVE_QUERY_INTERVAL } from '@/lib/live-query'
 import { formatActivityActionLabel, formatDate, formatReadableActivityDescription } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
+import { api } from '@/services/api'
 import { superAdminCustomerService } from '@/services/super-admin-customer.service'
 import type { SuperAdminCustomerDetails } from '@/types/super-admin.types'
 import type { UserRole } from '@/types/user.types'
@@ -45,6 +46,27 @@ export function CustomerDetailPage() {
     queryFn: () => superAdminCustomerService.getOne(customerId),
     enabled: Number.isFinite(customerId),
     ...liveQueryOptions(LIVE_QUERY_INTERVAL.STATUS_DETAIL),
+  })
+
+  const transactionEditsQuery = useQuery({
+    queryKey: ['super-admin', 'transaction-edits', customerId],
+    queryFn: async () => {
+      const { data } = await api.get<{
+        data: Array<{
+          id: number
+          license_id: number
+          bios_id: string
+          super_admin_name: string
+          previous_values: Record<string, any>
+          new_values: Record<string, any>
+          reason?: string
+          created_at: string
+        }>
+      }>('/super-admin/transaction-edit-logs', { params: { customer_id: customerId, per_page: 100 } })
+      return data
+    },
+    enabled: Number.isFinite(customerId),
+    refetchInterval: 30000,
   })
 
   const customer = query.data?.data
@@ -155,6 +177,7 @@ export function CustomerDetailPage() {
               <TabsTrigger value="bios">{t('managerParent.pages.customers.biosId')}</TabsTrigger>
               <TabsTrigger value="ips">{t('managerParent.pages.ipAnalytics.title')}</TabsTrigger>
               <TabsTrigger value="username_history">{t('common.history', { defaultValue: 'History' })}</TabsTrigger>
+              <TabsTrigger value="transaction_edits">{t('transaction.edit.history', { defaultValue: 'Edit History' })}</TabsTrigger>
               <TabsTrigger value="activity">{t('managerParent.nav.activity', { defaultValue: 'Panel Activity' })}</TabsTrigger>
             </TabsList>
 
@@ -263,6 +286,43 @@ export function CustomerDetailPage() {
                           </div>
                           <div className="text-start">
                             <p className="text-sm text-slate-500 dark:text-slate-400">{entry.created_at ? formatDate(entry.created_at, locale) : '-'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="transaction_edits">
+              <Card>
+                <CardHeader><CardTitle>{t('transaction.edit.history', { defaultValue: 'Transaction Edit History' })}</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {transactionEditsQuery.isLoading ? (
+                    <div className="text-sm text-slate-500 dark:text-slate-400">{t('common.loading', { defaultValue: 'Loading...' })}</div>
+                  ) : (transactionEditsQuery.data?.data ?? []).length === 0 ? (
+                    <EmptyState title={t('common.noData')} description={t('common.adjustFilters')} />
+                  ) : (
+                    (transactionEditsQuery.data?.data ?? []).map((edit) => (
+                      <div key={edit.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium">{edit.bios_id}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              {edit.super_admin_name} • {Object.entries(edit.new_values)
+                                .map(([key, newVal]) => {
+                                  const oldVal = edit.previous_values[key]
+                                  return `${key}: ${oldVal} → ${newVal}`
+                                })
+                                .join(', ')}
+                            </p>
+                            {edit.reason && (
+                              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400"><span className="font-medium">{t('common.reason', { defaultValue: 'Reason' })}:</span> {edit.reason}</p>
+                            )}
+                          </div>
+                          <div className="text-start">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{edit.created_at ? formatDate(edit.created_at, locale) : '-'}</p>
                           </div>
                         </div>
                       </div>

@@ -173,19 +173,32 @@ class TransactionEditController extends BaseSuperAdminController
      */
     public function allLogs(Request $request): JsonResponse
     {
-        $query = \App\Models\ActivityLog::query()
-            ->where('action', 'transaction.edited')
-            ->with('user:id,name')
+        $query = \App\Models\TransactionEdit::query()
+            ->where('action', 'edit')
+            ->with([
+                'superAdmin:id,name',
+                'license:id,bios_id,customer_id,reseller_id,program_id,tenant_id',
+                'license.tenant:id,name',
+                'license.customer:id,name',
+                'license.reseller:id,name',
+                'license.program:id,name',
+            ])
             ->orderByDesc('created_at');
 
-        // Search by BIOS ID or customer/reseller name
+        // Filter by customer ID if provided
+        if ($request->filled('customer_id')) {
+            $customerId = (int) $request->input('customer_id');
+            $query->whereHas('license', fn ($q) => $q->where('customer_id', $customerId));
+        }
+
+        // Search by BIOS ID, customer name, or reseller name
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->whereRaw(
-                "JSON_CONTAINS(metadata, JSON_OBJECT('license_id', (SELECT id FROM licenses WHERE bios_id LIKE ?)))",
-                ["%{$search}%"]
-            )
-            ->orWhereHas('user', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+            $query->whereHas('license', function ($q) use ($search) {
+                $q->where('bios_id', 'like', "%{$search}%")
+                  ->orWhereHas('customer', fn ($cq) => $cq->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('reseller', fn ($rq) => $rq->where('name', 'like', "%{$search}%"));
+            });
         }
 
         // Filter by date range
@@ -198,38 +211,41 @@ class TransactionEditController extends BaseSuperAdminController
 
         // Paginate
         $perPage = $request->input('per_page', 25);
-        $logs = $query->paginate($perPage);
+        $edits = $query->paginate($perPage);
 
         // Transform response
-        $data = $logs->map(function ($log) {
-            $metadata = (array) ($log->metadata ?? []);
-            $editData = \App\Models\TransactionEdit::find($metadata['transaction_edit_id'] ?? null);
+        $data = $edits->map(function ($edit) {
+            $license = $edit->license;
+            $customer = $license?->customer;
+            $reseller = $license?->reseller;
+            $program = $license?->program;
+            $tenant = $license?->tenant;
 
             return [
-                'id' => $editData?->id ?? $log->id,
-                'license_id' => $metadata['license_id'] ?? null,
-                'tenant_id' => $log->tenant_id,
-                'tenant_name' => $log->tenant?->name,
-                'bios_id' => $metadata['bios_id'] ?? null,
-                'customer_name' => $metadata['customer_id'] ? User::find($metadata['customer_id'])?->name : null,
-                'reseller_name' => $metadata['reseller_id'] ? User::find($metadata['reseller_id'])?->name : null,
-                'program_name' => null,
-                'super_admin_id' => $log->user_id,
-                'super_admin_name' => $log->user?->name,
-                'previous_values' => $metadata['previous_values'] ?? [],
-                'new_values' => $metadata['new_values'] ?? [],
-                'reason' => $editData?->reason ?? 'No reason provided',
-                'created_at' => $log->created_at?->toIso8601String(),
+                'id' => $edit->id,
+                'license_id' => $edit->license_id,
+                'tenant_id' => $edit->tenant_id,
+                'tenant_name' => $tenant?->name,
+                'bios_id' => $license?->bios_id,
+                'customer_name' => $customer?->name,
+                'reseller_name' => $reseller?->name,
+                'program_name' => $program?->name,
+                'super_admin_id' => $edit->super_admin_id,
+                'super_admin_name' => $edit->superAdmin?->name,
+                'previous_values' => $edit->previous_values ?? [],
+                'new_values' => $edit->new_values ?? [],
+                'reason' => $edit->reason,
+                'created_at' => $edit->created_at?->toIso8601String(),
             ];
         });
 
         return response()->json([
             'data' => $data,
             'meta' => [
-                'current_page' => $logs->currentPage(),
-                'last_page' => $logs->lastPage(),
-                'total' => $logs->total(),
-                'per_page' => $logs->perPage(),
+                'current_page' => $edits->currentPage(),
+                'last_page' => $edits->lastPage(),
+                'total' => $edits->total(),
+                'per_page' => $edits->perPage(),
             ],
         ]);
     }
