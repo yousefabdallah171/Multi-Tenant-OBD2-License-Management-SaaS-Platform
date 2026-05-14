@@ -98,7 +98,7 @@ export function Navbar() {
   } else if (user?.role === 'reseller') {
     reportRevenue = (reportQuery.data as any)?.data?.total_revenue ?? 0
   } else if (user?.role === 'super_admin') {
-    reportRevenue = (reportQuery.data as any)?.data?.summary?.total_revenue ?? 0
+    reportRevenue = (reportQuery.data as any)?.summary?.total_platform_revenue ?? 0
   }
 
   const title = user
