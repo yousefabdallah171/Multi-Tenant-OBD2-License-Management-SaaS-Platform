@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, Filter } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/hooks/useLanguage'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import { api } from '@/services/api'
 import type { ManagerParentSalesCustomerFilters } from '@/types/manager-reseller.types'
 
@@ -141,7 +140,6 @@ export function TransactionEditLogsPage() {
         description={t('transaction.edit.logs_description', {
           defaultValue: 'View all transaction edits across all customers',
         })}
-        icon={BarChart3}
       />
 
       <div className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">

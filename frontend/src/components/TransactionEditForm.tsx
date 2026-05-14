@@ -102,10 +102,6 @@ export function TransactionEditForm({
     editMutation.mutate(formState)
   }
 
-  const formatDateTime = (dateString: string): string => {
-    return new Date(dateString).toISOString().split('T')[0]
-  }
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Transaction Info */}
