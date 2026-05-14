@@ -87,16 +87,11 @@ export function TransactionEditForm({
   })
 
   const hasChanges = formState.price !== null
-  const hasReason = formState.reason.trim().length > 0
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!hasChanges) {
       toast.warning(t('transaction.edit.no_changes', { defaultValue: 'No changes to save' }))
-      return
-    }
-    if (!hasReason) {
-      toast.error(t('transaction.edit.reason_required', { defaultValue: 'Reason for change is required' }))
       return
     }
     editMutation.mutate(formState)
@@ -138,7 +133,8 @@ export function TransactionEditForm({
       <div className="space-y-4 border-t pt-4">
         <div>
           <Label htmlFor="price">
-            {t('transaction.field.price', { defaultValue: 'Price (USD)' })} <span className="text-red-500">*</span>
+            {t('transaction.field.price', { defaultValue: 'Price (USD)' })}
+            <span className="text-red-500">*</span>
           </Label>
           <Input
             id="price"
@@ -160,7 +156,7 @@ export function TransactionEditForm({
 
         <div>
           <Label htmlFor="reason">
-            {t('transaction.edit.reason_label', { defaultValue: 'Reason for change' })} <span className="text-red-500">*</span>
+            {t('transaction.edit.reason_label', { defaultValue: 'Reason for change' })}
           </Label>
           <Textarea
             id="reason"
@@ -172,11 +168,6 @@ export function TransactionEditForm({
             className="mt-1"
             rows={3}
           />
-          {!hasReason && formState.reason !== '' && (
-            <div className="text-xs text-red-600 mt-1">
-              {t('transaction.edit.reason_required', { defaultValue: 'Reason is required' })}
-            </div>
-          )}
         </div>
       </div>
 
@@ -205,7 +196,7 @@ export function TransactionEditForm({
         </Button>
         <Button
           type="submit"
-          disabled={!hasChanges || !hasReason || editMutation.isPending}
+          disabled={!hasChanges || editMutation.isPending}
           className="gap-2"
         >
           {editMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}

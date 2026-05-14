@@ -39,6 +39,7 @@ const superAdminItems: NavItem[] = [
   { key: 'programLogs', icon: FileText, href: routePaths.superAdmin.programLogs, translationKey: 'superAdmin.nav.programLogs' },
   { key: 'resellerPayments', icon: BarChart3, href: routePaths.superAdmin.resellerPayments, translationKey: 'superAdmin.nav.resellerPayments' },
   { key: 'transactionHistory', icon: History, href: routePaths.superAdmin.transactionHistory, translationKey: 'superAdmin.nav.transactionHistory' },
+  { key: 'transactionEditLogs', icon: FileText, href: routePaths.superAdmin.transactionEditLogs, translationKey: 'superAdmin.nav.transactionEditLogs' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.superAdmin.ipAnalytics, translationKey: 'superAdmin.nav.ipAnalytics' },
   { key: 'logsGroup', icon: ScrollText, href: routePaths.superAdmin.activity, translationKey: 'superAdmin.nav.logs' },
   { key: 'settingsGroup', icon: Settings, href: routePaths.superAdmin.settings, translationKey: 'superAdmin.nav.settings' },

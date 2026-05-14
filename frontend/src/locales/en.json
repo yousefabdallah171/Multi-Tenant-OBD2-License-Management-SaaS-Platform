@@ -319,6 +319,7 @@
       "programLogs": "Program Logs",
       "resellerPayments": "Reseller Payments",
       "transactionHistory": "Transaction History",
+      "transactionEditLogs": "Transaction Edit Logs",
       "ipAnalytics": "IP Analytics",
       "logs": "Logs",
       "activity": "Panel Activity",
