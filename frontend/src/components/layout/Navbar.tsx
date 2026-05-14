@@ -1,5 +1,5 @@
 import DOMPurify from 'dompurify'
-import { Bell, Download, Globe, LogOut, Menu, MoonStar, SunMedium } from 'lucide-react'
+import { Bell, Download, Globe, LogOut, Menu, MoonStar, SunMedium, BarChart3 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -16,10 +16,11 @@ import { formatTimezoneLabel } from '@/lib/timezones'
 import { routePaths } from '@/router/routes'
 import { managerParentService } from '@/services/manager-parent.service'
 import { managerService } from '@/services/manager.service'
+import { resellerService } from '@/services/reseller.service'
 import { superAdminBcrService } from '@/services/super-admin-bcr.service'
 import { useTheme } from '@/hooks/useTheme'
 import { useSidebarStore } from '@/stores/sidebarStore'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatCurrency } from '@/lib/utils'
 
 export function Navbar() {
   const { t } = useTranslation()
@@ -66,6 +67,33 @@ export function Navbar() {
     ...liveQueryOptions(5_000),
   })
   const recentRequests = recentBcrQuery.data?.data ?? []
+
+  const isReportRole = user?.role === 'manager' || user?.role === 'manager_parent' || user?.role === 'reseller'
+  const reportQueryFn =
+    user?.role === 'manager' ? () => managerService.getFinancialReports({})
+    : user?.role === 'manager_parent' ? () => managerParentService.getFinancialReports({})
+    : () => resellerService.getReportSummary({})
+  const reportPath =
+    user?.role === 'manager' ? routePaths.manager.reports(lang)
+    : user?.role === 'manager_parent' ? routePaths.managerParent.financialReports(lang)
+    : routePaths.reseller.reports(lang)
+
+  const reportQuery = useQuery({
+    queryKey:
+      user?.role === 'manager' ? ['manager', 'financial-reports']
+      : user?.role === 'manager_parent' ? ['manager-parent', 'financial-reports']
+      : ['reseller', 'reports', 'summary'],
+    queryFn: reportQueryFn as any,
+    enabled: isReportRole,
+    ...liveQueryOptions(30_000),
+  })
+
+  let reportRevenue = 0
+  if (user?.role === 'manager' || user?.role === 'manager_parent') {
+    reportRevenue = (reportQuery.data as any)?.data?.summary?.total_revenue ?? 0
+  } else if (user?.role === 'reseller') {
+    reportRevenue = (reportQuery.data as any)?.data?.total_revenue ?? 0
+  }
 
   const title = user
     ? user.role === 'super_admin'
@@ -214,6 +242,22 @@ export function Navbar() {
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
+            ) : null}
+
+            {isReportRole ? (
+              <button
+                type="button"
+                className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                onClick={() => navigate(reportPath)}
+                title={formatCurrency(reportRevenue, 'USD', locale)}
+              >
+                <BarChart3 className="h-[17px] w-[17px]" />
+                {reportRevenue > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-5 w-auto min-w-max items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-semibold text-white ring-2 ring-white dark:ring-slate-950">
+                    {formatCurrency(reportRevenue, 'USD', locale).replace('$', '').substring(0, 8)}
+                  </span>
+                ) : null}
+              </button>
             ) : null}
 
             <button
