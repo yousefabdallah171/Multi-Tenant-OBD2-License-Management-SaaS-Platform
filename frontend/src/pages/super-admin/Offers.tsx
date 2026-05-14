@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, Edit2, Trash2, Plus, Check, X } from 'lucide-react'
+import { Edit2, Trash2, Plus, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -10,8 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { managerParentService } from '@/services/manager-parent.service'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
-import type { ProgramSummary } from '@/types/manager-parent.types'
-import { format } from 'date-fns'
+import { formatDate } from '@/lib/utils'
 
 interface OfferFormData {
   program_id: number
@@ -26,13 +25,6 @@ interface OfferFormState {
   userId: number | null
   discountPercentage: number | null
   isActive: boolean
-}
-
-interface SelectableUser {
-  id: number
-  name: string
-  role: string
-  email: string
 }
 
 const INITIAL_FORM_STATE: OfferFormState = {
@@ -67,13 +59,6 @@ export function OffersPage() {
     queryFn: () => managerParentService.getProgramsWithExternalApi(),
   })
 
-  const usersQuery = useQuery({
-    queryKey: ['super-admin:users-for-offers'],
-    queryFn: async () => {
-      return [] as SelectableUser[]
-    },
-  })
-
   const createOfferMutation = useMutation({
     mutationFn: (data: OfferFormData) => managerParentService.createOffer(data),
     onSuccess: () => {
@@ -83,7 +68,7 @@ export function OffersPage() {
       setFormState(INITIAL_FORM_STATE)
     },
     onError: (error: any) => {
-      toast.error(resolveApiErrorMessage(error))
+      toast.error(resolveApiErrorMessage(error, t('common.error')))
     },
   })
 
@@ -94,7 +79,7 @@ export function OffersPage() {
       queryClient.invalidateQueries({ queryKey: ['super-admin:offers'] })
     },
     onError: (error: any) => {
-      toast.error(resolveApiErrorMessage(error))
+      toast.error(resolveApiErrorMessage(error, t('common.error')))
     },
   })
 
@@ -248,7 +233,7 @@ export function OffersPage() {
                     </td>
                     <td className="px-6 py-3 text-slate-600 dark:text-slate-400">{offer.creator_name}</td>
                     <td className="px-6 py-3 text-slate-600 dark:text-slate-400">
-                      {format(new Date(offer.created_at), 'MMM dd, yyyy')}
+                      {formatDate(offer.created_at)}
                     </td>
                     <td className="px-6 py-3">
                       <div className="flex items-center justify-center gap-2">
