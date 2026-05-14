@@ -36,6 +36,7 @@ use App\Http\Controllers\ManagerParent\DashboardController as ManagerParentDashb
 use App\Http\Controllers\ManagerParent\FinancialReportController as ManagerParentFinancialReportController;
 use App\Http\Controllers\ManagerParent\IpAnalyticsController as ManagerParentIpAnalyticsController;
 use App\Http\Controllers\ManagerParent\LicenseController as ManagerParentLicenseController;
+use App\Http\Controllers\ManagerParent\OfferController as ManagerParentOfferController;
 use App\Http\Controllers\ManagerParent\LogController as ManagerParentLogController;
 use App\Http\Controllers\ManagerParent\NetworkController as ManagerParentNetworkController;
 use App\Http\Controllers\ManagerParent\ProgramController as ManagerParentProgramController;
