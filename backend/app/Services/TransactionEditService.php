@@ -237,27 +237,31 @@ class TransactionEditService
         $tenantId = (int) $license->tenant_id;
         $resellerId = (int) $license->reseller_id;
 
-        // Super Admin financial reports cache
-        Cache::tags(['super-admin', 'financial-reports'])->flush();
-        $invalidated[] = 'super-admin:financial-reports:*';
+        try {
+            // Super Admin financial reports cache
+            Cache::tags(['super-admin', 'financial-reports'])->flush();
+            $invalidated[] = 'super-admin:financial-reports:*';
 
-        // Super Admin reseller payments cache
-        Cache::tags(['super-admin', 'reseller-payments'])->flush();
-        $invalidated[] = 'super-admin:reseller-payments:*';
+            // Super Admin reseller payments cache
+            Cache::tags(['super-admin', 'reseller-payments'])->flush();
+            $invalidated[] = 'super-admin:reseller-payments:*';
 
-        // Manager Parent financial reports for this tenant
-        Cache::tags(["manager-parent:tenant-{$tenantId}", 'financial-reports'])->flush();
-        $invalidated[] = "manager-parent:tenant-{$tenantId}:financial-reports:*";
+            // Manager Parent financial reports for this tenant
+            Cache::tags(["manager-parent:tenant-{$tenantId}", 'financial-reports'])->flush();
+            $invalidated[] = "manager-parent:tenant-{$tenantId}:financial-reports:*";
 
-        // Manager reports for resellers of this license
-        Cache::tags(["manager:tenant-{$tenantId}", 'reports'])->flush();
-        $invalidated[] = "manager:tenant-{$tenantId}:reports:*";
+            // Manager reports for resellers of this license
+            Cache::tags(["manager:tenant-{$tenantId}", 'reports'])->flush();
+            $invalidated[] = "manager:tenant-{$tenantId}:reports:*";
 
-        // Reseller reports for this specific reseller
-        Cache::tags(["reseller:{$resellerId}", 'reports'])->flush();
-        $invalidated[] = "reseller:{$resellerId}:reports:*";
+            // Reseller reports for this specific reseller
+            Cache::tags(["reseller:{$resellerId}", 'reports'])->flush();
+            $invalidated[] = "reseller:{$resellerId}:reports:*";
+        } catch (\BadMethodCallException $e) {
+            // Cache store doesn't support tagging (e.g., file cache), skip tagged invalidation
+        }
 
-        // License cache invalidation using existing system
+        // License cache invalidation using existing system (works with all cache drivers)
         LicenseCacheInvalidation::invalidateReports('super-admin:reports:version');
         LicenseCacheInvalidation::invalidateReports('manager-parent:reports:version');
         LicenseCacheInvalidation::invalidateReports('manager:reports:version');
