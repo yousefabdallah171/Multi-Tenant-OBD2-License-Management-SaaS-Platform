@@ -262,10 +262,10 @@ class TransactionEditService
         }
 
         // License cache invalidation using existing system (works with all cache drivers)
-        LicenseCacheInvalidation::invalidateReports('super-admin:reports:version');
-        LicenseCacheInvalidation::invalidateReports('manager-parent:reports:version');
-        LicenseCacheInvalidation::invalidateReports('manager:reports:version');
-        LicenseCacheInvalidation::invalidateReports('reseller:reports:version');
+        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+        LicenseCacheInvalidation::bumpVersion('manager-parent:reports:version');
+        LicenseCacheInvalidation::bumpVersion('manager:reports:version');
+        LicenseCacheInvalidation::bumpVersion('reseller:reports:version');
         $invalidated[] = 'LicenseCacheInvalidation:all-versions';
 
         return $invalidated;
