@@ -1094,6 +1094,11 @@ class CustomerController extends BaseSuperAdminController
                 $metadata['country_name'] = $customer->country_name;
                 $metadata['price_source'] = 'super_admin_override';
                 $metadata['price_override_previous'] = $oldLoggedPrice;
+                
+                if ($newPrice > 0) {
+                    $metadata['attribution_type'] = 'earned';
+                }
+
                 $revenueLog->forceFill(['metadata' => $metadata])->save();
 
                 $this->applyBalanceDifference($revenueLog, round($newPrice - $oldLoggedPrice, 2));
@@ -1106,7 +1111,7 @@ class CustomerController extends BaseSuperAdminController
                     $q->whereJsonContains('metadata->license_id', $license->id)
                         ->orWhereRaw("JSON_EXTRACT(metadata, '$.license_id') = ?", [(int) $license->id]);
                 })
-                ->where('metadata->price_source', 'super_admin_override')
+                ->where('metadata->price_source', 'super_admin_override_backfill')
                 ->where('id', '!=', $revenueLogs->max('id'))
                 ->delete();
         } else {
@@ -1142,32 +1147,18 @@ class CustomerController extends BaseSuperAdminController
     {
         $actions = ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'];
 
-        // Collect logs by license_id (current license)
-        $byLicenseId = ActivityLog::query()
+        // Only collect logs for the current license_id - price overrides must NOT affect historical transactions
+        $logs = ActivityLog::query()
             ->whereIn('action', $actions)
             ->whereMetadataLicenseId((int) $license->id)
             ->orderBy('id')
             ->get();
 
-        // Also collect logs for any previous licenses on the same BIOS + same reseller,
-        // so a price edit retroactively corrects all historical activity log entries for that BIOS.
-        $byBiosId = collect();
-        if ($license->bios_id && $license->reseller_id) {
-            $byBiosId = ActivityLog::query()
-                ->whereIn('action', $actions)
-                ->where('user_id', (int) $license->reseller_id)
-                ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.bios_id')) = ?", [$license->bios_id])
-                ->orderBy('id')
-                ->get();
-        }
-
-        $allLogs = $byLicenseId->merge($byBiosId)->unique('id')->sortBy('id')->values();
-
-        $earnedLogs = $allLogs->filter(
+        $earnedLogs = $logs->filter(
             fn (ActivityLog $log) => (is_array($log->metadata) ? ($log->metadata['attribution_type'] ?? null) : null) === BalanceService::TYPE_EARNED
         )->values();
 
-        return $earnedLogs->isNotEmpty() ? $earnedLogs : $allLogs;
+        return $earnedLogs->isNotEmpty() ? $earnedLogs : $logs;
     }
 
     private function createSyntheticRevenueLogForLicense(User $customer, License $license, float $price): ?ActivityLog

@@ -80,6 +80,7 @@ use App\Http\Controllers\SuperAdmin\ResellerLogController as SuperAdminResellerL
 use App\Http\Controllers\SuperAdmin\ResellerPaymentController as SuperAdminResellerPaymentController;
 use App\Http\Controllers\SuperAdmin\SecurityController;
 use App\Http\Controllers\SuperAdmin\TransactionHistoryController as SuperAdminTransactionHistoryController;
+use App\Http\Controllers\SuperAdmin\TransactionEditController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\SuperAdmin\TenantResetController as SuperAdminTenantResetController;
@@ -456,6 +457,13 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/licenses/expiring', [SuperAdminLicenseController::class, 'expiring']);
         Route::post('/licenses/force-activate', [SuperAdminLicenseController::class, 'forceActivate']);
         Route::post('/licenses/{license}/force-expire', [SuperAdminLicenseController::class, 'forceExpire']);
+
+        // Transaction editing (super admin can edit old transactions and their impact cascades to all reports)
+        Route::get('/transactions/{license}/editable', [TransactionEditController::class, 'show']);
+        Route::patch('/transactions/{license}', [TransactionEditController::class, 'update']);
+        Route::post('/transactions/{license}/revert', [TransactionEditController::class, 'revert']);
+        Route::get('/transactions/{license}/history', [TransactionEditController::class, 'history']);
+
         Route::get('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'index']);
         Route::get('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'show']);
         Route::post('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'store']);

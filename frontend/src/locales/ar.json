@@ -183,6 +183,8 @@
     "screenOptions": "خيارات الشاشة",
     "pagination": "الترقيم",
     "totalCount": "الإجمالي {{count}}",
+    "itemRange": "عرض {{start}}-{{end}} من {{total}} عنصر",
+    "noItems": "لا توجد عناصر",
     "selectAllVisible": "تحديد الظاهر",
     "clearVisible": "إلغاء الظاهر",
     "clearSelection": "إلغاء التحديد",
@@ -2285,6 +2287,46 @@
       "paymentDeleted": "تم حذف الدفعة بنجاح.",
       "deletePaymentConfirm": "هل تريد حذف سجل هذه الدفعة؟ لا يمكن التراجع عن هذا الإجراء.",
       "commissionSaved": "تم حفظ العمولة بنجاح."
+    },
+    "actions": {
+      "edit": "تعديل"
     }
+  },
+  "transaction": {
+    "edit": {
+      "title": "تعديل المعاملة",
+      "by": "بواسطة",
+      "changes": "تغيير/تغييرات",
+      "reverted": "تم الاسترجاع",
+      "changes_made": "التغييرات التي تم إجراؤها",
+      "from": "من:",
+      "to": "إلى:",
+      "reason": "السبب",
+      "no_history": "لا يوجد سجل تعديل",
+      "edit_history": "سجل التعديل",
+      "current_value": "الحالي:",
+      "reason_label": "سبب التغيير",
+      "reason_placeholder": "لماذا تقوم بهذا التغيير؟",
+      "impact_warning": "سيتم تطبيق هذا التغيير فوراً في جميع تقارير الموزعين والمديرين والآباء الإداريين. سيتم الاحتفاظ بسجل التعديل.",
+      "save_changes": "حفظ التغييرات",
+      "success": "تم تعديل المعاملة بنجاح",
+      "tab_edit": "تعديل",
+      "tab_history": "السجل"
+    },
+    "field": {
+      "price": "السعر (USD)",
+      "activated_at": "تاريخ التفعيل",
+      "duration_days": "المدة (يومياً)",
+      "customer_id": "معرف العميل",
+      "program_id": "معرف البرنامج",
+      "reseller": "الموزع",
+      "bios_id": "معرف BIOS",
+      "program": "البرنامج",
+      "status": "الحالة"
+    }
+  },
+  "error": {
+    "edit_failed": "فشل تعديل المعاملة",
+    "failed_to_load": "فشل تحميل تفاصيل المعاملة"
   }
 }
