@@ -463,6 +463,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::patch('/transactions/{license}', [TransactionEditController::class, 'update']);
         Route::post('/transactions/{license}/revert', [TransactionEditController::class, 'revert']);
         Route::get('/transactions/{license}/history', [TransactionEditController::class, 'history']);
+        Route::get('/transaction-edit-logs', [TransactionEditController::class, 'allLogs']);
 
         Route::get('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'index']);
         Route::get('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'show']);

@@ -102,6 +102,7 @@ const SuperAdminManagerParentSalesCustomersPage = lazyNamed(() => import('@/page
 const SuperAdminManagerSalesCustomersPage = lazyNamed(() => import('@/pages/super-admin/ManagerSalesCustomers'), 'ManagerSalesCustomersPage')
 const SuperAdminResellerSalesCustomersPage = lazyNamed(() => import('@/pages/super-admin/ResellerSalesCustomers'), 'ResellerSalesCustomersPage')
 const SuperAdminTransactionHistoryPage = lazyNamed(() => import('@/pages/super-admin/TransactionHistory'), 'TransactionHistoryPage')
+const SuperAdminTransactionEditLogsPage = lazyNamed(() => import('@/pages/super-admin/TransactionEditLogsPage'), 'TransactionEditLogsPage')
 const SuperAdminResellerLogsPage = lazyNamed(() => import('@/pages/super-admin/ResellerLogs'), 'ResellerLogsPage')
 const ReportsPage = lazyNamed(() => import('@/pages/super-admin/Reports'), 'ReportsPage')
 const SettingsPage = lazyNamed(() => import('@/pages/super-admin/Settings'), 'SettingsPage')
@@ -187,6 +188,7 @@ export function AppRouter() {
                   <Route path="reseller-payments/reseller/:resellerId/customers" element={<SuperAdminResellerSalesCustomersPage />} />
                   <Route path="reseller-payments/:resellerId" element={<SuperAdminResellerPaymentDetailPage />} />
                   <Route path="transaction-history" element={<SuperAdminTransactionHistoryPage />} />
+                  <Route path="transaction-edit-logs" element={<SuperAdminTransactionEditLogsPage />} />
                   <Route path="ip-analytics" element={<SuperAdminIpAnalyticsPage />} />
                   <Route path="logs" element={<LogsPage />} />
                   <Route path="activity" element={<SuperAdminActivityPage />} />

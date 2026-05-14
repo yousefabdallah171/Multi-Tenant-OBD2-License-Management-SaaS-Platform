@@ -96,17 +96,20 @@ class TransactionEditService
                 $activityLog->save();
             }
 
-            // Create audit record
-            $edit = TransactionEdit::create([
-                'tenant_id' => $license->tenant_id,
-                'license_id' => $license->id,
-                'activity_log_id' => $activityLog?->id,
-                'super_admin_id' => $superAdmin->id,
-                'action' => 'edit',
-                'previous_values' => $previousValues,
-                'new_values' => $newValues,
-                'reason' => $reason,
-            ]);
+            // Create audit record (only if table exists)
+            $edit = null;
+            if (DB::connection()->getSchemaBuilder()->hasTable('transaction_edits')) {
+                $edit = TransactionEdit::create([
+                    'tenant_id' => $license->tenant_id,
+                    'license_id' => $license->id,
+                    'activity_log_id' => $activityLog?->id,
+                    'super_admin_id' => $superAdmin->id,
+                    'action' => 'edit',
+                    'previous_values' => $previousValues,
+                    'new_values' => $newValues,
+                    'reason' => $reason,
+                ]);
+            }
 
             // Log activity for super admin logs page
             ActivityLog::create([
@@ -124,7 +127,7 @@ class TransactionEditService
                 ),
                 'metadata' => [
                     'license_id' => $license->id,
-                    'transaction_edit_id' => $edit->id,
+                    'transaction_edit_id' => $edit?->id,
                     'previous_values' => $previousValues,
                     'new_values' => $newValues,
                     'reseller_id' => $license->reseller_id,

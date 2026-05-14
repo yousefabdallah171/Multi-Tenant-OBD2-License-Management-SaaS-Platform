@@ -132,6 +132,7 @@ export const routePaths = {
     resellerPaymentsManagerCustomers: (lang: SupportedLanguage = DEFAULT_LANGUAGE, managerId: number | string = ':managerId') => `/${lang}/super-admin/reseller-payments/manager/${managerId}/customers`,
     resellerPaymentsResellerCustomers: (lang: SupportedLanguage = DEFAULT_LANGUAGE, resellerId: number | string = ':resellerId') => `/${lang}/super-admin/reseller-payments/reseller/${resellerId}/customers`,
     transactionHistory: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/transaction-history`,
+    transactionEditLogs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/transaction-edit-logs`,
     ipAnalytics: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/ip-analytics`,
     logs: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/logs`,
     activity: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/activity`,

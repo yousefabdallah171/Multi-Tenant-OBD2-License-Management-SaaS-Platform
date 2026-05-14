@@ -34,8 +34,6 @@ interface TransactionEditFormProps {
 
 interface FormState {
   price: string | null
-  activated_at: string | null
-  duration_days: string | null
   reason: string
 }
 
@@ -47,8 +45,6 @@ export function TransactionEditForm({
   const { t } = useTranslation()
   const [formState, setFormState] = useState<FormState>({
     price: null,
-    activated_at: null,
-    duration_days: null,
     reason: '',
   })
 
@@ -56,9 +52,7 @@ export function TransactionEditForm({
     mutationFn: (data: FormState) =>
       transactionService.editTransaction(transaction.license_id, {
         price: data.price ? parseFloat(data.price) : undefined,
-        activated_at: data.activated_at || undefined,
-        duration_days: data.duration_days ? parseFloat(data.duration_days) : undefined,
-        reason: data.reason || undefined,
+        reason: data.reason,
       }),
     onSuccess: (result) => {
       toast.success(
@@ -92,15 +86,17 @@ export function TransactionEditForm({
     },
   })
 
-  const hasChanges =
-    formState.price !== null ||
-    formState.activated_at !== null ||
-    formState.duration_days !== null
+  const hasChanges = formState.price !== null
+  const hasReason = formState.reason.trim().length > 0
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!hasChanges) {
       toast.warning(t('transaction.edit.no_changes', { defaultValue: 'No changes to save' }))
+      return
+    }
+    if (!hasReason) {
+      toast.error(t('transaction.edit.reason_required', { defaultValue: 'Reason for change is required' }))
       return
     }
     editMutation.mutate(formState)
@@ -146,7 +142,7 @@ export function TransactionEditForm({
       <div className="space-y-4 border-t pt-4">
         <div>
           <Label htmlFor="price">
-            {t('transaction.field.price', { defaultValue: 'Price (USD)' })}
+            {t('transaction.field.price', { defaultValue: 'Price (USD)' })} <span className="text-red-500">*</span>
           </Label>
           <Input
             id="price"
@@ -167,52 +163,8 @@ export function TransactionEditForm({
         </div>
 
         <div>
-          <Label htmlFor="activated_at">
-            {t('transaction.field.activated_at', { defaultValue: 'Activation Date' })}
-          </Label>
-          <Input
-            id="activated_at"
-            type="date"
-            placeholder={formatDateTime(transaction.activated_at)}
-            value={formState.activated_at ?? ''}
-            onChange={(e) => setFormState({ ...formState, activated_at: e.target.value || null })}
-            className="mt-1"
-          />
-          {formState.activated_at !== null && (
-            <div className="text-xs text-gray-600 mt-1">
-              {t('transaction.edit.current_value', { defaultValue: 'Current: ' })}
-              {formatDateTime(transaction.activated_at)} → {formState.activated_at}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <Label htmlFor="duration_days">
-            {t('transaction.field.duration_days', { defaultValue: 'Duration (days)' })}
-          </Label>
-          <Input
-            id="duration_days"
-            type="number"
-            step="0.1"
-            min="0"
-            placeholder={String(transaction.duration_days)}
-            value={formState.duration_days ?? ''}
-            onChange={(e) =>
-              setFormState({ ...formState, duration_days: e.target.value || null })
-            }
-            className="mt-1"
-          />
-          {formState.duration_days !== null && (
-            <div className="text-xs text-gray-600 mt-1">
-              {t('transaction.edit.current_value', { defaultValue: 'Current: ' })}
-              {transaction.duration_days} → {parseFloat(formState.duration_days)} days
-            </div>
-          )}
-        </div>
-
-        <div>
           <Label htmlFor="reason">
-            {t('transaction.edit.reason_label', { defaultValue: 'Reason for change' })}
+            {t('transaction.edit.reason_label', { defaultValue: 'Reason for change' })} <span className="text-red-500">*</span>
           </Label>
           <Textarea
             id="reason"
@@ -224,6 +176,11 @@ export function TransactionEditForm({
             className="mt-1"
             rows={3}
           />
+          {!hasReason && formState.reason !== '' && (
+            <div className="text-xs text-red-600 mt-1">
+              {t('transaction.edit.reason_required', { defaultValue: 'Reason is required' })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -252,7 +209,7 @@ export function TransactionEditForm({
         </Button>
         <Button
           type="submit"
-          disabled={!hasChanges || editMutation.isPending}
+          disabled={!hasChanges || !hasReason || editMutation.isPending}
           className="gap-2"
         >
           {editMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}

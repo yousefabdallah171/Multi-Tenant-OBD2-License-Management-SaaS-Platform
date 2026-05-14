@@ -166,6 +166,75 @@ class TransactionEditController extends BaseSuperAdminController
     }
 
     /**
+     * Get all transaction edit logs across all customers
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function allLogs(Request $request): JsonResponse
+    {
+        $query = \App\Models\ActivityLog::query()
+            ->where('action', 'transaction.edited')
+            ->with('user:id,name')
+            ->orderByDesc('created_at');
+
+        // Search by BIOS ID or customer/reseller name
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->whereRaw(
+                "JSON_CONTAINS(metadata, JSON_OBJECT('license_id', (SELECT id FROM licenses WHERE bios_id LIKE ?)))",
+                ["%{$search}%"]
+            )
+            ->orWhereHas('user', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+        }
+
+        // Filter by date range
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->input('from'));
+        }
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->input('to'));
+        }
+
+        // Paginate
+        $perPage = $request->input('per_page', 25);
+        $logs = $query->paginate($perPage);
+
+        // Transform response
+        $data = $logs->map(function ($log) {
+            $metadata = (array) ($log->metadata ?? []);
+            $editData = \App\Models\TransactionEdit::find($metadata['transaction_edit_id'] ?? null);
+
+            return [
+                'id' => $editData?->id ?? $log->id,
+                'license_id' => $metadata['license_id'] ?? null,
+                'tenant_id' => $log->tenant_id,
+                'tenant_name' => $log->tenant?->name,
+                'bios_id' => $metadata['bios_id'] ?? null,
+                'customer_name' => $metadata['customer_id'] ? User::find($metadata['customer_id'])?->name : null,
+                'reseller_name' => $metadata['reseller_id'] ? User::find($metadata['reseller_id'])?->name : null,
+                'program_name' => null,
+                'super_admin_id' => $log->user_id,
+                'super_admin_name' => $log->user?->name,
+                'previous_values' => $metadata['previous_values'] ?? [],
+                'new_values' => $metadata['new_values'] ?? [],
+                'reason' => $editData?->reason ?? 'No reason provided',
+                'created_at' => $log->created_at?->toIso8601String(),
+            ];
+        });
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $logs->currentPage(),
+                'last_page' => $logs->lastPage(),
+                'total' => $logs->total(),
+                'per_page' => $logs->perPage(),
+            ],
+        ]);
+    }
+
+    /**
      * Resolve and load license with relationships
      *
      * @param License $license
