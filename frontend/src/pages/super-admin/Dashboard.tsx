@@ -26,26 +26,31 @@ export function DashboardPage() {
   const statsQuery = useQuery({
     queryKey: ['super-admin', 'dashboard', 'stats'],
     queryFn: () => reportService.getDashboardStats(),
+    refetchInterval: 30000,
   })
 
   const revenueTrendQuery = useQuery({
     queryKey: ['super-admin', 'dashboard', 'revenue-trend'],
     queryFn: () => reportService.getRevenueTrend(),
+    refetchInterval: 30000,
   })
 
   const comparisonQuery = useQuery({
     queryKey: ['super-admin', 'dashboard', 'tenant-comparison'],
     queryFn: () => reportService.getTenantComparison(),
+    refetchInterval: 30000,
   })
 
   const timelineQuery = useQuery({
     queryKey: ['super-admin', 'dashboard', 'license-timeline'],
     queryFn: () => reportService.getLicenseTimeline(),
+    refetchInterval: 30000,
   })
 
   const activityQuery = useQuery({
     queryKey: ['super-admin', 'dashboard', 'activity'],
     queryFn: () => reportService.getRecentActivity(),
+    refetchInterval: 30000,
   })
 
   const stats = statsQuery.data?.data.stats

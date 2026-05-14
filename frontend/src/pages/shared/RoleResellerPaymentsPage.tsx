@@ -98,6 +98,7 @@ export function RoleResellerPaymentsPage({
   const query = useQuery({
     queryKey: [queryKeyPrefix, 'reseller-payments', listFilters],
     queryFn: () => fetchList(listFilters),
+    refetchInterval: 30000,
   })
 
   const rows = query.data?.data ?? []

@@ -46,31 +46,37 @@ export function ReportsPage() {
   const financialQuery = useQuery({
     queryKey: ['super-admin', 'financial-reports', params],
     queryFn: () => reportService.getFinancialReports(params),
+    refetchInterval: 30000,
   })
 
   const revenueQuery = useQuery({
     queryKey: ['super-admin', 'reports', 'revenue', params],
     queryFn: () => reportService.getRevenue(params),
+    refetchInterval: 30000,
   })
 
   const activationsQuery = useQuery({
     queryKey: ['super-admin', 'reports', 'activations', params],
     queryFn: () => reportService.getActivations(params),
+    refetchInterval: 30000,
   })
 
   const growthQuery = useQuery({
     queryKey: ['super-admin', 'reports', 'growth', params],
     queryFn: () => reportService.getGrowth(params),
+    refetchInterval: 30000,
   })
 
   const topResellersQuery = useQuery({
     queryKey: ['super-admin', 'reports', 'top-resellers', params],
     queryFn: () => reportService.getTopResellers(params),
+    refetchInterval: 30000,
   })
 
   const paymentRowsQuery = useQuery({
     queryKey: ['super-admin', 'reports', 'reseller-payments-table'],
     queryFn: () => superAdminPlatformService.getResellerPayments(),
+    refetchInterval: 30000,
   })
 
   const financialData = financialQuery.data?.data
