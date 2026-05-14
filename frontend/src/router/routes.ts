@@ -52,6 +52,7 @@ export const routePaths = {
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/profile`,
     mandiagTracking: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/mandiag-tracking`,
     mandiagDebug: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/mandiag-debug`,
+    offers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/offers`,
   },
   manager: {
     root: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/manager`,
@@ -141,6 +142,7 @@ export const routePaths = {
     biosChangeAudit: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-change-audit`,
     settings: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/settings`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/profile`,
+    offers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/offers`,
   },
 }
 

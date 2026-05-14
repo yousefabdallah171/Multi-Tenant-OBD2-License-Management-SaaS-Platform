@@ -42,3 +42,13 @@ export function resolvePresetEffectivePrice(preset: ProgramDurationPreset | null
   }
 }
 
+export function applyDiscountToPresetPrice(
+  resolved: ResolvedPresetPrice,
+  discountPercentage: number | null | undefined
+): ResolvedPresetPrice {
+  if (!discountPercentage) return resolved
+  return {
+    ...resolved,
+    effectivePrice: Math.round(resolved.effectivePrice * (1 - discountPercentage / 100) * 100) / 100,
+  }
+}

@@ -122,6 +122,7 @@ export interface ProgramSummary {
   licenses_sold: number
   active_licenses_count: number
   revenue: number
+  active_offer_discount?: number | null
   created_at: string | null
   duration_presets?: ProgramDurationPreset[]
 }

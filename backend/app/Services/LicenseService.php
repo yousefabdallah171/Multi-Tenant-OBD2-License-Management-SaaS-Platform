@@ -15,6 +15,7 @@ use App\Models\License;
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
 use App\Models\ProgramDurationPresetCountryPrice;
+use App\Models\ProgramOffer;
 use App\Models\User;
 use App\Support\CustomerOwnership;
 use Carbon\Carbon;
@@ -150,7 +151,8 @@ class LicenseService
             $countryName = ProgramDurationPresetCountryPrice::normalizeCountryName((string) ($data['country_name'] ?? $customer->country_name ?? ''));
             $presetPricing = $preset ? $this->resolvePresetEffectivePricing($preset, $countryName) : null;
             $durationMinutes = (int) max(1, round($durationDays * 1440));
-            $price = $preset ? (float) ($presetPricing['effective_price'] ?? $preset->price) : (float) $data['price'];
+            $rawPrice = $preset ? (float) ($presetPricing['effective_price'] ?? $preset->price) : (float) $data['price'];
+            $price = $this->applyResellerOffer($rawPrice, $reseller, (int) $program->id);
             $this->assertReasonablePrice($price);
             $activationAnchor = $scheduledAt ?? $this->currentMinute();
             $activatedAt = $isScheduled ? null : $this->currentMinute();
@@ -332,7 +334,8 @@ class LicenseService
             $scheduledAt = $isScheduled ? $this->normalizeToMinute(Carbon::parse((string) ($data['scheduled_date_time'] ?? ''), $scheduledTimezone)->utc()) : null;
             $expiresAt = ($scheduledAt?->copy() ?? $anchor->copy())->addMinutes($durationMinutes);
             $activatedAt = $license->activated_at;
-            $price = $preset ? (float) ($presetPricing['effective_price'] ?? $preset->price) : (float) $data['price'];
+            $rawPrice = $preset ? (float) ($presetPricing['effective_price'] ?? $preset->price) : (float) $data['price'];
+            $price = $this->applyResellerOffer($rawPrice, $reseller, (int) $license->program_id);
             $this->assertReasonablePrice($price);
 
             if ($isScheduled) {
@@ -2140,6 +2143,17 @@ class LicenseService
                 ? BalanceService::TYPE_EARNED
                 : BalanceService::TYPE_GRANTED,
         ];
+    }
+
+    private function applyResellerOffer(float $price, User $reseller, int $programId): float
+    {
+        $offer = ProgramOffer::query()
+            ->where('user_id', $reseller->id)
+            ->where('program_id', $programId)
+            ->where('is_active', true)
+            ->first();
+
+        return $offer ? round($price * (1 - $offer->discount_percentage / 100), 2) : $price;
     }
 
     private function assertReasonablePrice(float $price): void

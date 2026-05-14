@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ManagerParent;
 use App\Models\Program;
 use App\Models\ProgramDurationPreset;
 use App\Models\ProgramDurationPresetCountryPrice;
+use App\Models\ProgramOffer;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\ExternalApiSecurity;
@@ -316,8 +317,9 @@ class ProgramController extends BaseManagerParentController
     private function serializeProgram(Program $program, Request $request = null, ?Collection $revenueByProgram = null): array
     {
         $licensesSold = (int) ($program->total_licenses_count ?? 0);
+        $activeOfferDiscount = null;
 
-        // Scope licenses_sold based on user role
+        // Scope licenses_sold based on user role and get active offer discount
         if ($request && $request->user()) {
             $user = $request->user();
 
@@ -336,6 +338,15 @@ class ProgramController extends BaseManagerParentController
                 $licensesSold = (int) $program->licenses()->where('tenant_id', $user->tenant_id)->count();
             }
             // Super admin sees all licenses (use total_licenses_count)
+
+            // Get active offer discount for the current user
+            $offer = ProgramOffer::query()
+                ->where('user_id', $user->id)
+                ->where('program_id', $program->id)
+                ->where('is_active', true)
+                ->first();
+
+            $activeOfferDiscount = $offer ? round((float) $offer->discount_percentage, 2) : null;
         }
 
         return [
@@ -360,6 +371,7 @@ class ProgramController extends BaseManagerParentController
             'licenses_sold' => $licensesSold,
             'active_licenses_count' => (int) ($program->active_licenses_count ?? 0),
             'revenue' => round((float) ($revenueByProgram?->get($program->id) ?? $this->programRevenue($program, $request)), 2),
+            'active_offer_discount' => $activeOfferDiscount,
             'created_at' => $program->created_at?->toIso8601String(),
             'duration_presets' => $this->serializeDurationPresets($program),
         ];

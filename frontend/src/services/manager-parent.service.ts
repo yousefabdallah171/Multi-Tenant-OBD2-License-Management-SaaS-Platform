@@ -388,4 +388,62 @@ export const managerParentService = {
     const { data } = await api.post<{ success: boolean; latency_ms: number; status_code: number; error_code?: string | null; error_message?: string | null; error?: string }>('/mandiag/debug/ping')
     return data
   },
+  async getOffers(params?: { page?: number; per_page?: number; program_id?: number; user_id?: number }) {
+    const { data } = await api.get<PaginatedResponse<{
+      id: number
+      program_id: number
+      program_name: string
+      program_status: string
+      user_id: number
+      user_name: string
+      user_role: string
+      discount_percentage: number
+      is_active: boolean
+      created_by: number
+      creator_name: string
+      created_at: string
+      updated_at: string
+    }>>('/offers', { params })
+    return data
+  },
+  async createOffer(payload: { program_id: number; user_id: number; discount_percentage: number; is_active?: boolean }) {
+    const { data } = await api.post<{ data: {
+      id: number
+      program_id: number
+      program_name: string
+      program_status: string
+      user_id: number
+      user_name: string
+      user_role: string
+      discount_percentage: number
+      is_active: boolean
+      created_by: number
+      creator_name: string
+      created_at: string
+      updated_at: string
+    }; message: string }>('/offers', payload)
+    return data
+  },
+  async updateOffer(offerId: number, payload: { discount_percentage?: number; is_active?: boolean }) {
+    const { data } = await api.put<{ data: {
+      id: number
+      program_id: number
+      program_name: string
+      program_status: string
+      user_id: number
+      user_name: string
+      user_role: string
+      discount_percentage: number
+      is_active: boolean
+      created_by: number
+      creator_name: string
+      created_at: string
+      updated_at: string
+    }; message: string }>(`/offers/${offerId}`, payload)
+    return data
+  },
+  async deleteOffer(offerId: number) {
+    const { data } = await api.delete<{ message: string }>(`/offers/${offerId}`)
+    return data
+  },
 }

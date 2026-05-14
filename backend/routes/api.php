@@ -198,6 +198,11 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::delete('/reseller-payments/{resellerPayment}', [ManagerParentResellerPaymentController::class, 'destroyPayment']);
         Route::post('/reseller-commissions', [ManagerParentResellerPaymentController::class, 'storeCommission']);
 
+        Route::get('/offers', [ManagerParentOfferController::class, 'index']);
+        Route::post('/offers', [ManagerParentOfferController::class, 'store']);
+        Route::put('/offers/{offer}', [ManagerParentOfferController::class, 'update']);
+        Route::delete('/offers/{offer}', [ManagerParentOfferController::class, 'destroy']);
+
         Route::get('/activity/export', [ManagerParentActivityController::class, 'export']);
         Route::get('/activity', [ManagerParentActivityController::class, 'index']);
         Route::get('/reseller-logs', [ManagerParentResellerLogController::class, 'index']);

@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { ALL_COUNTRIES } from '@/lib/countries'
-import { resolvePresetEffectivePrice } from '@/lib/preset-pricing'
+import { resolvePresetEffectivePrice, applyDiscountToPresetPrice } from '@/lib/preset-pricing'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { formatDate } from '@/lib/utils'
 import { activateLicense } from '@/services/activation.service'
@@ -28,6 +28,7 @@ export interface ActivationProgram {
   has_external_api?: boolean
   external_software_id?: number | null
   duration_presets?: ProgramDurationPreset[]
+  active_offer_discount?: number | null
 }
 
 interface ActivateLicenseFormProps {
@@ -137,8 +138,11 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
     [program.duration_presets, selectedPresetId],
   )
   const selectedPresetPricing = useMemo(
-    () => resolvePresetEffectivePrice(selectedPreset, form.country_name),
-    [form.country_name, selectedPreset],
+    () => {
+      const resolved = resolvePresetEffectivePrice(selectedPreset, form.country_name)
+      return applyDiscountToPresetPrice(resolved, program.active_offer_discount)
+    },
+    [form.country_name, selectedPreset, program.active_offer_discount],
   )
 
   const durationDays = useMemo(() => {
@@ -754,7 +758,10 @@ export function ActivateLicenseForm({ program, onCancel, onSuccess }: ActivateLi
                   <div className="mt-2 text-sm font-medium">
                     {t('activate.presetPriceSummary', {
                       defaultValue: '${{price}}',
-                      price: resolvePresetEffectivePrice(preset, form.country_name).effectivePrice.toFixed(2),
+                      price: applyDiscountToPresetPrice(
+                        resolvePresetEffectivePrice(preset, form.country_name),
+                        program.active_offer_discount
+                      ).effectivePrice.toFixed(2),
                     })}
                   </div>
                 </button>
