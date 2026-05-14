@@ -535,6 +535,10 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::put('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'updatePayment']);
         Route::delete('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'destroyPayment']);
         Route::post('/reseller-commissions', [SuperAdminResellerPaymentController::class, 'storeCommission']);
+        Route::get('/offers', [ManagerParentOfferController::class, 'index']);
+        Route::post('/offers', [ManagerParentOfferController::class, 'store']);
+        Route::put('/offers/{offer}', [ManagerParentOfferController::class, 'update']);
+        Route::delete('/offers/{offer}', [ManagerParentOfferController::class, 'destroy']);
         Route::get('/transaction-history', [TransactionHistoryController::class, 'index']);
         Route::get('/ip-analytics', [SuperAdminIpAnalyticsController::class, 'index']);
         Route::get('/ip-analytics/stats', [SuperAdminIpAnalyticsController::class, 'stats']);
