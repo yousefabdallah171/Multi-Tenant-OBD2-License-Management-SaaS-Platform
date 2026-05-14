@@ -323,6 +323,7 @@
       "resellerLogs": "سجلات البائعين",
       "apiLogs": "سجلات API",
       "apiStatus": "حالة API",
+      "offers": "العروض المخصصة",
       "settings": "الإعدادات",
       "profile": "الملف الشخصي",
       "biosHistory": "سجل BIOS",
@@ -708,7 +709,8 @@
       "biosChangeRequests": "طلبات تغيير BIOS",
       "biosChangeAudit": "سجل عمليات BIOS",
       "resellerPayments": "مدفوعات الموزعين",
-      "mandiagDebug": "تصحيح وراقبة ماندياج"
+      "mandiagDebug": "تصحيح وراقبة ماندياج",
+      "offers": "العروض المخصصة"
     },
     "pages": {
       "dashboard": {

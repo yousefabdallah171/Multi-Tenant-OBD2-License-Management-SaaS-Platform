@@ -326,6 +326,7 @@
       "resellerLogs": "Reseller Logs",
       "apiLogs": "API Logs",
       "apiStatus": "API Status",
+      "offers": "Custom Offers",
       "settings": "Settings",
       "profile": "Profile"
     },
@@ -480,6 +481,53 @@
         "uptime30": "30d uptime",
         "historyTitle": "Response time history",
         "summaryTitle": "Current status"
+      },
+      "offers": {
+        "title": "Custom Discount Offers",
+        "subtitle": "Create and manage discount offers for resellers and managers on specific software programs.",
+        "newOffer": "New Offer",
+        "filterProgram": "Filter by Software",
+        "filterUser": "Filter by User",
+        "noOffers": "No offers created yet.",
+        "tableColumns": {
+          "software": "Software",
+          "user": "User",
+          "role": "Role",
+          "discount": "Discount %",
+          "status": "Status",
+          "creator": "Created By",
+          "createdAt": "Created At",
+          "actions": "Actions"
+        },
+        "modal": {
+          "title": "Create New Offer",
+          "step1": {
+            "title": "Select User",
+            "description": "Choose a reseller or manager to receive this offer",
+            "placeholder": "Search by name or email"
+          },
+          "step2": {
+            "title": "Select Software",
+            "description": "Choose which software program this offer applies to",
+            "placeholder": "Select a program"
+          },
+          "step3": {
+            "title": "Set Discount",
+            "description": "Enter the discount percentage (0.01 - 99.99%)",
+            "label": "Discount %",
+            "placeholder": "10.00",
+            "example": "Example: Day preset $85 → $76.50 with 10% off"
+          },
+          "submit": "Create Offer",
+          "cancel": "Cancel",
+          "next": "Next",
+          "previous": "Back"
+        },
+        "deleteConfirm": "Are you sure you want to delete this offer?",
+        "deleteSuccess": "Offer deleted successfully",
+        "createSuccess": "Offer created successfully",
+        "updateSuccess": "Offer updated successfully",
+        "error": "Failed to process offer"
       },
         "settings": {
           "title": "System Settings",
@@ -708,7 +756,8 @@
       "software": "Software",
       "licenses": "Licenses",
       "mandiagTracking": "Mandiag Tracking",
-      "mandiagDebug": "Mandiag Debug & Monitoring"
+      "mandiagDebug": "Mandiag Debug & Monitoring",
+      "offers": "Custom Offers"
     },
     "pages": {
       "dashboard": {
@@ -900,6 +949,53 @@
         "view": "View",
         "allMethods": "All Methods",
         "never": "Never"
+      },
+      "offers": {
+        "title": "Custom Discount Offers",
+        "subtitle": "Create and manage discount offers for resellers and managers on specific software programs.",
+        "newOffer": "New Offer",
+        "filterProgram": "Filter by Software",
+        "filterUser": "Filter by User",
+        "noOffers": "No offers created yet.",
+        "tableColumns": {
+          "software": "Software",
+          "user": "User",
+          "role": "Role",
+          "discount": "Discount %",
+          "status": "Status",
+          "creator": "Created By",
+          "createdAt": "Created At",
+          "actions": "Actions"
+        },
+        "modal": {
+          "title": "Create New Offer",
+          "step1": {
+            "title": "Select User",
+            "description": "Choose a reseller or manager to receive this offer",
+            "placeholder": "Search by name or email"
+          },
+          "step2": {
+            "title": "Select Software",
+            "description": "Choose which software program this offer applies to",
+            "placeholder": "Select a program"
+          },
+          "step3": {
+            "title": "Set Discount",
+            "description": "Enter the discount percentage (0.01 - 99.99%)",
+            "label": "Discount %",
+            "placeholder": "10.00",
+            "example": "Example: Day preset $85 → $76.50 with 10% off"
+          },
+          "submit": "Create Offer",
+          "cancel": "Cancel",
+          "next": "Next",
+          "previous": "Back"
+        },
+        "deleteConfirm": "Are you sure you want to delete this offer?",
+        "deleteSuccess": "Offer deleted successfully",
+        "createSuccess": "Offer created successfully",
+        "updateSuccess": "Offer updated successfully",
+        "error": "Failed to process offer"
       },
       "settings": {
         "title": "Settings",
