@@ -2227,7 +2227,8 @@
       "addCommission": "Add Commission",
       "editCommission": "Edit Commission",
       "editPayment": "Edit Payment",
-      "deletePayment": "Delete Payment"
+      "deletePayment": "Delete Payment",
+      "edit": "Edit"
     },
     "dialogs": {
       "recordPayment": "Record Payment",
@@ -2267,6 +2268,43 @@
       "deletePaymentConfirm": "Delete this payment record? This action cannot be undone.",
       "commissionSaved": "Commission saved successfully."
     }
+  },
+  "transaction": {
+    "edit": {
+      "title": "Edit Transaction",
+      "by": "by",
+      "changes": "change(s)",
+      "reverted": "Reverted",
+      "changes_made": "Changes Made",
+      "from": "From:",
+      "to": "To:",
+      "reason": "Reason",
+      "no_history": "No edit history",
+      "edit_history": "Edit History",
+      "current_value": "Current:",
+      "reason_label": "Reason for change",
+      "reason_placeholder": "Why are you making this change?",
+      "impact_warning": "This change will be immediately reflected in all reseller, manager, and manager parent reports. Edit history will be maintained.",
+      "save_changes": "Save Changes",
+      "success": "Transaction edited successfully",
+      "tab_edit": "Edit",
+      "tab_history": "History"
+    },
+    "field": {
+      "price": "Price (USD)",
+      "activated_at": "Activation Date",
+      "duration_days": "Duration (days)",
+      "customer_id": "Customer ID",
+      "program_id": "Program ID",
+      "reseller": "Reseller",
+      "bios_id": "BIOS ID",
+      "program": "Program",
+      "status": "Status"
+    }
+  },
+  "error": {
+    "edit_failed": "Failed to edit transaction",
+    "failed_to_load": "Failed to load transaction details"
   },
   "settings": {
     "serverTimezone": "Server Timezone",
