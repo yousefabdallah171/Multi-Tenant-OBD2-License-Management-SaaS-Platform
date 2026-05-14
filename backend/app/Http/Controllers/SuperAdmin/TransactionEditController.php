@@ -84,21 +84,21 @@ class TransactionEditController extends BaseSuperAdminController
 
         // Cannot edit BIOS ID
         abort_if(
-            isset($request->input('bios_id')),
+            $request->has('bios_id'),
             422,
             'BIOS ID cannot be edited (would break BIOS tracking).'
         );
 
         // Cannot edit reseller
         abort_if(
-            isset($request->input('reseller_id')),
+            $request->has('reseller_id'),
             422,
             'Reseller cannot be edited (would credit wrong seller). Deactivate and reactivate if needed.'
         );
 
         // Cannot edit status
         abort_if(
-            isset($request->input('status')),
+            $request->has('status'),
             422,
             'License status cannot be edited directly. Use deactivate/cancel endpoints.'
         );
