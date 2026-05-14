@@ -156,7 +156,7 @@ class TransactionEditService
                     'activity_logs_updated' => $activityLog !== null ? 1 : 0,
                     'caches_invalidated' => count($invalidatedCaches),
                     'balances_recalculated' => $affectedUsers,
-                    'edit_id' => $edit->id,
+                    'edit_id' => $edit?->id,
                 ],
             ];
         });
@@ -350,14 +350,14 @@ class TransactionEditService
      * Serialize license transaction for response
      *
      * @param License $license
-     * @param TransactionEdit $edit
+     * @param TransactionEdit|null $edit
      * @return array
      */
-    private function serializeTransaction(License $license, TransactionEdit $edit): array
+    private function serializeTransaction(License $license, ?TransactionEdit $edit): array
     {
         return [
             'license_id' => $license->id,
-            'activity_log_id' => $edit->activity_log_id,
+            'activity_log_id' => $edit?->activity_log_id,
             'tenant_id' => $license->tenant_id,
             'tenant_name' => $license->tenant?->name,
             'reseller_id' => $license->reseller_id,
@@ -372,11 +372,11 @@ class TransactionEditService
             'activated_at' => $license->activated_at?->toIso8601String(),
             'expires_at' => $license->expires_at?->toIso8601String(),
             'status' => $license->status,
-            'last_edited' => [
+            'last_edited' => $edit ? [
                 'by' => $edit->superAdmin->name,
                 'at' => $edit->created_at?->toIso8601String(),
                 'reason' => $edit->reason,
-            ],
+            ] : null,
         ];
     }
 }
