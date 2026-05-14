@@ -18,6 +18,7 @@ import { managerParentService } from '@/services/manager-parent.service'
 import { managerService } from '@/services/manager.service'
 import { resellerService } from '@/services/reseller.service'
 import { superAdminBcrService } from '@/services/super-admin-bcr.service'
+import { reportService } from '@/services/report.service'
 import { useTheme } from '@/hooks/useTheme'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { formatDate, formatCurrency } from '@/lib/utils'
@@ -68,21 +69,24 @@ export function Navbar() {
   })
   const recentRequests = recentBcrQuery.data?.data ?? []
 
-  const isReportRole = user?.role === 'manager' || user?.role === 'manager_parent' || user?.role === 'reseller'
+  const isReportRole = user?.role === 'manager' || user?.role === 'manager_parent' || user?.role === 'reseller' || user?.role === 'super_admin'
   const reportQueryFn =
     user?.role === 'manager' ? () => managerService.getFinancialReports({})
     : user?.role === 'manager_parent' ? () => managerParentService.getFinancialReports({})
-    : () => resellerService.getReportSummary({})
+    : user?.role === 'reseller' ? () => resellerService.getReportSummary({})
+    : () => reportService.getFinancialReports({})
   const reportPath =
     user?.role === 'manager' ? routePaths.manager.reports(lang)
     : user?.role === 'manager_parent' ? routePaths.managerParent.financialReports(lang)
-    : routePaths.reseller.reports(lang)
+    : user?.role === 'reseller' ? routePaths.reseller.reports(lang)
+    : routePaths.superAdmin.financialReports(lang)
 
   const reportQuery = useQuery({
     queryKey:
       user?.role === 'manager' ? ['manager', 'financial-reports']
       : user?.role === 'manager_parent' ? ['manager-parent', 'financial-reports']
-      : ['reseller', 'reports', 'summary'],
+      : user?.role === 'reseller' ? ['reseller', 'reports', 'summary']
+      : ['super-admin', 'financial-reports'],
     queryFn: reportQueryFn as any,
     enabled: isReportRole,
     ...liveQueryOptions(30_000),
@@ -93,6 +97,8 @@ export function Navbar() {
     reportRevenue = (reportQuery.data as any)?.data?.summary?.total_revenue ?? 0
   } else if (user?.role === 'reseller') {
     reportRevenue = (reportQuery.data as any)?.data?.total_revenue ?? 0
+  } else if (user?.role === 'super_admin') {
+    reportRevenue = (reportQuery.data as any)?.data?.summary?.total_revenue ?? 0
   }
 
   const title = user
@@ -168,7 +174,24 @@ export function Navbar() {
         <div className="flex shrink-0 items-center">
 
           {/* Icon strip */}
-          <div className="flex items-center">
+          <div className="flex items-center gap-1">
+            {isReportRole ? (
+              <button
+                type="button"
+                onClick={() => navigate(reportPath)}
+                className="inline-flex items-center gap-2.5 rounded-lg bg-emerald-50 px-3.5 py-2 transition-all hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30"
+                title="Total Revenue"
+              >
+                <BarChart3 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="flex flex-col items-start min-w-0">
+                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Revenue</span>
+                  <span className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                    {formatCurrency(reportRevenue, 'USD', locale)}
+                  </span>
+                </div>
+              </button>
+            ) : null}
+
             {isBcrRole ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -242,23 +265,6 @@ export function Navbar() {
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : null}
-
-            {isReportRole ? (
-              <button
-                type="button"
-                onClick={() => navigate(reportPath)}
-                className="inline-flex items-center gap-2.5 rounded-lg bg-emerald-50 px-3.5 py-2 transition-all hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30"
-                title="Total Revenue"
-              >
-                <BarChart3 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                <div className="flex flex-col items-start min-w-0">
-                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Revenue</span>
-                  <span className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
-                    {formatCurrency(reportRevenue, 'USD', locale)}
-                  </span>
-                </div>
-              </button>
             ) : null}
 
             <button
