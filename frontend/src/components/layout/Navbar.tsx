@@ -247,16 +247,17 @@ export function Navbar() {
             {isReportRole ? (
               <button
                 type="button"
-                className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 onClick={() => navigate(reportPath)}
-                title={formatCurrency(reportRevenue, 'USD', locale)}
+                className="inline-flex items-center gap-2.5 rounded-lg bg-emerald-50 px-3.5 py-2 transition-all hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30"
+                title="Total Revenue"
               >
-                <BarChart3 className="h-[17px] w-[17px]" />
-                {reportRevenue > 0 ? (
-                  <span className="absolute -right-1 -top-1 flex h-5 w-auto min-w-max items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-semibold text-white ring-2 ring-white dark:ring-slate-950">
-                    {formatCurrency(reportRevenue, 'USD', locale).replace('$', '').substring(0, 8)}
+                <BarChart3 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="flex flex-col items-start min-w-0">
+                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Revenue</span>
+                  <span className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                    {formatCurrency(reportRevenue, 'USD', locale)}
                   </span>
-                ) : null}
+                </div>
               </button>
             ) : null}
 
