@@ -31,6 +31,11 @@ class ActivityLogController extends BaseSuperAdminController
                     }
                 }
 
+                // Delete transaction_edits records that reference this activity log first
+                DB::table('transaction_edits')
+                    ->where('activity_log_id', $activityLog)
+                    ->delete();
+
                 // Delete the activity log
                 DB::table('activity_logs')
                     ->where('id', $activityLog)
