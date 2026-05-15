@@ -311,7 +311,7 @@ class LicenseService
             'is_scheduled' => $isScheduled,
         ]);
 
-        $renewedLicense = DB::transaction(function () use ($actor, $license, $data, $renewalOwner, $apiResponse, $isScheduled, $renewBiosLower, $shouldCreateTakeover, $preset, $countryName, $presetPricing): License {
+        $renewedLicense = DB::transaction(function () use ($actor, $license, $data, $renewalOwner, $apiResponse, $isScheduled, $renewBiosLower, $shouldCreateTakeover, $preset, $countryName, $presetPricing, $reseller): License {
             // Locked re-check inside transaction to close the race window
             if (! $isScheduled) {
                 $renewRaceConflict = License::query()

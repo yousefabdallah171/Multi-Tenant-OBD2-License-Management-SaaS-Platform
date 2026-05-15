@@ -62,6 +62,11 @@ class CustomerDeletionService
                 'revenue_total' => (float) $revenueTotal,
             ]);
 
+            // Delete activity logs (transaction history) - HARD DELETE for clean history
+            DB::table('activity_logs')
+                ->whereIn('id', $activityLogIds)
+                ->delete();
+
             // Delete licenses (hard delete)
             foreach ($licenses as $license) {
                 License::query()->where('id', $license['id'])->delete();

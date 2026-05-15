@@ -87,6 +87,7 @@ use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantControll
 use App\Http\Controllers\SuperAdmin\TenantResetController as SuperAdminTenantResetController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
 use App\Http\Controllers\SuperAdmin\OfferController as SuperAdminOfferController;
+use App\Http\Controllers\SuperAdmin\ActivityLogController as SuperAdminActivityLogController;
 use App\Http\Controllers\MandiagWebhookController;
 use App\Http\Controllers\ManagerParent\MandiagTrackingController as ManagerParentMandiagTrackingController;
 use App\Http\Controllers\ManagerParent\MandiagDebugController as ManagerParentMandiagDebugController;
@@ -536,6 +537,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::put('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'updatePayment']);
         Route::delete('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'destroyPayment']);
         Route::post('/reseller-commissions', [SuperAdminResellerPaymentController::class, 'storeCommission']);
+        Route::delete('/activity-logs/{activityLog}', [SuperAdminActivityLogController::class, 'destroy']);
         Route::get('/offers', [SuperAdminOfferController::class, 'index']);
         Route::post('/offers', [SuperAdminOfferController::class, 'store']);
         Route::put('/offers/{offer}', [SuperAdminOfferController::class, 'update']);

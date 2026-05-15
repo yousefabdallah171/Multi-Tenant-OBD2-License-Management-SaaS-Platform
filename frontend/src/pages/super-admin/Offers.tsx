@@ -85,7 +85,7 @@ export function OffersPage() {
 
   const handleCreateOffer = () => {
     if (!formState.programId || !formState.userId || formState.discountPercentage === null) {
-      toast.error('Please fill in all required fields')
+      toast.error(t('offers.validation.fillAllFields') || 'Please fill in all required fields')
       return
     }
 
