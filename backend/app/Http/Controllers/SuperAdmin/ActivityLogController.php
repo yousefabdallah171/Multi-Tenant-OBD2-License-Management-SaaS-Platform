@@ -16,21 +16,11 @@ class ActivityLogController extends BaseSuperAdminController
     public function destroy(int $activityLog): JsonResponse
     {
         try {
-            // Fetch activity log before deletion
+            // Fetch activity log before deletion (needed for logging)
             $activityLogModel = ActivityLog::query()->find($activityLog);
             $user = auth()->user();
 
             DB::transaction(function () use ($activityLog, $activityLogModel, $user): void {
-                // Log the deletion if we have the activity log and user
-                if ($activityLogModel && $user) {
-                    try {
-                        $this->transactionEditService->logTransactionDeletion($activityLog, $activityLogModel, $user);
-                    } catch (\Exception $e) {
-                        \Log::warning('Failed to log transaction deletion: ' . $e->getMessage());
-                        // Continue with deletion even if logging fails
-                    }
-                }
-
                 // Delete transaction_edits records that reference this activity log first
                 DB::table('transaction_edits')
                     ->where('activity_log_id', $activityLog)
@@ -40,6 +30,16 @@ class ActivityLogController extends BaseSuperAdminController
                 DB::table('activity_logs')
                     ->where('id', $activityLog)
                     ->delete();
+
+                // Log the deletion AFTER deleting (avoids foreign key constraint when creating new transaction_edits)
+                if ($activityLogModel && $user) {
+                    try {
+                        $this->transactionEditService->logTransactionDeletion($activityLog, $activityLogModel, $user);
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to log transaction deletion: ' . $e->getMessage());
+                        // Continue - deletion already completed
+                    }
+                }
             });
 
             // Invalidate cache
