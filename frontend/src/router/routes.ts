@@ -142,7 +142,6 @@ export const routePaths = {
     biosChangeAudit: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/bios-change-audit`,
     settings: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/settings`,
     profile: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/profile`,
-    offers: (lang: SupportedLanguage = DEFAULT_LANGUAGE) => `/${lang}/super-admin/offers`,
   },
 }
 
