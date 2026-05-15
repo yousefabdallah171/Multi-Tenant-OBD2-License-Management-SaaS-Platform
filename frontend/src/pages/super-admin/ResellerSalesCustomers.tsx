@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, BadgeDollarSign, ListOrdered, Users, Edit2 } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, BadgeDollarSign, ListOrdered, Users, Edit2, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
@@ -20,6 +21,7 @@ export function ResellerSalesCustomersPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { resellerId } = useParams<{ resellerId: string }>()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const resolvedResellerId = Number(resellerId)
@@ -33,6 +35,7 @@ export function ResellerSalesCustomersPage() {
   const [perPage, setPerPage] = useState(25)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedLicenseId, setSelectedLicenseId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const filters = useMemo<ManagerParentSalesCustomerFilters>(() => ({
     search: search || undefined,
@@ -58,6 +61,19 @@ export function ResellerSalesCustomersPage() {
   const countriesQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'countries'],
     queryFn: () => superAdminCustomerService.getCountries({}),
+  })
+
+  const deleteActivityLogMutation = useMutation({
+    mutationFn: (activityLogId: number) => superAdminPlatformService.deleteActivityLog(activityLogId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'reseller-payments', 'reseller-customers'] })
+      setDeletingId(null)
+      toast.success(t('common.deleteSuccess', { defaultValue: 'Transaction deleted successfully' }))
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || t('common.errorMessage', { defaultValue: 'Failed to delete transaction' }))
+      setDeletingId(null)
+    },
   })
 
   const rows = salesQuery.data?.data ?? []
@@ -139,10 +155,26 @@ export function ResellerSalesCustomersPage() {
               {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(t('common.confirmDelete', { defaultValue: 'Are you sure? This action cannot be undone.' }))) {
+                setDeletingId(row.activity_log_id)
+                deleteActivityLogMutation.mutate(row.activity_log_id)
+              }
+            }}
+            disabled={deleteActivityLogMutation.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {deletingId === row.activity_log_id && deleteActivityLogMutation.isPending
+              ? t('common.deleting', { defaultValue: 'Deleting...' })
+              : t('common.delete', { defaultValue: 'Delete' })}
+          </button>
         </div>
       ),
     },
-  ], [editModalOpen, lang, locale, navigate, selectedLicenseId, t])
+  ], [editModalOpen, lang, locale, navigate, selectedLicenseId, t, deleteActivityLogMutation.isPending, deletingId])
 
   return (
     <div className="space-y-6">
