@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Activity, AlertTriangle, BarChart3, Building2, Bug, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Network, Package, Percent, ScrollText, Settings, ShieldBan, Trash2, User, UserRound, Users } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Building2, Bug, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, History, LayoutDashboard, Network, Package, ScrollText, Settings, ShieldBan, Trash2, User, UserRound, Users } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -38,7 +38,6 @@ const superAdminItems: NavItem[] = [
   { key: 'reports', icon: BarChart3, href: routePaths.superAdmin.reports, translationKey: 'superAdmin.nav.reports' },
   { key: 'programLogs', icon: FileText, href: routePaths.superAdmin.programLogs, translationKey: 'superAdmin.nav.programLogs' },
   { key: 'resellerPayments', icon: BarChart3, href: routePaths.superAdmin.resellerPayments, translationKey: 'superAdmin.nav.resellerPayments' },
-  { key: 'offers', icon: Percent, href: routePaths.superAdmin.offers, translationKey: 'superAdmin.nav.offers' },
   { key: 'transactionHistory', icon: History, href: routePaths.superAdmin.transactionHistory, translationKey: 'superAdmin.nav.transactionHistory' },
   { key: 'transactionEditLogs', icon: FileText, href: routePaths.superAdmin.transactionEditLogs, translationKey: 'superAdmin.nav.transactionEditLogs' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.superAdmin.ipAnalytics, translationKey: 'superAdmin.nav.ipAnalytics' },
