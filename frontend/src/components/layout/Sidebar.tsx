@@ -57,7 +57,6 @@ const managerParentItems: NavItem[] = [
   { key: 'biosChangeRequestsTopLevel', icon: ClipboardList, href: routePaths.managerParent.biosChangeRequests, translationKey: 'managerParent.nav.biosChangeRequests' },
   { key: 'biosBlacklistGroup', icon: ShieldBan, href: routePaths.managerParent.biosBlacklist, translationKey: 'managerParent.nav.biosBlacklist' },
   { key: 'resellerPayments', icon: BarChart3, href: routePaths.managerParent.resellerPayments, translationKey: 'managerParent.nav.resellerPayments' },
-  { key: 'offers', icon: Percent, href: routePaths.managerParent.offers, translationKey: 'managerParent.nav.offers' },
   { key: 'mandiagTracking', icon: BarChart3, href: routePaths.managerParent.mandiagTracking, translationKey: 'managerParent.nav.mandiagTracking' },
   { key: 'mandiagDebug', icon: Bug, href: routePaths.managerParent.mandiagDebug, translationKey: 'managerParent.nav.mandiagDebug' },
   { key: 'ipAnalytics', icon: Activity, href: routePaths.managerParent.ipAnalytics, translationKey: 'managerParent.nav.ipAnalytics' },
