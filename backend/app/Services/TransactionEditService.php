@@ -194,6 +194,66 @@ class TransactionEditService
     }
 
     /**
+     * Log a transaction deletion
+     */
+    public function logTransactionDeletion(int $activityLogId, ?ActivityLog $activityLog, User $superAdmin): void
+    {
+        if ($activityLog === null) {
+            return;
+        }
+
+        try {
+            if (!DB::connection()->getSchemaBuilder()->hasTable('transaction_edits')) {
+                return;
+            }
+
+            $previousValues = [
+                'license_id' => $activityLog->metadata['license_id'] ?? null,
+                'price' => $activityLog->metadata['price'] ?? null,
+                'customer_id' => $activityLog->metadata['customer_id'] ?? null,
+                'customer_name' => $activityLog->metadata['customer_name'] ?? null,
+                'program_id' => $activityLog->metadata['program_id'] ?? null,
+                'program_name' => $activityLog->metadata['program_name'] ?? null,
+                'bios_id' => $activityLog->metadata['bios_id'] ?? null,
+            ];
+
+            TransactionEdit::create([
+                'tenant_id' => $activityLog->tenant_id,
+                'license_id' => $activityLog->metadata['license_id'] ?? 0,
+                'activity_log_id' => $activityLogId,
+                'super_admin_id' => $superAdmin->id,
+                'action' => 'delete',
+                'previous_values' => $previousValues,
+                'new_values' => [],
+                'reason' => 'Deleted',
+            ]);
+
+            // Log activity for super admin activity page
+            ActivityLog::create([
+                'tenant_id' => $activityLog->tenant_id,
+                'user_id' => $superAdmin->id,
+                'action' => 'transaction.deleted',
+                'description' => sprintf(
+                    'Transaction deleted - BIOS: %s, Price: $%s, Customer: %s',
+                    $previousValues['bios_id'] ?? 'Unknown',
+                    number_format((float) ($previousValues['price'] ?? 0), 2),
+                    $previousValues['customer_name'] ?? 'Unknown'
+                ),
+                'metadata' => [
+                    'activity_log_id' => $activityLogId,
+                    'license_id' => $previousValues['license_id'],
+                    'previous_values' => $previousValues,
+                    'customer_id' => $previousValues['customer_id'],
+                    'price' => $previousValues['price'],
+                ],
+                'ip_address' => request()?->ip(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('Failed to log transaction deletion: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Get full edit history for a license
      *
      * @param License $license

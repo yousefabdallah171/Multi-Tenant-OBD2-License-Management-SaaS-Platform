@@ -105,7 +105,18 @@ export function TransactionEditLogsPage() {
       key: 'changes',
       label: t('transaction.edit.changes', { defaultValue: 'Changes' }),
       render: (row) => {
-        const changes = Object.entries(row.new_values)
+        if (row.previous_values && Object.keys(row.new_values || {}).length === 0) {
+          const price = row.previous_values.price
+          return (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700 dark:bg-red-900 dark:text-red-200">
+                🗑️ Deleted
+              </span>
+              {price && <span className="text-xs text-gray-500">Price was: ${price}</span>}
+            </div>
+          )
+        }
+        const changes = Object.entries(row.new_values || {})
           .map(([key, newVal]) => {
             const oldVal = row.previous_values[key]
             if (key === 'price') {
