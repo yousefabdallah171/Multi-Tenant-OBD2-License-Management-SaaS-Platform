@@ -198,16 +198,19 @@ class TransactionEditService
      */
     public function logTransactionDeletion(int $activityLogId, ?ActivityLog $activityLog, User $superAdmin): void
     {
-        if ($activityLog === null) {
+        if ($activityLog === null || !$superAdmin) {
+            return;
+        }
+
+        // Check if transaction_edits table exists
+        if (!DB::connection()->getSchemaBuilder()->hasTable('transaction_edits')) {
             return;
         }
 
         try {
-            if (!DB::connection()->getSchemaBuilder()->hasTable('transaction_edits')) {
-                return;
-            }
+            // Safely extract metadata
+            $metadata = is_array($activityLog->metadata) ? $activityLog->metadata : json_decode($activityLog->metadata ?? '{}', true) ?? [];
 
-            $metadata = (array) ($activityLog->metadata ?? []);
             $previousValues = [
                 'license_id' => $metadata['license_id'] ?? null,
                 'price' => $metadata['price'] ?? null,
@@ -218,8 +221,9 @@ class TransactionEditService
                 'bios_id' => $metadata['bios_id'] ?? null,
             ];
 
-            TransactionEdit::create([
-                'tenant_id' => $activityLog->tenant_id,
+            // Create deletion log entry
+            TransactionEdit::query()->create([
+                'tenant_id' => $activityLog->tenant_id ?? 0,
                 'license_id' => (int) ($metadata['license_id'] ?? 0),
                 'activity_log_id' => $activityLogId,
                 'super_admin_id' => $superAdmin->id,
@@ -229,9 +233,9 @@ class TransactionEditService
                 'reason' => 'Deleted',
             ]);
 
-            // Log activity for super admin activity page
-            ActivityLog::create([
-                'tenant_id' => $activityLog->tenant_id,
+            // Log activity for audit trail
+            ActivityLog::query()->create([
+                'tenant_id' => $activityLog->tenant_id ?? 0,
                 'user_id' => $superAdmin->id,
                 'action' => 'transaction.deleted',
                 'description' => sprintf(
@@ -250,7 +254,8 @@ class TransactionEditService
                 'ip_address' => request()?->ip(),
             ]);
         } catch (\Exception $e) {
-            \Log::warning('Failed to log transaction deletion: ' . $e->getMessage());
+            \Log::error('Failed to log transaction deletion: ' . $e->getMessage());
+            throw $e; // Re-throw to be caught by controller
         }
     }
 

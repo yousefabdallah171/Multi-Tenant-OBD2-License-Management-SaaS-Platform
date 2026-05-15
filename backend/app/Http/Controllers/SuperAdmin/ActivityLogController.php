@@ -15,26 +15,39 @@ class ActivityLogController extends BaseSuperAdminController
 
     public function destroy(int $activityLog): JsonResponse
     {
-        $user = auth()->user();
-        $activityLogModel = ActivityLog::query()->find($activityLog);
+        try {
+            // Fetch activity log before deletion
+            $activityLogModel = ActivityLog::query()->find($activityLog);
+            $user = auth()->user();
 
-        DB::transaction(function () use ($activityLog, $activityLogModel, $user): void {
-            // Log the deletion
-            if ($activityLogModel && $user) {
-                $this->transactionEditService->logTransactionDeletion($activityLog, $activityLogModel, $user);
-            }
+            DB::transaction(function () use ($activityLog, $activityLogModel, $user): void {
+                // Log the deletion if we have the activity log and user
+                if ($activityLogModel && $user) {
+                    try {
+                        $this->transactionEditService->logTransactionDeletion($activityLog, $activityLogModel, $user);
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to log transaction deletion: ' . $e->getMessage());
+                        // Continue with deletion even if logging fails
+                    }
+                }
 
-            // Delete the activity log
-            DB::table('activity_logs')
-                ->where('id', $activityLog)
-                ->delete();
-        });
+                // Delete the activity log
+                DB::table('activity_logs')
+                    ->where('id', $activityLog)
+                    ->delete();
+            });
 
-        // Invalidate cache
-        \App\Support\LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+            // Invalidate cache
+            \App\Support\LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
 
-        return response()->json([
-            'message' => 'Transaction deleted successfully.',
-        ]);
+            return response()->json([
+                'message' => 'Transaction deleted successfully.',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting activity log: ' . $e->getMessage() . ' ' . $e->getTraceAsString());
+            return response()->json([
+                'message' => 'Error deleting transaction: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
