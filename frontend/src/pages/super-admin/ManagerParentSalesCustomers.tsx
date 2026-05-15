@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { ArrowLeft, BadgeDollarSign, ListOrdered, Users, Edit2, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useToast } from '@/hooks/useToast'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
@@ -21,7 +21,6 @@ export function ManagerParentSalesCustomersPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
-  const { showToast } = useToast()
   const { managerParentId } = useParams<{ managerParentId: string }>()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const resolvedManagerParentId = Number(managerParentId)
@@ -65,12 +64,11 @@ export function ManagerParentSalesCustomersPage() {
   const deleteActivityLogMutation = useMutation({
     mutationFn: (activityLogId: number) => superAdminPlatformService.deleteActivityLog(activityLogId),
     onSuccess: () => {
-      showToast({ type: 'success', message: t('payments.actions.deleteSuccess', { defaultValue: 'Transaction deleted successfully' }) })
+      toast.success(t('common.deleteSuccess', { defaultValue: 'Transaction deleted successfully' }))
       salesQuery.refetch()
     },
     onError: (error: any) => {
-      const message = error?.response?.data?.message || t('payments.actions.deleteError', { defaultValue: 'Error deleting transaction' })
-      showToast({ type: 'error', message })
+      toast.error(error?.response?.data?.message || t('common.errorMessage', { defaultValue: 'Error deleting transaction' }))
     },
   })
 
