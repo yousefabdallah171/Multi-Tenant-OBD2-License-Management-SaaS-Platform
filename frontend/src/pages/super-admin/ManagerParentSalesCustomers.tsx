@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, BadgeDollarSign, ListOrdered, Users, Edit2 } from 'lucide-react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { ArrowLeft, BadgeDollarSign, ListOrdered, Users, Edit2, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useToast } from '@/hooks/useToast'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
@@ -20,6 +21,7 @@ export function ManagerParentSalesCustomersPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const { managerParentId } = useParams<{ managerParentId: string }>()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const resolvedManagerParentId = Number(managerParentId)
@@ -58,6 +60,18 @@ export function ManagerParentSalesCustomersPage() {
   const countriesQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'countries'],
     queryFn: () => superAdminCustomerService.getCountries({}),
+  })
+
+  const deleteActivityLogMutation = useMutation({
+    mutationFn: (activityLogId: number) => superAdminPlatformService.deleteActivityLog(activityLogId),
+    onSuccess: () => {
+      showToast({ type: 'success', message: t('payments.actions.deleteSuccess', { defaultValue: 'Transaction deleted successfully' }) })
+      salesQuery.refetch()
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || t('payments.actions.deleteError', { defaultValue: 'Error deleting transaction' })
+      showToast({ type: 'error', message })
+    },
   })
 
   const rows = salesQuery.data?.data ?? []
@@ -139,10 +153,24 @@ export function ManagerParentSalesCustomersPage() {
               {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(t('payments.actions.deleteConfirm', { defaultValue: 'Are you sure you want to delete this transaction?' }))) {
+                deleteActivityLogMutation.mutate(row.activity_log_id)
+              }
+            }}
+            disabled={deleteActivityLogMutation.isPending}
+            className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/30"
+            title={t('payments.actions.delete', { defaultValue: 'Delete Transaction' })}
+          >
+            <Trash2 className="h-3 w-3" />
+            {t('payments.actions.delete', { defaultValue: 'Delete' })}
+          </button>
         </div>
       ),
     },
-  ], [editModalOpen, lang, locale, navigate, selectedLicenseId, t])
+  ], [deleteActivityLogMutation, editModalOpen, lang, locale, navigate, selectedLicenseId, t])
 
   return (
     <div className="space-y-6">
