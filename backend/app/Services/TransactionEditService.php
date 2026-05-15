@@ -207,19 +207,20 @@ class TransactionEditService
                 return;
             }
 
+            $metadata = (array) ($activityLog->metadata ?? []);
             $previousValues = [
-                'license_id' => $activityLog->metadata['license_id'] ?? null,
-                'price' => $activityLog->metadata['price'] ?? null,
-                'customer_id' => $activityLog->metadata['customer_id'] ?? null,
-                'customer_name' => $activityLog->metadata['customer_name'] ?? null,
-                'program_id' => $activityLog->metadata['program_id'] ?? null,
-                'program_name' => $activityLog->metadata['program_name'] ?? null,
-                'bios_id' => $activityLog->metadata['bios_id'] ?? null,
+                'license_id' => $metadata['license_id'] ?? null,
+                'price' => $metadata['price'] ?? null,
+                'customer_id' => $metadata['customer_id'] ?? null,
+                'customer_name' => $metadata['customer_name'] ?? null,
+                'program_id' => $metadata['program_id'] ?? null,
+                'program_name' => $metadata['program_name'] ?? null,
+                'bios_id' => $metadata['bios_id'] ?? null,
             ];
 
             TransactionEdit::create([
                 'tenant_id' => $activityLog->tenant_id,
-                'license_id' => $activityLog->metadata['license_id'] ?? 0,
+                'license_id' => (int) ($metadata['license_id'] ?? 0),
                 'activity_log_id' => $activityLogId,
                 'super_admin_id' => $superAdmin->id,
                 'action' => 'delete',
