@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Edit2, Trash2, Plus, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -11,6 +11,13 @@ import { Label } from '@/components/ui/label'
 import { managerParentService } from '@/services/manager-parent.service'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { formatDate } from '@/lib/utils'
+
+interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+}
 
 interface OfferFormData {
   program_id: number
@@ -23,6 +30,8 @@ interface OfferFormState {
   step: 1 | 2 | 3
   programId: number | null
   userId: number | null
+  selectedUser: User | null
+  searchQuery: string
   discountPercentage: number | null
   isActive: boolean
 }
@@ -31,6 +40,8 @@ const INITIAL_FORM_STATE: OfferFormState = {
   step: 1,
   programId: null,
   userId: null,
+  selectedUser: null,
+  searchQuery: '',
   discountPercentage: null,
   isActive: true,
 }
@@ -58,6 +69,30 @@ export function OffersPage() {
     queryKey: ['manager-parent:programs-for-offers'],
     queryFn: () => managerParentService.getProgramsWithExternalApi(),
   })
+
+  // Fetch team network to get available resellers and managers
+  const teamNetworkQuery = useQuery({
+    queryKey: ['manager-parent:team-network'],
+    queryFn: () => managerParentService.getTeamNetwork(),
+  })
+
+  const searchResults = useMemo(() => {
+    if (!teamNetworkQuery.data || !formState.searchQuery) return []
+
+    const query = formState.searchQuery.toLowerCase()
+    const allUsers: User[] = []
+
+    // Extract resellers and managers from team network
+    const teamData = teamNetworkQuery.data
+    if (Array.isArray(teamData)) {
+      return (teamData as any[]).filter((user: any) =>
+        (user.name?.toLowerCase().includes(query) || user.email?.toLowerCase().includes(query)) &&
+        (user.role === 'reseller' || user.role === 'manager')
+      )
+    }
+
+    return allUsers
+  }, [teamNetworkQuery.data, formState.searchQuery])
 
   const createOfferMutation = useMutation({
     mutationFn: (data: OfferFormData) => managerParentService.createOffer(data),
@@ -106,15 +141,15 @@ export function OffersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            {t('offers.title') || 'Custom Discount Offers'}
+            {t('managerParent.pages.offers.title') || 'Custom Discount Offers'}
           </h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {t('offers.subtitle') || 'Manage custom discount offers for your resellers and managers'}
+            {t('managerParent.pages.offers.subtitle') || 'Manage custom discount offers for your resellers and managers'}
           </p>
         </div>
         <Button onClick={() => setShowModal(true)} className="gap-2">
           <Plus className="h-4 w-4" />
-          {t('offers.newOffer') || 'New Offer'}
+          {t('managerParent.pages.offers.newOffer') || 'New Offer'}
         </Button>
       </div>
 
@@ -122,7 +157,7 @@ export function OffersPage() {
       <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label>{t('offers.filterProgram') || 'Filter by Software'}</Label>
+            <Label>{t('managerParent.pages.offers.filterProgram') || 'Filter by Software'}</Label>
             <select
               value={filterProgramId}
               onChange={(e) => {
@@ -140,15 +175,15 @@ export function OffersPage() {
             </select>
           </div>
           <div className="space-y-2">
-            <Label>{t('offers.filterUser') || 'Filter by User'}</Label>
+            <Label>{t('managerParent.pages.offers.filterUser') || 'Filter by User'}</Label>
             <Input
-              placeholder={t('common.searchByName') || 'Search by name or ID'}
+              placeholder={t('common.searchByName') || 'Search by name or email'}
               value={filterUserId}
               onChange={(e) => {
                 setFilterUserId(e.target.value ? Number(e.target.value) : '')
                 setCurrentPage(1)
               }}
-              type="number"
+              type="text"
             />
           </div>
         </div>
@@ -162,7 +197,7 @@ export function OffersPage() {
           </div>
         ) : offers.length === 0 ? (
           <div className="flex h-32 items-center justify-center text-slate-500">
-            {t('offers.noOffers') || 'No offers found'}
+            {t('managerParent.pages.offers.noOffers') || 'No offers found'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -297,7 +332,7 @@ export function OffersPage() {
           <div className="w-full max-w-md rounded-lg bg-white dark:bg-slate-900">
             <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-700">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                {t('offers.newOffer') || 'New Offer'}
+                {t('managerParent.pages.offers.newOffer') || 'New Offer'}
               </h2>
             </div>
 
@@ -306,19 +341,49 @@ export function OffersPage() {
               {formState.step === 1 && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>{t('offers.selectUser') || 'Select User (Reseller/Manager)'}</Label>
-                    <Input
-                      placeholder={t('common.searchByName') || 'Search by name or email'}
-                      type="text"
-                      className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
-                    />
-                    {/* Would populate from API search results */}
+                    <Label>{t('managerParent.pages.offers.selectUser') || 'Select User (Reseller/Manager)'}</Label>
+                    <div className="relative">
+                      <Input
+                        placeholder={t('common.searchByName') || 'Search by name or email'}
+                        type="text"
+                        value={formState.searchQuery}
+                        onChange={(e) => setFormState((prev) => ({ ...prev, searchQuery: e.target.value }))}
+                        className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
+                      />
+                      {formState.searchQuery && searchResults.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900 z-10">
+                          {searchResults.map((user: any) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() =>
+                                setFormState((prev) => ({
+                                  ...prev,
+                                  userId: user.id,
+                                  selectedUser: user,
+                                  searchQuery: '',
+                                }))
+                              }
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 last:border-b-0"
+                            >
+                              <div className="font-medium text-slate-900 dark:text-white">{user.name}</div>
+                              <div className="text-xs text-slate-500">{user.email}</div>
+                              <div className="text-xs text-slate-400 capitalize">{user.role?.replace('_', ' ')}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>{t('common.selectedUser') || 'Selected User'}</Label>
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                      {formState.userId ? (
-                        <div className="text-sm text-slate-900 dark:text-white">User ID: {formState.userId}</div>
+                      {formState.selectedUser ? (
+                        <div className="space-y-1">
+                          <div className="font-medium text-slate-900 dark:text-white">{formState.selectedUser.name}</div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400">{formState.selectedUser.email}</div>
+                          <div className="text-xs text-slate-500 capitalize">{formState.selectedUser.role?.replace('_', ' ')}</div>
+                        </div>
                       ) : (
                         <div className="text-sm text-slate-500">No user selected</div>
                       )}
@@ -331,7 +396,7 @@ export function OffersPage() {
               {formState.step === 2 && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>{t('offers.selectProgram') || 'Select Software'}</Label>
+                    <Label>{t('managerParent.pages.offers.selectProgram') || 'Select Software'}</Label>
                     <select
                       value={formState.programId || ''}
                       onChange={(e) => setFormState((prev) => ({ ...prev, programId: Number(e.target.value) }))}
@@ -359,7 +424,7 @@ export function OffersPage() {
               {formState.step === 3 && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>{t('offers.discount') || 'Discount Percentage'}</Label>
+                    <Label>{t('managerParent.pages.offers.discount') || 'Discount Percentage'}</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -379,7 +444,7 @@ export function OffersPage() {
                       <span className="text-slate-600 dark:text-slate-400">%</span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {t('offers.discountInfo') || 'Enter discount as percentage (0.01 - 99.99)'}
+                      {t('managerParent.pages.offers.discountInfo') || 'Enter discount as percentage (0.01 - 99.99)'}
                     </p>
                   </div>
 
@@ -392,7 +457,7 @@ export function OffersPage() {
                         className="h-4 w-4 rounded border-slate-300"
                       />
                       <span className="text-sm text-slate-700 dark:text-slate-300">
-                        {t('offers.activeNow') || 'Active Now'}
+                        {t('managerParent.pages.offers.activeNow') || 'Active Now'}
                       </span>
                     </label>
                   </div>
@@ -400,7 +465,7 @@ export function OffersPage() {
                   {formState.discountPercentage && (
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
                       <div className="text-xs text-slate-600 dark:text-slate-400">
-                        {t('offers.example') || 'Example'}: $100 × (1 - {formState.discountPercentage}%) = $
+                        {t('managerParent.pages.offers.example') || 'Example'}: $100 × (1 - {formState.discountPercentage}%) = $
                         {(100 * (1 - formState.discountPercentage / 100)).toFixed(2)}
                       </div>
                     </div>
