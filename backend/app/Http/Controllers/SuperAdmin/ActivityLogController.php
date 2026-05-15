@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 class ActivityLogController extends BaseSuperAdminController
 {
-    public function destroy(int $activityLogId): JsonResponse
+    public function destroy(int $activityLog): JsonResponse
     {
-        DB::transaction(function () use ($activityLogId): void {
+        DB::transaction(function () use ($activityLog): void {
             DB::table('activity_logs')
-                ->where('id', $activityLogId)
+                ->where('id', $activityLog)
                 ->delete();
         });
 

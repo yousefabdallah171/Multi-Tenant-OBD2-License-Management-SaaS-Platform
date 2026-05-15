@@ -10,6 +10,7 @@ import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -28,9 +29,11 @@ const ROLE_OPTIONS: Array<{ value: 'manager_parent' | 'manager' | 'reseller'; la
 export function TransactionHistoryPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
+  const isSuperAdmin = user?.role === 'super_admin'
 
   const [search, setSearch] = useState('')
   const [tenantId, setTenantId] = useState<number | ''>('')
@@ -214,26 +217,28 @@ export function TransactionHistoryPage() {
       label: t('common.actions'),
       render: (row) => (
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm(t('common.confirmDelete', { defaultValue: 'Are you sure? This action cannot be undone.' }))) {
-                setDeletingId(row.id)
-                deleteActivityLogMutation.mutate(row.id)
-              }
-            }}
-            disabled={deleteActivityLogMutation.isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            {deletingId === row.id && deleteActivityLogMutation.isPending
-              ? t('common.deleting', { defaultValue: 'Deleting...' })
-              : t('common.delete', { defaultValue: 'Delete' })}
-          </button>
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(t('common.confirmDelete', { defaultValue: 'Are you sure? This action cannot be undone.' }))) {
+                  setDeletingId(row.id)
+                  deleteActivityLogMutation.mutate(row.id)
+                }
+              }}
+              disabled={deleteActivityLogMutation.isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {deletingId === row.id && deleteActivityLogMutation.isPending
+                ? t('common.deleting', { defaultValue: 'Deleting...' })
+                : t('common.delete', { defaultValue: 'Delete' })}
+            </button>
+          )}
         </div>
       ),
     },
-  ], [lang, locale, t, deleteActivityLogMutation.isPending, deletingId])
+  ], [lang, locale, t, deleteActivityLogMutation.isPending, deletingId, isSuperAdmin])
 
   const clearFilters = () => {
     setSearch('')

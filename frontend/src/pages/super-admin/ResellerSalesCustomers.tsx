@@ -10,6 +10,7 @@ import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { TransactionEditModal } from '@/components/TransactionEditModal'
+import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -20,11 +21,13 @@ import type { ManagerParentSalesCustomerEventRow, ManagerParentSalesCustomerFilt
 export function ResellerSalesCustomersPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { resellerId } = useParams<{ resellerId: string }>()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const resolvedResellerId = Number(resellerId)
+  const isSuperAdmin = user?.role === 'super_admin'
 
   const [search, setSearch] = useState('')
   const [programId, setProgramId] = useState<number | ''>('')
@@ -155,26 +158,28 @@ export function ResellerSalesCustomersPage() {
               {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm(t('common.confirmDelete', { defaultValue: 'Are you sure? This action cannot be undone.' }))) {
-                setDeletingId(row.activity_log_id)
-                deleteActivityLogMutation.mutate(row.activity_log_id)
-              }
-            }}
-            disabled={deleteActivityLogMutation.isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            {deletingId === row.activity_log_id && deleteActivityLogMutation.isPending
-              ? t('common.deleting', { defaultValue: 'Deleting...' })
-              : t('common.delete', { defaultValue: 'Delete' })}
-          </button>
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(t('common.confirmDelete', { defaultValue: 'Are you sure? This action cannot be undone.' }))) {
+                  setDeletingId(row.activity_log_id)
+                  deleteActivityLogMutation.mutate(row.activity_log_id)
+                }
+              }}
+              disabled={deleteActivityLogMutation.isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {deletingId === row.activity_log_id && deleteActivityLogMutation.isPending
+                ? t('common.deleting', { defaultValue: 'Deleting...' })
+                : t('common.delete', { defaultValue: 'Delete' })}
+            </button>
+          )}
         </div>
       ),
     },
-  ], [editModalOpen, lang, locale, navigate, selectedLicenseId, t, deleteActivityLogMutation.isPending, deletingId])
+  ], [editModalOpen, lang, locale, navigate, selectedLicenseId, t, deleteActivityLogMutation.isPending, deletingId, isSuperAdmin])
 
   return (
     <div className="space-y-6">
