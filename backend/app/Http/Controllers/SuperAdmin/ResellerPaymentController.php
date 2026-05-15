@@ -215,15 +215,18 @@ class ResellerPaymentController extends BaseSuperAdminController
 
         $events = RevenueAnalytics::baseQuery($filters, (int) $managerParent->tenant_id, null, (int) $managerParent->id)
             ->whereRaw(RevenueAnalytics::earnedCondition())
-            ->select(['activity_logs.metadata', 'activity_logs.created_at'])
+            ->select(['activity_logs.id', 'activity_logs.metadata', 'activity_logs.created_at'])
             ->orderByDesc('activity_logs.created_at')
             ->get();
 
         $rows = $events
-            ->map(fn ($event) => $this->serializeManagerParentEventRow(
-                (array) ($event->metadata ?? []),
-                $event->created_at?->toIso8601String()
-            ))
+            ->map(fn ($event) => [
+                ...$this->serializeManagerParentEventRow(
+                    (array) ($event->metadata ?? []),
+                    $event->created_at?->toIso8601String()
+                ),
+                'activity_log_id' => $event->id,
+            ])
             ->filter(fn (array $row): bool => $row['sale_amount'] > 0)
             ->values();
 
@@ -273,6 +276,7 @@ class ResellerPaymentController extends BaseSuperAdminController
                 : null;
 
             return [
+                'activity_log_id' => $row['activity_log_id'],
                 'customer_id' => $row['customer_id'],
                 'customer_name' => $customer?->name ?? $row['customer_name'],
                 'customer_username' => $customer?->username ?? $row['customer_username'],
@@ -360,15 +364,18 @@ class ResellerPaymentController extends BaseSuperAdminController
 
         $events = RevenueAnalytics::baseQuery($filters, (int) $manager->tenant_id, null, (int) $manager->id)
             ->whereRaw(RevenueAnalytics::earnedCondition())
-            ->select(['activity_logs.metadata', 'activity_logs.created_at'])
+            ->select(['activity_logs.id', 'activity_logs.metadata', 'activity_logs.created_at'])
             ->orderByDesc('activity_logs.created_at')
             ->get();
 
         $rows = $events
-            ->map(fn ($event) => $this->serializeManagerParentEventRow(
-                (array) ($event->metadata ?? []),
-                $event->created_at?->toIso8601String()
-            ))
+            ->map(fn ($event) => [
+                ...$this->serializeManagerParentEventRow(
+                    (array) ($event->metadata ?? []),
+                    $event->created_at?->toIso8601String()
+                ),
+                'activity_log_id' => $event->id,
+            ])
             ->filter(fn (array $row): bool => $row['sale_amount'] > 0)
             ->values();
 
@@ -416,6 +423,7 @@ class ResellerPaymentController extends BaseSuperAdminController
                 : null;
 
             return [
+                'activity_log_id' => $row['activity_log_id'],
                 'customer_id' => $row['customer_id'],
                 'customer_name' => $customer?->name ?? $row['customer_name'],
                 'customer_username' => $customer?->username ?? $row['customer_username'],
@@ -503,15 +511,18 @@ class ResellerPaymentController extends BaseSuperAdminController
 
         $events = RevenueAnalytics::baseQuery($filters, (int) $reseller->tenant_id, null, (int) $reseller->id)
             ->whereRaw(RevenueAnalytics::earnedCondition())
-            ->select(['activity_logs.metadata', 'activity_logs.created_at'])
+            ->select(['activity_logs.id', 'activity_logs.metadata', 'activity_logs.created_at'])
             ->orderByDesc('activity_logs.created_at')
             ->get();
 
         $rows = $events
-            ->map(fn ($event) => $this->serializeManagerParentEventRow(
-                (array) ($event->metadata ?? []),
-                $event->created_at?->toIso8601String()
-            ))
+            ->map(fn ($event) => [
+                ...$this->serializeManagerParentEventRow(
+                    (array) ($event->metadata ?? []),
+                    $event->created_at?->toIso8601String()
+                ),
+                'activity_log_id' => $event->id,
+            ])
             ->filter(fn (array $row): bool => $row['sale_amount'] > 0)
             ->values();
 
@@ -559,6 +570,7 @@ class ResellerPaymentController extends BaseSuperAdminController
                 : null;
 
             return [
+                'activity_log_id' => $row['activity_log_id'],
                 'customer_id' => $row['customer_id'],
                 'customer_name' => $customer?->name ?? $row['customer_name'],
                 'customer_username' => $customer?->username ?? $row['customer_username'],

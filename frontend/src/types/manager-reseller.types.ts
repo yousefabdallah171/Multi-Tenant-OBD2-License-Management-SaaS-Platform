@@ -566,6 +566,7 @@ export interface ManagerParentSalesCustomerFilters {
 }
 
 export interface ManagerParentSalesCustomerEventRow {
+  activity_log_id: number
   customer_id: number | null
   customer_name: string | null
   customer_username: string | null

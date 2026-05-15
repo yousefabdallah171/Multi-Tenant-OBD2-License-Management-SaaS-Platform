@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, BadgeDollarSign, ListOrdered, Users } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, BadgeDollarSign, ListOrdered, Trash2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
@@ -13,12 +14,14 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
 import { customerService } from '@/services/customer.service'
 import { managerParentService } from '@/services/manager-parent.service'
+import { superAdminPlatformService } from '@/services/super-admin-platform.service'
 import type { ManagerParentSalesCustomerEventRow, ManagerParentSalesCustomerFilters } from '@/types/manager-reseller.types'
 
 export function ResellerSalesCustomersPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { resellerId } = useParams<{ resellerId: string }>()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const resolvedResellerId = Number(resellerId)
@@ -30,6 +33,7 @@ export function ResellerSalesCustomersPage() {
   const [to, setTo] = useState('')
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(25)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const filters = useMemo<ManagerParentSalesCustomerFilters>(() => ({
     search: search || undefined,
@@ -55,6 +59,19 @@ export function ResellerSalesCustomersPage() {
   const countriesQuery = useQuery({
     queryKey: ['manager-parent', 'customers', 'countries'],
     queryFn: () => customerService.getCountries({}),
+  })
+
+  const deleteActivityLogMutation = useMutation({
+    mutationFn: (activityLogId: number) => superAdminPlatformService.deleteActivityLog(activityLogId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manager-parent', 'reseller-payments', 'reseller-customers'] })
+      setDeletingId(null)
+      toast.success(t('common.deleteSuccess', { defaultValue: 'Transaction deleted successfully' }))
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || t('common.errorMessage', { defaultValue: 'Failed to delete transaction' }))
+      setDeletingId(null)
+    },
   })
 
   const rows = salesQuery.data?.data ?? []
@@ -115,13 +132,33 @@ export function ResellerSalesCustomersPage() {
     {
       key: 'actions',
       label: t('common.actions'),
-      render: (row) => row.customer_id ? (
-        <button type="button" onClick={() => navigate(routePaths.managerParent.customerDetail(lang, row.customer_id ?? ''))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
-          {t('payments.actions.view')}
-        </button>
-      ) : <span className="text-sm text-slate-500 dark:text-slate-400">-</span>,
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          {row.customer_id && (
+            <button type="button" onClick={() => navigate(routePaths.managerParent.customerDetail(lang, row.customer_id ?? ''))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+              {t('payments.actions.view')}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(t('common.confirmDelete', { defaultValue: 'Are you sure? This action cannot be undone.' }))) {
+                setDeletingId(row.activity_log_id)
+                deleteActivityLogMutation.mutate(row.activity_log_id)
+              }
+            }}
+            disabled={deleteActivityLogMutation.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {deletingId === row.activity_log_id && deleteActivityLogMutation.isPending
+              ? t('common.deleting', { defaultValue: 'Deleting...' })
+              : t('common.delete', { defaultValue: 'Delete' })}
+          </button>
+        </div>
+      ),
     },
-  ], [lang, locale, navigate, t])
+  ], [lang, locale, navigate, t, deleteActivityLogMutation.isPending, deletingId])
 
   return (
     <div className="space-y-6">

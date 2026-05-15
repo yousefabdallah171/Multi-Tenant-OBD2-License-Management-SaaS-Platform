@@ -169,4 +169,8 @@ export const superAdminPlatformService = {
     const { data } = await api.get<{ data: TransactionHistorySellerOption[] }>('/super-admin/transaction-history/sellers', { params })
     return data
   },
+  async deleteActivityLog(activityLogId: number) {
+    const { data } = await api.delete<{ message: string }>(`/super-admin/activity-logs/${activityLogId}`)
+    return data
+  },
 }

@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { BadgeDollarSign, ListOrdered, Users } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { BadgeDollarSign, ListOrdered, Trash2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
@@ -28,6 +29,7 @@ export function TransactionHistoryPage() {
   const { t } = useTranslation()
   const { lang } = useLanguage()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
 
   const [search, setSearch] = useState('')
@@ -37,6 +39,7 @@ export function TransactionHistoryPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [page, setPage] = useState(1)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const sellerFilters = useMemo(() => ({
     tenant_id: tenantId || undefined,
@@ -68,6 +71,19 @@ export function TransactionHistoryPage() {
   const sellersQuery = useQuery({
     queryKey: ['super-admin', 'transaction-history-sellers', sellerFilters],
     queryFn: () => superAdminPlatformService.getTransactionHistorySellers(sellerFilters),
+  })
+
+  const deleteActivityLogMutation = useMutation({
+    mutationFn: (activityLogId: number) => superAdminPlatformService.deleteActivityLog(activityLogId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'transaction-history'] })
+      setDeletingId(null)
+      toast.success(t('common.deleteSuccess', { defaultValue: 'Transaction deleted successfully' }))
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || t('common.errorMessage', { defaultValue: 'Failed to delete transaction' }))
+      setDeletingId(null)
+    },
   })
 
   const rows = historyQuery.data?.data ?? []
@@ -193,7 +209,31 @@ export function TransactionHistoryPage() {
       sortValue: (row) => row.sale_date ?? '',
       render: (row) => row.sale_date ? formatDate(row.sale_date, locale) : '-',
     },
-  ], [lang, locale, t])
+    {
+      key: 'actions',
+      label: t('common.actions'),
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(t('common.confirmDelete', { defaultValue: 'Are you sure? This action cannot be undone.' }))) {
+                setDeletingId(row.id)
+                deleteActivityLogMutation.mutate(row.id)
+              }
+            }}
+            disabled={deleteActivityLogMutation.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {deletingId === row.id && deleteActivityLogMutation.isPending
+              ? t('common.deleting', { defaultValue: 'Deleting...' })
+              : t('common.delete', { defaultValue: 'Delete' })}
+          </button>
+        </div>
+      ),
+    },
+  ], [lang, locale, t, deleteActivityLogMutation.isPending, deletingId])
 
   const clearFilters = () => {
     setSearch('')
