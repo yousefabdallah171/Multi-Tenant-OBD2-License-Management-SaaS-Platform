@@ -45,6 +45,7 @@ export function ActivateLicensePage({ defaultBackPath }: ActivateLicensePageProp
       has_external_api: program.has_external_api,
       external_software_id: program.external_software_id,
       duration_presets: program.duration_presets,
+      active_offer_discount: (program as any).active_offer_discount ?? null,
     }
   }, [programQuery.data?.data])
 

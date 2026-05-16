@@ -182,6 +182,7 @@ class TransactionHistoryController extends BaseSuperAdminController
             'country_name'     => (string) ($metadata['country_name'] ?? ''),
             'country_code'     => $this->resolveCountryCode((string) ($metadata['country_name'] ?? '')),
             'amount'           => round((float) ($metadata['price'] ?? 0), 2),
+            'offer_discount_percentage' => isset($metadata['offer_discount_percentage']) ? (float) $metadata['offer_discount_percentage'] : null,
             'type'             => $event->action === 'license.renewed' ? 'Renewal' : 'Activation',
             'sale_date'        => $event->created_at?->toIso8601String(),
             'license_id'       => $this->intOrNull($metadata['license_id'] ?? null),

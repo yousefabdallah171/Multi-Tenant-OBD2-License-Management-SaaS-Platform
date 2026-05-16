@@ -575,6 +575,7 @@ export interface ManagerParentSalesCustomerEventRow {
   program_name: string | null
   country_name: string | null
   sale_amount: number
+  offer_discount_percentage: number | null
   sale_date: string | null
   license_id: number | null
 }
@@ -781,6 +782,7 @@ export interface TransactionHistoryRow {
   country_name: string
   country_code: string
   amount: number
+  offer_discount_percentage: number | null
   type: 'Activation' | 'Renewal'
   sale_date: string | null
   license_id: number | null

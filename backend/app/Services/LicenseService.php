@@ -152,7 +152,7 @@ class LicenseService
             $presetPricing = $preset ? $this->resolvePresetEffectivePricing($preset, $countryName) : null;
             $durationMinutes = (int) max(1, round($durationDays * 1440));
             $rawPrice = $preset ? (float) ($presetPricing['effective_price'] ?? $preset->price) : (float) $data['price'];
-            $price = $this->applyResellerOffer($rawPrice, $reseller, (int) $program->id);
+            ['price' => $price, 'offer_discount_percentage' => $offerDiscountPercentage] = $this->applyResellerOffer($rawPrice, $reseller, (int) $program->id);
             $this->assertReasonablePrice($price);
             $activationAnchor = $scheduledAt ?? $this->currentMinute();
             $activatedAt = $isScheduled ? null : $this->currentMinute();
@@ -173,6 +173,7 @@ class LicenseService
                     : null,
                 'duration_days' => $durationDays,
                 'price' => $price,
+                'offer_discount_percentage' => $offerDiscountPercentage,
                 'activated_at' => $activatedAt,
                 'expires_at' => $activationAnchor->copy()->addMinutes($durationMinutes),
                 'scheduled_at' => $scheduledAt,
@@ -204,6 +205,7 @@ class LicenseService
                     'bios_id' => $biosId,
                     'external_username' => $externalUsername,
                     'price' => (float) $license->price,
+                    'offer_discount_percentage' => $offerDiscountPercentage,
                     'preset_id' => $preset?->id,
                     'country_name' => $countryName,
                     'price_source' => $presetPricing['price_source'] ?? null,
@@ -335,7 +337,7 @@ class LicenseService
             $expiresAt = ($scheduledAt?->copy() ?? $anchor->copy())->addMinutes($durationMinutes);
             $activatedAt = $license->activated_at;
             $rawPrice = $preset ? (float) ($presetPricing['effective_price'] ?? $preset->price) : (float) $data['price'];
-            $price = $this->applyResellerOffer($rawPrice, $reseller, (int) $license->program_id);
+            ['price' => $price, 'offer_discount_percentage' => $offerDiscountPercentage] = $this->applyResellerOffer($rawPrice, $reseller, (int) $license->program_id);
             $this->assertReasonablePrice($price);
 
             if ($isScheduled) {
@@ -357,6 +359,7 @@ class LicenseService
                     'external_activation_response' => (string) ($apiResponse['data']['response'] ?? 'Renewed under new owner.'),
                     'duration_days' => $durationDays,
                     'price' => $price,
+                    'offer_discount_percentage' => $offerDiscountPercentage,
                     'activated_at' => $activatedAt,
                     'expires_at' => $expiresAt,
                     'scheduled_at' => $scheduledAt,
@@ -371,10 +374,11 @@ class LicenseService
                     'pause_reason' => null,
                     'status' => $isScheduled ? 'pending' : 'active',
                 ])
-                : tap($license, function (License $license) use ($price, $durationDays, $activatedAt, $expiresAt, $apiResponse, $isScheduled, $scheduledAt, $scheduledTimezone): void {
+                : tap($license, function (License $license) use ($price, $offerDiscountPercentage, $durationDays, $activatedAt, $expiresAt, $apiResponse, $isScheduled, $scheduledAt, $scheduledTimezone): void {
                     $license->forceFill([
                         'duration_days' => $durationDays,
                         'price' => $price,
+                        'offer_discount_percentage' => $offerDiscountPercentage,
                         'activated_at' => $activatedAt,
                         'expires_at' => $expiresAt,
                         'external_activation_response' => (string) ($apiResponse['data']['response'] ?? $license->external_activation_response),
@@ -412,6 +416,7 @@ class LicenseService
                     'external_username' => $renewed->external_username,
                     'duration_days' => $durationDays,
                     'price' => (float) $renewed->price,
+                    'offer_discount_percentage' => $offerDiscountPercentage,
                     'preset_id' => $preset?->id,
                     'country_name' => $countryName,
                     'price_source' => $presetPricing['price_source'] ?? null,
@@ -2145,7 +2150,7 @@ class LicenseService
         ];
     }
 
-    private function applyResellerOffer(float $price, User $reseller, int $programId): float
+    private function applyResellerOffer(float $price, User $reseller, int $programId): array
     {
         $offer = ProgramOffer::query()
             ->where('user_id', $reseller->id)
@@ -2153,7 +2158,14 @@ class LicenseService
             ->where('is_active', true)
             ->first();
 
-        return $offer ? round($price * (1 - $offer->discount_percentage / 100), 2) : $price;
+        if (! $offer) {
+            return ['price' => $price, 'offer_discount_percentage' => null];
+        }
+
+        $discountPct = (float) $offer->discount_percentage;
+        $discounted  = round($price * (1 - $discountPct / 100), 2);
+
+        return ['price' => $discounted, 'offer_discount_percentage' => $discountPct];
     }
 
     private function assertReasonablePrice(float $price): void

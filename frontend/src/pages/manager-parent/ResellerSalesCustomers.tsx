@@ -106,6 +106,19 @@ export function ResellerSalesCustomersPage() {
       render: (row) => formatCurrency(row.sale_amount, 'USD', locale),
     },
     {
+      key: 'offer_discount_percentage',
+      label: t('payments.managerParentCustomers.columns.offerDiscount', { defaultValue: 'Offer %' }),
+      sortable: true,
+      sortValue: (row) => row.offer_discount_percentage ?? 0,
+      render: (row) => row.offer_discount_percentage != null
+        ? (
+          <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            {row.offer_discount_percentage}%
+          </span>
+        )
+        : <span className="text-slate-400">—</span>,
+    },
+    {
       key: 'sale_date',
       label: t('payments.managerParentCustomers.columns.saleDate'),
       sortable: true,

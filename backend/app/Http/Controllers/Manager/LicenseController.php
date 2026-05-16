@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Manager;
 
 use App\Models\License;
+use App\Models\ProgramOffer;
 use App\Services\LicenseService;
 use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
@@ -67,9 +68,16 @@ class LicenseController extends BaseManagerController
         $resolved = $this->resolveTeamLicense($request, $license);
         $resolved->load(['customer:id,name,email,phone', 'program:id,name,version,download_link']);
 
+        $activeOfferDiscount = ProgramOffer::query()
+            ->where('user_id', $resolved->reseller_id)
+            ->where('program_id', $resolved->program_id)
+            ->where('is_active', true)
+            ->value('discount_percentage');
+
         return response()->json([
             'data' => [
                 ...$this->serializeLicense($resolved),
+                'active_offer_discount' => $activeOfferDiscount !== null ? (float) $activeOfferDiscount : null,
                 'customer' => $resolved->customer ? [
                     'id' => $resolved->customer->id,
                     'name' => $resolved->customer->name,
