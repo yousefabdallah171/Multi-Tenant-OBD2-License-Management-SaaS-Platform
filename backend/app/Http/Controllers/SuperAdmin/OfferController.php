@@ -30,7 +30,7 @@ class OfferController extends BaseSuperAdminController
         $offers = $query->paginate($perPage);
 
         return response()->json([
-            'data' => $offers->items(),
+            'data' => collect($offers->items())->map(fn (ProgramOffer $offer) => $this->serializeOffer($offer))->values(),
             'meta' => [
                 'current_page' => $offers->currentPage(),
                 'last_page' => $offers->lastPage(),

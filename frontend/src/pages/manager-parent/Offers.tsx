@@ -261,7 +261,7 @@ export function OffersPage() {
                     </td>
                     <td className="px-6 py-3">
                       <div className="font-medium text-slate-900 dark:text-white">{offer.user_name}</div>
-                      <div className="text-xs text-slate-500 capitalize">{offer.user_role.replace('_', ' ')}</div>
+                      <div className="text-xs text-slate-500 capitalize">{(typeof offer.user_role === 'string' ? offer.user_role : (offer.user_role as any)?.value || '')?.replace('_', ' ')}</div>
                     </td>
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1 dark:bg-emerald-950">
@@ -379,11 +379,14 @@ export function OffersPage() {
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
                 >
                   <option value="">-- Select User --</option>
-                  {availableUsers.map((user: any) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.role?.replace('_', ' ')})
-                    </option>
-                  ))}
+                  {availableUsers.map((user: any) => {
+                    const roleDisplay = typeof user.role === 'string' ? user.role : (user.role as any)?.value || 'user'
+                    return (
+                      <option key={user.id} value={user.id}>
+                        {user.name} ({roleDisplay.replace('_', ' ')})
+                      </option>
+                    )
+                  })}
                 </select>
               </div>
 
