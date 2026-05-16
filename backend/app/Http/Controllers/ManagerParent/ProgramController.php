@@ -45,14 +45,25 @@ class ProgramController extends BaseManagerParentController
 
         $programs = $query->paginate((int) ($validated['per_page'] ?? 12));
 
+        $programIds = collect($programs->items())->pluck('id')->all();
+
         $revenueByProgram = RevenueAnalytics::revenueByProgramIds(
-            collect($programs->items())->pluck('id')->all(),
+            $programIds,
             [],
             $this->currentTenantId($request),
         );
 
+        $user = $request->user();
+        $offersByProgram = ($user && in_array($user->role?->value ?? (string) $user->role, ['reseller', 'manager', 'manager_parent'], true))
+            ? ProgramOffer::query()
+                ->where('user_id', $user->id)
+                ->where('is_active', true)
+                ->whereIn('program_id', $programIds)
+                ->pluck('discount_percentage', 'program_id')
+            : collect();
+
         return response()->json([
-            'data' => collect($programs->items())->map(fn (Program $program): array => $this->serializeProgram($program, $request, $revenueByProgram))->values(),
+            'data' => collect($programs->items())->map(fn (Program $program): array => $this->serializeProgram($program, $request, $revenueByProgram, $offersByProgram))->values(),
             'meta' => $this->paginationMeta($programs),
         ]);
     }
@@ -314,7 +325,7 @@ class ProgramController extends BaseManagerParentController
         }
     }
 
-    private function serializeProgram(Program $program, Request $request = null, ?Collection $revenueByProgram = null): array
+    private function serializeProgram(Program $program, Request $request = null, ?Collection $revenueByProgram = null, ?Collection $offersByProgram = null): array
     {
         $licensesSold = (int) ($program->total_licenses_count ?? 0);
         $activeOfferDiscount = null;
@@ -339,14 +350,18 @@ class ProgramController extends BaseManagerParentController
             }
             // Super admin sees all licenses (use total_licenses_count)
 
-            // Get active offer discount for the current user
-            $offer = ProgramOffer::query()
-                ->where('user_id', $user->id)
-                ->where('program_id', $program->id)
-                ->where('is_active', true)
-                ->first();
-
-            $activeOfferDiscount = $offer ? round((float) $offer->discount_percentage, 2) : null;
+            // Get active offer discount — use bulk-loaded map if available, else single query
+            if ($offersByProgram !== null) {
+                $raw = $offersByProgram->get($program->id);
+                $activeOfferDiscount = $raw !== null ? round((float) $raw, 2) : null;
+            } else {
+                $offer = ProgramOffer::query()
+                    ->where('user_id', $user->id)
+                    ->where('program_id', $program->id)
+                    ->where('is_active', true)
+                    ->first();
+                $activeOfferDiscount = $offer ? round((float) $offer->discount_percentage, 2) : null;
+            }
         }
 
         return [
