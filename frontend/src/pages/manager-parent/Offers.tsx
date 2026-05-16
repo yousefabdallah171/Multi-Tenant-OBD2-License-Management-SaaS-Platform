@@ -27,21 +27,30 @@ interface OfferFormData {
 }
 
 interface OfferFormState {
-  step: 1 | 2 | 3
   programId: number | null
   userId: number | null
   selectedUser: User | null
-  searchQuery: string
   discountPercentage: number | null
   isActive: boolean
 }
 
+interface EditingOffer {
+  id: number
+  discountPercentage: number
+  isActive: boolean
+}
+
+interface NetworkNode {
+  id: number
+  name: string
+  email: string
+  role: string
+}
+
 const INITIAL_FORM_STATE: OfferFormState = {
-  step: 1,
   programId: null,
   userId: null,
   selectedUser: null,
-  searchQuery: '',
   discountPercentage: null,
   isActive: true,
 }
@@ -50,6 +59,7 @@ export function OffersPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
+  const [editingOffer, setEditingOffer] = useState<EditingOffer | null>(null)
   const [formState, setFormState] = useState<OfferFormState>(INITIAL_FORM_STATE)
   const [filterProgramId, setFilterProgramId] = useState<number | ''>('')
   const [filterUserId, setFilterUserId] = useState<number | ''>('')
@@ -76,23 +86,22 @@ export function OffersPage() {
     queryFn: () => managerParentService.getTeamNetwork(),
   })
 
-  const searchResults = useMemo(() => {
-    if (!teamNetworkQuery.data || !formState.searchQuery) return []
+  const availableUsers = useMemo(() => {
+    if (!teamNetworkQuery.data) return []
+    const payload = (teamNetworkQuery.data as any)?.data as any
+    if (!payload) return []
 
-    const query = formState.searchQuery.toLowerCase()
-    const allUsers: User[] = []
+    const users: NetworkNode[] = []
 
-    // Extract resellers and managers from team network
-    const teamData = teamNetworkQuery.data
-    if (Array.isArray(teamData)) {
-      return (teamData as any[]).filter((user: any) =>
-        (user.name?.toLowerCase().includes(query) || user.email?.toLowerCase().includes(query)) &&
-        (user.role === 'reseller' || user.role === 'manager')
-      )
+    if (payload.managers && Array.isArray(payload.managers)) {
+      users.push(...payload.managers)
+    }
+    if (payload.resellers && Array.isArray(payload.resellers)) {
+      users.push(...payload.resellers)
     }
 
-    return allUsers
-  }, [teamNetworkQuery.data, formState.searchQuery])
+    return users
+  }, [teamNetworkQuery.data])
 
   const createOfferMutation = useMutation({
     mutationFn: (data: OfferFormData) => managerParentService.createOffer(data),
@@ -112,6 +121,22 @@ export function OffersPage() {
     onSuccess: () => {
       toast.success(t('offers.deleteSuccess') || 'Offer deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['manager-parent:offers'] })
+    },
+    onError: (error: any) => {
+      toast.error(resolveApiErrorMessage(error, t('common.error')))
+    },
+  })
+
+  const updateOfferMutation = useMutation({
+    mutationFn: (data: { offerId: number; discountPercentage: number; isActive: boolean }) =>
+      managerParentService.updateOffer(data.offerId, {
+        discount_percentage: data.discountPercentage,
+        is_active: data.isActive,
+      }),
+    onSuccess: () => {
+      toast.success(t('offers.updateSuccess') || 'Offer updated successfully')
+      queryClient.invalidateQueries({ queryKey: ['manager-parent:offers'] })
+      setEditingOffer(null)
     },
     onError: (error: any) => {
       toast.error(resolveApiErrorMessage(error, t('common.error')))
@@ -276,7 +301,7 @@ export function OffersPage() {
                           variant="outline"
                           size="sm"
                           className="h-8 w-8 p-0"
-                          onClick={() => toast.info('Edit functionality coming soon')}
+                          onClick={() => setEditingOffer({ id: offer.id, discountPercentage: offer.discount_percentage, isActive: offer.is_active })}
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -326,7 +351,7 @@ export function OffersPage() {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
+      {/* Create Offer Modal - Single Dialog */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg bg-white dark:bg-slate-900">
@@ -336,199 +361,214 @@ export function OffersPage() {
               </h2>
             </div>
 
-            <div className="space-y-6 px-6 py-4">
-              {/* Step 1: Select User */}
-              {formState.step === 1 && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>{t('managerParent.pages.offers.selectUser') || 'Select User (Reseller/Manager)'}</Label>
-                    <div className="relative">
-                      <Input
-                        placeholder={t('common.searchByName') || 'Search by name or email'}
-                        type="text"
-                        value={formState.searchQuery}
-                        onChange={(e) => setFormState((prev) => ({ ...prev, searchQuery: e.target.value }))}
-                        className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
-                      />
-                      {formState.searchQuery && searchResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900 z-10">
-                          {searchResults.map((user: any) => (
-                            <button
-                              key={user.id}
-                              type="button"
-                              onClick={() =>
-                                setFormState((prev) => ({
-                                  ...prev,
-                                  userId: user.id,
-                                  selectedUser: user,
-                                  searchQuery: '',
-                                }))
-                              }
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 last:border-b-0"
-                            >
-                              <div className="font-medium text-slate-900 dark:text-white">{user.name}</div>
-                              <div className="text-xs text-slate-500">{user.email}</div>
-                              <div className="text-xs text-slate-400 capitalize">{user.role?.replace('_', ' ')}</div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('common.selectedUser') || 'Selected User'}</Label>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                      {formState.selectedUser ? (
-                        <div className="space-y-1">
-                          <div className="font-medium text-slate-900 dark:text-white">{formState.selectedUser.name}</div>
-                          <div className="text-xs text-slate-600 dark:text-slate-400">{formState.selectedUser.email}</div>
-                          <div className="text-xs text-slate-500 capitalize">{formState.selectedUser.role?.replace('_', ' ')}</div>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-slate-500">No user selected</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Select Program */}
-              {formState.step === 2 && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>{t('managerParent.pages.offers.selectProgram') || 'Select Software'}</Label>
-                    <select
-                      value={formState.programId || ''}
-                      onChange={(e) => setFormState((prev) => ({ ...prev, programId: Number(e.target.value) }))}
-                      className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
-                    >
-                      <option value="">-- Select Software --</option>
-                      {programs.map((program) => (
-                        <option key={program.id} value={program.id}>
-                          {program.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {formState.programId && (
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
-                      <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                        {programs.find((p) => p.id === formState.programId)?.name}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Step 3: Set Discount */}
-              {formState.step === 3 && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>{t('managerParent.pages.offers.discount') || 'Discount Percentage'}</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min="0.01"
-                        max="99.99"
-                        step="0.01"
-                        value={formState.discountPercentage || ''}
-                        onChange={(e) =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            discountPercentage: e.target.value ? parseFloat(e.target.value) : null,
-                          }))
-                        }
-                        placeholder="e.g., 10.00"
-                        className="h-10 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
-                      />
-                      <span className="text-slate-600 dark:text-slate-400">%</span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {t('managerParent.pages.offers.discountInfo') || 'Enter discount as percentage (0.01 - 99.99)'}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={formState.isActive}
-                        onChange={(e) => setFormState((prev) => ({ ...prev, isActive: e.target.checked }))}
-                        className="h-4 w-4 rounded border-slate-300"
-                      />
-                      <span className="text-sm text-slate-700 dark:text-slate-300">
-                        {t('managerParent.pages.offers.activeNow') || 'Active Now'}
-                      </span>
-                    </label>
-                  </div>
-
-                  {formState.discountPercentage && (
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                      <div className="text-xs text-slate-600 dark:text-slate-400">
-                        {t('managerParent.pages.offers.example') || 'Example'}: $100 × (1 - {formState.discountPercentage}%) = $
-                        {(100 * (1 - formState.discountPercentage / 100)).toFixed(2)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Navigation Buttons */}
-              <div className="flex gap-2">
-                {formState.step > 1 && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setFormState((prev) => ({ ...prev, step: (prev.step - 1) as OfferFormState['step'] }))}
-                  >
-                    {t('common.previous') || 'Previous'}
-                  </Button>
-                )}
-
-                {formState.step < 3 ? (
-                  <Button
-                    onClick={() => {
-                      if (formState.step === 1 && !formState.userId) {
-                        toast.error('Please select a user')
-                        return
-                      }
-                      if (formState.step === 2 && !formState.programId) {
-                        toast.error('Please select software')
-                        return
-                      }
-                      setFormState((prev) => ({ ...prev, step: (prev.step + 1) as OfferFormState['step'] }))
-                    }}
-                    className="flex-1"
-                  >
-                    {t('common.next') || 'Next'}
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleCreateOffer}
-                    disabled={createOfferMutation.isPending}
-                    className="flex-1"
-                  >
-                    {createOfferMutation.isPending ? (
-                      <>
-                        <span className="animate-spin mr-2">⏳</span>
-                        {t('common.creating') || 'Creating...'}
-                      </>
-                    ) : (
-                      t('common.create') || 'Create'
-                    )}
-                  </Button>
-                )}
+            <div className="space-y-4 px-6 py-4">
+              {/* User Dropdown */}
+              <div className="space-y-2">
+                <Label>{t('managerParent.pages.offers.selectUser') || 'Select Reseller or Manager'}</Label>
+                <select
+                  value={formState.userId || ''}
+                  onChange={(e) => {
+                    const userId = e.target.value ? Number(e.target.value) : null
+                    const user = availableUsers.find((u: any) => u.id === userId)
+                    setFormState((prev) => ({
+                      ...prev,
+                      userId: userId,
+                      selectedUser: user || null,
+                    }))
+                  }}
+                  className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
+                >
+                  <option value="">-- Select User --</option>
+                  {availableUsers.map((user: any) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.role?.replace('_', ' ')})
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {/* Program/Software Dropdown */}
+              <div className="space-y-2">
+                <Label>{t('managerParent.pages.offers.selectProgram') || 'Select Software'}</Label>
+                <select
+                  value={formState.programId || ''}
+                  onChange={(e) => setFormState((prev) => ({ ...prev, programId: e.target.value ? Number(e.target.value) : null }))}
+                  className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
+                >
+                  <option value="">-- Select Software --</option>
+                  {programs.map((program) => (
+                    <option key={program.id} value={program.id}>
+                      {program.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Discount Percentage Input */}
+              <div className="space-y-2">
+                <Label>{t('managerParent.pages.offers.discount') || 'Discount Percentage'}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0.01"
+                    max="99.99"
+                    step="0.01"
+                    value={formState.discountPercentage || ''}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        discountPercentage: e.target.value ? parseFloat(e.target.value) : null,
+                      }))
+                    }
+                    placeholder="e.g., 10.00"
+                    className="h-10 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
+                  />
+                  <span className="text-slate-600 dark:text-slate-400">%</span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('managerParent.pages.offers.discountInfo') || 'Enter discount as percentage (0.01 - 99.99)'}
+                </p>
+              </div>
+
+              {/* Active Checkbox */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={formState.isActive}
+                    onChange={(e) => setFormState((prev) => ({ ...prev, isActive: e.target.checked }))}
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
+                    {t('managerParent.pages.offers.activeNow') || 'Active Now'}
+                  </span>
+                </label>
+              </div>
+
+              {/* Example Display */}
+              {formState.discountPercentage && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
+                    {t('managerParent.pages.offers.example') || 'Example'}: $100 × (1 - {formState.discountPercentage}%) = $
+                    {(100 * (1 - formState.discountPercentage / 100)).toFixed(2)}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Footer */}
-            <div className="border-t border-slate-200 px-6 py-3 dark:border-slate-700">
+            {/* Action Buttons */}
+            <div className="flex gap-2 border-t border-slate-200 px-6 py-3 dark:border-slate-700">
+              <Button
+                onClick={handleCreateOffer}
+                disabled={createOfferMutation.isPending || !formState.userId || !formState.programId || formState.discountPercentage === null}
+                className="flex-1"
+              >
+                {createOfferMutation.isPending ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    {t('common.creating') || 'Creating...'}
+                  </>
+                ) : (
+                  t('common.create') || 'Create'
+                )}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => {
                   setShowModal(false)
                   setFormState(INITIAL_FORM_STATE)
                 }}
-                className="w-full"
+                className="flex-1"
+              >
+                {t('common.cancel') || 'Cancel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Offer Modal */}
+      {editingOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white dark:bg-slate-900">
+            <div className="border-b border-slate-200 px-6 py-4 dark:border-slate-700">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                {t('common.edit') || 'Edit Offer'}
+              </h2>
+            </div>
+
+            <div className="space-y-4 px-6 py-4">
+              {/* Discount Percentage Input */}
+              <div className="space-y-2">
+                <Label>{t('managerParent.pages.offers.discount') || 'Discount Percentage'}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0.01"
+                    max="99.99"
+                    step="0.01"
+                    value={editingOffer.discountPercentage}
+                    onChange={(e) =>
+                      setEditingOffer((prev) => prev ? { ...prev, discountPercentage: parseFloat(e.target.value) || 0 } : null)
+                    }
+                    className="h-10 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
+                  />
+                  <span className="text-slate-600 dark:text-slate-400">%</span>
+                </div>
+              </div>
+
+              {/* Active Checkbox */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={editingOffer.isActive}
+                    onChange={(e) =>
+                      setEditingOffer((prev) => prev ? { ...prev, isActive: e.target.checked } : null)
+                    }
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
+                    {t('common.active') || 'Active'}
+                  </span>
+                </label>
+              </div>
+
+              {/* Example Display */}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+                <div className="text-xs text-slate-600 dark:text-slate-400">
+                  {t('managerParent.pages.offers.example') || 'Example'}: $100 × (1 - {editingOffer.discountPercentage}%) = $
+                  {(100 * (1 - editingOffer.discountPercentage / 100)).toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 border-t border-slate-200 px-6 py-3 dark:border-slate-700">
+              <Button
+                onClick={() => {
+                  updateOfferMutation.mutate({
+                    offerId: editingOffer.id,
+                    discountPercentage: editingOffer.discountPercentage,
+                    isActive: editingOffer.isActive,
+                  })
+                }}
+                disabled={updateOfferMutation.isPending}
+                className="flex-1"
+              >
+                {updateOfferMutation.isPending ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    {t('common.saving') || 'Saving...'}
+                  </>
+                ) : (
+                  t('common.save') || 'Save'
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setEditingOffer(null)}
+                className="flex-1"
               >
                 {t('common.cancel') || 'Cancel'}
               </Button>

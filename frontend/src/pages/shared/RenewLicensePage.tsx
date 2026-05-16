@@ -170,6 +170,7 @@ export function RenewLicensePage({
               customerCountryName={license.customer_country_name ?? null}
               allowScheduleControls={allowScheduleControls}
               requireScheduled={isScheduleEdit}
+              activeOfferDiscount={(license as any)?.active_offer_discount ?? null}
             />
           ) : null}
         </CardContent>

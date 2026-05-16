@@ -158,6 +158,17 @@ class LicenseController extends BaseManagerParentController
     {
         $license->loadMissing(['customer:id,name,email', 'program:id,name', 'reseller:id,name']);
 
+        // Fetch active offer discount for the reseller
+        $activeOfferDiscount = null;
+        if ($license->reseller_id && $license->program_id) {
+            $offer = \App\Models\ProgramOffer::query()
+                ->where('user_id', $license->reseller_id)
+                ->where('program_id', $license->program_id)
+                ->where('is_active', true)
+                ->value('discount_percentage');
+            $activeOfferDiscount = $offer ? (float) $offer : null;
+        }
+
         return [
             'id' => $license->id,
             'customer_id' => $license->customer_id,
@@ -184,6 +195,7 @@ class LicenseController extends BaseManagerParentController
             'pause_remaining_minutes' => $license->pause_remaining_minutes !== null ? (int) $license->pause_remaining_minutes : null,
             'pause_reason' => $license->pause_reason,
             'status' => $license->effectiveStatus(),
+            'active_offer_discount' => $activeOfferDiscount,
         ];
     }
 }
