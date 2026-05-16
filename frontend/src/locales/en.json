@@ -1007,10 +1007,19 @@
           "previous": "Back"
         },
         "deleteConfirm": "Are you sure you want to delete this offer?",
-        "deleteSuccess": "Offer deleted successfully",
-        "createSuccess": "Offer created successfully",
-        "updateSuccess": "Offer updated successfully",
-        "error": "Failed to process offer"
+        "selectUser": "Select Reseller or Manager",
+        "selectProgram": "Select Software",
+        "discount": "Discount Percentage",
+        "discountInfo": "Enter discount as percentage (0.01 - 100). 100% = Free offer.",
+        "activeNow": "Active Now",
+        "example": "Example",
+        "deleteSuccess": "Offer deleted successfully.",
+        "createSuccess": "Offer created successfully.",
+        "updateSuccess": "Offer updated successfully.",
+        "error": "Failed to process offer",
+        "validation": {
+          "fillAllFields": "Please fill in all required fields."
+        }
       },
       "settings": {
         "title": "Settings",

@@ -106,7 +106,7 @@ export function OffersPage() {
   const createOfferMutation = useMutation({
     mutationFn: (data: OfferFormData) => managerParentService.createOffer(data),
     onSuccess: () => {
-      toast.success(t('offers.createSuccess') || 'Offer created successfully')
+      toast.success(t('managerParent.pages.offers.createSuccess'))
       queryClient.invalidateQueries({ queryKey: ['manager-parent:offers'] })
       setShowModal(false)
       setFormState(INITIAL_FORM_STATE)
@@ -119,7 +119,7 @@ export function OffersPage() {
   const deleteOfferMutation = useMutation({
     mutationFn: (offerId: number) => managerParentService.deleteOffer(offerId),
     onSuccess: () => {
-      toast.success(t('offers.deleteSuccess') || 'Offer deleted successfully')
+      toast.success(t('managerParent.pages.offers.deleteSuccess'))
       queryClient.invalidateQueries({ queryKey: ['manager-parent:offers'] })
     },
     onError: (error: any) => {
@@ -134,7 +134,7 @@ export function OffersPage() {
         is_active: data.isActive,
       }),
     onSuccess: () => {
-      toast.success(t('offers.updateSuccess') || 'Offer updated successfully')
+      toast.success(t('managerParent.pages.offers.updateSuccess'))
       queryClient.invalidateQueries({ queryKey: ['manager-parent:offers'] })
       setEditingOffer(null)
     },
@@ -145,7 +145,7 @@ export function OffersPage() {
 
   const handleCreateOffer = () => {
     if (!formState.programId || !formState.userId || formState.discountPercentage === null) {
-      toast.error(t('offers.validation.fillAllFields') || 'Please fill in all required fields')
+      toast.error(t('managerParent.pages.offers.validation.fillAllFields'))
       return
     }
 
@@ -230,25 +230,25 @@ export function OffersPage() {
               <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
                 <tr>
                   <th className="px-6 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">
-                    {t('common.software') || 'Software'}
+                    {t('managerParent.pages.offers.tableColumns.software')}
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">
-                    {t('common.user') || 'User'}
+                    {t('managerParent.pages.offers.tableColumns.user')}
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">
-                    {t('offers.discount') || 'Discount'}
+                    {t('managerParent.pages.offers.tableColumns.discount')}
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">
-                    {t('common.status') || 'Status'}
+                    {t('managerParent.pages.offers.tableColumns.status')}
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">
-                    {t('common.createdBy') || 'Created By'}
+                    {t('managerParent.pages.offers.tableColumns.creator')}
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">
-                    {t('common.createdAt') || 'Created At'}
+                    {t('managerParent.pages.offers.tableColumns.createdAt')}
                   </th>
                   <th className="px-6 py-3 text-center font-semibold text-slate-700 dark:text-slate-300">
-                    {t('common.actions') || 'Actions'}
+                    {t('managerParent.pages.offers.tableColumns.actions')}
                   </th>
                 </tr>
               </thead>
