@@ -411,22 +411,25 @@ export function OffersPage() {
                   <Input
                     type="number"
                     min="0.01"
-                    max="99.99"
+                    max="100"
                     step="0.01"
                     value={formState.discountPercentage || ''}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      let value = e.target.value ? parseFloat(e.target.value) : null
+                      if (value !== null && value > 100) value = 100
+                      if (value !== null && value < 0.01) value = 0.01
                       setFormState((prev) => ({
                         ...prev,
-                        discountPercentage: e.target.value ? parseFloat(e.target.value) : null,
+                        discountPercentage: value,
                       }))
-                    }
+                    }}
                     placeholder="e.g., 10.00"
                     className="h-10 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
                   />
                   <span className="text-slate-600 dark:text-slate-400">%</span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {t('managerParent.pages.offers.discountInfo') || 'Enter discount as percentage (0.01 - 99.99)'}
+                  {t('managerParent.pages.offers.discountInfo') || 'Enter discount as percentage (0.01 - 100). 100% = Free'}
                 </p>
               </div>
 
@@ -505,12 +508,15 @@ export function OffersPage() {
                   <Input
                     type="number"
                     min="0.01"
-                    max="99.99"
+                    max="100"
                     step="0.01"
                     value={editingOffer.discountPercentage}
-                    onChange={(e) =>
-                      setEditingOffer((prev) => prev ? { ...prev, discountPercentage: parseFloat(e.target.value) || 0 } : null)
-                    }
+                    onChange={(e) => {
+                      let value = parseFloat(e.target.value) || 0
+                      if (value > 100) value = 100
+                      if (value < 0.01) value = 0.01
+                      setEditingOffer((prev) => prev ? { ...prev, discountPercentage: value } : null)
+                    }}
                     className="h-10 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-600 dark:bg-slate-950"
                   />
                   <span className="text-slate-600 dark:text-slate-400">%</span>
