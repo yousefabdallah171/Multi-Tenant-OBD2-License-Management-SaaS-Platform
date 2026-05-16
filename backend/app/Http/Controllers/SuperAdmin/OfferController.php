@@ -45,7 +45,7 @@ class OfferController extends BaseSuperAdminController
         $validated = $request->validate([
             'program_id' => ['required', 'integer', 'exists:programs,id'],
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            'discount_percentage' => ['required', 'numeric', 'min:0.01', 'max:99.99'],
+            'discount_percentage' => ['required', 'numeric', 'min:0.01', 'max:100'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
@@ -70,7 +70,7 @@ class OfferController extends BaseSuperAdminController
     public function update(Request $request, ProgramOffer $offer): JsonResponse
     {
         $validated = $request->validate([
-            'discount_percentage' => ['nullable', 'numeric', 'min:0.01', 'max:99.99'],
+            'discount_percentage' => ['nullable', 'numeric', 'min:0.01', 'max:100'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
