@@ -5,6 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Models\DeletedCustomer;
 use App\Models\License;
 use App\Models\User;
+use App\Support\CustomerDeletionService;
 use App\Support\LicenseCacheInvalidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -209,6 +210,7 @@ class DeletedCustomerController extends BaseSuperAdminController
     {
         try {
             $activityLogIds = $this->resolveActivityLogIds($deletedCustomer);
+            $resellerIds = $this->resolveResellerIds($deletedCustomer);
 
             DB::transaction(function () use ($deletedCustomer, $activityLogIds): void {
                 if (!empty($activityLogIds)) {
@@ -232,11 +234,11 @@ class DeletedCustomerController extends BaseSuperAdminController
                 ]);
             });
 
-            // Invalidate Reports cache
-            LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
-            if ($deletedCustomer->tenant_id) {
-                LicenseCacheInvalidation::bumpVersion("manager-parent:{$deletedCustomer->tenant_id}:reports:version");
-            }
+            // Recalculate UserBalance for affected resellers (after logs deleted)
+            CustomerDeletionService::recalculateResellerBalances($resellerIds);
+
+            // Invalidate all report caches
+            $this->invalidateAllCaches($deletedCustomer->tenant_id);
 
             $message = empty($activityLogIds)
                 ? 'No revenue records found — revenue has been reset to $0.00.'
@@ -253,6 +255,7 @@ class DeletedCustomerController extends BaseSuperAdminController
     public function destroy(DeletedCustomer $deletedCustomer): JsonResponse
     {
         $activityLogIds = $this->resolveActivityLogIds($deletedCustomer);
+        $resellerIds = $this->resolveResellerIds($deletedCustomer);
 
         DB::transaction(function () use ($deletedCustomer, $activityLogIds): void {
             if (!empty($activityLogIds)) {
@@ -263,15 +266,42 @@ class DeletedCustomerController extends BaseSuperAdminController
             $deletedCustomer->delete();
         });
 
-        // Invalidate Reports cache
-        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
-        if ($deletedCustomer->tenant_id) {
-            LicenseCacheInvalidation::bumpVersion("manager-parent:{$deletedCustomer->tenant_id}:reports:version");
-        }
+        // Recalculate UserBalance for affected resellers (after logs deleted)
+        CustomerDeletionService::recalculateResellerBalances($resellerIds);
+
+        // Invalidate all report caches
+        $this->invalidateAllCaches($deletedCustomer->tenant_id);
 
         return response()->json([
             'message' => 'Deleted customer record and revenue permanently removed.',
         ]);
+    }
+
+    /**
+     * Invalidate all report caches across all roles.
+     */
+    private function invalidateAllCaches(?int $tenantId): void
+    {
+        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+        LicenseCacheInvalidation::bumpVersion('manager-parent:reports:version');
+        LicenseCacheInvalidation::bumpVersion('manager:reports:version');
+        LicenseCacheInvalidation::bumpVersion('reseller:reports:version');
+        if ($tenantId) {
+            LicenseCacheInvalidation::bumpVersion("manager-parent:{$tenantId}:reports:version");
+        }
+    }
+
+    /**
+     * Extract reseller IDs from the deleted customer's snapshot licenses.
+     *
+     * @return array<int>
+     */
+    private function resolveResellerIds(DeletedCustomer $deletedCustomer): array
+    {
+        $licenses = $deletedCustomer->snapshot['licenses'] ?? [];
+        return array_values(array_unique(
+            array_filter(array_map(fn ($l) => isset($l['reseller_id']) ? (int) $l['reseller_id'] : null, $licenses))
+        ));
     }
 
     /**
