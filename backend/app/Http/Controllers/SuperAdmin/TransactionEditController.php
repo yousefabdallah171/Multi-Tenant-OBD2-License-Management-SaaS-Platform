@@ -174,7 +174,7 @@ class TransactionEditController extends BaseSuperAdminController
     public function allLogs(Request $request): JsonResponse
     {
         $query = \App\Models\TransactionEdit::query()
-            ->where('action', 'edit')
+            ->whereIn('action', ['edit', 'revert', 'delete'])
             ->with([
                 'superAdmin:id,name',
                 'license:id,bios_id,customer_id,reseller_id,program_id,tenant_id',
@@ -194,10 +194,13 @@ class TransactionEditController extends BaseSuperAdminController
         // Search by BIOS ID, customer name, or reseller name
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->whereHas('license', function ($q) use ($search) {
-                $q->where('bios_id', 'like', "%{$search}%")
-                  ->orWhereHas('customer', fn ($cq) => $cq->where('name', 'like', "%{$search}%"))
-                  ->orWhereHas('reseller', fn ($rq) => $rq->where('name', 'like', "%{$search}%"));
+            $query->where(function ($outer) use ($search): void {
+                $outer->whereHas('license', function ($q) use ($search): void {
+                    $q->where('bios_id', 'like', "%{$search}%")
+                      ->orWhereHas('customer', fn ($cq) => $cq->where('name', 'like', "%{$search}%"))
+                      ->orWhereHas('reseller', fn ($rq) => $rq->where('name', 'like', "%{$search}%"));
+                })->orWhere('previous_values->bios_id', 'like', "%{$search}%")
+                  ->orWhere('previous_values->customer_name', 'like', "%{$search}%");
             });
         }
 
@@ -220,20 +223,22 @@ class TransactionEditController extends BaseSuperAdminController
             $reseller = $license?->reseller;
             $program = $license?->program;
             $tenant = $license?->tenant;
+            $prev = is_array($edit->previous_values) ? $edit->previous_values : [];
 
             return [
                 'id' => $edit->id,
+                'action' => $edit->action,
                 'license_id' => $edit->license_id,
                 'tenant_id' => $edit->tenant_id,
                 'tenant_name' => $tenant?->name,
-                'bios_id' => $license?->bios_id,
-                'customer_name' => $customer?->name,
+                'bios_id' => $license?->bios_id ?? ($prev['bios_id'] ?? null),
+                'customer_name' => $customer?->name ?? ($prev['customer_name'] ?? null),
                 'reseller_name' => $reseller?->name,
-                'program_name' => $program?->name,
+                'program_name' => $program?->name ?? ($prev['program_name'] ?? null),
                 'super_admin_id' => $edit->super_admin_id,
                 'super_admin_name' => $edit->superAdmin?->name,
-                'previous_values' => $edit->previous_values ?? [],
-                'new_values' => $edit->new_values ?? [],
+                'previous_values' => $prev,
+                'new_values' => is_array($edit->new_values) ? $edit->new_values : [],
                 'reason' => $edit->reason,
                 'created_at' => $edit->created_at?->toIso8601String(),
             ];

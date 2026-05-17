@@ -222,10 +222,12 @@ class TransactionEditService
             ];
 
             // Create deletion log entry
+            // activity_log_id is null because the original log has already been deleted
+            $licenseId = (int) ($metadata['license_id'] ?? 0);
             TransactionEdit::query()->create([
                 'tenant_id' => $activityLog->tenant_id ?? 0,
-                'license_id' => (int) ($metadata['license_id'] ?? 0),
-                'activity_log_id' => $activityLogId,
+                'license_id' => $licenseId > 0 ? $licenseId : 0,
+                'activity_log_id' => null,
                 'super_admin_id' => $superAdmin->id,
                 'action' => 'delete',
                 'previous_values' => $previousValues,

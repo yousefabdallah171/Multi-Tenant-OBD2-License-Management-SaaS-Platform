@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\License;
 use App\Models\ProgramDurationPreset;
 use App\Models\ProgramDurationPresetCountryPrice;
+use App\Models\ProgramOffer;
 use App\Models\User;
 use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
@@ -96,8 +97,24 @@ class LicenseController extends Controller
     {
         $resolved = $this->resolveAccessibleLicense($request, $license);
 
+        $user = $request->user();
+        $actorRole = $user?->role?->value ?? (string) $user?->role;
+        $activeOfferDiscount = null;
+
+        if ($user && in_array($actorRole, [UserRole::RESELLER->value, UserRole::MANAGER->value], true)) {
+            $activeOfferDiscount = ProgramOffer::query()
+                ->where('user_id', $user->id)
+                ->where('program_id', $resolved->program_id)
+                ->where('is_active', true)
+                ->value('discount_percentage');
+            $activeOfferDiscount = $activeOfferDiscount !== null ? (float) $activeOfferDiscount : null;
+        }
+
         return response()->json([
-            'data' => $this->serializeLicense($resolved),
+            'data' => [
+                ...$this->serializeLicense($resolved),
+                'active_offer_discount' => $activeOfferDiscount,
+            ],
         ]);
     }
 
