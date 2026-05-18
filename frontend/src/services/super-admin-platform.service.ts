@@ -173,4 +173,8 @@ export const superAdminPlatformService = {
     const { data } = await api.delete<{ message: string }>(`/super-admin/activity-logs/${activityLogId}`)
     return data
   },
+  async exportTransactionHistoryCsv(params?: Omit<TransactionHistoryFilters, 'page' | 'per_page'>) {
+    const { downloadFile } = await import('@/utils/download')
+    await downloadFile('/super-admin/transaction-history/export', 'transaction-history.csv', params)
+  },
 }

@@ -8,7 +8,9 @@ use App\Models\User;
 use App\Support\RevenueAnalytics;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TransactionHistoryController extends BaseSuperAdminController
 {
@@ -22,9 +24,70 @@ class TransactionHistoryController extends BaseSuperAdminController
             'from'      => ['nullable', 'date'],
             'to'        => ['nullable', 'date'],
             'page'      => ['nullable', 'integer', 'min:1'],
-            'per_page'  => ['nullable', 'integer', 'min:1', 'max:100'],
+            'per_page'  => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
+        $rows = $this->buildRows($request, $validated);
+
+        $totalSales   = round((float) $rows->sum('amount'), 2);
+        $totalEvents  = $rows->count();
+        $totalSellers = $rows->pluck('seller_id')->filter()->unique()->count();
+
+        $page      = (int) ($validated['page'] ?? 1);
+        $perPage   = (int) ($validated['per_page'] ?? 25);
+        $paginator = $this->paginateCollection($rows, $page, $perPage);
+
+        return response()->json([
+            'data'    => $paginator->getCollection()->values(),
+            'summary' => [
+                'total_events'  => $totalEvents,
+                'total_sales'   => $totalSales,
+                'total_sellers' => $totalSellers,
+            ],
+            'meta'    => $this->paginationMeta($paginator),
+        ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $validated = $request->validate([
+            'search'    => ['nullable', 'string', 'max:255'],
+            'tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
+            'seller_id' => ['nullable', 'integer'],
+            'role'      => ['nullable', 'in:manager_parent,manager,reseller'],
+            'from'      => ['nullable', 'date'],
+            'to'        => ['nullable', 'date'],
+        ]);
+
+        $rows = $this->buildRows($request, $validated)->all();
+
+        return response()->streamDownload(function () use ($rows): void {
+            $handle = fopen('php://output', 'wb');
+            // UTF-8 BOM so Excel opens it correctly
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, ['Seller', 'Seller Email', 'Seller Role', 'Tenant', 'Customer', 'BIOS ID', 'Program', 'Country', 'Amount (USD)', 'Offer Discount %', 'Type', 'Sale Date']);
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row['seller_name'] ?? '',
+                    $row['seller_email'] ?? '',
+                    $row['seller_role'] ?? '',
+                    $row['tenant_name'] ?? '',
+                    $row['customer_name'] ?? '',
+                    $row['bios_id'] ?? '',
+                    $row['program_name'] ?? '',
+                    $row['country_name'] ?? '',
+                    $row['amount'] ?? 0,
+                    $row['offer_discount_percentage'] ?? '',
+                    $row['type'] ?? '',
+                    $row['sale_date'] ?? '',
+                ]);
+            }
+            fclose($handle);
+        }, 'transaction-history.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function buildRows(Request $request, array $validated): Collection
+    {
         $filters  = ['from' => $validated['from'] ?? null, 'to' => $validated['to'] ?? null];
         $tenantId = ! empty($validated['tenant_id']) ? (int) $validated['tenant_id'] : null;
 
@@ -62,13 +125,13 @@ class TransactionHistoryController extends BaseSuperAdminController
         $rows = $events->map(fn ($event): array => $this->serializeRow($event))->values();
 
         // Hydrate program names from DB
-        $programIds = $rows->pluck('program_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
+        $programIds   = $rows->pluck('program_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
         $programsById = $programIds !== []
             ? Program::query()->whereIn('id', $programIds)->select(['id', 'name'])->get()->keyBy('id')
             : collect();
 
         // Hydrate customer names from DB
-        $customerIds = $rows->pluck('customer_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
+        $customerIds   = $rows->pluck('customer_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
         $customersById = $customerIds !== []
             ? User::query()->whereIn('id', $customerIds)->select(['id', 'name', 'username'])->get()->keyBy('id')
             : collect();
@@ -78,7 +141,7 @@ class TransactionHistoryController extends BaseSuperAdminController
                 $row['program_name'] = (string) $programsById->get($row['program_id'])->name;
             }
             if ($row['customer_id'] > 0 && $customersById->has($row['customer_id'])) {
-                $customer = $customersById->get($row['customer_id']);
+                $customer             = $customersById->get($row['customer_id']);
                 $row['customer_name']     = (string) $customer->name;
                 $row['customer_username'] = (string) ($customer->username ?? $row['customer_username']);
             }
@@ -101,23 +164,7 @@ class TransactionHistoryController extends BaseSuperAdminController
             })->values();
         }
 
-        $totalSales   = round((float) $rows->sum('amount'), 2);
-        $totalEvents  = $rows->count();
-        $totalSellers = $rows->pluck('seller_id')->filter()->unique()->count();
-
-        $page      = (int) ($validated['page'] ?? 1);
-        $perPage   = (int) ($validated['per_page'] ?? 25);
-        $paginator = $this->paginateCollection($rows, $page, $perPage);
-
-        return response()->json([
-            'data'    => $paginator->getCollection()->values(),
-            'summary' => [
-                'total_events'  => $totalEvents,
-                'total_sales'   => $totalSales,
-                'total_sellers' => $totalSellers,
-            ],
-            'meta'    => $this->paginationMeta($paginator),
-        ]);
+        return $rows;
     }
 
     public function sellers(Request $request): JsonResponse
