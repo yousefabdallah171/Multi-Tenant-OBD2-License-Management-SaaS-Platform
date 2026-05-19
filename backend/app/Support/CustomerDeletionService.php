@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\DeletedCustomer;
 use App\Models\License;
 use App\Models\User;
+use App\Models\UserBalance;
 use Illuminate\Support\Facades\DB;
 
 class CustomerDeletionService
@@ -14,7 +15,7 @@ class CustomerDeletionService
      */
     public static function snapshotAndDelete(User $customer, User $actor): DeletedCustomer
     {
-        return DB::transaction(function () use ($customer, $actor): DeletedCustomer {
+        $deletedCustomer = DB::transaction(function () use ($customer, $actor): DeletedCustomer {
             // Collect licenses
             $licenses = License::query()
                 ->where('customer_id', $customer->id)
@@ -75,7 +76,54 @@ class CustomerDeletionService
             // Delete user (hard delete)
             $customer->delete();
 
+            // Recalculate UserBalance for affected resellers (queried after logs deleted = correct lower total)
+            $resellerIds = array_values(array_unique(
+                array_filter(array_column($licenses, 'reseller_id'))
+            ));
+            self::recalculateResellerBalances($resellerIds);
+
             return $deletedCustomer;
         });
+
+        // Invalidate all report caches after transaction commits
+        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+        LicenseCacheInvalidation::bumpVersion('manager-parent:reports:version');
+        LicenseCacheInvalidation::bumpVersion('manager:reports:version');
+        LicenseCacheInvalidation::bumpVersion('reseller:reports:version');
+
+        return $deletedCustomer;
+    }
+
+    /**
+     * Recalculate UserBalance totals for a set of reseller IDs.
+     * Should be called after revenue activity logs have been deleted.
+     *
+     * @param array<int> $resellerIds
+     */
+    public static function recalculateResellerBalances(array $resellerIds): void
+    {
+        foreach ($resellerIds as $resellerId) {
+            $reseller = User::find((int) $resellerId);
+            if ($reseller === null) {
+                continue;
+            }
+
+            $totalRevenue = (float) DB::table('activity_logs')
+                ->where('tenant_id', $reseller->tenant_id)
+                ->where('user_id', $resellerId)
+                ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
+                ->selectRaw('COALESCE(SUM(CAST(JSON_EXTRACT(metadata, "$.price") AS DECIMAL(12,2))), 0) as total')
+                ->value('total');
+
+            UserBalance::updateOrCreate(
+                ['user_id' => (int) $resellerId],
+                [
+                    'tenant_id' => $reseller->tenant_id,
+                    'total_revenue' => round($totalRevenue, 2),
+                    'pending_balance' => round($totalRevenue, 2),
+                    'last_activity_at' => now(),
+                ]
+            );
+        }
     }
 }

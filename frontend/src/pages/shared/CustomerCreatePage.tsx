@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
 import { resolveApiErrorMessage } from '@/lib/api-errors'
 import { ALL_COUNTRIES, normalizeCountryName } from '@/lib/countries'
-import { resolvePresetEffectivePrice } from '@/lib/preset-pricing'
+import { applyDiscountToPresetPrice, resolvePresetEffectivePrice } from '@/lib/preset-pricing'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, resolveDisplayTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/hooks/useLanguage'
@@ -216,6 +216,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
     () => resolvePresetEffectivePrice(selectedPreset, countryName),
     [countryName, selectedPreset],
   )
+  const activeOfferDiscount: number | null = (selectedProgram as any)?.active_offer_discount ?? null
+  const selectedPresetPricingWithDiscount = useMemo(
+    () => applyDiscountToPresetPrice(selectedPresetPricing, activeOfferDiscount),
+    [selectedPresetPricing, activeOfferDiscount],
+  )
 
   useEffect(() => {
     if (!isPresetSeller && availablePresets.length > 0) {
@@ -268,11 +273,11 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
 
   const autoPrice = useMemo(() => {
     if (!selectedProgram || !createLicenseNow) return 0
-    if (isPresetSeller || mode === 'preset') return Number(selectedPresetPricing.effectivePrice.toFixed(2))
+    if (isPresetSeller || mode === 'preset') return selectedPresetPricingWithDiscount.effectivePrice
     // Round to nearest 0.01 day (~14 min) to avoid floating-point drift (e.g. 0.999 × $25 = $24.99)
     const roundedDays = Math.round(Math.max(durationDays, 0) * 100) / 100
     return Number((roundedDays * Number(selectedProgram.base_price ?? 0)).toFixed(2))
-  }, [createLicenseNow, durationDays, isPresetSeller, mode, selectedPresetPricing.effectivePrice, selectedProgram])
+  }, [createLicenseNow, durationDays, isPresetSeller, mode, selectedPresetPricingWithDiscount.effectivePrice, selectedProgram])
 
   useEffect(() => {
     if (priceMode === 'auto') {
@@ -694,7 +699,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                               if (d % 30 === 0) return `${d / 30} month${d / 30 > 1 ? 's' : ''}`
                               if (d % 7 === 0) return `${d / 7} week${d / 7 > 1 ? 's' : ''}`
                               return `${d} days`
-                            })(selectedPreset.duration_days)} • {t('activate.presetPriceSummary', { price: selectedPresetPricing.effectivePrice.toFixed(2), defaultValue: '$ {{price}}' })}
+                            })(selectedPreset.duration_days)} • {t('activate.presetPriceSummary', { price: selectedPresetPricingWithDiscount.effectivePrice.toFixed(2), defaultValue: '$ {{price}}' })}
                       </p>
                     ) : null}
                   </div>
@@ -743,7 +748,7 @@ export function CustomerCreatePage({ title, description, backPath, createCustome
                               if (d % 30 === 0) return `${d / 30} month${d / 30 > 1 ? 's' : ''}`
                               if (d % 7 === 0) return `${d / 7} week${d / 7 > 1 ? 's' : ''}`
                               return `${d} days`
-                            })(selectedPreset.duration_days)} • {formatCurrency(selectedPresetPricing.effectivePrice, 'USD', locale)}
+                            })(selectedPreset.duration_days)} • {formatCurrency(selectedPresetPricingWithDiscount.effectivePrice, 'USD', locale)}
                           </p>
                         ) : null}
                       </div>

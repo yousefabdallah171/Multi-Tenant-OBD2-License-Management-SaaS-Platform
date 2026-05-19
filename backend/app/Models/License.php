@@ -40,6 +40,7 @@ class License extends Model
         'pause_reason',
         'paused_by_role',
         'status',
+        'offer_discount_percentage',
     ];
 
     protected function casts(): array
@@ -47,6 +48,7 @@ class License extends Model
         return [
             'duration_days' => 'decimal:3',
             'price' => 'decimal:2',
+            'offer_discount_percentage' => 'float',
             'activated_at' => 'datetime',
             'expires_at' => 'datetime',
             'scheduled_at' => 'datetime',

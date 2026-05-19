@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { useLanguage } from '@/hooks/useLanguage'
 import { useResolvedTimezone } from '@/hooks/useResolvedTimezone'
 import { getActivationDurationPresets } from '@/lib/activation-presets'
-import { resolvePresetEffectivePrice } from '@/lib/preset-pricing'
+import { resolvePresetEffectivePrice, applyDiscountToPresetPrice } from '@/lib/preset-pricing'
 import { COMMON_TIMEZONES, formatDateTimeLocalInTimezone, zonedDateTimeInputToUtcDate } from '@/lib/timezones'
 import { formatDate } from '@/lib/utils'
 import type { ProgramDurationPreset, RenewLicenseData } from '@/types/manager-reseller.types'
@@ -36,6 +36,7 @@ interface RenewLicenseFormProps {
   allowScheduleControls?: boolean
   requireScheduled?: boolean
   customerCountryName?: string | null
+  activeOfferDiscount?: number | null
 }
 
 const MIN_DURATION_DAYS = 1 / 1440
@@ -135,6 +136,7 @@ export function RenewLicenseForm({
   allowScheduleControls = !presetOnly,
   requireScheduled = false,
   customerCountryName = null,
+  activeOfferDiscount = null,
 }: RenewLicenseFormProps) {
   const { t } = useTranslation()
   const { lang } = useLanguage()
@@ -168,8 +170,11 @@ export function RenewLicenseForm({
     [activePresetOptions, selectedPresetId],
   )
   const selectedPresetPricing = useMemo(
-    () => resolvePresetEffectivePrice(selectedPreset, customerCountryName),
-    [customerCountryName, selectedPreset],
+    () => {
+      const resolved = resolvePresetEffectivePrice(selectedPreset, customerCountryName)
+      return applyDiscountToPresetPrice(resolved, activeOfferDiscount)
+    },
+    [activeOfferDiscount, customerCountryName, selectedPreset],
   )
 
   useEffect(() => {
@@ -425,26 +430,48 @@ export function RenewLicenseForm({
           <>
             {activePresetOptions.length > 0 ? (
               <div className="grid gap-3 md:grid-cols-2">
-                {activePresetOptions.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => setSelectedPresetId(preset.id)}
-                    className={`rounded-2xl border px-4 py-3 text-start transition ${
-                      selectedPreset?.id === preset.id
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:border-emerald-400 dark:bg-emerald-950/30 dark:text-emerald-100'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'
-                    }`}
-                  >
-                    <div className="text-sm font-semibold">{preset.label}</div>
-                    <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      {t('activate.presetDurationSummary', {
-                        defaultValue: '{{days}} days',
-                        days: preset.duration_days,
-                      })} • ${resolvePresetEffectivePrice(preset, customerCountryName).effectivePrice.toFixed(2)}
-                    </div>
-                  </button>
-                ))}
+                {activePresetOptions.map((preset) => {
+                  const presetPricing = applyDiscountToPresetPrice(resolvePresetEffectivePrice(preset, customerCountryName), activeOfferDiscount)
+                  const rawPricing = resolvePresetEffectivePrice(preset, customerCountryName)
+                  const hasDiscount = activeOfferDiscount && activeOfferDiscount > 0
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setSelectedPresetId(preset.id)}
+                      className={`rounded-2xl border px-4 py-3 text-start transition ${
+                        selectedPreset?.id === preset.id
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:border-emerald-400 dark:bg-emerald-950/30 dark:text-emerald-100'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold">{preset.label}</div>
+                        {hasDiscount && (
+                          <div className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white dark:bg-emerald-500">
+                            -{activeOfferDiscount}%
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        {t('activate.presetDurationSummary', {
+                          defaultValue: '{{days}} days',
+                          days: preset.duration_days,
+                        })}{' '}
+                        •{' '}
+                        {hasDiscount ? (
+                          <>
+                            <span className="line-through">${rawPricing.effectivePrice.toFixed(2)}</span>
+                            {' → '}
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">${presetPricing.effectivePrice.toFixed(2)}</span>
+                          </>
+                        ) : (
+                          <span>${presetPricing.effectivePrice.toFixed(2)}</span>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             ) : (
               <p className="text-sm text-slate-500 dark:text-slate-400">

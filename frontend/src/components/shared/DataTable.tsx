@@ -158,7 +158,7 @@ export function DataTable<T>({
           {onPageSizeChange && (
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Per page:</span>
-              {[10, 25, 50, 100].map((size) => (
+              {[10, 25, 50, 100, 200].map((size) => (
                 <button
                   key={size}
                   type="button"

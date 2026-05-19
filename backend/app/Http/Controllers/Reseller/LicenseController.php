@@ -6,6 +6,7 @@ use App\Http\Requests\ActivateLicenseRequest;
 use App\Http\Requests\RenewLicenseRequest;
 use App\Models\ActivityLog;
 use App\Models\License;
+use App\Models\ProgramOffer;
 use App\Services\LicenseService;
 use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
@@ -101,9 +102,17 @@ class LicenseController extends BaseResellerController
             ])
             ->values();
 
+        $resellerId = $this->currentReseller($request)->id;
+        $activeOfferDiscount = ProgramOffer::query()
+            ->where('user_id', $resellerId)
+            ->where('program_id', $resolved->program_id)
+            ->where('is_active', true)
+            ->value('discount_percentage');
+
         return response()->json([
             'data' => [
                 ...$this->serializeLicense($resolved),
+                'active_offer_discount' => $activeOfferDiscount !== null ? (float) $activeOfferDiscount : null,
                 'customer' => $resolved->customer ? [
                     'id' => $resolved->customer->id,
                     'name' => $resolved->customer->name,

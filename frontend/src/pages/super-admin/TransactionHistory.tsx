@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { ExportButtons } from '@/components/shared/ExportButtons'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +43,7 @@ export function TransactionHistoryPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(25)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const sellerFilters = useMemo(() => ({
@@ -58,8 +60,8 @@ export function TransactionHistoryPage() {
     from: from || undefined,
     to: to || undefined,
     page,
-    per_page: 25,
-  }), [from, page, role, search, sellerId, tenantId, to])
+    per_page: perPage,
+  }), [from, page, perPage, role, search, sellerId, tenantId, to])
 
   const historyQuery = useQuery({
     queryKey: ['super-admin', 'transaction-history', filters],
@@ -189,6 +191,19 @@ export function TransactionHistoryPage() {
       ),
     },
     {
+      key: 'offer_discount_percentage',
+      label: t('transactionHistory.columns.offerDiscount', { defaultValue: 'Offer %' }),
+      sortable: true,
+      sortValue: (row) => row.offer_discount_percentage ?? 0,
+      render: (row) => row.offer_discount_percentage != null
+        ? (
+          <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            {row.offer_discount_percentage}%
+          </span>
+        )
+        : <span className="text-slate-400">—</span>,
+    },
+    {
       key: 'type',
       label: t('common.type', { defaultValue: 'Type' }),
       sortable: true,
@@ -239,6 +254,15 @@ export function TransactionHistoryPage() {
       ),
     },
   ], [lang, locale, t, deleteActivityLogMutation.isPending, deletingId, isSuperAdmin])
+
+  const exportFilters = useMemo(() => ({
+    search: search || undefined,
+    tenant_id: tenantId || undefined,
+    role: role || undefined,
+    seller_id: sellerId || undefined,
+    from: from || undefined,
+    to: to || undefined,
+  }), [from, role, search, sellerId, tenantId, to])
 
   const clearFilters = () => {
     setSearch('')
@@ -362,6 +386,22 @@ export function TransactionHistoryPage() {
         ) : null}
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ExportButtons
+          onExportCsv={() => superAdminPlatformService.exportTransactionHistoryCsv(exportFilters)}
+          onExportPdf={() => {
+            const json = JSON.stringify(rows, null, 2)
+            const blob = new Blob([json], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = 'transaction-history.json'
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+        />
+      </div>
+
       <DataTable
         tableKey="super_admin_transaction_history"
         columns={columns}
@@ -369,32 +409,10 @@ export function TransactionHistoryPage() {
         rowKey={(row) => String(row.id)}
         isLoading={historyQuery.isLoading}
         emptyMessage={t('transactionHistory.empty', { defaultValue: 'No transactions found.' })}
+        pagination={{ page, lastPage: meta?.last_page ?? 1, total: meta?.total ?? 0, perPage }}
+        onPageChange={(newPage) => setPage(newPage)}
+        onPageSizeChange={(size) => { setPerPage(size); setPage(1) }}
       />
-
-      <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
-        <span>{t('common.totalCount', { count: meta?.total ?? 0 })}</span>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!meta || page <= 1}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-          >
-            {t('common.previous')}
-          </Button>
-          <span>{meta ? `${meta.current_page} / ${meta.last_page}` : '1 / 1'}</span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!meta || page >= meta.last_page}
-            onClick={() => setPage((current) => current + 1)}
-          >
-            {t('common.next')}
-          </Button>
-        </div>
-      </div>
     </div>
   )
 }

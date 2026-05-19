@@ -311,6 +311,7 @@ class ResellerPaymentController extends BaseManagerParentController
                 'program_name' => $program?->name ?? $row['program_name'],
                 'country_name' => $customer?->country_name ?? $row['country_name'],
                 'sale_amount' => $row['sale_amount'],
+                'offer_discount_percentage' => $row['offer_discount_percentage'] ?? null,
                 'sale_date' => $row['sale_date'],
                 'license_id' => $row['license_id'],
             ];
@@ -424,6 +425,7 @@ class ResellerPaymentController extends BaseManagerParentController
                 'program_name' => $program?->name ?? $row['program_name'],
                 'country_name' => $customer?->country_name ?? $row['country_name'],
                 'sale_amount' => $row['sale_amount'],
+                'offer_discount_percentage' => $row['offer_discount_percentage'] ?? null,
                 'sale_date' => $row['sale_date'],
                 'license_id' => $row['license_id'],
             ];
@@ -520,6 +522,7 @@ class ResellerPaymentController extends BaseManagerParentController
                 'program_name' => $program?->name ?? $row['program_name'],
                 'country_name' => $customer?->country_name ?? $row['country_name'],
                 'sale_amount' => $row['sale_amount'],
+                'offer_discount_percentage' => $row['offer_discount_percentage'] ?? null,
                 'sale_date' => $row['sale_date'],
                 'license_id' => $row['license_id'],
             ];
@@ -950,6 +953,7 @@ class ResellerPaymentController extends BaseManagerParentController
             'program_name' => null,
             'country_name' => (string) ($metadata['country_name'] ?? ''),
             'sale_amount' => round((float) ($metadata['price'] ?? 0), 2),
+            'offer_discount_percentage' => isset($metadata['offer_discount_percentage']) ? (float) $metadata['offer_discount_percentage'] : null,
             'sale_date' => $saleDate,
             'license_id' => $this->intOrNull($metadata['license_id'] ?? null),
         ];

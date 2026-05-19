@@ -46,9 +46,14 @@ export function applyDiscountToPresetPrice(
   resolved: ResolvedPresetPrice,
   discountPercentage: number | null | undefined
 ): ResolvedPresetPrice {
-  if (!discountPercentage) return resolved
+  if (!discountPercentage || discountPercentage <= 0) return resolved
+
+  // Cap discount at 100% (minimum price is $0.00)
+  const cappedDiscount = Math.min(discountPercentage, 100)
+  const discountedPrice = Math.round(resolved.effectivePrice * (1 - cappedDiscount / 100) * 100) / 100
+
   return {
     ...resolved,
-    effectivePrice: Math.round(resolved.effectivePrice * (1 - discountPercentage / 100) * 100) / 100,
+    effectivePrice: Math.max(0, discountedPrice),  // Ensure price never goes below 0
   }
 }

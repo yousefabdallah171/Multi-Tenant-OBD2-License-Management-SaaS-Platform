@@ -555,6 +555,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/activity/export', [SuperAdminActivityController::class, 'export']);
         Route::get('/reseller-logs', [SuperAdminResellerLogController::class, 'index']);
         Route::get('/transaction-history', [SuperAdminTransactionHistoryController::class, 'index']);
+        Route::get('/transaction-history/export', [SuperAdminTransactionHistoryController::class, 'export']);
         Route::get('/transaction-history/sellers', [SuperAdminTransactionHistoryController::class, 'sellers']);
         Route::get('/logs', [LogController::class, 'index']);
         Route::get('/logs/{log}', [LogController::class, 'show']);

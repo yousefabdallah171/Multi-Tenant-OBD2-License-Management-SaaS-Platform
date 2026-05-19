@@ -275,11 +275,7 @@ export function CustomersPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (customerId: number) => {
-      await superAdminCustomerService.remove(customerId)
-      // Always delete revenue when customer is deleted
-      await superAdminCustomerService.removeRevenue(customerId)
-    },
+    mutationFn: (customerId: number) => superAdminCustomerService.remove(customerId),
     onSuccess: () => {
       toast.success(t('common.deleted', { defaultValue: 'Deleted successfully.' }))
       setDeleteTarget(null)
