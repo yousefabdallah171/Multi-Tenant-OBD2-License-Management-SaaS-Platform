@@ -13,6 +13,7 @@ export interface TransactionDetailsResponse {
   data: {
     transaction: {
       license_id: number
+      activity_log_id: number
       tenant_id: number
       tenant_name: string
       reseller_id: number
@@ -48,6 +49,7 @@ export interface TransactionDetailsResponse {
 export interface EditTransactionResponse {
   data: {
     license_id: number
+    activity_log_id: number
     tenant_id: number
     tenant_name: string
     reseller_id: number
@@ -99,6 +101,7 @@ export interface TransactionHistoryResponse {
   }>
   summary: {
     license_id: number
+    activity_log_id?: number
     total_edits: number
   }
 }
@@ -106,9 +109,9 @@ export interface TransactionHistoryResponse {
 /**
  * Get transaction details with full edit history
  */
-export async function getTransactionDetails(licenseId: number): Promise<TransactionDetailsResponse['data']> {
+export async function getTransactionDetails(activityLogId: number): Promise<TransactionDetailsResponse['data']> {
   const { data } = await api.get<TransactionDetailsResponse>(
-    `/super-admin/transactions/${licenseId}/editable`
+    `/super-admin/transactions/activity-logs/${activityLogId}/editable`
   )
   return data.data
 }
@@ -117,11 +120,11 @@ export async function getTransactionDetails(licenseId: number): Promise<Transact
  * Edit a transaction (price, customer, date, program, duration)
  */
 export async function editTransaction(
-  licenseId: number,
+  activityLogId: number,
   payload: EditTransactionRequest
 ): Promise<EditTransactionResponse> {
   const { data } = await api.patch<EditTransactionResponse>(
-    `/super-admin/transactions/${licenseId}`,
+    `/super-admin/transactions/activity-logs/${activityLogId}`,
     payload
   )
   return data
@@ -131,11 +134,11 @@ export async function editTransaction(
  * Revert a transaction to its previous state
  */
 export async function revertTransaction(
-  licenseId: number,
+  activityLogId: number,
   reason?: string
 ): Promise<EditTransactionResponse> {
   const { data } = await api.post<EditTransactionResponse>(
-    `/super-admin/transactions/${licenseId}/revert`,
+    `/super-admin/transactions/activity-logs/${activityLogId}/revert`,
     { reason }
   )
   return data
@@ -145,10 +148,10 @@ export async function revertTransaction(
  * Get full transaction edit history
  */
 export async function getTransactionHistory(
-  licenseId: number
+  activityLogId: number
 ): Promise<TransactionHistoryResponse['data']> {
   const { data } = await api.get<TransactionHistoryResponse>(
-    `/super-admin/transactions/${licenseId}/history`
+    `/super-admin/transactions/activity-logs/${activityLogId}/history`
   )
   return data.data
 }

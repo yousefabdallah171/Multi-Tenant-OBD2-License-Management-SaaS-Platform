@@ -12,18 +12,18 @@ import * as transactionService from '@/services/transaction-edit.service'
 interface TransactionEditModalProps {
   open: boolean
   onClose: () => void
-  licenseId: number
+  activityLogId: number
   onSuccess?: () => void
 }
 
-export function TransactionEditModal({ open, onClose, licenseId, onSuccess }: TransactionEditModalProps) {
+export function TransactionEditModal({ open, onClose, activityLogId, onSuccess }: TransactionEditModalProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<'edit' | 'history'>('edit')
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['transaction-details', licenseId],
-    queryFn: () => transactionService.getTransactionDetails(licenseId),
-    enabled: open,
+    queryKey: ['transaction-details', activityLogId],
+    queryFn: () => transactionService.getTransactionDetails(activityLogId),
+    enabled: open && activityLogId > 0,
   })
 
   if (!open) return null

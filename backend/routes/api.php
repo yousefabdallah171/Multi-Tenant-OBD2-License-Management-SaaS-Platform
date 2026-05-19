@@ -467,6 +467,10 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::post('/licenses/{license}/force-expire', [SuperAdminLicenseController::class, 'forceExpire']);
 
         // Transaction editing (super admin can edit old transactions and their impact cascades to all reports)
+        Route::get('/transactions/activity-logs/{activityLog}/editable', [TransactionEditController::class, 'showByActivityLog']);
+        Route::patch('/transactions/activity-logs/{activityLog}', [TransactionEditController::class, 'updateByActivityLog']);
+        Route::post('/transactions/activity-logs/{activityLog}/revert', [TransactionEditController::class, 'revertByActivityLog']);
+        Route::get('/transactions/activity-logs/{activityLog}/history', [TransactionEditController::class, 'historyByActivityLog']);
         Route::get('/transactions/{license}/editable', [TransactionEditController::class, 'show']);
         Route::patch('/transactions/{license}', [TransactionEditController::class, 'update']);
         Route::post('/transactions/{license}/revert', [TransactionEditController::class, 'revert']);

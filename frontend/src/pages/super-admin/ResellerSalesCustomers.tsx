@@ -37,7 +37,7 @@ export function ResellerSalesCustomersPage() {
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(25)
   const [editModalOpen, setEditModalOpen] = useState(false)
-  const [selectedLicenseId, setSelectedLicenseId] = useState<number | null>(null)
+  const [selectedActivityLogId, setSelectedActivityLogId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const filters = useMemo<ManagerParentSalesCustomerFilters>(() => ({
@@ -143,7 +143,7 @@ export function ResellerSalesCustomersPage() {
             <button
               type="button"
               onClick={() => {
-                setSelectedLicenseId(row.license_id)
+                setSelectedActivityLogId(row.activity_log_id)
                 setEditModalOpen(true)
               }}
               className="inline-flex items-center gap-1 rounded-lg border border-blue-300 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:hover:bg-blue-900/30"
@@ -179,7 +179,7 @@ export function ResellerSalesCustomersPage() {
         </div>
       ),
     },
-  ], [editModalOpen, lang, locale, navigate, selectedLicenseId, t, deleteActivityLogMutation.isPending, deletingId, isSuperAdmin])
+  ], [editModalOpen, lang, locale, navigate, selectedActivityLogId, t, deleteActivityLogMutation.isPending, deletingId, isSuperAdmin])
 
   return (
     <div className="space-y-6">
@@ -280,7 +280,7 @@ export function ResellerSalesCustomersPage() {
       <TransactionEditModal
         open={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        licenseId={selectedLicenseId ?? 0}
+        activityLogId={selectedActivityLogId ?? 0}
         onSuccess={() => salesQuery.refetch()}
       />
     </div>
