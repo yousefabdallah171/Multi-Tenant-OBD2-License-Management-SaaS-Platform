@@ -9,6 +9,8 @@ import { TableScreenOptions } from '@/components/shared/TableScreenOptions'
 import { useTablePreferences } from '@/hooks/useTablePreferences'
 import { cn } from '@/lib/utils'
 
+const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
 export interface DataTableColumn<T> {
   key: string
   label: React.ReactNode
@@ -38,6 +40,7 @@ interface DataTableProps<T> {
   }
   onPageChange?: (page: number) => void
   onPageSizeChange?: (pageSize: number) => void
+  pageSizeOptions?: number[]
   tableKey?: string
 }
 
@@ -53,6 +56,7 @@ export function DataTable<T>({
   pagination,
   onPageChange,
   onPageSizeChange,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   tableKey,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
@@ -81,6 +85,7 @@ export function DataTable<T>({
     columns: preferenceColumns,
     perPage: pagination?.perPage,
     onPerPageChange: onPageSizeChange,
+    pageSizeOptions,
   })
 
   const visibleColumns = useMemo(() => columns.filter((column) => visibleColumnSet.has(column.key)), [columns, visibleColumnSet])
@@ -158,7 +163,7 @@ export function DataTable<T>({
           {onPageSizeChange && (
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Per page:</span>
-              {[10, 25, 50, 100, 200].map((size) => (
+              {pageSizeOptions.map((size) => (
                 <button
                   key={size}
                   type="button"

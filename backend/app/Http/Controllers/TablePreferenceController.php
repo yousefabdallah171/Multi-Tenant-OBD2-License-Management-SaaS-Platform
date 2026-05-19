@@ -46,7 +46,7 @@ class TablePreferenceController extends Controller
             'available_columns.*' => ['string', 'max:100'],
             'locked_columns' => ['array'],
             'locked_columns.*' => ['string', 'max:100'],
-            'per_page' => ['nullable', 'integer', 'in:10,25,50,100'],
+            'per_page' => ['nullable', 'integer', 'in:10,25,50,100,200'],
         ]);
 
         abort_unless(preg_match('/^[A-Za-z0-9._:-]+$/', $tableKey) === 1, Response::HTTP_UNPROCESSABLE_ENTITY);

@@ -27,6 +27,7 @@ const ACTION_OPTIONS = [
   'license.deactivated',
   'license.delete',
 ] as const
+const RESELLER_LOG_PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 200]
 
 interface SellerOption {
   id: number
@@ -42,7 +43,7 @@ export function ResellerLogsPage() {
   const locale = lang === 'ar' ? 'ar-EG' : 'en-US'
   const [searchParams, setSearchParams] = useSearchParams()
   const [page, setPage] = useState(() => parsePositiveInt(searchParams.get('page'), 1))
-  const [perPage, setPerPage] = useState(() => parsePositiveInt(searchParams.get('per_page'), 15))
+  const [perPage, setPerPage] = useState(() => parsePageSize(searchParams.get('per_page'), 15))
   const [sellerId, setSellerId] = useState<number | ''>(() => parseOptionalNumber(searchParams.get('seller_id')))
   const [action, setAction] = useState<string>(() => searchParams.get('action') ?? '')
   const [range, setRange] = useState<DateRangeValue>(() => ({
@@ -341,6 +342,7 @@ export function ResellerLogsPage() {
           total: logsQuery.data?.meta.total ?? 0,
           perPage: logsQuery.data?.meta.per_page ?? perPage,
         }}
+        pageSizeOptions={RESELLER_LOG_PAGE_SIZE_OPTIONS}
         onPageChange={setPage}
         onPageSizeChange={(size) => {
           setPerPage(size)
@@ -406,6 +408,12 @@ function parsePositiveInt(value: string | null, fallback: number) {
   const parsed = Number(value)
 
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+function parsePageSize(value: string | null, fallback: number) {
+  const parsed = Number(value)
+
+  return Number.isInteger(parsed) && RESELLER_LOG_PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : fallback
 }
 
 function parseOptionalNumber(value: string | null): number | '' {

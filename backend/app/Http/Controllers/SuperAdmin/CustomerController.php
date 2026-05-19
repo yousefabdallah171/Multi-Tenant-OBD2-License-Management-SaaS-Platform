@@ -14,7 +14,9 @@ use App\Models\UserBalance;
 use App\Models\UserIpLog;
 use App\Models\UserUsernameHistory;
 use App\Support\CustomerOwnership;
+use App\Support\CustomerDeletionService;
 use App\Support\LicenseCacheInvalidation;
+use App\Support\RevenueAnalytics;
 use App\Services\BalanceService;
 use App\Services\ExportTaskService;
 use App\Services\ExternalApiService;
@@ -1083,43 +1085,37 @@ class CustomerController extends BaseSuperAdminController
         $oldPrice = CustomerOwnership::displayPriceForLicense($license);
         $license->loadMissing(['reseller']);
 
-        $license->forceFill(['price' => $newPrice])->save();
-        $revenueLogs = $this->resolveEditableRevenueLogs($license);
+        $revenueLog = $this->resolveEditableRevenueLog($license);
 
-        if ($revenueLogs->isNotEmpty()) {
-            $revenueLogs->each(function (ActivityLog $revenueLog) use ($customer, $newPrice, $oldPrice): void {
-                $metadata = is_array($revenueLog->metadata) ? $revenueLog->metadata : [];
-                $oldLoggedPrice = CustomerOwnership::sanitizeDisplayPrice($metadata['price'] ?? $oldPrice);
-                $metadata['price'] = $newPrice;
-                $metadata['country_name'] = $customer->country_name;
-                $metadata['price_source'] = 'super_admin_override';
-                $metadata['price_override_previous'] = $oldLoggedPrice;
-                
-                if ($newPrice > 0) {
-                    $metadata['attribution_type'] = 'earned';
-                }
-
-                $revenueLog->forceFill(['metadata' => $metadata])->save();
-
-                $this->applyBalanceDifference($revenueLog, round($newPrice - $oldLoggedPrice, 2));
-            });
-
-            // Clean up any duplicate synthetic logs that may have been created as fallbacks
-            ActivityLog::query()
-                ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
-                ->where(function ($q) use ($license): void {
-                    $q->whereJsonContains('metadata->license_id', $license->id)
-                        ->orWhereRaw("JSON_EXTRACT(metadata, '$.license_id') = ?", [(int) $license->id]);
-                })
-                ->where('metadata->price_source', 'super_admin_override_backfill')
-                ->where('id', '!=', $revenueLogs->max('id'))
-                ->delete();
-        } else {
-            $syntheticRevenueLog = $this->createSyntheticRevenueLogForLicense($customer, $license, $newPrice);
-            if ($syntheticRevenueLog) {
-                $this->applyBalanceDifference($syntheticRevenueLog, $newPrice);
-            }
+        if (! $revenueLog) {
+            throw ValidationException::withMessages([
+                'price' => 'No editable revenue transaction was found for this license. Price was not changed.',
+            ]);
         }
+
+        $license->forceFill(['price' => $newPrice])->save();
+
+        $metadata = is_array($revenueLog->metadata) ? $revenueLog->metadata : [];
+        $oldLoggedPrice = CustomerOwnership::sanitizeDisplayPrice($metadata['price'] ?? $oldPrice);
+        $previousOfferDiscount = $metadata['offer_discount_percentage'] ?? null;
+
+        $metadata['price'] = $newPrice;
+        $metadata['country_name'] = $customer->country_name;
+        $metadata['price_source'] = 'super_admin_customer_override';
+        $metadata['price_override_previous'] = $oldLoggedPrice;
+        $metadata['manual_price_override'] = true;
+        $metadata['offer_discount_percentage'] = null;
+
+        if ($previousOfferDiscount !== null) {
+            $metadata['offer_discount_previous'] = $previousOfferDiscount;
+        }
+
+        if ($newPrice > 0) {
+            $metadata['attribution_type'] = BalanceService::TYPE_EARNED;
+        }
+
+        $revenueLog->forceFill(['metadata' => $metadata])->save();
+        $this->recalculateRevenueBalanceForLog($revenueLog);
 
         $this->refreshEditableLicenseCountry($customer, $license);
         $this->recordSuperAdminCustomerActivity(
@@ -1133,6 +1129,7 @@ class CustomerController extends BaseSuperAdminController
                 'bios_id' => $license->bios_id,
                 'old_price' => $oldPrice,
                 'new_price' => $newPrice,
+                'activity_log_id' => $revenueLog->id,
                 'country_name' => $customer->country_name,
             ],
         );
@@ -1140,25 +1137,17 @@ class CustomerController extends BaseSuperAdminController
         LicenseCacheInvalidation::invalidateForLicense($license->fresh(['reseller:id,tenant_id,created_by']));
     }
 
-    /**
-     * @return Collection<int, ActivityLog>
-     */
-    private function resolveEditableRevenueLogs(License $license): Collection
+    private function resolveEditableRevenueLog(License $license): ?ActivityLog
     {
         $actions = ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'];
 
-        // Only collect logs for the current license_id - price overrides must NOT affect historical transactions
-        $logs = ActivityLog::query()
+        return ActivityLog::query()
             ->whereIn('action', $actions)
             ->whereMetadataLicenseId((int) $license->id)
-            ->orderBy('id')
-            ->get();
-
-        $earnedLogs = $logs->filter(
-            fn (ActivityLog $log) => (is_array($log->metadata) ? ($log->metadata['attribution_type'] ?? null) : null) === BalanceService::TYPE_EARNED
-        )->values();
-
-        return $earnedLogs->isNotEmpty() ? $earnedLogs : $logs;
+            ->whereRaw(RevenueAnalytics::earnedCondition())
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
     }
 
     private function createSyntheticRevenueLogForLicense(User $customer, License $license, float $price): ?ActivityLog
@@ -1245,6 +1234,15 @@ class CustomerController extends BaseSuperAdminController
 
         $balance->last_activity_at = now();
         $balance->save();
+    }
+
+    private function recalculateRevenueBalanceForLog(ActivityLog $revenueLog): void
+    {
+        if ((int) $revenueLog->user_id <= 0) {
+            return;
+        }
+
+        CustomerDeletionService::recalculateResellerBalances([(int) $revenueLog->user_id]);
     }
 
     private function normalizeCustomerPhone(?string $phone): ?string

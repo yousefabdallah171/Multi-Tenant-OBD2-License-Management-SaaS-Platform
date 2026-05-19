@@ -24,6 +24,8 @@ interface CachedTablePreference {
   per_page?: number | null
 }
 
+const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
 function sanitizeVisibleColumns(columns: TablePreferenceColumn[], visibleColumns: string[]) {
   const available = new Set(columns.map((column) => column.key))
   const locked = new Set(columns.filter((column, index) => column.alwaysVisible || index === 0 || column.key === 'actions').map((column) => column.key))
@@ -80,7 +82,7 @@ export function useTablePreferences({
   columns,
   perPage,
   onPerPageChange,
-  pageSizeOptions = [10, 25, 50, 100],
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
 }: UseTablePreferencesOptions) {
   const queryClient = useQueryClient()
   const columnSchemaKey = useMemo(

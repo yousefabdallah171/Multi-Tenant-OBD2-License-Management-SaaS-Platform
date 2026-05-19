@@ -112,7 +112,8 @@ class CustomerDeletionService
                 ->where('tenant_id', $reseller->tenant_id)
                 ->where('user_id', $resellerId)
                 ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
-                ->selectRaw('COALESCE(SUM(CAST(JSON_EXTRACT(metadata, "$.price") AS DECIMAL(12,2))), 0) as total')
+                ->whereRaw(RevenueAnalytics::earnedCondition())
+                ->selectRaw('COALESCE(SUM('.RevenueAnalytics::priceExpression().'), 0) as total')
                 ->value('total');
 
             UserBalance::updateOrCreate(

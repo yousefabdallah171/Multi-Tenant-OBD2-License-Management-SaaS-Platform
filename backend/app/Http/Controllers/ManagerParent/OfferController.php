@@ -99,7 +99,7 @@ class OfferController extends BaseManagerParentController
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $offer->update(array_filter($validated));
+        $offer->update(array_filter($validated, fn ($value) => $value !== null));
 
         return response()->json([
             'data' => $this->serializeOffer($offer),

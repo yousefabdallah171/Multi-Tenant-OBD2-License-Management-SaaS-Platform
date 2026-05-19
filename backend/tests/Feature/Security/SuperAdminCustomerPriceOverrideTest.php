@@ -98,8 +98,9 @@ class SuperAdminCustomerPriceOverrideTest extends TestCase
 
         $this->assertSame(0.0, (float) $license->price);
         $this->assertSame(0.0, (float) data_get($earnedActivationLog->metadata, 'price'));
-        $this->assertSame('super_admin_override', data_get($earnedActivationLog->metadata, 'price_source'));
+        $this->assertSame('super_admin_customer_override', data_get($earnedActivationLog->metadata, 'price_source'));
         $this->assertSame(60.0, (float) data_get($earnedActivationLog->metadata, 'price_override_previous'));
+        $this->assertTrue((bool) data_get($earnedActivationLog->metadata, 'manual_price_override'));
         $this->assertSame(145.0, (float) data_get($grantedRenewalLog->metadata, 'price'));
 
         $balance = UserBalance::query()->where('user_id', $reseller->id)->firstOrFail();
@@ -172,7 +173,7 @@ class SuperAdminCustomerPriceOverrideTest extends TestCase
         $this->assertSame(0.0, RevenueAnalytics::totalRevenue([], (int) $tenant->id, null, (int) $reseller->id));
     }
 
-    public function test_super_admin_price_override_rewrites_all_earned_logs_for_the_license(): void
+    public function test_super_admin_price_override_updates_latest_earned_log_only(): void
     {
         $superAdmin = $this->createUser('super_admin');
         $tenant = $this->createTenant();
@@ -252,7 +253,9 @@ class SuperAdminCustomerPriceOverrideTest extends TestCase
             ->get();
 
         $this->assertCount(2, $updatedLogs);
-        $this->assertSame([0.0, 0.0], $updatedLogs->map(fn (ActivityLog $log) => round((float) data_get($log->metadata, 'price'), 2))->all());
-        $this->assertSame(0.0, RevenueAnalytics::totalRevenue([], (int) $tenant->id, null, (int) $reseller->id));
+        $this->assertSame([50.0, 0.0], $updatedLogs->map(fn (ActivityLog $log) => round((float) data_get($log->metadata, 'price'), 2))->all());
+        $this->assertSame('super_admin_customer_override', data_get($updatedLogs[1]->metadata, 'price_source'));
+        $this->assertTrue((bool) data_get($updatedLogs[1]->metadata, 'manual_price_override'));
+        $this->assertSame(50.0, RevenueAnalytics::totalRevenue([], (int) $tenant->id, null, (int) $reseller->id));
     }
 }

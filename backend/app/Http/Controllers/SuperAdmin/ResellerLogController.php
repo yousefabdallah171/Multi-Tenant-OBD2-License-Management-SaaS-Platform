@@ -34,7 +34,7 @@ class ResellerLogController extends BaseSuperAdminController
             'action' => ['nullable', 'string'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
         ]);
 
         $sellerQuery = User::query()

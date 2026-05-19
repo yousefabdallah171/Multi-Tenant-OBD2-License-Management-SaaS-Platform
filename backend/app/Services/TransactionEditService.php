@@ -338,7 +338,16 @@ class TransactionEditService
         $metadata = (array) ($activityLog->metadata ?? []);
 
         if (array_key_exists('price', $changedFields)) {
+            $previousOfferDiscount = $metadata['offer_discount_percentage'] ?? null;
+
             $metadata['price'] = round((float) $changedFields['price'], 2);
+            $metadata['price_source'] = 'super_admin_transaction_edit';
+            $metadata['manual_price_override'] = true;
+            $metadata['offer_discount_percentage'] = null;
+
+            if ($previousOfferDiscount !== null) {
+                $metadata['offer_discount_previous'] = $previousOfferDiscount;
+            }
         }
         if (array_key_exists('customer_id', $changedFields)) {
             $metadata['customer_id'] = $changedFields['customer_id'];
