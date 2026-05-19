@@ -11,6 +11,14 @@ class TransactionEdit extends Model
 {
     use BelongsToTenant, HasFactory;
 
+    private const DIFF_FIELDS = [
+        'price' => 'Price',
+        'customer_id' => 'Customer ID',
+        'activated_at' => 'Activation Date',
+        'duration_days' => 'Duration (days)',
+        'program_id' => 'Program ID',
+    ];
+
     protected $fillable = [
         'tenant_id',
         'license_id',
@@ -55,17 +63,14 @@ class TransactionEdit extends Model
     public function getDiffsAttribute(): array
     {
         $diffs = [];
-        $fields = [
-            'price' => 'Price',
-            'customer_id' => 'Customer ID',
-            'activated_at' => 'Activation Date',
-            'duration_days' => 'Duration (days)',
-            'program_id' => 'Program ID',
-        ];
 
-        foreach ($fields as $field => $label) {
-            $prev = $this->previous_values[$field] ?? null;
-            $new = $this->new_values[$field] ?? null;
+        foreach (self::DIFF_FIELDS as $field => $label) {
+            if (!array_key_exists($field, $this->new_values ?? [])) {
+                continue;
+            }
+
+            $prev = $this->normalizeDiffValue($field, $this->previous_values[$field] ?? null);
+            $new = $this->normalizeDiffValue($field, $this->new_values[$field] ?? null);
 
             if ($prev !== $new) {
                 $diffs[$field] = [
@@ -77,5 +82,29 @@ class TransactionEdit extends Model
         }
 
         return $diffs;
+    }
+
+    private function normalizeDiffValue(string $field, mixed $value): mixed
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return match ($field) {
+            'price' => round((float) $value, 2),
+            'duration_days' => round((float) $value, 3),
+            'customer_id', 'program_id' => (int) $value,
+            'activated_at' => $this->normalizeDateValue($value),
+            default => $value,
+        };
+    }
+
+    private function normalizeDateValue(mixed $value): ?string
+    {
+        try {
+            return \Carbon\CarbonImmutable::parse((string) $value)->toIso8601String();
+        } catch (\Throwable) {
+            return (string) $value;
+        }
     }
 }

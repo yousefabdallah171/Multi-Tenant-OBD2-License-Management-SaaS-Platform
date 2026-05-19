@@ -7,153 +7,114 @@ use App\Models\License;
 use App\Models\TransactionEdit;
 use App\Models\User;
 use App\Support\LicenseCacheInvalidation;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class TransactionEditService
 {
+    private const EDITABLE_ACTIONS = [
+        'license.activated',
+        'license.renewed',
+        'license.scheduled_activation_executed',
+    ];
+
+    private const TRACKED_FIELDS = [
+        'price',
+        'customer_id',
+        'activated_at',
+        'duration_days',
+        'program_id',
+    ];
+
     public function __construct(
         private readonly BalanceService $balanceService,
     ) {}
 
     /**
-     * Edit a transaction (license + activity log)
-     *
-     * @param License $license
      * @param array{price?: float, customer_id?: int, activated_at?: string, duration_days?: float, program_id?: int, reason?: string} $newValues
-     * @param User $superAdmin
-     * @param string|null $reason
      * @return array{transaction: array, affected: array}
      */
     public function editTransaction(
         License $license,
+        ActivityLog $activityLog,
         array $newValues,
         User $superAdmin,
         ?string $reason = null,
     ): array {
-        $newValues = array_filter($newValues, fn ($v) => $v !== null);
+        $submittedValues = array_filter($newValues, fn ($value) => $value !== null);
 
-        return DB::transaction(function () use ($license, $newValues, $superAdmin, $reason): array {
+        return DB::transaction(function () use ($license, $activityLog, $submittedValues, $superAdmin, $reason): array {
             $license->refresh();
+            $activityLog->refresh();
 
-            // Snapshot previous values for audit
-            $previousValues = [
-                'price' => $license->price,
-                'customer_id' => $license->customer_id,
-                'activated_at' => $license->activated_at?->toIso8601String(),
-                'duration_days' => $license->duration_days,
-                'program_id' => $license->program_id,
-            ];
+            $previousValues = $this->snapshotTransaction($license, $activityLog);
+            $newSnapshot = $this->buildNewSnapshot($previousValues, $submittedValues);
+            $changedFields = $this->changedFields($previousValues, $newSnapshot, array_keys($submittedValues));
 
-            // Get the corresponding activity log entry (first activation or most recent)
-            $activityLog = ActivityLog::query()
-                ->where('tenant_id', $license->tenant_id)
-                ->whereMetadataLicenseId((int) $license->id)
-                ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
-                ->orderByDesc('created_at')
-                ->first();
+            abort_if($changedFields === [], 422, 'No actual changes were detected.');
 
-            // Update License record
-            if (isset($newValues['price'])) {
-                $license->price = (float) $newValues['price'];
-            }
-            if (isset($newValues['customer_id'])) {
-                $license->customer_id = (int) $newValues['customer_id'];
-            }
-            if (isset($newValues['activated_at'])) {
-                $license->activated_at = $newValues['activated_at'];
-            }
-            if (isset($newValues['duration_days'])) {
-                $license->duration_days = (float) $newValues['duration_days'];
-            }
-            if (isset($newValues['program_id'])) {
-                $license->program_id = (int) $newValues['program_id'];
-            }
-            $license->save();
+            $isLatestEvent = $this->isLatestRevenueEventForLicense($license, $activityLog);
 
-            // Update ActivityLog metadata if it exists
-            if ($activityLog !== null) {
-                $metadata = (array) ($activityLog->metadata ?? []);
+            $this->applyActivityLogChanges($activityLog, $changedFields);
 
-                if (isset($newValues['price'])) {
-                    $metadata['price'] = (float) $newValues['price'];
-                }
-                if (isset($newValues['customer_id'])) {
-                    $metadata['customer_id'] = (int) $newValues['customer_id'];
-                }
-                if (isset($newValues['activated_at'])) {
-                    $metadata['activated_at'] = $newValues['activated_at'];
-                }
-                if (isset($newValues['duration_days'])) {
-                    $metadata['duration_days'] = (float) $newValues['duration_days'];
-                }
-                if (isset($newValues['program_id'])) {
-                    $metadata['program_id'] = (int) $newValues['program_id'];
-                }
+            $licenseWasUpdated = $this->applyLicenseChanges($license, $changedFields, $isLatestEvent);
 
-                $activityLog->metadata = $metadata;
-                $activityLog->save();
-            }
-
-            // Create audit record (only if table exists)
             $edit = null;
             if (DB::connection()->getSchemaBuilder()->hasTable('transaction_edits')) {
                 $edit = TransactionEdit::create([
                     'tenant_id' => $license->tenant_id,
                     'license_id' => $license->id,
-                    'activity_log_id' => $activityLog?->id,
+                    'activity_log_id' => $activityLog->id,
                     'super_admin_id' => $superAdmin->id,
                     'action' => 'edit',
                     'previous_values' => $previousValues,
-                    'new_values' => $newValues,
+                    'new_values' => $newSnapshot,
                     'reason' => $reason,
                 ]);
             }
 
-            // Log activity for super admin logs page
             ActivityLog::create([
                 'tenant_id' => $license->tenant_id,
                 'user_id' => $superAdmin->id,
                 'action' => 'transaction.edited',
                 'description' => sprintf(
-                    'Super Admin edited transaction (License #%d). Changes: %s',
+                    'Super Admin edited transaction (ActivityLog #%d, License #%d). Changes: %s',
+                    $activityLog->id,
                     $license->id,
                     implode(', ', array_map(
-                        fn ($k, $v) => "{$k}: {$previousValues[$k]} → {$v}",
-                        array_keys($newValues),
-                        $newValues
+                        fn ($key, $value) => sprintf('%s: %s -> %s', $key, $this->stringifyValue($previousValues[$key] ?? null), $this->stringifyValue($value)),
+                        array_keys($changedFields),
+                        $changedFields
                     ))
                 ),
                 'metadata' => [
+                    'activity_log_id' => $activityLog->id,
                     'license_id' => $license->id,
                     'transaction_edit_id' => $edit?->id,
                     'previous_values' => $previousValues,
-                    'new_values' => $newValues,
+                    'new_values' => $newSnapshot,
+                    'changed_fields' => $changedFields,
                     'reseller_id' => $license->reseller_id,
                     'customer_id' => $license->customer_id,
-                    'price' => $license->price,
+                    'price' => $newSnapshot['price'],
                 ],
                 'ip_address' => request()?->ip(),
             ]);
 
-            // Get affected seller IDs (reseller + their manager + manager parent)
-            $affectedSellerIds = $this->getAffectedSellerIds($license->reseller);
-
-            // Invalidate all affected caches
-            $invalidatedCaches = $this->invalidateCaches($license);
-
-            // Recalculate balances for affected users
+            $affectedSellerIds = $this->getAffectedSellerIds($license, $activityLog);
+            $invalidatedCaches = $this->invalidateCaches($license, $affectedSellerIds);
             $affectedUsers = $this->recalculateBalances($affectedSellerIds);
 
-            // Reload license with relationships for response
             $license->load('reseller:id,name', 'customer:id,name,email', 'program:id,name', 'tenant:id,name');
+            $activityLog->refresh();
 
             return [
-                'transaction' => $this->serializeTransaction($license, $edit),
+                'transaction' => $this->serializeTransaction($license, $activityLog, $edit),
                 'affected' => [
-                    'licenses_updated' => 1,
-                    'activity_logs_updated' => $activityLog !== null ? 1 : 0,
+                    'licenses_updated' => $licenseWasUpdated ? 1 : 0,
+                    'activity_logs_updated' => 1,
                     'caches_invalidated' => count($invalidatedCaches),
                     'balances_recalculated' => $affectedUsers,
                     'edit_id' => $edit?->id,
@@ -163,52 +124,43 @@ class TransactionEditService
     }
 
     /**
-     * Revert a transaction to its previous state
-     *
-     * @param License $license
-     * @param User $superAdmin
-     * @param string|null $reason
      * @return array{transaction: array, affected: array}
      */
     public function revertTransaction(
         License $license,
+        ActivityLog $activityLog,
         User $superAdmin,
         ?string $reason = null,
     ): array {
         $lastEdit = TransactionEdit::query()
             ->where('license_id', $license->id)
+            ->where('activity_log_id', $activityLog->id)
             ->where('action', 'edit')
             ->orderByDesc('created_at')
             ->first();
 
         abort_unless($lastEdit, 404, 'No edits found to revert.');
 
-        $previousValues = $lastEdit->previous_values;
-
         return $this->editTransaction(
             $license,
-            $previousValues,
+            $activityLog,
+            $lastEdit->previous_values,
             $superAdmin,
             $reason ?? "Revert to previous state (edit #{$lastEdit->id})",
         );
     }
 
-    /**
-     * Log a transaction deletion
-     */
     public function logTransactionDeletion(int $activityLogId, ?ActivityLog $activityLog, User $superAdmin): void
     {
         if ($activityLog === null || !$superAdmin) {
             return;
         }
 
-        // Check if transaction_edits table exists
         if (!DB::connection()->getSchemaBuilder()->hasTable('transaction_edits')) {
             return;
         }
 
         try {
-            // Safely extract metadata
             $metadata = is_array($activityLog->metadata) ? $activityLog->metadata : json_decode($activityLog->metadata ?? '{}', true) ?? [];
 
             $previousValues = [
@@ -221,8 +173,6 @@ class TransactionEditService
                 'bios_id' => $metadata['bios_id'] ?? null,
             ];
 
-            // Create deletion log entry
-            // activity_log_id is null because the original log has already been deleted
             $licenseId = (int) ($metadata['license_id'] ?? 0);
             TransactionEdit::query()->create([
                 'tenant_id' => $activityLog->tenant_id ?? 0,
@@ -235,7 +185,6 @@ class TransactionEditService
                 'reason' => 'Deleted',
             ]);
 
-            // Log activity for audit trail
             ActivityLog::query()->create([
                 'tenant_id' => $activityLog->tenant_id ?? 0,
                 'user_id' => $superAdmin->id,
@@ -256,26 +205,20 @@ class TransactionEditService
                 'ip_address' => request()?->ip(),
             ]);
         } catch (\Exception $e) {
-            \Log::error('Failed to log transaction deletion: ' . $e->getMessage());
-            throw $e; // Re-throw to be caught by controller
+            \Log::error('Failed to log transaction deletion: '.$e->getMessage());
+            throw $e;
         }
     }
 
-    /**
-     * Get full edit history for a license
-     *
-     * @param License $license
-     * @return Collection
-     */
-    public function getTransactionHistory(License $license): Collection
+    public function getTransactionHistory(License $license, ?ActivityLog $activityLog = null): Collection
     {
-        // Check if transaction_edits table exists (migration might not have been run)
         if (!DB::connection()->getSchemaBuilder()->hasTable('transaction_edits')) {
             return collect([]);
         }
 
         return TransactionEdit::query()
             ->where('license_id', $license->id)
+            ->when($activityLog !== null, fn ($query) => $query->where('activity_log_id', $activityLog->id))
             ->with('superAdmin:id,name,email')
             ->orderByDesc('created_at')
             ->get()
@@ -293,43 +236,211 @@ class TransactionEditService
             ]);
     }
 
+    public function serializeTransaction(License $license, ActivityLog $activityLog, ?TransactionEdit $edit = null): array
+    {
+        $snapshot = $this->snapshotTransaction($license, $activityLog);
+
+        return [
+            'license_id' => $license->id,
+            'activity_log_id' => $activityLog->id,
+            'tenant_id' => $license->tenant_id,
+            'tenant_name' => $license->tenant?->name,
+            'reseller_id' => $license->reseller_id,
+            'reseller_name' => $license->reseller?->name,
+            'customer_id' => $snapshot['customer_id'],
+            'customer_name' => $license->customer?->name,
+            'customer_email' => $license->customer?->email,
+            'bios_id' => $license->bios_id,
+            'program_id' => $snapshot['program_id'],
+            'program_name' => $license->program?->name,
+            'price' => $snapshot['price'],
+            'duration_days' => $snapshot['duration_days'],
+            'activated_at' => $snapshot['activated_at'],
+            'expires_at' => $license->expires_at?->toIso8601String(),
+            'status' => $license->status,
+            'created_at' => $activityLog->created_at?->toIso8601String(),
+            'updated_at' => $activityLog->updated_at?->toIso8601String(),
+            'last_edited' => $edit ? [
+                'by' => $edit->superAdmin->name,
+                'at' => $edit->created_at?->toIso8601String(),
+                'reason' => $edit->reason,
+            ] : null,
+        ];
+    }
+
     /**
-     * Invalidate all report caches affected by the edit
-     *
-     * @param License $license
-     * @return array List of cache keys invalidated
+     * @return array{price: float, customer_id: ?int, activated_at: ?string, duration_days: ?float, program_id: ?int}
      */
-    private function invalidateCaches(License $license): array
+    private function snapshotTransaction(License $license, ActivityLog $activityLog): array
+    {
+        $metadata = is_array($activityLog->metadata) ? $activityLog->metadata : [];
+
+        return [
+            'price' => round((float) ($metadata['price'] ?? $license->price ?? 0), 2),
+            'customer_id' => $this->nullableInt($metadata['customer_id'] ?? $license->customer_id),
+            'activated_at' => $activityLog->created_at?->toIso8601String() ?? $license->activated_at?->toIso8601String(),
+            'duration_days' => $this->nullableFloat($metadata['duration_days'] ?? $license->duration_days, 3),
+            'program_id' => $this->nullableInt($metadata['program_id'] ?? $license->program_id),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $previousValues
+     * @param array<string, mixed> $submittedValues
+     * @return array<string, mixed>
+     */
+    private function buildNewSnapshot(array $previousValues, array $submittedValues): array
+    {
+        $snapshot = $previousValues;
+
+        foreach ($submittedValues as $field => $value) {
+            if (!in_array($field, self::TRACKED_FIELDS, true)) {
+                continue;
+            }
+
+            $snapshot[$field] = $this->normalizeSnapshotValue($field, $value);
+        }
+
+        return $snapshot;
+    }
+
+    /**
+     * @param array<string, mixed> $previousValues
+     * @param array<string, mixed> $newValues
+     * @param array<int, string> $submittedFields
+     * @return array<string, mixed>
+     */
+    private function changedFields(array $previousValues, array $newValues, array $submittedFields): array
+    {
+        $changed = [];
+
+        foreach ($submittedFields as $field) {
+            if (!in_array($field, self::TRACKED_FIELDS, true)) {
+                continue;
+            }
+
+            $previous = $this->normalizeSnapshotValue($field, $previousValues[$field] ?? null);
+            $next = $this->normalizeSnapshotValue($field, $newValues[$field] ?? null);
+
+            if ($previous !== $next) {
+                $changed[$field] = $next;
+            }
+        }
+
+        return $changed;
+    }
+
+    /**
+     * @param array<string, mixed> $changedFields
+     */
+    private function applyActivityLogChanges(ActivityLog $activityLog, array $changedFields): void
+    {
+        $metadata = (array) ($activityLog->metadata ?? []);
+
+        if (array_key_exists('price', $changedFields)) {
+            $metadata['price'] = round((float) $changedFields['price'], 2);
+        }
+        if (array_key_exists('customer_id', $changedFields)) {
+            $metadata['customer_id'] = $changedFields['customer_id'];
+        }
+        if (array_key_exists('duration_days', $changedFields)) {
+            $metadata['duration_days'] = $changedFields['duration_days'];
+        }
+        if (array_key_exists('program_id', $changedFields)) {
+            $metadata['program_id'] = $changedFields['program_id'];
+        }
+        if (array_key_exists('activated_at', $changedFields)) {
+            $metadata['activated_at'] = $changedFields['activated_at'];
+            $activityLog->created_at = CarbonImmutable::parse((string) $changedFields['activated_at']);
+        }
+
+        $activityLog->metadata = $metadata;
+        $activityLog->save();
+    }
+
+    /**
+     * @param array<string, mixed> $changedFields
+     */
+    private function applyLicenseChanges(License $license, array $changedFields, bool $isLatestEvent): bool
+    {
+        if (!$isLatestEvent) {
+            return false;
+        }
+
+        if (array_key_exists('price', $changedFields)) {
+            $license->price = round((float) $changedFields['price'], 2);
+        }
+        if (array_key_exists('customer_id', $changedFields)) {
+            $license->customer_id = $changedFields['customer_id'];
+        }
+        if (array_key_exists('program_id', $changedFields)) {
+            $license->program_id = $changedFields['program_id'];
+        }
+        if (array_key_exists('duration_days', $changedFields)) {
+            $license->duration_days = $changedFields['duration_days'];
+        }
+        if (array_key_exists('activated_at', $changedFields)) {
+            $license->activated_at = CarbonImmutable::parse((string) $changedFields['activated_at']);
+        }
+
+        if (array_key_exists('activated_at', $changedFields) || array_key_exists('duration_days', $changedFields)) {
+            $activatedAt = $license->activated_at ? CarbonImmutable::parse($license->activated_at) : null;
+            if ($activatedAt !== null && $license->duration_days !== null) {
+                $license->expires_at = $activatedAt->addSeconds((int) round((float) $license->duration_days * 86400));
+            }
+        }
+
+        if (!$license->isDirty()) {
+            return false;
+        }
+
+        $license->save();
+
+        return true;
+    }
+
+    private function isLatestRevenueEventForLicense(License $license, ActivityLog $activityLog): bool
+    {
+        $latest = ActivityLog::query()
+            ->where('tenant_id', $license->tenant_id)
+            ->whereMetadataLicenseId((int) $license->id)
+            ->whereIn('action', self::EDITABLE_ACTIONS)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+
+        return (int) ($latest?->id ?? 0) === (int) $activityLog->id;
+    }
+
+    /**
+     * @param array<int, int> $affectedSellerIds
+     */
+    private function invalidateCaches(License $license, array $affectedSellerIds): array
     {
         $invalidated = [];
         $tenantId = (int) $license->tenant_id;
-        $resellerId = (int) $license->reseller_id;
 
         try {
-            // Super Admin financial reports cache
             Cache::tags(['super-admin', 'financial-reports'])->flush();
             $invalidated[] = 'super-admin:financial-reports:*';
 
-            // Super Admin reseller payments cache
             Cache::tags(['super-admin', 'reseller-payments'])->flush();
             $invalidated[] = 'super-admin:reseller-payments:*';
 
-            // Manager Parent financial reports for this tenant
             Cache::tags(["manager-parent:tenant-{$tenantId}", 'financial-reports'])->flush();
             $invalidated[] = "manager-parent:tenant-{$tenantId}:financial-reports:*";
 
-            // Manager reports for resellers of this license
             Cache::tags(["manager:tenant-{$tenantId}", 'reports'])->flush();
             $invalidated[] = "manager:tenant-{$tenantId}:reports:*";
 
-            // Reseller reports for this specific reseller
-            Cache::tags(["reseller:{$resellerId}", 'reports'])->flush();
-            $invalidated[] = "reseller:{$resellerId}:reports:*";
+            foreach ($affectedSellerIds as $sellerId) {
+                Cache::tags(["reseller:{$sellerId}", 'reports'])->flush();
+                $invalidated[] = "reseller:{$sellerId}:reports:*";
+            }
         } catch (\BadMethodCallException $e) {
-            // Cache store doesn't support tagging (e.g., file cache), skip tagged invalidation
+            // Cache store doesn't support tagging (e.g. file cache).
         }
 
-        // License cache invalidation using existing system (works with all cache drivers)
         LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
         LicenseCacheInvalidation::bumpVersion('manager-parent:reports:version');
         LicenseCacheInvalidation::bumpVersion('manager:reports:version');
@@ -340,10 +451,8 @@ class TransactionEditService
     }
 
     /**
-     * Recalculate UserBalance totals for affected users
-     *
-     * @param array $sellerIds
-     * @return array List of affected user IDs
+     * @param array<int, int> $sellerIds
+     * @return array<int, array{user_id: int, user_name: string, user_role: string, total_revenue: float}>
      */
     private function recalculateBalances(array $sellerIds): array
     {
@@ -355,20 +464,15 @@ class TransactionEditService
                 continue;
             }
 
-            // Recalculate by re-querying activity logs for this user
-            // This triggers the BalanceService to update the UserBalance record
-            // (This is done via the license service when activating, so we simulate it here)
-
             $totalRevenue = (float) ActivityLog::query()
                 ->where('tenant_id', $user->tenant_id)
                 ->where('user_id', $user->id)
-                ->whereIn('action', ['license.activated', 'license.renewed', 'license.scheduled_activation_executed'])
+                ->whereIn('action', self::EDITABLE_ACTIONS)
                 ->whereRaw(\App\Support\RevenueAnalytics::earnedCondition())
                 ->selectRaw(\App\Support\RevenueAnalytics::priceExpression())
                 ->sum(DB::raw(\App\Support\RevenueAnalytics::priceExpression()));
 
-            // Update or create user balance
-            $balance = \App\Models\UserBalance::updateOrCreate(
+            \App\Models\UserBalance::updateOrCreate(
                 ['user_id' => $user->id],
                 [
                     'tenant_id' => $user->tenant_id,
@@ -390,22 +494,42 @@ class TransactionEditService
     }
 
     /**
-     * Get all affected seller IDs (reseller + manager + manager parent chain)
-     *
-     * @param User $reseller
-     * @return array
+     * @return array<int, int>
      */
-    private function getAffectedSellerIds(User $reseller): array
+    private function getAffectedSellerIds(License $license, ActivityLog $activityLog): array
     {
-        $sellerIds = [(int) $reseller->id];
+        $sellerIds = [];
+        $users = [];
 
-        // Add manager if reseller was created by one
-        if ($reseller->created_by !== null) {
+        if ($activityLog->user instanceof User) {
+            $users[] = $activityLog->user;
+        } elseif ($activityLog->user_id !== null) {
+            $user = User::find((int) $activityLog->user_id);
+            if ($user !== null) {
+                $users[] = $user;
+            }
+        }
+
+        if ($license->reseller instanceof User) {
+            $users[] = $license->reseller;
+        } elseif ($license->reseller_id !== null) {
+            $user = User::find((int) $license->reseller_id);
+            if ($user !== null) {
+                $users[] = $user;
+            }
+        }
+
+        foreach ($users as $reseller) {
+            $sellerIds[] = (int) $reseller->id;
+
+            if ($reseller->created_by === null) {
+                continue;
+            }
+
             $manager = User::find($reseller->created_by);
             if ($manager !== null) {
                 $sellerIds[] = (int) $manager->id;
 
-                // Add manager parent if manager was created by one
                 if ($manager->created_by !== null) {
                     $managerParent = User::find($manager->created_by);
                     if ($managerParent !== null) {
@@ -415,40 +539,56 @@ class TransactionEditService
             }
         }
 
-        return array_unique($sellerIds);
+        return array_values(array_unique($sellerIds));
     }
 
-    /**
-     * Serialize license transaction for response
-     *
-     * @param License $license
-     * @param TransactionEdit|null $edit
-     * @return array
-     */
-    private function serializeTransaction(License $license, ?TransactionEdit $edit): array
+    private function normalizeSnapshotValue(string $field, mixed $value): mixed
     {
-        return [
-            'license_id' => $license->id,
-            'activity_log_id' => $edit?->activity_log_id,
-            'tenant_id' => $license->tenant_id,
-            'tenant_name' => $license->tenant?->name,
-            'reseller_id' => $license->reseller_id,
-            'reseller_name' => $license->reseller?->name,
-            'customer_id' => $license->customer_id,
-            'customer_name' => $license->customer?->name,
-            'bios_id' => $license->bios_id,
-            'program_id' => $license->program_id,
-            'program_name' => $license->program?->name,
-            'price' => round((float) $license->price, 2),
-            'duration_days' => (float) $license->duration_days,
-            'activated_at' => $license->activated_at?->toIso8601String(),
-            'expires_at' => $license->expires_at?->toIso8601String(),
-            'status' => $license->status,
-            'last_edited' => $edit ? [
-                'by' => $edit->superAdmin->name,
-                'at' => $edit->created_at?->toIso8601String(),
-                'reason' => $edit->reason,
-            ] : null,
-        ];
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return match ($field) {
+            'price' => round((float) $value, 2),
+            'customer_id', 'program_id' => (int) $value,
+            'duration_days' => round((float) $value, 3),
+            'activated_at' => CarbonImmutable::parse((string) $value)->toIso8601String(),
+            default => $value,
+        };
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (int) $value;
+    }
+
+    private function nullableFloat(mixed $value, int $precision = 2): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return round((float) $value, $precision);
+    }
+
+    private function stringifyValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '(none)';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        return json_encode($value) ?: '(unserializable)';
     }
 }

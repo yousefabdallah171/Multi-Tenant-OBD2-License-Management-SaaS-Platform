@@ -2,48 +2,43 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+use App\Models\ActivityLog;
 use App\Models\License;
 use App\Models\Program;
 use App\Models\User;
 use App\Services\TransactionEditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class TransactionEditController extends BaseSuperAdminController
 {
+    private const EDITABLE_ACTIONS = [
+        'license.activated',
+        'license.renewed',
+        'license.scheduled_activation_executed',
+    ];
+
     public function __construct(
         private readonly TransactionEditService $editService,
     ) {}
 
-    /**
-     * Get transaction details + edit history
-     */
-    public function show(License $license): JsonResponse
+    public function showByActivityLog(ActivityLog $activityLog): JsonResponse
     {
-        $transaction = $this->resolveLicense($license);
-        $history = $this->editService->getTransactionHistory($transaction);
+        [$transaction, $license] = $this->resolveEditableTransaction($activityLog);
+        $history = $this->editService->getTransactionHistory($license, $transaction);
 
         return response()->json([
             'data' => [
-                'transaction' => $this->serializeTransaction($transaction),
+                'transaction' => $this->editService->serializeTransaction($license, $transaction),
                 'edit_history' => $history,
             ],
         ]);
     }
 
-    /**
-     * Edit a transaction
-     *
-     * @param Request $request
-     * @param License $license
-     * @return JsonResponse
-     */
-    public function update(Request $request, License $license): JsonResponse
+    public function updateByActivityLog(Request $request, ActivityLog $activityLog): JsonResponse
     {
-        $transaction = $this->resolveLicense($license);
-        $tenantId = (int) $transaction->tenant_id;
+        [$transaction, $license] = $this->resolveEditableTransaction($activityLog);
+        $tenantId = (int) $license->tenant_id;
 
         $validated = $request->validate([
             'price' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
@@ -54,56 +49,30 @@ class TransactionEditController extends BaseSuperAdminController
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
-        // Count how many fields are actually being changed (ignore nulls)
-        $fieldsToChange = array_filter($validated, fn ($v) => $v !== null && $v !== '');
-        abort_if(
-            count($fieldsToChange) === 0,
-            422,
-            'At least one field must be changed.'
+        $fieldsToChange = array_filter(
+            $validated,
+            fn ($value, $key) => $key !== 'reason' && $value !== null && $value !== '',
+            ARRAY_FILTER_USE_BOTH
         );
 
-        // Validate customer belongs to same tenant
+        abort_if(count($fieldsToChange) === 0, 422, 'At least one field must be changed.');
+
         if (isset($validated['customer_id'])) {
             $customer = User::find((int) $validated['customer_id']);
-            abort_unless(
-                $customer && (int) $customer->tenant_id === $tenantId,
-                422,
-                'Customer must belong to the same tenant.'
-            );
+            abort_unless($customer && (int) $customer->tenant_id === $tenantId, 422, 'Customer must belong to the same tenant.');
         }
 
-        // Validate program belongs to same tenant
         if (isset($validated['program_id'])) {
             $program = Program::find((int) $validated['program_id']);
-            abort_unless(
-                $program && (int) $program->tenant_id === $tenantId,
-                422,
-                'Program must belong to the same tenant.'
-            );
+            abort_unless($program && (int) $program->tenant_id === $tenantId, 422, 'Program must belong to the same tenant.');
         }
 
-        // Cannot edit BIOS ID
-        abort_if(
-            $request->has('bios_id'),
-            422,
-            'BIOS ID cannot be edited (would break BIOS tracking).'
-        );
-
-        // Cannot edit reseller
-        abort_if(
-            $request->has('reseller_id'),
-            422,
-            'Reseller cannot be edited (would credit wrong seller). Deactivate and reactivate if needed.'
-        );
-
-        // Cannot edit status
-        abort_if(
-            $request->has('status'),
-            422,
-            'License status cannot be edited directly. Use deactivate/cancel endpoints.'
-        );
+        abort_if($request->has('bios_id'), 422, 'BIOS ID cannot be edited (would break BIOS tracking).');
+        abort_if($request->has('reseller_id'), 422, 'Reseller cannot be edited (would credit wrong seller). Deactivate and reactivate if needed.');
+        abort_if($request->has('status'), 422, 'License status cannot be edited directly. Use deactivate/cancel endpoints.');
 
         $result = $this->editService->editTransaction(
+            $license,
             $transaction,
             $fieldsToChange,
             $request->user(),
@@ -117,22 +86,15 @@ class TransactionEditController extends BaseSuperAdminController
         ]);
     }
 
-    /**
-     * Revert transaction to previous state
-     *
-     * @param Request $request
-     * @param License $license
-     * @return JsonResponse
-     */
-    public function revert(Request $request, License $license): JsonResponse
+    public function revertByActivityLog(Request $request, ActivityLog $activityLog): JsonResponse
     {
-        $transaction = $this->resolveLicense($license);
-
+        [$transaction, $license] = $this->resolveEditableTransaction($activityLog);
         $validated = $request->validate([
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         $result = $this->editService->revertTransaction(
+            $license,
             $transaction,
             $request->user(),
             $validated['reason'] ?? null,
@@ -145,32 +107,52 @@ class TransactionEditController extends BaseSuperAdminController
         ]);
     }
 
-    /**
-     * Get full edit history for a transaction
-     *
-     * @param License $license
-     * @return JsonResponse
-     */
-    public function history(License $license): JsonResponse
+    public function historyByActivityLog(ActivityLog $activityLog): JsonResponse
     {
-        $transaction = $this->resolveLicense($license);
-        $history = $this->editService->getTransactionHistory($transaction);
+        [$transaction, $license] = $this->resolveEditableTransaction($activityLog);
+        $history = $this->editService->getTransactionHistory($license, $transaction);
 
         return response()->json([
             'data' => $history,
             'summary' => [
                 'license_id' => $license->id,
+                'activity_log_id' => $transaction->id,
                 'total_edits' => count($history),
             ],
         ]);
     }
 
     /**
-     * Get all transaction edit logs across all customers
-     *
-     * @param Request $request
-     * @return JsonResponse
+     * Legacy license-scoped endpoints are kept as compatibility shims and resolve to the latest revenue event.
      */
+    public function show(License $license): JsonResponse
+    {
+        $activityLog = $this->resolveLatestEditableActivityLog($license);
+
+        return $this->showByActivityLog($activityLog);
+    }
+
+    public function update(Request $request, License $license): JsonResponse
+    {
+        $activityLog = $this->resolveLatestEditableActivityLog($license);
+
+        return $this->updateByActivityLog($request, $activityLog);
+    }
+
+    public function revert(Request $request, License $license): JsonResponse
+    {
+        $activityLog = $this->resolveLatestEditableActivityLog($license);
+
+        return $this->revertByActivityLog($request, $activityLog);
+    }
+
+    public function history(License $license): JsonResponse
+    {
+        $activityLog = $this->resolveLatestEditableActivityLog($license);
+
+        return $this->historyByActivityLog($activityLog);
+    }
+
     public function allLogs(Request $request): JsonResponse
     {
         $query = \App\Models\TransactionEdit::query()
@@ -185,13 +167,11 @@ class TransactionEditController extends BaseSuperAdminController
             ])
             ->orderByDesc('created_at');
 
-        // Filter by customer ID if provided
         if ($request->filled('customer_id')) {
             $customerId = (int) $request->input('customer_id');
             $query->whereHas('license', fn ($q) => $q->where('customer_id', $customerId));
         }
 
-        // Search by BIOS ID, customer name, or reseller name
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($outer) use ($search): void {
@@ -204,7 +184,6 @@ class TransactionEditController extends BaseSuperAdminController
             });
         }
 
-        // Filter by date range
         if ($request->filled('from')) {
             $query->whereDate('created_at', '>=', $request->input('from'));
         }
@@ -212,11 +191,9 @@ class TransactionEditController extends BaseSuperAdminController
             $query->whereDate('created_at', '<=', $request->input('to'));
         }
 
-        // Paginate
         $perPage = $request->input('per_page', 25);
         $edits = $query->paginate($perPage);
 
-        // Transform response
         $data = $edits->map(function ($edit) {
             $license = $edit->license;
             $customer = $license?->customer;
@@ -229,6 +206,7 @@ class TransactionEditController extends BaseSuperAdminController
                 'id' => $edit->id,
                 'action' => $edit->action,
                 'license_id' => $edit->license_id,
+                'activity_log_id' => $edit->activity_log_id,
                 'tenant_id' => $edit->tenant_id,
                 'tenant_name' => $tenant?->name,
                 'bios_id' => $license?->bios_id ?? ($prev['bios_id'] ?? null),
@@ -255,14 +233,18 @@ class TransactionEditController extends BaseSuperAdminController
         ]);
     }
 
-    /**
-     * Resolve and load license with relationships
-     *
-     * @param License $license
-     * @return License
-     */
-    private function resolveLicense(License $license): License
+    private function resolveEditableTransaction(ActivityLog $activityLog): array
     {
+        abort_unless(in_array($activityLog->action, self::EDITABLE_ACTIONS, true), 422, 'This activity log cannot be edited as a transaction.');
+
+        $metadata = is_array($activityLog->metadata) ? $activityLog->metadata : [];
+        $licenseId = (int) ($metadata['license_id'] ?? 0);
+        abort_if($licenseId <= 0, 422, 'This activity log is missing a license reference.');
+
+        $license = License::query()->find($licenseId);
+        abort_unless($license !== null, 422, 'The related license for this transaction could not be found.');
+        abort_unless((int) $license->tenant_id === (int) $activityLog->tenant_id, 422, 'The transaction tenant does not match the related license.');
+
         $license->loadMissing([
             'tenant:id,name',
             'reseller:id,name,role,created_by',
@@ -270,36 +252,21 @@ class TransactionEditController extends BaseSuperAdminController
             'program:id,name',
         ]);
 
-        return $license;
+        return [$activityLog, $license];
     }
 
-    /**
-     * Serialize license transaction for response
-     *
-     * @param License $license
-     * @return array
-     */
-    private function serializeTransaction(License $license): array
+    private function resolveLatestEditableActivityLog(License $license): ActivityLog
     {
-        return [
-            'license_id' => $license->id,
-            'tenant_id' => $license->tenant_id,
-            'tenant_name' => $license->tenant?->name,
-            'reseller_id' => $license->reseller_id,
-            'reseller_name' => $license->reseller?->name,
-            'customer_id' => $license->customer_id,
-            'customer_name' => $license->customer?->name,
-            'customer_email' => $license->customer?->email,
-            'bios_id' => $license->bios_id,
-            'program_id' => $license->program_id,
-            'program_name' => $license->program?->name,
-            'price' => round((float) $license->price, 2),
-            'duration_days' => (float) $license->duration_days,
-            'activated_at' => $license->activated_at?->toIso8601String(),
-            'expires_at' => $license->expires_at?->toIso8601String(),
-            'status' => $license->status,
-            'created_at' => $license->created_at?->toIso8601String(),
-            'updated_at' => $license->updated_at?->toIso8601String(),
-        ];
+        $latest = ActivityLog::query()
+            ->where('tenant_id', $license->tenant_id)
+            ->whereMetadataLicenseId((int) $license->id)
+            ->whereIn('action', self::EDITABLE_ACTIONS)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+
+        abort_unless($latest !== null, 404, 'No editable transaction event found for this license.');
+
+        return $latest;
     }
 }

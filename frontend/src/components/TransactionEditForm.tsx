@@ -13,6 +13,7 @@ import * as transactionService from '@/services/transaction-edit.service'
 interface TransactionEditFormProps {
   transaction: {
     license_id: number
+    activity_log_id: number
     tenant_id: number
     tenant_name: string
     reseller_id: number
@@ -50,7 +51,7 @@ export function TransactionEditForm({
 
   const editMutation = useMutation({
     mutationFn: (data: FormState) =>
-      transactionService.editTransaction(transaction.license_id, {
+      transactionService.editTransaction(transaction.activity_log_id, {
         price: data.price ? parseFloat(data.price) : undefined,
         reason: data.reason,
       }),
