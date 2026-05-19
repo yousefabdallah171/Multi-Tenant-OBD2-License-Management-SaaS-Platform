@@ -36,6 +36,7 @@ use App\Http\Controllers\ManagerParent\DashboardController as ManagerParentDashb
 use App\Http\Controllers\ManagerParent\FinancialReportController as ManagerParentFinancialReportController;
 use App\Http\Controllers\ManagerParent\IpAnalyticsController as ManagerParentIpAnalyticsController;
 use App\Http\Controllers\ManagerParent\LicenseController as ManagerParentLicenseController;
+use App\Http\Controllers\ManagerParent\OfferController as ManagerParentOfferController;
 use App\Http\Controllers\ManagerParent\LogController as ManagerParentLogController;
 use App\Http\Controllers\ManagerParent\NetworkController as ManagerParentNetworkController;
 use App\Http\Controllers\ManagerParent\ProgramController as ManagerParentProgramController;
@@ -80,10 +81,16 @@ use App\Http\Controllers\SuperAdmin\ResellerLogController as SuperAdminResellerL
 use App\Http\Controllers\SuperAdmin\ResellerPaymentController as SuperAdminResellerPaymentController;
 use App\Http\Controllers\SuperAdmin\SecurityController;
 use App\Http\Controllers\SuperAdmin\TransactionHistoryController as SuperAdminTransactionHistoryController;
+use App\Http\Controllers\SuperAdmin\TransactionEditController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\SuperAdmin\TenantResetController as SuperAdminTenantResetController;
 use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
+use App\Http\Controllers\SuperAdmin\OfferController as SuperAdminOfferController;
+use App\Http\Controllers\SuperAdmin\ActivityLogController as SuperAdminActivityLogController;
+use App\Http\Controllers\MandiagWebhookController;
+use App\Http\Controllers\ManagerParent\MandiagTrackingController as ManagerParentMandiagTrackingController;
+use App\Http\Controllers\ManagerParent\MandiagDebugController as ManagerParentMandiagDebugController;
 use App\Http\Controllers\TablePreferenceController;
 use App\Http\Middleware\ProcessDueScheduledLicenses;
 use Illuminate\Http\JsonResponse;
@@ -100,6 +107,11 @@ Route::get('/health', function (): JsonResponse {
 Route::prefix('auth')->group(function (): void {
     Route::post('/login', [AuthController::class, 'login'])->middleware('api.logger');
 });
+
+// Intentionally outside the auth group — Mandiag calls this as an external service and cannot
+// authenticate as a tenant user. Request authenticity is verified via HMAC signature inside the controller.
+Route::post('/mandiag/webhook', [MandiagWebhookController::class, 'receive'])
+    ->middleware('throttle:60,1');
 
 Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 'ip.tracker', 'update.last_seen', 'track.online', ProcessDueScheduledLicenses::class, 'api.logger'])->group(function (): void {
     Route::prefix('auth')->group(function (): void {
@@ -181,11 +193,18 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         });
         Route::get('/reseller-payments', [ManagerParentResellerPaymentController::class, 'index']);
         Route::get('/reseller-payments/manager-parent/{user}/customers', [ManagerParentResellerPaymentController::class, 'managerParentCustomers']);
+        Route::get('/reseller-payments/manager/{user}/customers', [ManagerParentResellerPaymentController::class, 'managerCustomers']);
+        Route::get('/reseller-payments/reseller/{user}/customers', [ManagerParentResellerPaymentController::class, 'resellerCustomers']);
         Route::get('/reseller-payments/{user}', [ManagerParentResellerPaymentController::class, 'show']);
         Route::post('/reseller-payments', [ManagerParentResellerPaymentController::class, 'storePayment']);
         Route::put('/reseller-payments/{resellerPayment}', [ManagerParentResellerPaymentController::class, 'updatePayment']);
         Route::delete('/reseller-payments/{resellerPayment}', [ManagerParentResellerPaymentController::class, 'destroyPayment']);
         Route::post('/reseller-commissions', [ManagerParentResellerPaymentController::class, 'storeCommission']);
+
+        Route::get('/offers', [ManagerParentOfferController::class, 'index']);
+        Route::post('/offers', [ManagerParentOfferController::class, 'store']);
+        Route::put('/offers/{offer}', [ManagerParentOfferController::class, 'update']);
+        Route::delete('/offers/{offer}', [ManagerParentOfferController::class, 'destroy']);
 
         Route::get('/activity/export', [ManagerParentActivityController::class, 'export']);
         Route::get('/activity', [ManagerParentActivityController::class, 'index']);
@@ -248,6 +267,22 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/financial-reports/export/csv', [ManagerParentFinancialReportController::class, 'exportCsv']);
         Route::get('/financial-reports/export/pdf', [ManagerParentFinancialReportController::class, 'exportPdf']);
         Route::get('/online-users', [OnlineUsersController::class, 'index']);
+
+        Route::prefix('mandiag')->group(function (): void {
+            Route::get('/summary',   [ManagerParentMandiagTrackingController::class, 'summary']);
+            Route::get('/resellers', [ManagerParentMandiagTrackingController::class, 'resellers']);
+            Route::get('/licenses',  [ManagerParentMandiagTrackingController::class, 'licenses']);
+
+            Route::prefix('debug')->group(function (): void {
+                Route::get('/logs',            [ManagerParentMandiagDebugController::class, 'apiLogs']);
+                Route::get('/logs/{log}',      [ManagerParentMandiagDebugController::class, 'apiLogDetail']);
+                Route::get('/local-licenses',  [ManagerParentMandiagDebugController::class, 'localLicenses']);
+                Route::get('/local-resellers', [ManagerParentMandiagDebugController::class, 'localResellers']);
+                Route::get('/webhook-events',  [ManagerParentMandiagDebugController::class, 'webhookEvents']);
+                Route::post('/test-webhook',   [ManagerParentMandiagDebugController::class, 'testWebhook']);
+                Route::post('/ping',           [ManagerParentMandiagDebugController::class, 'pingMandiag']);
+            });
+        });
     });
 
     Route::prefix('manager')->middleware('role:manager')->group(function (): void {
@@ -430,6 +465,18 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/licenses/expiring', [SuperAdminLicenseController::class, 'expiring']);
         Route::post('/licenses/force-activate', [SuperAdminLicenseController::class, 'forceActivate']);
         Route::post('/licenses/{license}/force-expire', [SuperAdminLicenseController::class, 'forceExpire']);
+
+        // Transaction editing (super admin can edit old transactions and their impact cascades to all reports)
+        Route::get('/transactions/activity-logs/{activityLog}/editable', [TransactionEditController::class, 'showByActivityLog']);
+        Route::patch('/transactions/activity-logs/{activityLog}', [TransactionEditController::class, 'updateByActivityLog']);
+        Route::post('/transactions/activity-logs/{activityLog}/revert', [TransactionEditController::class, 'revertByActivityLog']);
+        Route::get('/transactions/activity-logs/{activityLog}/history', [TransactionEditController::class, 'historyByActivityLog']);
+        Route::get('/transactions/{license}/editable', [TransactionEditController::class, 'show']);
+        Route::patch('/transactions/{license}', [TransactionEditController::class, 'update']);
+        Route::post('/transactions/{license}/revert', [TransactionEditController::class, 'revert']);
+        Route::get('/transactions/{license}/history', [TransactionEditController::class, 'history']);
+        Route::get('/transaction-edit-logs', [TransactionEditController::class, 'allLogs']);
+
         Route::get('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'index']);
         Route::get('/admin-management/{user}', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'show']);
         Route::post('/admin-management', [\App\Http\Controllers\SuperAdmin\AdminManagementController::class, 'store']);
@@ -494,6 +541,11 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::put('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'updatePayment']);
         Route::delete('/reseller-payments/{resellerPayment}', [SuperAdminResellerPaymentController::class, 'destroyPayment']);
         Route::post('/reseller-commissions', [SuperAdminResellerPaymentController::class, 'storeCommission']);
+        Route::delete('/activity-logs/{activityLog}', [SuperAdminActivityLogController::class, 'destroy']);
+        Route::get('/offers', [SuperAdminOfferController::class, 'index']);
+        Route::post('/offers', [SuperAdminOfferController::class, 'store']);
+        Route::put('/offers/{offer}', [SuperAdminOfferController::class, 'update']);
+        Route::delete('/offers/{offer}', [SuperAdminOfferController::class, 'destroy']);
         Route::get('/transaction-history', [TransactionHistoryController::class, 'index']);
         Route::get('/ip-analytics', [SuperAdminIpAnalyticsController::class, 'index']);
         Route::get('/ip-analytics/stats', [SuperAdminIpAnalyticsController::class, 'stats']);
@@ -503,6 +555,7 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/activity/export', [SuperAdminActivityController::class, 'export']);
         Route::get('/reseller-logs', [SuperAdminResellerLogController::class, 'index']);
         Route::get('/transaction-history', [SuperAdminTransactionHistoryController::class, 'index']);
+        Route::get('/transaction-history/export', [SuperAdminTransactionHistoryController::class, 'export']);
         Route::get('/transaction-history/sellers', [SuperAdminTransactionHistoryController::class, 'sellers']);
         Route::get('/logs', [LogController::class, 'index']);
         Route::get('/logs/{log}', [LogController::class, 'show']);

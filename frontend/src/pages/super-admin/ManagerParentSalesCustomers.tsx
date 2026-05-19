@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, BadgeDollarSign, ListOrdered, Users } from 'lucide-react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { ArrowLeft, BadgeDollarSign, ListOrdered, Users, Edit2, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { TransactionEditModal } from '@/components/TransactionEditModal'
 import { useLanguage } from '@/hooks/useLanguage'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { routePaths } from '@/router/routes'
@@ -29,6 +31,9 @@ export function ManagerParentSalesCustomersPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(25)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [selectedActivityLogId, setSelectedActivityLogId] = useState<number | null>(null)
 
   const filters = useMemo<ManagerParentSalesCustomerFilters>(() => ({
     search: search || undefined,
@@ -37,8 +42,8 @@ export function ManagerParentSalesCustomersPage() {
     from: from || undefined,
     to: to || undefined,
     page,
-    per_page: 25,
-  }), [countryName, from, page, programId, search, to])
+    per_page: perPage,
+  }), [countryName, from, page, perPage, programId, search, to])
 
   const salesQuery = useQuery({
     queryKey: ['super-admin', 'reseller-payments', 'manager-parent-customers', resolvedManagerParentId, filters],
@@ -54,6 +59,17 @@ export function ManagerParentSalesCustomersPage() {
   const countriesQuery = useQuery({
     queryKey: ['super-admin', 'customers', 'countries'],
     queryFn: () => superAdminCustomerService.getCountries({}),
+  })
+
+  const deleteActivityLogMutation = useMutation({
+    mutationFn: (activityLogId: number) => superAdminPlatformService.deleteActivityLog(activityLogId),
+    onSuccess: () => {
+      toast.success(t('common.deleteSuccess', { defaultValue: 'Transaction deleted successfully' }))
+      salesQuery.refetch()
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || t('common.errorMessage', { defaultValue: 'Error deleting transaction' }))
+    },
   })
 
   const rows = salesQuery.data?.data ?? []
@@ -114,13 +130,45 @@ export function ManagerParentSalesCustomersPage() {
     {
       key: 'actions',
       label: t('common.actions'),
-      render: (row) => row.customer_id ? (
-        <button type="button" onClick={() => navigate(routePaths.superAdmin.customerDetail(lang, row.customer_id ?? ''))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
-          {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
-        </button>
-      ) : <span className="text-sm text-slate-500 dark:text-slate-400">-</span>,
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          {row.license_id && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedActivityLogId(row.activity_log_id)
+                setEditModalOpen(true)
+              }}
+              className="inline-flex items-center gap-1 rounded-lg border border-blue-300 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:hover:bg-blue-900/30"
+              title={t('transaction.edit.title', { defaultValue: 'Edit Transaction' })}
+            >
+              <Edit2 className="h-3 w-3" />
+              {t('payments.actions.edit', { defaultValue: 'Edit' })}
+            </button>
+          )}
+          {row.customer_id && (
+            <button type="button" onClick={() => navigate(routePaths.superAdmin.customerDetail(lang, row.customer_id ?? ''))} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900">
+              {t('payments.actions.viewDetails', { defaultValue: 'View Details' })}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(t('payments.actions.deleteConfirm', { defaultValue: 'Are you sure you want to delete this transaction?' }))) {
+                deleteActivityLogMutation.mutate(row.activity_log_id)
+              }
+            }}
+            disabled={deleteActivityLogMutation.isPending}
+            className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/30"
+            title={t('payments.actions.delete', { defaultValue: 'Delete Transaction' })}
+          >
+            <Trash2 className="h-3 w-3" />
+            {t('payments.actions.delete', { defaultValue: 'Delete' })}
+          </button>
+        </div>
+      ),
     },
-  ], [lang, locale, navigate, t])
+  ], [deleteActivityLogMutation, editModalOpen, lang, locale, navigate, selectedActivityLogId, t])
 
   return (
     <div className="space-y-6">
@@ -198,20 +246,32 @@ export function ManagerParentSalesCustomersPage() {
         </div>
       </div>
 
-      <DataTable tableKey="super_admin_manager_parent_sales_customers" columns={columns} data={rows} rowKey={(row) => `${row.license_id ?? 'no-license'}-${row.sale_date ?? ''}-${row.customer_id ?? 'no-customer'}`} isLoading={salesQuery.isLoading} emptyMessage={t('payments.managerParentCustomers.empty')} />
+      <DataTable
+        tableKey="super_admin_manager_parent_sales_customers"
+        columns={columns}
+        data={rows}
+        rowKey={(row) => `${row.license_id ?? 'no-license'}-${row.sale_date ?? ''}-${row.customer_id ?? 'no-customer'}`}
+        isLoading={salesQuery.isLoading}
+        emptyMessage={t('payments.managerParentCustomers.empty')}
+        pagination={{
+          page: meta?.current_page ?? page,
+          lastPage: meta?.last_page ?? 1,
+          total: meta?.total ?? 0,
+          perPage: meta?.per_page ?? perPage,
+        }}
+        onPageChange={setPage}
+        onPageSizeChange={(newSize) => {
+          setPerPage(newSize)
+          setPage(1)
+        }}
+      />
 
-      <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
-        <span>{t('common.totalCount', { count: meta?.total ?? 0 })}</span>
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" disabled={!meta || page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
-            {t('common.previous')}
-          </Button>
-          <span>{meta ? `${meta.current_page} / ${meta.last_page}` : '1 / 1'}</span>
-          <Button type="button" variant="outline" size="sm" disabled={!meta || page >= meta.last_page} onClick={() => setPage((current) => current + 1)}>
-            {t('common.next')}
-          </Button>
-        </div>
-      </div>
+      <TransactionEditModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        activityLogId={selectedActivityLogId ?? 0}
+        onSuccess={() => salesQuery.refetch()}
+      />
     </div>
   )
 }
