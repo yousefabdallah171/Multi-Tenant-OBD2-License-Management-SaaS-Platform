@@ -9,7 +9,7 @@ import { TableScreenOptions } from '@/components/shared/TableScreenOptions'
 import { useTablePreferences } from '@/hooks/useTablePreferences'
 import { cn } from '@/lib/utils'
 
-const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+const DEFAULT_PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 200]
 
 export interface DataTableColumn<T> {
   key: string
