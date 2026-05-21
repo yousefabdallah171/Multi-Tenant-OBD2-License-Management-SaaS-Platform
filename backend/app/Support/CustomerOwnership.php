@@ -39,7 +39,9 @@ class CustomerOwnership
                                 ->orWhereNull("{$table}.is_scheduled");
                         })
                         ->whereNotNull("{$table}.paused_at")
-                        ->where("{$table}.pause_remaining_minutes", '>', 0);
+                        ->where("{$table}.pause_remaining_minutes", '>', 0)
+                        ->whereNotNull("{$table}.expires_at")
+                        ->where("{$table}.expires_at", '>=', now()->copy()->startOfMinute()->addMinute());
                 });
         });
     }
@@ -58,7 +60,10 @@ class CustomerOwnership
             return true;
         }
 
-        return $license->paused_at !== null && (int) ($license->pause_remaining_minutes ?? 0) > 0;
+        return $license->paused_at !== null
+            && (int) ($license->pause_remaining_minutes ?? 0) > 0
+            && $license->expires_at !== null
+            && $license->expires_at->gte(now()->copy()->startOfMinute()->addMinute());
     }
 
     /**

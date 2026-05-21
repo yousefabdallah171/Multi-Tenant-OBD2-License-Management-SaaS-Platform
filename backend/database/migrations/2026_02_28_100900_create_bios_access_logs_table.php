@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('bios_id');
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('tenant_id')->nullable()->constrained()->nullOnDelete();
-            $table->enum('action', ['activate', 'deactivate', 'renew', 'check', 'blacklist', 'conflict']);
+            $table->enum('action', ['activate', 'deactivate', 'renew', 'check', 'blacklist', 'conflict', 'pause', 'resume', 'reactivate', 'change']);
             $table->string('ip_address', 45)->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();

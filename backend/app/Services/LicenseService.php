@@ -671,6 +671,14 @@ class LicenseService
             ]);
         }
 
+        if ($isPausedPending && $this->hasExpired($license)) {
+            $this->markPausedLicenseExpired($license);
+
+            throw ValidationException::withMessages([
+                'license' => 'This license expired while paused. Please renew it.',
+            ]);
+        }
+
         if (BiosBlacklist::blocksBios((string) $license->bios_id, (int) $reseller->tenant_id)) {
             throw ValidationException::withMessages([
                 'license' => 'This BIOS ID is blacklisted and cannot be reactivated.',
@@ -721,15 +729,10 @@ class LicenseService
             ]);
         }
 
-        // Capture the base time once so Mandiag and the local DB store the same expiry
-        $resumeBase = $this->currentMinute();
-
-        if ($program?->isMandiag() && $license->mandiag_license_id) {
-            $remainingMinutes = max(1, (int) ($license->pause_remaining_minutes ?? 0));
-            $newExpiry = $resumeBase->copy()->addMinutes($remainingMinutes);
+        if ($isPausedPending && $program?->isMandiag() && $license->mandiag_license_id && $license->expires_at) {
             $expiryResponse = $this->mandiagApiService->setExpiration(
                 (int) $license->mandiag_license_id,
-                $newExpiry->format('Y-m-d H:i:s')
+                $license->expires_at->copy()->startOfMinute()->format('Y-m-d H:i:s')
             );
 
             if (! ($expiryResponse['success'] ?? false)) {
@@ -743,7 +746,7 @@ class LicenseService
 
         $hasPausedByRole = \Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role');
 
-        return DB::transaction(function () use ($license, $reseller, $apiResponse, $isPausedPending, $biosIdLower, $hasPausedByRole, $resumeBase): License {
+        return DB::transaction(function () use ($license, $reseller, $apiResponse, $biosIdLower, $hasPausedByRole): License {
             // Re-check inside transaction with a lock to prevent race condition
             $conflict = License::query()
                 ->whereRaw('LOWER(bios_id) = ?', [$biosIdLower])
@@ -758,14 +761,10 @@ class LicenseService
                 ]);
             }
 
-            $remainingMinutes = $isPausedPending
-                ? max(1, (int) ($license->pause_remaining_minutes ?? 0))
-                : null;
-
             $resumeData = [
                 'status' => 'active',
                 'external_activation_response' => (string) ($apiResponse['data']['response'] ?? ''),
-                'expires_at' => $remainingMinutes !== null ? $resumeBase->copy()->addMinutes($remainingMinutes) : $license->expires_at,
+                'expires_at' => $license->expires_at,
                 'paused_at' => null,
                 'pause_remaining_minutes' => null,
                 'pause_reason' => null,
@@ -1486,7 +1485,9 @@ class LicenseService
                           $q3->where('is_scheduled', false)->orWhereNull('is_scheduled');
                       })
                       ->whereNotNull('paused_at')
-                      ->where('pause_remaining_minutes', '>', 0);
+                      ->where('pause_remaining_minutes', '>', 0)
+                      ->whereNotNull('expires_at')
+                      ->where('expires_at', '>=', now()->copy()->startOfMinute()->addMinute());
                });
         });
     }
@@ -1497,6 +1498,29 @@ class LicenseService
             && ! $license->is_scheduled
             && $license->paused_at !== null
             && (int) ($license->pause_remaining_minutes ?? 0) > 0;
+    }
+
+    private function hasExpired(License $license): bool
+    {
+        return $license->expires_at !== null
+            && $license->expires_at->lt($this->currentMinute()->copy()->addMinute());
+    }
+
+    private function markPausedLicenseExpired(License $license): void
+    {
+        $data = [
+            'status' => 'expired',
+            'external_deletion_response' => 'License expired while paused.',
+            'paused_at' => null,
+            'pause_remaining_minutes' => null,
+            'pause_reason' => null,
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('licenses', 'paused_by_role')) {
+            $data['paused_by_role'] = null;
+        }
+
+        $license->forceFill($data)->save();
     }
 
     private function upsertCustomer(User $reseller, array $data, string $externalUsername): User

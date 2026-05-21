@@ -18,9 +18,29 @@ class LicenseExpiryService
         $minuteWindowEnd = now()->startOfMinute()->addMinute();
 
         $query = License::query()
-            ->where('status', 'active')
+            ->where(function ($query) use ($minuteWindowEnd): void {
+                $query
+                    ->where(function ($active) use ($minuteWindowEnd): void {
+                        $active
+                            ->where('status', 'active')
+                            ->whereNotNull('expires_at')
+                            ->where('expires_at', '<', $minuteWindowEnd);
+                    })
+                    ->orWhere(function ($paused) use ($minuteWindowEnd): void {
+                        $paused
+                            ->where('status', 'pending')
+                            ->where(function ($plainPending): void {
+                                $plainPending
+                                    ->where('is_scheduled', false)
+                                    ->orWhereNull('is_scheduled');
+                            })
+                            ->whereNotNull('paused_at')
+                            ->where('pause_remaining_minutes', '>', 0)
+                            ->whereNotNull('expires_at')
+                            ->where('expires_at', '<', $minuteWindowEnd);
+                    });
+            })
             ->whereNotNull('expires_at')
-            ->where('expires_at', '<', $minuteWindowEnd)
             ->limit($limit);
 
         if ($deactivateExternal) {
@@ -41,7 +61,7 @@ class LicenseExpiryService
             $apiResponseText = 'Auto-expired locally.';
 
             try {
-                if ($deactivateExternal) {
+                if ($deactivateExternal && $license->status === 'active') {
                     $program = $license->program;
                     if ($program?->isMandiag() && $license->mandiag_license_id) {
                         $this->mandiagApiService->disableLicense(
@@ -61,16 +81,27 @@ class LicenseExpiryService
                             $apiResponseText = (string) ($response['data']['response'] ?? $response['data']['message'] ?? $apiResponseText);
                         }
                     }
+                } elseif ($license->status === 'pending') {
+                    $apiResponseText = 'Auto-expired while paused; external access was already disabled.';
                 }
             } catch (\Throwable $exception) {
                 report($exception);
                 $apiResponseText = $exception->getMessage();
             }
 
-            $license->forceFill([
+            $expiredData = [
                 'status' => 'expired',
                 'external_deletion_response' => $apiResponseText,
-            ])->save();
+            ];
+
+            if ($license->paused_at !== null) {
+                $expiredData['paused_at'] = null;
+                $expiredData['pause_remaining_minutes'] = null;
+                $expiredData['pause_reason'] = null;
+                $expiredData['paused_by_role'] = null;
+            }
+
+            $license->forceFill($expiredData)->save();
 
             ActivityLog::query()->create([
                 'tenant_id' => $license->tenant_id,
