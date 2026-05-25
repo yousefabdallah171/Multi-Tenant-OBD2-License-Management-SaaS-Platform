@@ -8,12 +8,14 @@ use App\Models\User;
 use App\Services\SellerAccountingService;
 use App\Services\ExportTaskService;
 use App\Support\CustomerOwnership;
+use App\Support\LicenseCacheInvalidation;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Support\RevenueAnalytics;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class FinancialReportController extends BaseManagerParentController
@@ -26,69 +28,70 @@ class FinancialReportController extends BaseManagerParentController
     {
         $tenantId = $this->currentTenantId($request);
         $validated = $this->validatedFilters($request);
-        $scope = $this->resolveSellerScope($tenantId, $validated);
-        $activeCustomers = License::query()
-            ->where('tenant_id', $tenantId)
-            ->whereIn('reseller_id', $scope['seller_ids'])
-            ->whereEffectivelyActive()
-            ->whereNotNull('customer_id')
-            ->distinct('customer_id')
-            ->count('customer_id');
-        $baseQuery = $this->baseQuery($tenantId, $validated, $scope);
-        $summary = $this->revenueQuery($tenantId, $validated, $scope)
-            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
-            ->selectRaw(RevenueAnalytics::revenueSumExpression('granted', 'activity_logs', 'granted_value'))
-            ->first();
-        $totalActivations = (int) (clone $baseQuery)->count();
-        $totalCustomers = CustomerOwnership::currentOwnedCustomerCount($scope['seller_ids'], $tenantId);
-        $revenueSellers = $scope['sellers']
-            ->filter(fn (User $seller): bool => in_array($seller->role?->value ?? (string) $seller->role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true))
-            ->values();
-        $revenueSellerIds = $revenueSellers->pluck('id')->map(fn ($id): int => (int) $id)->all();
 
-        $revenueMap = RevenueAnalytics::revenueBySellerIds($revenueSellerIds, $tenantId, $validated);
-        $activationCounts = $this->revenueQuery($tenantId, $validated, ['seller_ids' => $revenueSellerIds])
-            ->selectRaw('activity_logs.user_id as seller_id')
-            ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
-            ->groupBy('activity_logs.user_id')
-            ->get()
-            ->mapWithKeys(fn ($row): array => [(int) $row->seller_id => (int) $row->activations]);
+        $data = Cache::remember($this->cacheKey($tenantId, $validated), now()->addSeconds(90), function () use ($tenantId, $validated): array {
+            $scope = $this->resolveSellerScope($tenantId, $validated);
+            $activeCustomers = License::query()
+                ->where('tenant_id', $tenantId)
+                ->whereIn('reseller_id', $scope['seller_ids'])
+                ->whereEffectivelyActive()
+                ->whereNotNull('customer_id')
+                ->distinct('customer_id')
+                ->count('customer_id');
+            $baseQuery = $this->baseQuery($tenantId, $validated, $scope);
+            $summary = $this->revenueQuery($tenantId, $validated, $scope)
+                ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
+                ->selectRaw(RevenueAnalytics::revenueSumExpression('granted', 'activity_logs', 'granted_value'))
+                ->first();
+            $totalActivations = (int) (clone $baseQuery)->count();
+            $totalCustomers = CustomerOwnership::currentOwnedCustomerCount($scope['seller_ids'], $tenantId);
+            $revenueSellers = $scope['sellers']
+                ->filter(fn (User $seller): bool => in_array($seller->role?->value ?? (string) $seller->role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true))
+                ->values();
+            $revenueSellerIds = $revenueSellers->pluck('id')->map(fn ($id): int => (int) $id)->all();
 
-        $revenueByReseller = $revenueSellers
-            ->map(fn (User $seller): array => [
-                'id' => $seller->id,
-                'reseller' => $seller->name ?? 'Unknown',
-                'email' => $seller->email,
-                'role' => $seller->role?->value ?? (string) $seller->role,
-                'revenue' => round((float) ($revenueMap->get((int) $seller->id) ?? 0), 2),
-                'activations' => (int) ($activationCounts[(int) $seller->id] ?? 0),
-            ])
-            ->sortByDesc('revenue')
-            ->values()
-            ->all();
-        $programRows = $this->revenueQuery($tenantId, $validated, $scope)
-            ->selectRaw(RevenueAnalytics::programIdExpression('activity_logs').' as program_id')
-            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
-            ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
-            ->groupByRaw(RevenueAnalytics::programIdExpression('activity_logs'))
-            ->orderByDesc('revenue')
-            ->get()
-            ->filter(fn ($row): bool => (int) ($row->program_id ?? 0) > 0)
-            ->values();
-        $programNames = \App\Models\Program::query()
-            ->whereIn('id', $programRows->pluck('program_id')->all())
-            ->pluck('name', 'id');
-        $revenueByProgram = $programRows
-            ->map(fn ($row): array => [
-                'program' => (string) ($programNames->get((int) $row->program_id) ?? 'Unknown'),
-                'revenue' => round((float) $row->revenue, 2),
-                'activations' => (int) $row->activations,
-            ])
-            ->values()
-            ->all();
+            $revenueMap = RevenueAnalytics::revenueBySellerIds($revenueSellerIds, $tenantId, $validated);
+            $activationCounts = $this->revenueQuery($tenantId, $validated, ['seller_ids' => $revenueSellerIds])
+                ->selectRaw('activity_logs.user_id as seller_id')
+                ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
+                ->groupBy('activity_logs.user_id')
+                ->get()
+                ->mapWithKeys(fn ($row): array => [(int) $row->seller_id => (int) $row->activations]);
 
-        return response()->json([
-            'data' => [
+            $revenueByReseller = $revenueSellers
+                ->map(fn (User $seller): array => [
+                    'id' => $seller->id,
+                    'reseller' => $seller->name ?? 'Unknown',
+                    'email' => $seller->email,
+                    'role' => $seller->role?->value ?? (string) $seller->role,
+                    'revenue' => round((float) ($revenueMap->get((int) $seller->id) ?? 0), 2),
+                    'activations' => (int) ($activationCounts[(int) $seller->id] ?? 0),
+                ])
+                ->sortByDesc('revenue')
+                ->values()
+                ->all();
+            $programRows = $this->revenueQuery($tenantId, $validated, $scope)
+                ->selectRaw(RevenueAnalytics::programIdExpression('activity_logs').' as program_id')
+                ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'revenue'))
+                ->selectRaw(RevenueAnalytics::revenueCountExpression('earned', 'activity_logs', 'activations'))
+                ->groupByRaw(RevenueAnalytics::programIdExpression('activity_logs'))
+                ->orderByDesc('revenue')
+                ->get()
+                ->filter(fn ($row): bool => (int) ($row->program_id ?? 0) > 0)
+                ->values();
+            $programNames = \App\Models\Program::query()
+                ->whereIn('id', $programRows->pluck('program_id')->all())
+                ->pluck('name', 'id');
+            $revenueByProgram = $programRows
+                ->map(fn ($row): array => [
+                    'program' => (string) ($programNames->get((int) $row->program_id) ?? 'Unknown'),
+                    'revenue' => round((float) $row->revenue, 2),
+                    'activations' => (int) $row->activations,
+                ])
+                ->values()
+                ->all();
+
+            return [
                 'summary' => [
                     'total_revenue' => round((float) ($summary?->total_revenue ?? 0), 2),
                     'granted_value' => round((float) ($summary?->granted_value ?? 0), 2),
@@ -101,8 +104,20 @@ class FinancialReportController extends BaseManagerParentController
                 'revenue_by_program' => $revenueByProgram,
                 'monthly_revenue' => $this->monthlyRevenue($tenantId, $validated, $scope),
                 'reseller_balances' => $this->resellerBalances($validated, $scope),
-            ],
-        ]);
+            ];
+        });
+
+        return response()->json(['data' => $data]);
+    }
+
+    private function cacheKey(int $tenantId, array $validated): string
+    {
+        return sprintf(
+            'manager-parent:%d:financial-reports:v%d:%s',
+            $tenantId,
+            LicenseCacheInvalidation::reportVersion("manager-parent:{$tenantId}:reports:version"),
+            md5((string) json_encode($validated)),
+        );
     }
 
     public function exportCsv(Request $request, ExportTaskService $exportTaskService): JsonResponse
@@ -191,22 +206,31 @@ class FinancialReportController extends BaseManagerParentController
     private function resellerBalances(array $validated, array $scope)
     {
         $sellers = $scope['sellers'];
+        if ($sellers->isEmpty()) {
+            return collect();
+        }
+
+        $sellerIds = $sellers->pluck('id')->map(fn ($id): int => (int) $id)->all();
+        $tenantId = (int) $sellers->first()->tenant_id;
+
+        $revenueMap = RevenueAnalytics::revenueBySellerIds($sellerIds, $tenantId, $validated);
+
+        $activationMap = License::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('reseller_id', $sellerIds)
+            ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
+            ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']))
+            ->selectRaw('reseller_id, COUNT(*) as total')
+            ->groupBy('reseller_id')
+            ->pluck('total', 'reseller_id')
+            ->map(fn ($v): int => (int) $v);
+
         $accountingBySeller = $this->sellerAccountingService->summariesForSellers($sellers);
 
-        return $sellers->map(function (User $seller) use ($validated, $accountingBySeller): array {
-            $totals = RevenueAnalytics::baseQuery($validated, (int) $seller->tenant_id, null, $seller->id)
-                ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
-                ->first();
-            $totalActivations = (int) License::query()
-                ->where('tenant_id', $seller->tenant_id)
-                ->when(! empty($validated['from']), fn ($query) => $query->whereDate('licenses.activated_at', '>=', $validated['from']))
-                ->when(! empty($validated['to']), fn ($query) => $query->whereDate('licenses.activated_at', '<=', $validated['to']))
-                ->where('reseller_id', $seller->id)
-                ->count();
-            $totalRevenue = round((float) ($totals?->total_revenue ?? 0), 2);
-            $accounting = $accountingBySeller[(int) $seller->id] ?? [
-                'still_not_paid' => 0.0,
-            ];
+        return $sellers->map(function (User $seller) use ($revenueMap, $activationMap, $accountingBySeller): array {
+            $totalRevenue = round((float) ($revenueMap->get((int) $seller->id) ?? 0), 2);
+            $totalActivations = (int) ($activationMap->get((int) $seller->id) ?? 0);
+            $accounting = $accountingBySeller[(int) $seller->id] ?? ['still_not_paid' => 0.0];
 
             return [
                 'id' => $seller->id,

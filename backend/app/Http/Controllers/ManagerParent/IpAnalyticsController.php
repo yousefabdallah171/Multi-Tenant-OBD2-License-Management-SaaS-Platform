@@ -50,8 +50,13 @@ class IpAnalyticsController extends BaseManagerParentController
                 ]);
             }
 
-            $parsed = $this->ipAnalyticsService->parseExternalLogs((string) ($response['data']['raw'] ?? ''));
-            $matched = $this->ipAnalyticsService->matchLogsToDatabaseRecords($parsed, $tenantId);
+            try {
+                $parsed = $this->ipAnalyticsService->parseExternalLogs((string) ($response['data']['raw'] ?? ''));
+                $matched = $this->ipAnalyticsService->matchLogsToDatabaseRecords($parsed, $tenantId);
+            } catch (\Throwable $e) {
+                report($e);
+                $matched = [];
+            }
             $matched = array_values(array_filter($matched, static fn (array $row): bool => ($row['program_id'] ?? null) !== null));
             $matched = array_reverse($matched);
             try {
@@ -182,7 +187,7 @@ class IpAnalyticsController extends BaseManagerParentController
                     continue;
                 }
 
-                foreach ($response->json() as $item) {
+                foreach ((array) $response->json() as $item) {
                     $ip = (string) ($item['query'] ?? '');
                     if ($ip === '' || ($item['status'] ?? '') !== 'success') {
                         if ($ip !== '') {

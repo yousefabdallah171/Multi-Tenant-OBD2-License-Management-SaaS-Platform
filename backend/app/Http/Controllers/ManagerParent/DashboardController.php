@@ -55,7 +55,7 @@ class DashboardController extends BaseManagerParentController
                     $tenantId,
                 ),
             ])
-            ->header('Cache-Control', 'private, max-age=60');
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     public function stats(Request $request): JsonResponse
@@ -71,7 +71,7 @@ class DashboardController extends BaseManagerParentController
                     $tenantId,
                 ),
             ])
-            ->header('Cache-Control', 'private, max-age=300');
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     public function revenueChart(Request $request): JsonResponse
@@ -87,7 +87,7 @@ class DashboardController extends BaseManagerParentController
                     $tenantId,
                 ),
             ])
-            ->header('Cache-Control', 'private, max-age=60');
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     public function expiryForecast(Request $request): JsonResponse
@@ -103,7 +103,7 @@ class DashboardController extends BaseManagerParentController
                     $tenantId,
                 ),
             ])
-            ->header('Cache-Control', 'private, max-age=300');
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     public function teamPerformance(Request $request): JsonResponse
@@ -119,7 +119,7 @@ class DashboardController extends BaseManagerParentController
                     $tenantId,
                 ),
             ])
-            ->header('Cache-Control', 'private, max-age=60');
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     public function conflictRate(Request $request): JsonResponse
@@ -135,7 +135,7 @@ class DashboardController extends BaseManagerParentController
                     $tenantId,
                 ),
             ])
-            ->header('Cache-Control', 'private, max-age=60');
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     /**

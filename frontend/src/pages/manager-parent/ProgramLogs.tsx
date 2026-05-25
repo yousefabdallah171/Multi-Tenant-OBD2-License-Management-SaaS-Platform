@@ -4,6 +4,7 @@ import { Download } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
+import { StatusFilterCard } from '@/components/customers/StatusFilterCard'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
 import { RoleBadge } from '@/components/shared/RoleBadge'
 import { RoleOptionPicker } from '@/components/shared/RoleOptionPicker'
@@ -28,18 +29,6 @@ interface LocationMeta {
   hosting: boolean
 }
 
-const ACTION_OPTIONS = [
-  'license.activated',
-  'license.scheduled',
-  'license.scheduled_activation_executed',
-  'license.renewed',
-  'license.deactivated',
-  'license.paused',
-  'license.resumed',
-  'license.scheduled_activation_failed',
-  'manager.program.activate',
-  'license.delete',
-] as const
 
 function exportUserCsv(rows: ProgramUserLogEntry[], fileName: string) {
   const header = 'action,actor_name,actor_role,customer_name,external_username,bios_id,price,timestamp'
@@ -88,7 +77,7 @@ export function ProgramLogsPage() {
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(15)
   const [sellerId, setSellerId] = useState<number | ''>('')
-  const [action, setAction] = useState<string>('')
+  const [actions, setActions] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<'users' | 'login'>('users')
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [ipMetaCache, setIpMetaCache] = useState<Record<string, LocationMeta>>({})
@@ -101,7 +90,7 @@ export function ProgramLogsPage() {
   })
 
   const logsQuery = useQuery({
-    queryKey: ['manager-parent', 'program-logs', selectedProgramId, page, perPage, sellerId, action, autoRefresh],
+    queryKey: ['manager-parent', 'program-logs', selectedProgramId, page, perPage, sellerId, actions, autoRefresh],
     queryFn: () => {
       if (!selectedProgramId) {
         return Promise.resolve({
@@ -127,7 +116,7 @@ export function ProgramLogsPage() {
         page,
         per_page: perPage,
         seller_id: sellerId || undefined,
-        action: action || undefined,
+        actions: actions.length > 0 ? actions : undefined,
       })
     },
     enabled: selectedProgramId !== null,
@@ -388,13 +377,13 @@ export function ProgramLogsPage() {
       />
 
       <Card>
-        <CardContent className="grid gap-3 p-4 lg:grid-cols-[260px_240px_240px_minmax(0,1fr)]">
+        <CardContent className="grid gap-3 p-4 lg:grid-cols-[260px_240px_minmax(0,1fr)]">
           <select
             value={selectedProgramId ?? ''}
             onChange={(event) => {
               setSelectedProgramId(event.target.value ? Number(event.target.value) : null)
               setSellerId('')
-              setAction('')
+              setActions([])
               setPage(1)
             }}
             className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
@@ -416,21 +405,6 @@ export function ProgramLogsPage() {
             placeholder={t('programLogs.allUsers')}
             emptyLabel={t('programLogs.allUsers')}
           />
-          <select
-            value={action}
-            onChange={(event) => {
-              setAction(event.target.value)
-              setPage(1)
-            }}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-          >
-            <option value="">{t('programLogs.allActions')}</option>
-            {ACTION_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {getActionLabel(option, t)}
-              </option>
-            ))}
-          </select>
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
             <span>{t('programLogs.dynamicHint')}</span>
             <label className="flex items-center gap-2">
@@ -449,13 +423,37 @@ export function ProgramLogsPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <MetricCard label={t('common.actions')} value={summary.total_entries} />
-        <MetricCard label={t('common.activate')} value={summary.activations} />
-        <MetricCard label={t('programLogs.actionScheduled')} value={summary.scheduled} />
-        <MetricCard label={t('programLogs.actionExecuted')} value={summary.executed} />
-        <MetricCard label={t('common.renew')} value={summary.renewals} />
-        <MetricCard label={t('programLogs.actionFailed')} value={summary.failures} />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-5">
+        {[
+          { key: 'all', label: t('common.all'), cardActions: [] as string[], color: 'sky' as const, count: summary.total_entries },
+          { key: 'activated', label: t('common.activate'), cardActions: ['license.activated', 'manager.program.activate'], color: 'emerald' as const, count: summary.activations },
+          { key: 'scheduled', label: t('programLogs.actionScheduled'), cardActions: ['license.scheduled'], color: 'amber' as const, count: summary.scheduled },
+          { key: 'executed', label: t('programLogs.actionExecuted'), cardActions: ['license.scheduled_activation_executed'], color: 'sky' as const, count: summary.executed },
+          { key: 'renewed', label: t('common.renew'), cardActions: ['license.renewed'], color: 'emerald' as const, count: summary.renewals },
+          { key: 'deactivated', label: t('common.deactivate'), cardActions: ['license.deactivated'], color: 'amber' as const, count: summary.deactivations },
+          { key: 'failed', label: t('programLogs.actionFailed'), cardActions: ['license.scheduled_activation_failed'], color: 'rose' as const, count: summary.failures },
+          { key: 'paused', label: t('common.pause'), cardActions: ['license.paused'], color: 'slate' as const, count: undefined },
+          { key: 'resumed', label: t('common.resume'), cardActions: ['license.resumed'], color: 'emerald' as const, count: undefined },
+          { key: 'deleted', label: t('common.delete'), cardActions: ['license.delete'], color: 'rose' as const, count: undefined },
+        ].map(({ key, label, cardActions, color, count }) => (
+          <StatusFilterCard
+            key={key}
+            label={label}
+            count={count}
+            color={color}
+            isActive={cardActions.length === 0 ? actions.length === 0 : cardActions.some(a => actions.includes(a))}
+            onClick={() => {
+              setPage(1)
+              if (cardActions.length === 0) { setActions([]); return }
+              setActions(prev => {
+                const allSelected = cardActions.every(a => prev.includes(a))
+                return allSelected
+                  ? prev.filter(a => !cardActions.includes(a))
+                  : [...new Set([...prev, ...cardActions])]
+              })
+            }}
+          />
+        ))}
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'users' | 'login')}>
@@ -508,16 +506,6 @@ export function ProgramLogsPage() {
   )
 }
 
-function MetricCard({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
-        <div className="mt-2 font-semibold text-slate-950 dark:text-white">{value}</div>
-      </CardContent>
-    </Card>
-  )
-}
 
 function ActionPill({ label, action }: { label: string; action: string }) {
   const styles: Record<string, string> = {

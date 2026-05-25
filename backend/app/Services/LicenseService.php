@@ -18,6 +18,7 @@ use App\Models\ProgramDurationPresetCountryPrice;
 use App\Models\ProgramOffer;
 use App\Models\User;
 use App\Support\CustomerOwnership;
+use App\Support\LicenseCacheInvalidation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -2040,9 +2041,15 @@ class LicenseService
             "dashboard:manager-parent:tenant:{$tenantId}:conflict-rate",
             "dashboard:global:stats",
             "dashboard:tenant:{$tenantId}:stats",
+            'super-admin:dashboard:stats',
+            'super-admin:dashboard:revenue-trend',
+            'super-admin:dashboard:tenant-comparison',
         ] as $key) {
             Cache::forget($key);
         }
+
+        LicenseCacheInvalidation::bumpVersion('super-admin:reports:version');
+        LicenseCacheInvalidation::bumpVersion("manager-parent:{$tenantId}:reports:version");
 
         if ($managerId > 0) {
             foreach ([
@@ -2053,6 +2060,8 @@ class LicenseService
             ] as $key) {
                 Cache::forget($key);
             }
+
+            LicenseCacheInvalidation::bumpVersion("manager:{$managerId}:reports:version");
         }
     }
 

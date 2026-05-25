@@ -39,6 +39,7 @@ export function DashboardPage() {
   const statsQuery = useQuery({
     queryKey: ['manager-parent', 'dashboard'],
     queryFn: () => managerParentService.getDashboard(),
+    refetchInterval: 60_000,
   })
 
   const stats = statsQuery.data?.stats

@@ -39,6 +39,8 @@ class ProgramLogsController extends BaseManagerParentController
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
             'seller_id' => ['nullable', 'integer'],
+            'actions' => ['nullable', 'array'],
+            'actions.*' => [Rule::in(self::TRACKED_ACTIONS)],
             'action' => ['nullable', 'string', Rule::in(self::TRACKED_ACTIONS)],
         ]);
         $page = (int) ($validated['page'] ?? 1);
@@ -102,8 +104,9 @@ class ProgramLogsController extends BaseManagerParentController
             }
         }
 
-        if (! empty($validated['action'])) {
-            $activityQuery->where('action', $validated['action']);
+        $actionFilter = ! empty($validated['actions']) ? $validated['actions'] : (! empty($validated['action']) ? [$validated['action']] : []);
+        if (! empty($actionFilter)) {
+            $activityQuery->whereIn('action', $actionFilter);
         }
 
         $summaryQuery = clone $activityQuery;

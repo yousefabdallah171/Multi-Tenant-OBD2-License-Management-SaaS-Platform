@@ -310,7 +310,7 @@ export const managerParentService = {
     const { data } = await api.post<{ data: unknown; message: string }>('/reseller-commissions', payload)
     return data
   },
-  async getProgramLogs(programId: number, params?: { page?: number; per_page?: number; seller_id?: number | ''; action?: string }): Promise<{ raw: string; rows?: ProgramLog[]; user_rows?: ProgramUserLogEntry[]; users?: ProgramLogUserOption[]; summary?: ProgramLogSummary; external_available?: boolean; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }> {
+  async getProgramLogs(programId: number, params?: { page?: number; per_page?: number; seller_id?: number | ''; actions?: string[] }): Promise<{ raw: string; rows?: ProgramLog[]; user_rows?: ProgramUserLogEntry[]; users?: ProgramLogUserOption[]; summary?: ProgramLogSummary; external_available?: boolean; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }> {
     const { data } = await api.get<{ data: { raw: string; rows?: ProgramLog[]; user_rows?: ProgramUserLogEntry[]; users?: ProgramLogUserOption[]; summary?: ProgramLogSummary; external_available?: boolean; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } } }>(`/manager-parent/programs/${programId}/logs`, { params })
     return data.data
   },

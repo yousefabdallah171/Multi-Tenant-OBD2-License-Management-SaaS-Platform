@@ -33,7 +33,7 @@ export const superAdminPlatformService = {
     const { data } = await api.get<PaginatedResponse<ProgramSummary>>('/super-admin/programs', { params: { per_page: 100, status: 'active', ...params } })
     return data.data.filter((program) => program.has_external_api)
   },
-  async getProgramLogs(programId: number, params?: { page?: number; per_page?: number; seller_id?: number | ''; action?: string }): Promise<{ raw: string; rows?: ProgramLog[]; user_rows?: ProgramUserLogEntry[]; users?: ProgramLogUserOption[]; summary?: ProgramLogSummary; external_available?: boolean; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }> {
+  async getProgramLogs(programId: number, params?: { page?: number; per_page?: number; seller_id?: number | ''; actions?: string[] }): Promise<{ raw: string; rows?: ProgramLog[]; user_rows?: ProgramUserLogEntry[]; users?: ProgramLogUserOption[]; summary?: ProgramLogSummary; external_available?: boolean; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } }> {
     const { data } = await api.get<{ data: { raw: string; rows?: ProgramLog[]; user_rows?: ProgramUserLogEntry[]; users?: ProgramLogUserOption[]; summary?: ProgramLogSummary; external_available?: boolean; meta?: { page: number; per_page: number; total: number; last_page: number; has_next_page: boolean; next_page: number | null } } }>(`/super-admin/programs/${programId}/logs`, { params })
     return data.data
   },

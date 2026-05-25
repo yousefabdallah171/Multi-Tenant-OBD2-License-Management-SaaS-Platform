@@ -186,25 +186,42 @@ class FinancialReportController extends BaseSuperAdminController
     {
         $sellers = User::query()
             ->whereIn('role', [UserRole::MANAGER_PARENT->value, UserRole::MANAGER->value, UserRole::RESELLER->value])
+            ->with('tenant:id,name')
             ->get(['id', 'name', 'tenant_id', 'role']);
 
-        return $sellers->map(function (User $seller) use ($validated): array {
-            $totals = RevenueAnalytics::baseQuery($validated, $seller->tenant_id, null, $seller->id)
-                ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
-                ->first();
-            $totalActivations = (int) $this->baseQuery($validated)
-                ->where('licenses.reseller_id', $seller->id)
-                ->count();
-            $tenantName = Tenant::query()->whereKey($seller->tenant_id)->value('name');
+        if ($sellers->isEmpty()) {
+            return [];
+        }
+
+        $sellerIds = $sellers->pluck('id')->map(fn ($id): int => (int) $id)->all();
+
+        $revenueMap = RevenueAnalytics::baseQuery($validated)
+            ->whereIn('activity_logs.user_id', $sellerIds)
+            ->selectRaw('activity_logs.user_id as seller_id')
+            ->selectRaw(RevenueAnalytics::revenueSumExpression('earned', 'activity_logs', 'total_revenue'))
+            ->groupBy('activity_logs.user_id')
+            ->get()
+            ->mapWithKeys(fn ($row): array => [(int) $row->seller_id => round((float) $row->total_revenue, 2)]);
+
+        $activationMap = $this->baseQuery($validated)
+            ->whereIn('licenses.reseller_id', $sellerIds)
+            ->selectRaw('licenses.reseller_id, COUNT(*) as total')
+            ->groupBy('licenses.reseller_id')
+            ->pluck('total', 'reseller_id')
+            ->map(fn ($v): int => (int) $v);
+
+        return $sellers->map(function (User $seller) use ($revenueMap, $activationMap): array {
+            $totalRevenue = (float) ($revenueMap->get((int) $seller->id) ?? 0);
+            $totalActivations = (int) ($activationMap->get((int) $seller->id) ?? 0);
 
             return [
                 'id' => $seller->id,
                 'reseller' => $seller->name,
                 'role' => $seller->role?->value ?? (string) $seller->role,
-                'tenant' => (string) ($tenantName ?? 'Unknown'),
-                'total_revenue' => round((float) ($totals?->total_revenue ?? 0), 2),
+                'tenant' => (string) ($seller->tenant?->name ?? 'Unknown'),
+                'total_revenue' => round($totalRevenue, 2),
                 'total_activations' => $totalActivations,
-                'avg_price' => $totalActivations > 0 ? round(((float) ($totals?->total_revenue ?? 0)) / $totalActivations, 2) : 0,
+                'avg_price' => $totalActivations > 0 ? round($totalRevenue / $totalActivations, 2) : 0,
             ];
         })
             ->sortByDesc('total_revenue')
