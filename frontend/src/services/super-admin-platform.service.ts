@@ -177,4 +177,12 @@ export const superAdminPlatformService = {
     const { downloadFile } = await import('@/utils/download')
     await downloadFile('/super-admin/transaction-history/export', 'transaction-history.csv', params)
   },
+  async exportManagerSalesCustomersCsv(managerId: number, filters?: Omit<ManagerParentSalesCustomerFilters, 'page' | 'per_page'>) {
+    const { downloadFile } = await import('@/utils/download')
+    await downloadFile(`/super-admin/reseller-payments/manager/${managerId}/customers/export/csv`, 'manager-customers.xlsx', filters)
+  },
+  async exportManagerSalesCustomersPdf(managerId: number, filters?: Omit<ManagerParentSalesCustomerFilters, 'page' | 'per_page'>) {
+    const { downloadFile } = await import('@/utils/download')
+    await downloadFile(`/super-admin/reseller-payments/manager/${managerId}/customers/export/pdf`, 'manager-customers.pdf', filters)
+  },
 }

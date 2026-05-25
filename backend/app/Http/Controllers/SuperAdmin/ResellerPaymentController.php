@@ -8,6 +8,7 @@ use App\Models\Program;
 use App\Models\ResellerCommission;
 use App\Models\ResellerPayment;
 use App\Models\User;
+use App\Services\ExportTaskService;
 use App\Services\ResellerCommissionService;
 use App\Services\SellerAccountingService;
 use App\Support\RevenueAnalytics;
@@ -483,6 +484,170 @@ class ResellerPaymentController extends BaseSuperAdminController
             ],
             'meta' => $this->paginationMeta($paginator),
         ]);
+    }
+
+    public function exportManagerCustomersCsv(Request $request, int $id, ExportTaskService $exportTaskService): JsonResponse
+    {
+        $rows = $this->buildManagerCustomerRows($request, $id);
+        $task = $exportTaskService->queue(
+            $request,
+            'xlsx',
+            'manager-customers.xlsx',
+            'Manager Customers',
+            $this->managerCustomerExportSections($rows),
+            [],
+            '',
+            $this->reportLanguage($request),
+        );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
+    }
+
+    public function exportManagerCustomersPdf(Request $request, int $id, ExportTaskService $exportTaskService): JsonResponse
+    {
+        $rows = $this->buildManagerCustomerRows($request, $id);
+        $task = $exportTaskService->queue(
+            $request,
+            'pdf',
+            'manager-customers.pdf',
+            'Manager Customers',
+            $this->managerCustomerExportSections($rows),
+            [],
+            '',
+            $this->reportLanguage($request),
+        );
+
+        return response()->json(['export_id' => $task->id, 'status' => $task->status], 202);
+    }
+
+    private function buildManagerCustomerRows(Request $request, int $id): Collection
+    {
+        $user = User::findOrFail($id);
+        $manager = $this->resolveSeller($user);
+        $role = $manager->role?->value ?? (string) $manager->role;
+        if ($role !== UserRole::MANAGER->value) {
+            throw ValidationException::withMessages(['user' => 'The selected user is not a manager.']);
+        }
+
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'search' => ['nullable', 'string', 'max:255'],
+            'program_id' => ['nullable', 'integer'],
+            'country_name' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $filters = [
+            'from' => ! empty($validated['from']) ? (string) $validated['from'] : null,
+            'to' => ! empty($validated['to']) ? (string) $validated['to'] : null,
+        ];
+
+        $events = RevenueAnalytics::baseQuery($filters, (int) $manager->tenant_id, null, (int) $manager->id)
+            ->whereRaw(RevenueAnalytics::earnedCondition())
+            ->select(['activity_logs.id', 'activity_logs.metadata', 'activity_logs.created_at'])
+            ->orderByDesc('activity_logs.created_at')
+            ->get();
+
+        $rows = $events
+            ->map(fn ($event) => [
+                ...$this->serializeManagerParentEventRow(
+                    (array) ($event->metadata ?? []),
+                    $event->created_at?->toIso8601String()
+                ),
+                'activity_log_id' => $event->id,
+            ])
+            ->filter(fn (array $row): bool => $row['sale_amount'] > 0)
+            ->values();
+
+        if (! empty($validated['program_id'])) {
+            $programId = (int) $validated['program_id'];
+            $rows = $rows->filter(fn (array $row): bool => (int) ($row['program_id'] ?? 0) === $programId)->values();
+        }
+
+        $customerIds = $rows->pluck('customer_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
+        $programIds = $rows->pluck('program_id')->filter(fn ($id): bool => (int) $id > 0)->map(fn ($id): int => (int) $id)->unique()->values()->all();
+
+        $customersById = $customerIds === []
+            ? collect()
+            : User::query()->where('tenant_id', $manager->tenant_id)->whereIn('id', $customerIds)->select(['id', 'name', 'username', 'country_name'])->get()->keyBy('id');
+        $programsById = $programIds === []
+            ? collect()
+            : Program::query()->where('tenant_id', $manager->tenant_id)->whereIn('id', $programIds)->select(['id', 'name'])->get()->keyBy('id');
+
+        $hydratedRows = $rows->map(function (array $row) use ($customersById, $programsById): array {
+            $customer = (int) ($row['customer_id'] ?? 0) > 0 ? $customersById->get((int) $row['customer_id']) : null;
+            $program = (int) ($row['program_id'] ?? 0) > 0 ? $programsById->get((int) $row['program_id']) : null;
+
+            return [
+                'activity_log_id' => $row['activity_log_id'],
+                'customer_id' => $row['customer_id'],
+                'customer_name' => $customer?->name ?? $row['customer_name'],
+                'customer_username' => $customer?->username ?? $row['customer_username'],
+                'bios_id' => $row['bios_id'],
+                'program_id' => $row['program_id'],
+                'program_name' => $program?->name ?? $row['program_name'],
+                'country_name' => $customer?->country_name ?? $row['country_name'],
+                'sale_amount' => $row['sale_amount'],
+                'sale_date' => $row['sale_date'],
+                'license_id' => $row['license_id'],
+            ];
+        })->values();
+
+        if (! empty($validated['country_name'])) {
+            $countryFilter = mb_strtolower(trim((string) $validated['country_name']));
+            $hydratedRows = $hydratedRows->filter(function (array $row) use ($countryFilter): bool {
+                $country = mb_strtolower(trim((string) ($row['country_name'] ?? '')));
+
+                return $country !== '' && str_contains($country, $countryFilter);
+            })->values();
+        }
+
+        if (! empty($validated['search'])) {
+            $search = mb_strtolower(trim((string) $validated['search']));
+            $hydratedRows = $hydratedRows->filter(function (array $row) use ($search): bool {
+                $haystack = mb_strtolower(implode(' ', [
+                    (string) ($row['customer_name'] ?? ''),
+                    (string) ($row['customer_username'] ?? ''),
+                    (string) ($row['bios_id'] ?? ''),
+                    (string) ($row['program_name'] ?? ''),
+                    (string) ($row['country_name'] ?? ''),
+                ]));
+
+                return $haystack !== '' && str_contains($haystack, $search);
+            })->values();
+        }
+
+        return $hydratedRows;
+    }
+
+    /**
+     * @param Collection $rows
+     * @return array<int, array{title?: string|null, headers: array<int, string>, rows: array<int, array<int, string|int|float|null>>}>
+     */
+    private function managerCustomerExportSections(Collection $rows): array
+    {
+        return [
+            [
+                'title' => null,
+                'headers' => ['Customer Name', 'Username', 'BIOS ID', 'Program', 'Country', 'Sale Amount (USD)', 'Sale Date'],
+                'rows' => $rows->map(fn (array $row): array => [
+                    (string) ($row['customer_name'] ?? ''),
+                    (string) ($row['customer_username'] ?? ''),
+                    (string) ($row['bios_id'] ?? ''),
+                    (string) ($row['program_name'] ?? ''),
+                    (string) ($row['country_name'] ?? ''),
+                    '$'.number_format((float) ($row['sale_amount'] ?? 0), 2, '.', ','),
+                    (string) ($row['sale_date'] ?? ''),
+                ])->values()->all(),
+            ],
+        ];
+    }
+
+    private function reportLanguage(Request $request): string
+    {
+        $lang = $request->query('lang', $request->header('Accept-Language', 'en'));
+
+        return str_starts_with((string) $lang, 'ar') ? 'ar' : 'en';
     }
 
     public function resellerCustomers(Request $request, int $id): JsonResponse

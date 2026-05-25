@@ -7,7 +7,6 @@ use App\Models\License;
 use App\Models\User;
 use App\Services\SellerAccountingService;
 use App\Services\ExportTaskService;
-use App\Support\CustomerOwnership;
 use App\Support\LicenseCacheInvalidation;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -44,7 +43,12 @@ class FinancialReportController extends BaseManagerParentController
                 ->selectRaw(RevenueAnalytics::revenueSumExpression('granted', 'activity_logs', 'granted_value'))
                 ->first();
             $totalActivations = (int) (clone $baseQuery)->count();
-            $totalCustomers = CustomerOwnership::currentOwnedCustomerCount($scope['seller_ids'], $tenantId);
+            $totalCustomers = License::query()
+                ->where('tenant_id', $tenantId)
+                ->whereIn('reseller_id', $scope['seller_ids'])
+                ->whereNotNull('customer_id')
+                ->distinct('customer_id')
+                ->count('customer_id');
             $revenueSellers = $scope['sellers']
                 ->filter(fn (User $seller): bool => in_array($seller->role?->value ?? (string) $seller->role, [UserRole::MANAGER->value, UserRole::RESELLER->value], true))
                 ->values();

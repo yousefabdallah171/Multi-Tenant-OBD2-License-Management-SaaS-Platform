@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/manager-parent/PageHeader'
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable'
+import { ExportButtons } from '@/components/shared/ExportButtons'
 import { StatsCard } from '@/components/shared/StatsCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,6 +34,7 @@ export function ManagerSalesCustomersPage() {
   const [perPage, setPerPage] = useState(25)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedActivityLogId, setSelectedActivityLogId] = useState<number | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
 
   const filters = useMemo<ManagerParentSalesCustomerFilters>(() => ({
     search: search || undefined,
@@ -202,7 +204,38 @@ export function ManagerSalesCustomersPage() {
             <Input type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1) }} />
           </label>
         </div>
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex items-center justify-between">
+          <ExportButtons
+            isExporting={isExporting}
+            onExportCsv={async () => {
+              setIsExporting(true)
+              try {
+                await superAdminPlatformService.exportManagerSalesCustomersCsv(resolvedManagerId, {
+                  search: search || undefined,
+                  program_id: programId || undefined,
+                  country_name: countryName || undefined,
+                  from: from || undefined,
+                  to: to || undefined,
+                })
+              } finally {
+                setIsExporting(false)
+              }
+            }}
+            onExportPdf={async () => {
+              setIsExporting(true)
+              try {
+                await superAdminPlatformService.exportManagerSalesCustomersPdf(resolvedManagerId, {
+                  search: search || undefined,
+                  program_id: programId || undefined,
+                  country_name: countryName || undefined,
+                  from: from || undefined,
+                  to: to || undefined,
+                })
+              } finally {
+                setIsExporting(false)
+              }
+            }}
+          />
           <Button
             type="button"
             variant="ghost"

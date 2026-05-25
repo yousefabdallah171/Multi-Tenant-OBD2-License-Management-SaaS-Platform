@@ -535,6 +535,8 @@ Route::middleware(['auth:sanctum', ActiveRoleMiddleware::class, 'tenant.scope', 
         Route::get('/reseller-payments', [SuperAdminResellerPaymentController::class, 'index']);
         Route::get('/reseller-payments/manager-parent/{id}/customers', [SuperAdminResellerPaymentController::class, 'managerParentCustomers']);
         Route::get('/reseller-payments/manager/{id}/customers', [SuperAdminResellerPaymentController::class, 'managerCustomers']);
+        Route::get('/reseller-payments/manager/{id}/customers/export/csv', [SuperAdminResellerPaymentController::class, 'exportManagerCustomersCsv']);
+        Route::get('/reseller-payments/manager/{id}/customers/export/pdf', [SuperAdminResellerPaymentController::class, 'exportManagerCustomersPdf']);
         Route::get('/reseller-payments/reseller/{id}/customers', [SuperAdminResellerPaymentController::class, 'resellerCustomers']);
         Route::get('/reseller-payments/{user}', [SuperAdminResellerPaymentController::class, 'show']);
         Route::post('/reseller-payments', [SuperAdminResellerPaymentController::class, 'storePayment']);
